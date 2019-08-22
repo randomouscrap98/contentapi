@@ -6,6 +6,8 @@ using System.Linq;
 using System.Security.Cryptography;
 using Microsoft.AspNetCore.Cryptography.KeyDerivation;
 using System;
+using System.Threading.Tasks;
+using Microsoft.EntityFrameworkCore;
 
 namespace contentapi.Controllers
 {
@@ -27,14 +29,41 @@ namespace contentapi.Controllers
         }
 
         [HttpGet]
-        public ActionResult<IEnumerable<UserView>> Get()
+        public async Task<ActionResult<IEnumerable<UserView>>> Get()
         {
-            return context.Users.Select(x => mapper.Map<UserView>(x)).ToList();
+            //Find a way to "fix" these results so you can do fancy sorting/etc.
+            //Will we need this on every endpoint? Won't that be disgusting? How do we
+            //make that "restful"? Look up pagination in REST
+            return await context.Users.Select(x => mapper.Map<UserView>(x)).ToListAsync();
+        }
+
+        [HttpGet("{id}")]
+        public async Task<ActionResult<UserView>> GetSingle(long id)
+        {
+            var user = await context.Users.FindAsync(id);
+
+            if(user == null)
+                return NotFound();
+
+            return mapper.Map<UserView>(user);
         }
 
         [HttpPost]
-        public ActionResult<UserView> Post([FromForm]UserCredential user)
+        public async Task<ActionResult<UserView>> Post([FromBody]UserCredential user)
         {
+            //One day, fix these so they're the "standard" bad object request from model validation!!
+            //Perhaps do custom validation!
+            if(user.username == null)
+                return BadRequest("Must provide a username!");
+            if(user.email == null)
+                return BadRequest("Must provide an email!");
+
+            var existing = await context.Users.FirstOrDefaultAsync(
+                x => x.username == user.username || x.email == user.email);
+
+            if(existing != null)
+                return BadRequest("This user already seems to exist!");
+
             var salt = GetSalt();
 
             var newUser = new User()
@@ -47,9 +76,9 @@ namespace contentapi.Controllers
             };
 
             context.Users.Add(newUser);
-            context.SaveChanges();
+            await context.SaveChangesAsync();
 
-            return mapper.Map<UserView>(newUser);
+            return CreatedAtAction(nameof(GetSingle), new { id = newUser.id }, mapper.Map<UserView>(newUser));
         }
 
         protected byte[] GetSalt()
