@@ -29,12 +29,15 @@ namespace contentapi.Controllers
         }
 
         [HttpGet]
-        public async Task<ActionResult<IEnumerable<UserView>>> Get()
+        public async Task<ActionResult<Object>> Get()
         {
             //Find a way to "fix" these results so you can do fancy sorting/etc.
             //Will we need this on every endpoint? Won't that be disgusting? How do we
             //make that "restful"? Look up pagination in REST
-            return await context.Users.Select(x => mapper.Map<UserView>(x)).ToListAsync();
+            return new { 
+                users = await context.Users.Select(x => mapper.Map<UserView>(x)).ToListAsync(),
+                _links = new List<string>() //one day, turn this into HATEOS
+            };
         }
 
         [HttpGet("{id}")]
@@ -47,6 +50,15 @@ namespace contentapi.Controllers
 
             return mapper.Map<UserView>(user);
         }
+
+        //[AcceptVerbs("Post")]
+        //public IActionResult CheckUniqueUsername(string username, int ? id)
+        //{
+        //    if(context.Users.FirstOrDefaultAsync(x => x.username == username) != null)
+        //        return Json($"");
+        //    return Json(true);
+        //    );
+        //}
 
         [HttpPost]
         public async Task<ActionResult<UserView>> Post([FromBody]UserCredential user)
@@ -79,6 +91,22 @@ namespace contentapi.Controllers
             await context.SaveChangesAsync();
 
             return CreatedAtAction(nameof(GetSingle), new { id = newUser.id }, mapper.Map<UserView>(newUser));
+        }
+
+        [HttpPost("authenticate")]
+        public async Task<ActionResult<bool>> Authenticate([FromBody]UserCredential user)
+        {
+            User foundUser = null;
+
+            if(user.username != null)
+                foundUser = await context.Users.FirstOrDefaultAsync(x => x.username == user.username);
+            else if (user.email != null)
+                foundUser = await context.Users.FirstOrDefaultAsync(x => x.email == user.email);
+
+            if(foundUser == null)
+                return BadRequest("Must provide a username or email!");
+
+            return false;
         }
 
         protected byte[] GetSalt()

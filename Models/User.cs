@@ -1,6 +1,7 @@
 using System.ComponentModel.DataAnnotations.Schema;
 using System.ComponentModel.DataAnnotations;
 using System;
+using Microsoft.AspNetCore.Mvc;
 
 namespace contentapi.Models
 {
@@ -29,6 +30,7 @@ namespace contentapi.Models
     {
         [MinLength(3)]
         [MaxLength(20)]
+        //[Remote("CheckUniqueUsername", "Users", AdditionalFields = "id", ErrorMessage = "Username taken!")]
         public string username {get;set;}
 
         [Required]
@@ -36,6 +38,7 @@ namespace contentapi.Models
         public string password {get;set;}
 
         [EmailAddress]
+        //[Remote("CheckUniqueEmail", "Users", AdditionalFields = ErrorMessage = "Email taken!")]
         public string email {get; set;}
     }
 }
