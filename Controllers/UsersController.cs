@@ -21,6 +21,8 @@ namespace contentapi.Controllers
         public int HashBits = 512;
         public int HashIterations = 10000;
 
+        public TimeSpan TokenExpiration = TimeSpan.FromDays(60);
+
         public string JwtSecretKey = "nothing";
     }
 
@@ -48,7 +50,8 @@ namespace contentapi.Controllers
             //make that "restful"? Look up pagination in REST
             return new { 
                 users = await context.Users.Select(x => mapper.Map<UserView>(x)).ToListAsync(),
-                _links = new List<string>() //one day, turn this into HATEOS
+                _links = new List<string>(), //one day, turn this into HATEOS
+                _claims = User.Claims.ToDictionary(x => x.Type, x => x.Value)
             };
         }
 
@@ -115,21 +118,27 @@ namespace contentapi.Controllers
             else if (user.email != null)
                 foundUser = await context.Users.FirstOrDefaultAsync(x => x.email == user.email);
 
+            //Should this be the same as bad password? eeeehhhh
             if(foundUser == null)
-                return BadRequest("Must provide a username or email!");
+                return BadRequest("Must provide a valid username or email!");
 
-            var handler = new JwtSecurityTokenHandler();
-            var key = Encoding.ASCII.GetBytes(config.JwtSecretKey);
+            var hash = GetHash(user.password, foundUser.passwordSalt);
+
+            if(!hash.SequenceEqual(foundUser.passwordHash))
+                return BadRequest("Password incorrect!");
+
             var descriptor = new SecurityTokenDescriptor
             {
-                Subject = new ClaimsIdentity(new Claim[]
-                {
-                    new Claim("uid", foundUser.id.ToString())
-                }),
-                Expires = DateTime.UtcNow.AddDays(60),
-                SigningCredentials = new SigningCredentials(new SymmetricSecurityKey(key), SecurityAlgorithms.HmacSha256Signature)
+                Subject = new ClaimsIdentity(new Claim[] {
+                    new Claim("uid", foundUser.id.ToString()) }),
+                Expires = DateTime.UtcNow.Add(config.TokenExpiration),
+                NotBefore = DateTime.UtcNow.AddMinutes(-30),
+                SigningCredentials = new SigningCredentials(
+                    new SymmetricSecurityKey(Encoding.ASCII.GetBytes(config.JwtSecretKey)), 
+                    SecurityAlgorithms.HmacSha256Signature)
             };
 
+            var handler = new JwtSecurityTokenHandler();
             var token = handler.CreateToken(descriptor);
             var tokenString = handler.WriteToken(token);
             return tokenString;
