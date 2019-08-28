@@ -3,6 +3,7 @@ using System.Collections.Generic;
 using System.Linq;
 using System.Threading.Tasks;
 using AutoMapper;
+using contentapi.Controllers;
 using contentapi.Models;
 using Microsoft.AspNetCore.Builder;
 using Microsoft.AspNetCore.Hosting;
@@ -29,7 +30,13 @@ namespace contentapi
         public void ConfigureServices(IServiceCollection services)
         {
             var dataSection = Configuration.GetSection("Data");
-            var contentConstring = dataSection.GetValue<string>("ContentConnectionString", null);
+            var tempSection = Configuration.GetSection("Temp");
+            var contentConstring = dataSection.GetValue<string>("ContentConnectionString");
+
+            services.AddSingleton(new UsersControllerConfig()
+            {
+                JwtSecretKey = tempSection.GetValue<string>("JWTSecret")
+            });
 
             //Database config
             services.AddDbContext<ContentDbContext>(options => options.UseSqlite(contentConstring));

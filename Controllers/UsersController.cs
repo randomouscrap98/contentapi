@@ -8,24 +8,36 @@ using Microsoft.AspNetCore.Cryptography.KeyDerivation;
 using System;
 using System.Threading.Tasks;
 using Microsoft.EntityFrameworkCore;
+using System.IdentityModel.Tokens.Jwt;
+using System.Text;
+using Microsoft.IdentityModel.Tokens;
+using System.Security.Claims;
 
 namespace contentapi.Controllers
 {
-    [Route("api/[controller]")]
-    [ApiController]
-    public class UsersController : ControllerBase
+    public class UsersControllerConfig
     {
         public int SaltBits = 256;
         public int HashBits = 512;
         public int HashIterations = 10000;
 
+        public string JwtSecretKey = "nothing";
+    }
+
+    [Route("api/[controller]")]
+    [ApiController]
+    public class UsersController : ControllerBase
+    {
         private ContentDbContext context;
         private IMapper mapper;
 
-        public UsersController(ContentDbContext context, IMapper mapper)
+        protected UsersControllerConfig config;
+
+        public UsersController(ContentDbContext context, IMapper mapper, UsersControllerConfig config)
         {
             this.context = context;
             this.mapper = mapper;
+            this.config = config;
         }
 
         [HttpGet]
@@ -94,7 +106,7 @@ namespace contentapi.Controllers
         }
 
         [HttpPost("authenticate")]
-        public async Task<ActionResult<bool>> Authenticate([FromBody]UserCredential user)
+        public async Task<ActionResult<string>> Authenticate([FromBody]UserCredential user)
         {
             User foundUser = null;
 
@@ -106,12 +118,26 @@ namespace contentapi.Controllers
             if(foundUser == null)
                 return BadRequest("Must provide a username or email!");
 
-            return false;
+            var handler = new JwtSecurityTokenHandler();
+            var key = Encoding.ASCII.GetBytes(config.JwtSecretKey);
+            var descriptor = new SecurityTokenDescriptor
+            {
+                Subject = new ClaimsIdentity(new Claim[]
+                {
+                    new Claim("uid", foundUser.id.ToString())
+                }),
+                Expires = DateTime.UtcNow.AddDays(60),
+                SigningCredentials = new SigningCredentials(new SymmetricSecurityKey(key), SecurityAlgorithms.HmacSha256Signature)
+            };
+
+            var token = handler.CreateToken(descriptor);
+            var tokenString = handler.WriteToken(token);
+            return tokenString;
         }
 
         protected byte[] GetSalt()
         {
-            byte[] salt = new byte[ SaltBits / 8 ];
+            byte[] salt = new byte[ config.SaltBits / 8 ];
 
             using(var rng = RandomNumberGenerator.Create())
             {
@@ -127,8 +153,8 @@ namespace contentapi.Controllers
                 password: password,
                 salt: salt,
                 prf: KeyDerivationPrf.HMACSHA1,
-                iterationCount: HashIterations,
-                numBytesRequested: HashBits / 8
+                iterationCount: config.HashIterations,
+                numBytesRequested: config.HashBits / 8
             );
         }
 
