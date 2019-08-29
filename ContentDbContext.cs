@@ -10,8 +10,7 @@ namespace contentapi
     {
         public ContentDbContext(DbContextOptions<ContentDbContext> options) : base(options) { }
 
-        //public DbSet<Message> Messages { get; set; }
         public DbSet<User> Users {get; set;}
-        //public DbSet<Room> Rooms {get; set;}
+        public DbSet<Category> Categories {get;set;}
     }
 }
