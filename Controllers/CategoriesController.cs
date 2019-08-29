@@ -48,7 +48,7 @@ namespace contentapi.Controllers
 
         [HttpGet("{id}")]
         [AllowAnonymous]
-        public async Task<ActionResult<object>> GetSingle(long id)
+        public async Task<ActionResult<CategoryView>> GetSingle(long id)
         {
             var category = await context.Categories.FindAsync(id);
             var parent = category.Parent;

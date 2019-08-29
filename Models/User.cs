@@ -7,10 +7,8 @@ namespace contentapi.Models
 {
     //This is the user as they are in the database
     [Table("users")]
-    public class User
+    public class User : GenericModel
     {
-        public long id { get; set; }
-        public DateTime createDate { get; set; }
         public string username { get; set; }
         public string email { get; set; }
         public byte[] passwordHash { get; set; }
@@ -18,10 +16,8 @@ namespace contentapi.Models
     }
 
     //This is the user as we give them out
-    public class UserView
+    public class UserView : GenericModel
     {
-        public long id { get; set; }
-        public DateTime createDate { get; set; }
         public string username { get; set; }
     }
 
