@@ -49,19 +49,19 @@ namespace contentapi.Controllers
                 throw new ActionCarryingException<V>() {Result = result};
         }
 
-        protected virtual Task Post_PreConversionCheck(P item) { return Task.CompletedTask; }//.FromResult<ActionResult<V>>(null); }
+        protected virtual Task Post_PreConversionCheck(P item) { return Task.CompletedTask; }
         protected virtual T Post_ConvertItem(P item) { return mapper.Map<T>(item); }
         protected virtual Task Post_PreInsertCheck(T item) 
         { 
             //Make sure some fields are like... yeah
             item.createDate = DateTime.Now;
             item.id = 0;
-            return Task.CompletedTask; //FromResult<ActionResult<V>>(null); 
+            return Task.CompletedTask;
         }
 
-        protected virtual Task Put_PreConversionCheck(P item, T existing) { return Task.CompletedTask; }//.FromResult<ActionResult<V>>(null); }
+        protected virtual Task Put_PreConversionCheck(P item, T existing) { return Task.CompletedTask; }
         protected virtual T Put_ConvertItem(P item, T existing) { return mapper.Map<P, T>(item, existing); }
-        protected virtual Task Put_PreInsertCheck(T existing) { return Task.CompletedTask; } //.FromResult<ActionResult<V>>(null); }
+        protected virtual Task Put_PreInsertCheck(T existing) { return Task.CompletedTask; }
 
         [HttpGet]
         [AllowAnonymous]
