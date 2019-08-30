@@ -15,6 +15,15 @@ using contentapi.Models;
 
 namespace contentapi.Controllers
 {
+    public class ActionCarryingException<T> : Exception
+    {
+        public ActionResult<T> Result;
+
+        public ActionCarryingException() : base() { }
+        public ActionCarryingException(string message) : base(message) {}
+        public ActionCarryingException(string message, Exception inner) : base(message, inner) {}
+    }
+
     [Route("api/[controller]")]
     [ApiController]
     [Authorize]
@@ -32,13 +41,27 @@ namespace contentapi.Controllers
         //You MUST say how to get your objects! They're probably from the context!
         public abstract DbSet<T> GetObjects();
         
-        protected virtual Task<ActionResult<V>> Post_PreConversionCheck(P item) { return Task.FromResult<ActionResult<V>>(null); }
-        protected virtual T Post_ConvertItem(P item) { return mapper.Map<T>(item); }
-        protected virtual Task<ActionResult<V>> Post_PreInsertCheck(T item) { return Task.FromResult<ActionResult<V>>(null); }
+        protected void ThrowAction(ActionResult<V> result, string message = null)
+        {
+            if(message != null)
+                throw new ActionCarryingException<V>(message) {Result = result};
+            else
+                throw new ActionCarryingException<V>() {Result = result};
+        }
 
-        protected virtual Task<ActionResult<V>> Put_PreConversionCheck(P item, T existing) { return Task.FromResult<ActionResult<V>>(null); }
+        protected virtual Task Post_PreConversionCheck(P item) { return Task.CompletedTask; }//.FromResult<ActionResult<V>>(null); }
+        protected virtual T Post_ConvertItem(P item) { return mapper.Map<T>(item); }
+        protected virtual Task Post_PreInsertCheck(T item) 
+        { 
+            //Make sure some fields are like... yeah
+            item.createDate = DateTime.Now;
+            item.id = 0;
+            return Task.CompletedTask; //FromResult<ActionResult<V>>(null); 
+        }
+
+        protected virtual Task Put_PreConversionCheck(P item, T existing) { return Task.CompletedTask; }//.FromResult<ActionResult<V>>(null); }
         protected virtual T Put_ConvertItem(P item, T existing) { return mapper.Map<P, T>(item, existing); }
-        protected virtual Task<ActionResult<V>> Put_PreInsertCheck(T existing) { return Task.FromResult<ActionResult<V>>(null); }
+        protected virtual Task Put_PreInsertCheck(T existing) { return Task.CompletedTask; } //.FromResult<ActionResult<V>>(null); }
 
         [HttpGet]
         [AllowAnonymous]
@@ -69,62 +92,70 @@ namespace contentapi.Controllers
         [HttpPost]
         public async virtual Task<ActionResult<V>> Post([FromBody]P item)
         {
-            //Check the passed-in object. If anything happens, stop now
-            var result = await Post_PreConversionCheck(item);
+            try
+            {
+                //Check the passed-in object. If anything happens, stop now
+                await Post_PreConversionCheck(item);
 
-            if(result != null)
-                return result;
+                //Convert the user-provided object into a real one
+                var newThing = Post_ConvertItem(item);
 
-            //Convert the user-provided object into a real one
-            var newThing = Post_ConvertItem(item);
+                //Perform one last check on the converted item
+                await Post_PreInsertCheck(newThing);
 
-            //Perform one last check on the converted item
-            result = await Post_PreInsertCheck(newThing);
+                //Actually add the object??
+                await GetObjects().AddAsync(newThing);
+                await context.SaveChangesAsync();
 
-            if(result != null)
-                return result;
-
-            //Actually add the object??
-            await GetObjects().AddAsync(newThing);
-            await context.SaveChangesAsync();
-
-            return CreatedAtAction(nameof(GetSingle), new { id = newThing.id }, mapper.Map<V>(newThing));
+                return CreatedAtAction(nameof(GetSingle), new { id = newThing.id }, mapper.Map<V>(newThing));
+            }
+            catch(ActionCarryingException<V> ex)
+            {
+                return ex.Result;
+            }
         }
 
         [HttpPut("{id}")]
         public async virtual Task<ActionResult<V>> Put([FromRoute]long id, [FromBody]P item)
         {
-            //First, see if our "existing" object (by id) even exists
-            var existing = await GetObjects().FindAsync(id);
+            try
+            {
+                //First, see if our "existing" object (by id) even exists
+                var existing = await GetObjects().FindAsync(id);
 
-            if(existing == null)
-                return NotFound();
+                if (existing == null)
+                    return NotFound();
 
-            //Next, perform some checks. If anything happens, we need to return the result.
-            var result = await Put_PreConversionCheck(item, existing);
+                //Next, perform some checks. If anything happens, we need to return the result.
+                await Put_PreConversionCheck(item, existing);
 
-            if(result != null)
-                return result;
+                //Now actually "convert" the item by placing it "into" the existing (assume existing gets modified in-place?)
+                Put_ConvertItem(item, existing);
 
-            //Now actually "convert" the item by placing it "into" the existing (assume existing gets modified in-place?)
-            Put_ConvertItem(item, existing);
+                //After conversion, perform one last check before insertion
+                await Put_PreInsertCheck(existing);
 
-            //After conversion, perform one last check before insertion
-            result = await Put_PreInsertCheck(existing);
+                //Actually update the object now? I hope???
+                GetObjects().Update(existing);
+                await context.SaveChangesAsync();
 
-            if(result != null)
-                return result;
-
-            //Actually update the object now? I hope???
-            GetObjects().Update(existing);
-            await context.SaveChangesAsync();
-
-            return CreatedAtAction(nameof(GetSingle), new { id = existing.id }, mapper.Map<V>(existing));
+                return CreatedAtAction(nameof(GetSingle), new { id = existing.id }, mapper.Map<V>(existing));
+            }
+            catch(ActionCarryingException<V> ex)
+            {
+                return ex.Result;
+            }
         }
     }
 
-    public abstract class GenericController<T,V> : GenericControllerRaw<T,V,V> where T : GenericModel where V : class
+    public abstract class GenericController<T,V> : GenericControllerRaw<T,V,V> where T : GenericModel where V : GenericModel
     {
         public GenericController(ContentDbContext context, IMapper mapper) : base(context, mapper){}
+        protected override Task Put_PreConversionCheck(V item, T existing) 
+        { 
+            item.createDate = existing.createDate;
+            item.id = existing.id;
+            return Task.CompletedTask;
+        }
     }
 }

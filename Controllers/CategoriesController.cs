@@ -25,19 +25,17 @@ namespace contentapi.Controllers
             return context.Categories;
         }
 
-        protected override async Task<ActionResult<CategoryView>> Post_PreInsertCheck(Category category)
+        protected override async Task Post_PreInsertCheck(Category category)
         {
-            category.createDate = DateTime.Now;
+            await base.Post_PreInsertCheck(category);
 
             if(category.parentId != null)
             {
                 var parentCategory = await context.Categories.FindAsync(category.parentId);
 
                 if(parentCategory == null)
-                    return BadRequest("Nonexistent parent category!");
+                    ThrowAction(BadRequest("Nonexistent parent category!"));
             }
-
-            return null;
         }
     }
 }

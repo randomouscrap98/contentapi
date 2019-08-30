@@ -38,22 +38,19 @@ namespace contentapi.Controllers
 
         public override DbSet<User> GetObjects() { return context.Users; }
         
-        protected override async Task<ActionResult<UserView>> Post_PreConversionCheck(UserCredential user)
+        protected override async Task Post_PreConversionCheck(UserCredential user)
         {
             //One day, fix these so they're the "standard" bad object request from model validation!!
             //Perhaps do custom validation!
             if(user.username == null)
-                return BadRequest("Must provide a username!");
+                ThrowAction(BadRequest("Must provide a username!"));
             if(user.email == null)
-                return BadRequest("Must provide an email!");
+                ThrowAction(BadRequest("Must provide an email!"));
 
-            var existing = await context.Users.FirstOrDefaultAsync(
-                x => x.username == user.username || x.email == user.email);
+            var existing = await context.Users.FirstOrDefaultAsync(x => x.username == user.username || x.email == user.email);
 
             if(existing != null)
-                return BadRequest("This user already seems to exist!");
-
-            return null;
+                ThrowAction(BadRequest("This user already seems to exist!"));
         }
 
         protected override User Post_ConvertItem(UserCredential user) 
