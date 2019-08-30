@@ -12,6 +12,7 @@ using System.IdentityModel.Tokens.Jwt;
 using System.Text;
 using Microsoft.IdentityModel.Tokens;
 using System.Security.Claims;
+using Microsoft.AspNetCore.Authorization;
 
 namespace contentapi.Controllers
 {
@@ -26,57 +27,18 @@ namespace contentapi.Controllers
         public string JwtSecretKey = "nothing";
     }
 
-    [Route("api/[controller]")]
-    [ApiController]
-    public class UsersController : ControllerBase
+    public class UsersController : GenericControllerRaw<User, UserView, UserCredential>
     {
-        private ContentDbContext context;
-        private IMapper mapper;
-
         protected UsersControllerConfig config;
 
-        public UsersController(ContentDbContext context, IMapper mapper, UsersControllerConfig config)
+        public UsersController(ContentDbContext context, IMapper mapper, UsersControllerConfig config) : base (context, mapper)
         {
-            this.context = context;
-            this.mapper = mapper;
             this.config = config;
         }
 
-        [HttpGet]
-        public async Task<ActionResult<Object>> Get()
-        {
-            //Find a way to "fix" these results so you can do fancy sorting/etc.
-            //Will we need this on every endpoint? Won't that be disgusting? How do we
-            //make that "restful"? Look up pagination in REST
-            return new { 
-                users = await context.Users.Select(x => mapper.Map<UserView>(x)).ToListAsync(),
-                _links = new List<string>(), //one day, turn this into HATEOS
-                _claims = User.Claims.ToDictionary(x => x.Type, x => x.Value)
-            };
-        }
-
-        [HttpGet("{id}")]
-        public async Task<ActionResult<UserView>> GetSingle(long id)
-        {
-            var user = await context.Users.FindAsync(id);
-
-            if(user == null)
-                return NotFound();
-
-            return mapper.Map<UserView>(user);
-        }
-
-        //[AcceptVerbs("Post")]
-        //public IActionResult CheckUniqueUsername(string username, int ? id)
-        //{
-        //    if(context.Users.FirstOrDefaultAsync(x => x.username == username) != null)
-        //        return Json($"");
-        //    return Json(true);
-        //    );
-        //}
-
-        [HttpPost]
-        public async Task<ActionResult<UserView>> Post([FromBody]UserCredential user)
+        public override DbSet<User> GetObjects() { return context.Users; }
+        
+        protected override async Task<ActionResult<UserView>> Post_PreConversionCheck(UserCredential user)
         {
             //One day, fix these so they're the "standard" bad object request from model validation!!
             //Perhaps do custom validation!
@@ -91,9 +53,14 @@ namespace contentapi.Controllers
             if(existing != null)
                 return BadRequest("This user already seems to exist!");
 
+            return null;
+        }
+
+        protected override User Post_ConvertItem(UserCredential user) 
+        {
             var salt = GetSalt();
 
-            var newUser = new User()
+            return new User()
             {
                 username = user.username,
                 createDate = DateTime.Now,
@@ -101,14 +68,16 @@ namespace contentapi.Controllers
                 passwordSalt = salt,
                 passwordHash = GetHash(user.password, salt)
             };
+        }
 
-            context.Users.Add(newUser);
-            await context.SaveChangesAsync();
-
-            return CreatedAtAction(nameof(GetSingle), new { id = newUser.id }, mapper.Map<UserView>(newUser));
+        [AllowAnonymous]
+        public async override Task<ActionResult<UserView>> Post([FromBody]UserCredential item)
+        {
+            return await base.Post(item);
         }
 
         [HttpPost("authenticate")]
+        [AllowAnonymous]
         public async Task<ActionResult<string>> Authenticate([FromBody]UserCredential user)
         {
             User foundUser = null;

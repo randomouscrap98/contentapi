@@ -16,67 +16,28 @@ using Microsoft.AspNetCore.Authorization;
 
 namespace contentapi.Controllers
 {
-    [Route("api/[controller]")]
-    [ApiController]
-    [Authorize]
-    public class CategoriesController : ControllerBase
+    public class CategoriesController : GenericController<Category, CategoryView>
     {
-        private ContentDbContext context;
-        private IMapper mapper;
+        public CategoriesController(ContentDbContext context, IMapper mapper):base(context, mapper) { }
 
-        //protected UsersControllerConfig config;
-
-        public CategoriesController(ContentDbContext context, IMapper mapper) //, UsersControllerConfig config)
+        public override DbSet<Category> GetObjects()
         {
-            this.context = context;
-            this.mapper = mapper;
-            //this.config = config;
+            return context.Categories;
         }
 
-        [HttpGet]
-        [AllowAnonymous]
-        public async Task<ActionResult<Object>> Get()
+        protected override async Task<ActionResult<CategoryView>> Post_PreInsertCheck(Category category)
         {
-            //Find a way to "fix" these results so you can do fancy sorting/etc.
-            //Will we need this on every endpoint? Won't that be disgusting? How do we
-            //make that "restful"? Look up pagination in REST
-            return new { 
-                categories = (await context.Categories.ToListAsync()).Select(x => mapper.Map<CategoryView>(x)),
-                _links = new List<string>(), //one day, turn this into HATEOS
-            };
-        }
-
-        [HttpGet("{id}")]
-        [AllowAnonymous]
-        public async Task<ActionResult<CategoryView>> GetSingle(long id)
-        {
-            var category = await context.Categories.FindAsync(id);
-            var parent = category.Parent;
-            var children = category.Children;
-
-            if(category == null)
-                return NotFound();
-
-            return mapper.Map<CategoryView>(category);
-        }
-
-        [HttpPost]
-        public async Task<ActionResult<CategoryView>> Post([FromBody]CategoryView category)
-        {
-            var newCategory = mapper.Map<Category>(category);
-            newCategory.createDate = DateTime.Now;
+            category.createDate = DateTime.Now;
 
             if(category.parentId != null)
             {
-                var parentCategory = context.Categories.Find(category.parentId);
+                var parentCategory = await context.Categories.FindAsync(category.parentId);
+
                 if(parentCategory == null)
                     return BadRequest("Nonexistent parent category!");
             }
 
-            context.Categories.Add(newCategory);
-            await context.SaveChangesAsync();
-
-            return CreatedAtAction(nameof(GetSingle), new { id = newCategory.id }, mapper.Map<CategoryView>(newCategory));
+            return null;
         }
     }
 }
