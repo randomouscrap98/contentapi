@@ -148,7 +148,7 @@ namespace contentapi.Controllers
         }
     }
 
-    public abstract class GenericController<T,V> : GenericControllerRaw<T,V,V> where T : GenericModel where V : GenericModel
+    public abstract class GenericController<T,V> : GenericControllerRaw<T,V,V> where T : GenericModel where V : GenericView 
     {
         public GenericController(ContentDbContext context, IMapper mapper) : base(context, mapper){}
         protected override Task Put_PreConversionCheck(V item, T existing) 

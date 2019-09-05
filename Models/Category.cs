@@ -14,26 +14,27 @@ namespace contentapi.Models
         public long? parentId {get;set;}
         public string name {get;set;}
         public string description {get;set;}
-        public string accessPerms {get;set;}
-        public string defaultPerms {get;set;}
+        //public string inheritAccess {get;set;}
 
         [ForeignKey("parentId")]
         public virtual Category Parent {get;set;}
-        [InverseProperty(nameof(Parent))]
+
+        //[InverseProperty(nameof(Parent))]
         public virtual List<Category> Children {get;set;}
     }
 
-    public class CategoryView : GenericModel
+    public class CategoryView : GenericView
     {
         public long? parentId {get;set;}
         [Required]
         [MinLength(1)]
         public string name {get;set;}
         public string description {get;set;}
+        //public string inheritAccess {get;set;}
+        //[Required(AllowEmptyStrings = true)]
+        //public string accessPerms {get;set;}
         [Required(AllowEmptyStrings = true)]
-        public string accessPerms {get;set;}
-        [Required(AllowEmptyStrings = true)]
-        public string defaultPerms {get;set;}
+        //public string inherit {get;set;}
         public List<long> childrenIds {get;set;}
     }
 }

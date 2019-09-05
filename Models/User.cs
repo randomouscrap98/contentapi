@@ -16,7 +16,7 @@ namespace contentapi.Models
     }
 
     //This is the user as we give them out
-    public class UserView : GenericModel
+    public class UserView : GenericView
     {
         public string username { get; set; }
     }
