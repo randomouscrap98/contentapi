@@ -12,5 +12,7 @@ namespace contentapi
 
         public DbSet<User> Users {get; set;}
         public DbSet<Category> Categories {get;set;}
+        public DbSet<Content> Content {get;set;}
+        public DbSet<ContentAccess> ContentAccesses {get;set;}
     }
 }

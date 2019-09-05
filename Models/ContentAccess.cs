@@ -9,7 +9,7 @@ namespace contentapi.Models
     //}
 
     [Table("contentAccess")]
-    public class contentAccess: GenericModel
+    public class ContentAccess: GenericModel
     {
         public long userId {get;set;}
         public string access {get;set;}
