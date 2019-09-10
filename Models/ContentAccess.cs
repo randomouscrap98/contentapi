@@ -2,12 +2,6 @@ using System.ComponentModel.DataAnnotations.Schema;
 
 namespace contentapi.Models
 {
-    //[Table("categoryAccess")]
-    //public class CategoryAccess : GenericSingleAccess
-    //{
-    //    public int categoryId;
-    //}
-
     [Table("contentAccess")]
     public class ContentAccess: GenericModel
     {

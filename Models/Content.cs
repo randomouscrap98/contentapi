@@ -10,8 +10,9 @@ namespace contentapi.Models
         public string title {get;set;}
         public string content {get;set;}
         public string format {get;set;}
-
         public string baseAccess {get;set;}
+
+        public virtual User User {get; set;}
         public virtual List<ContentAccess>  accessList {get;set;}= new List<ContentAccess>();
     }
 
