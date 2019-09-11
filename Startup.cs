@@ -42,6 +42,14 @@ namespace contentapi
             {
                 JwtSecretKey = secretKey
             });
+            services.AddSingleton(new EmailConfig()
+            {
+                User = tempSection.GetValue<string>("smtpEmail"),
+                Password = tempSection.GetValue<string>("smtpPassword"),
+                Port = tempSection.GetValue<int>("smtpPort"),
+                Host = tempSection.GetValue<string>("smtpHost"),
+                SubjectFront = tempSection.GetValue<string>("emailSubjectFront")
+            });
 
             //Database config
             services.AddDbContext<ContentDbContext>(options => options.UseLazyLoadingProxies().UseSqlite(contentConstring));

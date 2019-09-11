@@ -13,6 +13,7 @@ namespace contentapi.Models
         public string email { get; set; }
         public byte[] passwordHash { get; set; }
         public byte[] passwordSalt { get; set; }
+        public string registerCode {get;set;}
     }
 
     //This is the user as we give them out

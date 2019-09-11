@@ -13,6 +13,8 @@ using System.Text;
 using Microsoft.IdentityModel.Tokens;
 using System.Security.Claims;
 using Microsoft.AspNetCore.Authorization;
+using System.Net.Mail;
+using System.Net;
 
 namespace contentapi.Controllers
 {
@@ -27,13 +29,25 @@ namespace contentapi.Controllers
         public string JwtSecretKey = "nothing";
     }
 
+    public class EmailConfig
+    {
+        public string Host;
+        public string User;
+        public string Password;
+        public int Port;
+
+        public string SubjectFront;
+    }
+
     public class UsersController : GenericControllerRaw<User, UserView, UserCredential>
     {
         protected UsersControllerConfig config;
+        protected EmailConfig emailConfig;
 
-        public UsersController(ContentDbContext context, IMapper mapper, UsersControllerConfig config) : base (context, mapper)
+        public UsersController(ContentDbContext context, IMapper mapper, UsersControllerConfig config, EmailConfig emailConfig) : base (context, mapper)
         {
             this.config = config;
+            this.emailConfig = emailConfig;
         }
 
         public override DbSet<User> GetObjects() { return context.Users; }
@@ -63,7 +77,8 @@ namespace contentapi.Controllers
                 createDate = DateTime.Now,
                 email = user.email,
                 passwordSalt = salt,
-                passwordHash = GetHash(user.password, salt)
+                passwordHash = GetHash(user.password, salt),
+                registerCode = Guid.NewGuid().ToString()
             };
         }
 
@@ -71,6 +86,56 @@ namespace contentapi.Controllers
         public async override Task<ActionResult<UserView>> Post([FromBody]UserCredential item)
         {
             return await base.Post(item);
+        }
+
+        [HttpPost("sendemail")]
+        [AllowAnonymous]
+        public async Task<ActionResult> SendRegistrationEmail([FromBody]string email)
+        {
+            var foundUser = await context.Users.FirstOrDefaultAsync(x => x.email == email);
+
+            if(foundUser == null)
+                return BadRequest("No user with that email");
+            if(foundUser.registerCode == null)
+                return BadRequest("Nothing to do for user");
+
+            using(var message = new MailMessage())
+            {
+                message.To.Add(new MailAddress(email));
+                message.From = new MailAddress(emailConfig.User);
+                message.Subject = $"{emailConfig.SubjectFront} - Confirm Email";
+                message.Body = $"Your confirmation code is {foundUser.registerCode}";
+
+                using(var client = new SmtpClient(emailConfig.Host))
+                {
+                    client.Port = emailConfig.Port;
+                    client.Credentials = new NetworkCredential(emailConfig.User, emailConfig.Password);
+                    client.EnableSsl = true;
+                    client.Send(message);
+                }
+            }
+
+            return Ok("Email sent");
+        }
+
+        [HttpPost("confirm")]
+        [AllowAnonymous]
+        public async Task<ActionResult> ConfirmEmail([FromBody]string confirmationKey)
+        {
+            if(string.IsNullOrEmpty(confirmationKey ))
+                return BadRequest("Must provide a confirmation key in the body");
+
+            var foundUser = await context.Users.FirstOrDefaultAsync(x => x.registerCode == confirmationKey);
+
+            if(foundUser == null)
+                return BadRequest("No user found with confirmation key");
+
+            foundUser.registerCode = null;
+
+            GetObjects().Update(foundUser);
+            await context.SaveChangesAsync();
+
+            return Ok("Email Confirmed");
         }
 
         [HttpPost("authenticate")]
@@ -87,6 +152,9 @@ namespace contentapi.Controllers
             //Should this be the same as bad password? eeeehhhh
             if(foundUser == null)
                 return BadRequest("Must provide a valid username or email!");
+
+            if(foundUser.registerCode != null)
+                return BadRequest("You must confirm your email first");
 
             var hash = GetHash(user.password, foundUser.passwordSalt);
 
