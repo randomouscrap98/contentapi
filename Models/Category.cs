@@ -14,6 +14,7 @@ namespace contentapi.Models
         public long? parentId {get;set;}
         public string name {get;set;}
         public string description {get;set;}
+        public string type {get;set;}
 
         [ForeignKey("parentId")]
         public virtual Category Parent {get;set;}
@@ -30,6 +31,7 @@ namespace contentapi.Models
         public string name {get;set;}
 
         public string description {get;set;}
+        public string type {get;set;}
 
         [Required(AllowEmptyStrings = true)]
         public List<long> childrenIds {get;set;}
