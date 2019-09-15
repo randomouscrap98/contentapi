@@ -88,11 +88,17 @@ namespace contentapi.Controllers
             return await base.Post(item);
         }
 
+        //Temp class stuff to make life... easier?
+        public class RegistrationData
+        {
+            public string email {get;set;}
+        }
+
         [HttpPost("sendemail")]
         [AllowAnonymous]
-        public async Task<ActionResult> SendRegistrationEmail([FromBody]string email)
+        public async Task<ActionResult> SendRegistrationEmail([FromBody]RegistrationData data)
         {
-            var foundUser = await context.Users.FirstOrDefaultAsync(x => x.email == email);
+            var foundUser = await context.Users.FirstOrDefaultAsync(x => x.email == data.email);
 
             if(foundUser == null)
                 return BadRequest("No user with that email");
@@ -101,7 +107,7 @@ namespace contentapi.Controllers
 
             using(var message = new MailMessage())
             {
-                message.To.Add(new MailAddress(email));
+                message.To.Add(new MailAddress(data.email));
                 message.From = new MailAddress(emailConfig.User);
                 message.Subject = $"{emailConfig.SubjectFront} - Confirm Email";
                 message.Body = $"Your confirmation code is {foundUser.registerCode}";
@@ -118,14 +124,20 @@ namespace contentapi.Controllers
             return Ok("Email sent");
         }
 
+        //Temp class stuff to make life... easier?
+        public class ConfirmationData
+        {
+            public string confirmationKey {get;set;}
+        }
+
         [HttpPost("confirm")]
         [AllowAnonymous]
-        public async Task<ActionResult> ConfirmEmail([FromBody]string confirmationKey)
+        public async Task<ActionResult> ConfirmEmail([FromBody]ConfirmationData data)
         {
-            if(string.IsNullOrEmpty(confirmationKey ))
+            if(string.IsNullOrEmpty(data.confirmationKey))
                 return BadRequest("Must provide a confirmation key in the body");
 
-            var foundUser = await context.Users.FirstOrDefaultAsync(x => x.registerCode == confirmationKey);
+            var foundUser = await context.Users.FirstOrDefaultAsync(x => x.registerCode == data.confirmationKey);
 
             if(foundUser == null)
                 return BadRequest("No user found with confirmation key");
