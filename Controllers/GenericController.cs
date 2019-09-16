@@ -24,6 +24,7 @@ namespace contentapi.Controllers
         public ActionCarryingException(string message, Exception inner) : base(message, inner) {}
     }
 
+    [Produces("application/json")]
     [Route("api/[controller]")]
     [ApiController]
     [Authorize]
