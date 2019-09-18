@@ -82,6 +82,19 @@ namespace contentapi.Controllers
             };
         }
 
+        [HttpGet("me")]
+        public async Task<ActionResult<UserView>> Me()
+        {
+            try
+            {
+                return await GetSingle(GetCurrentUid());
+            }
+            catch(Exception ex)
+            {
+                return BadRequest(ex.Message);
+            }
+        }
+
         [AllowAnonymous]
         public async override Task<ActionResult<UserView>> Post([FromBody]UserCredential item)
         {

@@ -50,6 +50,24 @@ namespace contentapi.Controllers
                 throw new ActionCarryingException<V>() {Result = result};
         }
 
+        protected long GetCurrentUid()
+        {
+            if(User == null)
+                throw new InvalidOperationException("User is not set! Maybe there was no auth?");
+
+            var value = User.FindFirstValue("uid");
+            
+            if(value == null)
+                throw new InvalidOperationException("No uid field in User! Maybe there was no auth?");
+
+            long result = 0;
+
+            if(long.TryParse(User.FindFirstValue("uid"), out result))
+                return result;
+            else
+                throw new InvalidOperationException("UID in incorrect format! How did this happen???");
+        }
+
         protected virtual Task Post_PreConversionCheck(P item) { return Task.CompletedTask; }
         protected virtual T Post_ConvertItem(P item) { return mapper.Map<T>(item); }
         protected virtual Task Post_PreInsertCheck(T item) 
