@@ -13,6 +13,10 @@ namespace contentapi
     {
         public ContentDbContext(DbContextOptions<ContentDbContext> options) : base(options) { }
 
+        public DbSet<User> Users {get;set;}
+        public DbSet<Category> Categories {get;set;}
+        public DbSet<Content> Content {get;set;}
+
         public IQueryable<T> GetAll<T>(params long[] ids) where T : GenericModel 
         {
             var set = Set<T>();
@@ -20,6 +24,9 @@ namespace contentapi
 
             if(ids != null && ids.Length > 0)
                 result = set.Where(x => ids.Contains(x.id));
+
+            //Remove deleted stuff
+            result = result.Where(x => (x.status & (int)ModelStatus.Deleted) == 0);
 
             return result;
         }

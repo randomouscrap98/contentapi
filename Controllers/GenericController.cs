@@ -78,6 +78,15 @@ namespace contentapi.Controllers
         protected virtual T Put_ConvertItem(P item, T existing) { return mapper.Map<P, T>(item, existing); }
         protected virtual Task Put_PreInsertCheck(T existing) { return Task.CompletedTask; }
 
+        public Object GetGenericCollectionResult<W>(IEnumerable<W> items, IEnumerable<string> links = null) where W : GenericModel
+        {
+            return new { 
+                collection = items.Select(x => mapper.Map<V>(x)),
+                _links = links ?? new List<string>(), //one day, turn this into HATEOS
+                _claims = User.Claims.ToDictionary(x => x.Type, x => x.Value)
+            };
+        }
+
         [HttpGet]
         [AllowAnonymous]
         public async virtual Task<ActionResult<Object>> Get()
@@ -85,11 +94,7 @@ namespace contentapi.Controllers
             //Find a way to "fix" these results so you can do fancy sorting/etc.
             //Will we need this on every endpoint? Won't that be disgusting? How do we
             //make that "restful"? Look up pagination in REST
-            return new { 
-                collection = (await context.GetAll<T>().ToListAsync()).Select(x => mapper.Map<V>(x)),
-                _links = new List<string>(), //one day, turn this into HATEOS
-                _claims = User.Claims.ToDictionary(x => x.Type, x => x.Value)
-            };
+            return GetGenericCollectionResult<T>(await context.GetAll<T>().ToListAsync());
         }
 
         [HttpGet("{id}")]

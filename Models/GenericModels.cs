@@ -12,6 +12,12 @@ namespace contentapi.Models
         public long status {get;set;}
     }
 
+    [Flags]
+    public enum ModelStatus
+    {
+        Deleted = 1
+    }
+
     public class GenericView
     {
         public long id {get;set;}
