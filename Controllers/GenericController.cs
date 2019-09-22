@@ -28,7 +28,7 @@ namespace contentapi.Controllers
     [Route("api/[controller]")]
     [ApiController]
     [Authorize]
-    public abstract class GenericControllerRaw<T,V,P> : ControllerBase where T : GenericModel where V : class
+    public class GenericControllerRaw<T,V,P> : ControllerBase where T : GenericModel where V : class
     {
         protected ContentDbContext context;
         protected IMapper mapper;
@@ -40,7 +40,7 @@ namespace contentapi.Controllers
         }
 
         //You MUST say how to get your objects! They're probably from the context!
-        public abstract DbSet<T> GetObjects();
+        //public abstract DbSet<T> GetObjects();
         
         protected void ThrowAction(ActionResult<V> result, string message = null)
         {
@@ -90,7 +90,7 @@ namespace contentapi.Controllers
             //Will we need this on every endpoint? Won't that be disgusting? How do we
             //make that "restful"? Look up pagination in REST
             return new { 
-                collection = (await GetObjects().ToListAsync()).Select(x => mapper.Map<V>(x)),
+                collection = (await context.GetAll<T>().ToListAsync()).Select(x => mapper.Map<V>(x)),
                 _links = new List<string>(), //one day, turn this into HATEOS
                 _claims = User.Claims.ToDictionary(x => x.Type, x => x.Value)
             };
@@ -100,12 +100,15 @@ namespace contentapi.Controllers
         [AllowAnonymous]
         public async virtual Task<ActionResult<V>> GetSingle(long id)
         {
-            var item = await GetObjects().FindAsync(id);
-
-            if(item == null)
+            try
+            {
+                var item = await context.GetSingleAsync<T>(id); //FindAsync(id);
+                return mapper.Map<V>(item);
+            }
+            catch //(Exception ex)
+            {
                 return NotFound();
-
-            return mapper.Map<V>(item);
+            }
         }
 
         [HttpPost]
@@ -123,7 +126,7 @@ namespace contentapi.Controllers
                 await Post_PreInsertCheck(newThing);
 
                 //Actually add the object??
-                await GetObjects().AddAsync(newThing);
+                await context.Set<T>().AddAsync(newThing);
                 await context.SaveChangesAsync();
 
                 return CreatedAtAction(nameof(GetSingle), new { id = newThing.id }, mapper.Map<V>(newThing));
@@ -139,8 +142,10 @@ namespace contentapi.Controllers
         {
             try
             {
+                //var set = context.Set<T>();
+
                 //First, see if our "existing" object (by id) even exists
-                var existing = await GetObjects().FindAsync(id);
+                var existing = await context.GetSingleAsync<T>(id); //set.FirstAsync(x => x.id == id); //.FindAsync(id);
 
                 if (existing == null)
                     return NotFound();
@@ -155,7 +160,7 @@ namespace contentapi.Controllers
                 await Put_PreInsertCheck(existing);
 
                 //Actually update the object now? I hope???
-                GetObjects().Update(existing);
+                context.Set<T>().Update(existing);
                 await context.SaveChangesAsync();
 
                 return CreatedAtAction(nameof(GetSingle), new { id = existing.id }, mapper.Map<V>(existing));
@@ -167,7 +172,7 @@ namespace contentapi.Controllers
         }
     }
 
-    public abstract class GenericController<T,V> : GenericControllerRaw<T,V,V> where T : GenericModel where V : GenericView 
+    public class GenericController<T,V> : GenericControllerRaw<T,V,V> where T : GenericModel where V : GenericView 
     {
         public GenericController(ContentDbContext context, IMapper mapper) : base(context, mapper){}
         protected override Task Put_PreConversionCheck(V item, T existing) 

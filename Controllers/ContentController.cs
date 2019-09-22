@@ -20,10 +20,10 @@ namespace contentapi.Controllers
     {
         public ContentController(ContentDbContext context, IMapper mapper):base(context, mapper) { }
 
-        public override DbSet<Content> GetObjects()
-        {
-            return context.Content;
-        }
+        //public override DbSet<Content> GetObjects()
+        //{
+        //    return context.Content;
+        //}
 
         protected override async Task Post_PreInsertCheck(Content content)
         {

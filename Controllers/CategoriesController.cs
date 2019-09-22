@@ -20,10 +20,10 @@ namespace contentapi.Controllers
     {
         public CategoriesController(ContentDbContext context, IMapper mapper):base(context, mapper) { }
 
-        public override DbSet<Category> GetObjects()
-        {
-            return context.Categories;
-        }
+        //public override DbSet<Category> GetObjects()
+        //{
+        //    return context.Categories;
+        //}
 
         protected override async Task Post_PreInsertCheck(Category category)
         {
@@ -31,10 +31,16 @@ namespace contentapi.Controllers
 
             if(category.parentId != null)
             {
-                var parentCategory = await context.Categories.FindAsync(category.parentId);
-
-                if(parentCategory == null)
+                try
+                {
+                    var parentCategory = await context.GetSingleAsync<Category>((long)category.parentId); //context.GetAll()//Categories.FindAsync(category.parentId);
+                }
+                catch
+                {
                     ThrowAction(BadRequest("Nonexistent parent category!"));
+                }
+
+                //if(parentCategory == null)
             }
         }
     }

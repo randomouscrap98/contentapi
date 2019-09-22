@@ -50,7 +50,7 @@ namespace contentapi.Controllers
             this.emailConfig = emailConfig;
         }
 
-        public override DbSet<User> GetObjects() { return context.Users; }
+        //public override DbSet<User> GetObjects() { return context.Users; }
         
         protected override async Task Post_PreConversionCheck(UserCredential user)
         {
@@ -61,7 +61,7 @@ namespace contentapi.Controllers
             if(user.email == null)
                 ThrowAction(BadRequest("Must provide an email!"));
 
-            var existing = await context.Users.FirstOrDefaultAsync(x => x.username == user.username || x.email == user.email);
+            var existing = await context.GetAll<User>().FirstOrDefaultAsync(x => x.username == user.username || x.email == user.email);
 
             if(existing != null)
                 ThrowAction(BadRequest("This user already seems to exist!"));
@@ -111,7 +111,7 @@ namespace contentapi.Controllers
         [AllowAnonymous]
         public async Task<ActionResult> SendRegistrationEmail([FromBody]RegistrationData data)
         {
-            var foundUser = await context.Users.FirstOrDefaultAsync(x => x.email == data.email);
+            var foundUser = await context.GetAll<User>().FirstOrDefaultAsync(x => x.email == data.email);
 
             if(foundUser == null)
                 return BadRequest("No user with that email");
@@ -150,14 +150,15 @@ namespace contentapi.Controllers
             if(string.IsNullOrEmpty(data.confirmationKey))
                 return BadRequest("Must provide a confirmation key in the body");
 
-            var foundUser = await context.Users.FirstOrDefaultAsync(x => x.registerCode == data.confirmationKey);
+            var users = context.GetAll<User>();
+            var foundUser = await users.FirstOrDefaultAsync(x => x.registerCode == data.confirmationKey);
 
             if(foundUser == null)
                 return BadRequest("No user found with confirmation key");
 
             foundUser.registerCode = null;
 
-            GetObjects().Update(foundUser);
+            context.Set<User>().Update(foundUser);
             await context.SaveChangesAsync();
 
             return Ok("Email Confirmed");
@@ -168,11 +169,12 @@ namespace contentapi.Controllers
         public async Task<ActionResult<string>> Authenticate([FromBody]UserCredential user)
         {
             User foundUser = null;
+            var users = context.GetAll<User>();
 
             if(user.username != null)
-                foundUser = await context.Users.FirstOrDefaultAsync(x => x.username == user.username);
+                foundUser = await users.FirstOrDefaultAsync(x => x.username == user.username);
             else if (user.email != null)
-                foundUser = await context.Users.FirstOrDefaultAsync(x => x.email == user.email);
+                foundUser = await users.FirstOrDefaultAsync(x => x.email == user.email);
 
             //Should this be the same as bad password? eeeehhhh
             if(foundUser == null)
