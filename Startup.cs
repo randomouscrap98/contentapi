@@ -58,8 +58,10 @@ namespace contentapi
             var mapperConfig = new MapperConfiguration(cfg => 
             {
                 cfg.CreateMap<User,UserView>();
-                cfg.CreateMap<Category,CategoryView>().ForMember(dest => dest.childrenIds, opt => opt.MapFrom(src => src.Children.Select(x => x.id)));
+                //cfg.CreateMap<Category,CategoryView>().ForMember(dest => dest.childrenIds, opt => opt.MapFrom(src => src.Children.Select(x => x.id)));
+                cfg.CreateMap<Category, CategoryView>();
                 cfg.CreateMap<CategoryView,Category>();
+                //cfg.CreateMap<
             }); 
             services.AddSingleton(mapperConfig.CreateMapper());
 

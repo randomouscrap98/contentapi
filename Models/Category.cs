@@ -32,8 +32,5 @@ namespace contentapi.Models
 
         public string description {get;set;}
         public string type {get;set;}
-
-        [Required(AllowEmptyStrings = true)]
-        public List<long> childrenIds {get;set;}
     }
 }
