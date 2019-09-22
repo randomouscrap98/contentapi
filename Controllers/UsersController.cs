@@ -50,8 +50,6 @@ namespace contentapi.Controllers
             this.emailConfig = emailConfig;
         }
 
-        //public override DbSet<User> GetObjects() { return context.Users; }
-        
         protected override async Task Post_PreConversionCheck(UserCredential user)
         {
             //One day, fix these so they're the "standard" bad object request from model validation!!

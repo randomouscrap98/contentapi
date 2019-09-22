@@ -24,7 +24,6 @@ namespace contentapi.Controllers
         public ActionCarryingException(string message, Exception inner) : base(message, inner) {}
     }
 
-    //[Produces("application/json")]
     [Route("api/[controller]")]
     [ApiController]
     [Authorize]
@@ -39,9 +38,6 @@ namespace contentapi.Controllers
             this.mapper = mapper;
         }
 
-        //You MUST say how to get your objects! They're probably from the context!
-        //public abstract DbSet<T> GetObjects();
-        
         protected void ThrowAction(ActionResult<V> result, string message = null)
         {
             if(message != null)
