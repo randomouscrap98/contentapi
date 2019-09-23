@@ -61,7 +61,12 @@ namespace contentapi
                 //cfg.CreateMap<Category,CategoryView>().ForMember(dest => dest.childrenIds, opt => opt.MapFrom(src => src.Children.Select(x => x.id)));
                 cfg.CreateMap<Category, CategoryView>();
                 cfg.CreateMap<CategoryView,Category>();
-                //cfg.CreateMap<
+                cfg.CreateMap<Content, ContentView>().ForMember(dest => dest.accessList, opt => opt.MapFrom(src => src.AccessList.ToDictionary(x => x.userId, y => y.access)));
+                cfg.CreateMap<ContentView, Content>().ForMember(dest => dest.AccessList, opt => opt.MapFrom(src => src.accessList.Select(x => new ContentAccess() 
+                {
+                    access = x.Value,
+                    userId = x.Key,
+                }).ToList()));
             }); 
             services.AddSingleton(mapperConfig.CreateMapper());
             services.AddSingleton(new PermissionService());

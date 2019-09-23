@@ -103,6 +103,7 @@ namespace contentapi.Controllers
             //Make sure some fields are like... yeah
             item.createDate = DateTime.Now;
             item.id = 0;
+            item.status = 0;
             return Task.CompletedTask;
         }
 

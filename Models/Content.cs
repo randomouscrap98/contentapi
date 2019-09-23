@@ -13,7 +13,7 @@ namespace contentapi.Models
         public string baseAccess {get;set;}
 
         public virtual User User {get; set;}
-        public virtual List<ContentAccess>  accessList {get;set;}= new List<ContentAccess>();
+        public virtual List<ContentAccess>  AccessList {get;set;} //= new List<ContentAccess>();
     }
 
     public class ContentView : GenericView

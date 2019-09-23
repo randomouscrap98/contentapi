@@ -9,7 +9,7 @@ namespace contentapi.Models
         public string access {get;set;}
         public int contentId {get;set;}
 
-        public virtual User user {get;set;}
-        public virtual Content content {get;set;}
+        public virtual User User {get;set;}
+        public virtual Content Content {get;set;}
     }
 }
