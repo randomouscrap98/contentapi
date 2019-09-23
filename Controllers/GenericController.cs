@@ -31,11 +31,13 @@ namespace contentapi.Controllers
     {
         protected ContentDbContext context;
         protected IMapper mapper;
+        protected PermissionService permissionService;
 
-        public GenericControllerRaw(ContentDbContext context, IMapper mapper)
+        public GenericControllerRaw(ContentDbContext context, IMapper mapper, PermissionService permissionService)
         {
             this.context = context;
             this.mapper = mapper;
+            this.permissionService = permissionService;
         }
 
         protected void ThrowAction(ActionResult<V> result, string message = null)
@@ -46,22 +48,52 @@ namespace contentapi.Controllers
                 throw new ActionCarryingException<V>() {Result = result};
         }
 
-        protected long GetCurrentUid()
+        protected string GetCurrentField(string field)
         {
             if(User == null)
                 throw new InvalidOperationException("User is not set! Maybe there was no auth?");
 
-            var value = User.FindFirstValue("uid");
+            var value = User.FindFirstValue(field);
             
             if(value == null)
-                throw new InvalidOperationException("No uid field in User! Maybe there was no auth?");
+                throw new InvalidOperationException($"No {field} field in User! Maybe there was no auth?");
 
+            return value;
+        }
+
+        protected long GetCurrentUid()
+        {
             long result = 0;
 
-            if(long.TryParse(User.FindFirstValue("uid"), out result))
+            if(long.TryParse(GetCurrentField("uid"), out result))
                 return result;
             else
                 throw new InvalidOperationException("UID in incorrect format! How did this happen???");
+        }
+
+        protected async Task<User> GetCurrentUserAsync()
+        {
+            return await context.Users.FindAsync(GetCurrentUid());
+        }
+
+        //protected Role GetCurrentRole()
+        //{
+        //    Role result;
+
+        //    if(Role.TryParse(GetCurrentField("role"), out result))
+        //        return result;
+        //    else
+        //        throw new InvalidOperationException("Role in incorrect format! How did this happen???");
+        //}
+
+        protected async Task<bool> CanUserAsync(Permission permission)
+        {
+            var user = await GetCurrentUserAsync();
+
+            if(user == null)
+                return false;
+
+            return permissionService.CanDo(user.role, permission);
         }
 
         protected virtual Task Post_PreConversionCheck(P item) { return Task.CompletedTask; }
@@ -175,7 +207,7 @@ namespace contentapi.Controllers
 
     public class GenericController<T,V> : GenericControllerRaw<T,V,V> where T : GenericModel where V : GenericView 
     {
-        public GenericController(ContentDbContext context, IMapper mapper) : base(context, mapper){}
+        public GenericController(ContentDbContext context, IMapper mapper, PermissionService permissionService) : base(context, mapper, permissionService){}
         protected override Task Put_PreConversionCheck(V item, T existing) 
         { 
             item.createDate = existing.createDate;

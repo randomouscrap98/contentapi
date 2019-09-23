@@ -64,6 +64,7 @@ namespace contentapi
                 //cfg.CreateMap<
             }); 
             services.AddSingleton(mapperConfig.CreateMapper());
+            services.AddSingleton(new PermissionService());
 
             services.AddCors();
             services.AddMvc().SetCompatibilityVersion(CompatibilityVersion.Version_2_2);

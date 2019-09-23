@@ -18,11 +18,14 @@ namespace contentapi.Controllers
 {
     public class CategoriesController : GenericController<Category, CategoryView>
     {
-        public CategoriesController(ContentDbContext context, IMapper mapper):base(context, mapper) { }
+        public CategoriesController(ContentDbContext context, IMapper mapper, PermissionService permissionService):base(context, mapper, permissionService) { }
 
         protected override async Task Post_PreInsertCheck(Category category)
         {
             await base.Post_PreInsertCheck(category);
+
+            if(!await CanUserAsync(Permission.CreateCategory))
+                ThrowAction(Unauthorized("No permission to create categories"));
 
             if(category.parentId != null)
             {

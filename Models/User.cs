@@ -14,12 +14,14 @@ namespace contentapi.Models
         public byte[] passwordHash { get; set; }
         public byte[] passwordSalt { get; set; }
         public string registerCode {get;set;}
+        public Role role {get;set;}
     }
 
     //This is the user as we give them out
     public class UserView : GenericView
     {
         public string username { get; set; }
+        public string role {get;set;}
     }
 
     //This is the user as they sign in (or create account?)

@@ -18,7 +18,7 @@ namespace contentapi.Controllers
 {
     public class ContentController : GenericController<Content, ContentView>
     {
-        public ContentController(ContentDbContext context, IMapper mapper):base(context, mapper) { }
+        public ContentController(ContentDbContext context, IMapper mapper, PermissionService permissionService):base(context, mapper, permissionService) { }
 
         protected override async Task Post_PreInsertCheck(Content content)
         {

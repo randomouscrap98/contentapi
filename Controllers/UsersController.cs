@@ -44,7 +44,8 @@ namespace contentapi.Controllers
         protected UsersControllerConfig config;
         protected EmailConfig emailConfig;
 
-        public UsersController(ContentDbContext context, IMapper mapper, UsersControllerConfig config, EmailConfig emailConfig) : base (context, mapper)
+        public UsersController(ContentDbContext context, IMapper mapper, PermissionService permissionService, UsersControllerConfig config, EmailConfig emailConfig) : 
+            base (context, mapper, permissionService)
         {
             this.config = config;
             this.emailConfig = emailConfig;
@@ -190,6 +191,7 @@ namespace contentapi.Controllers
             {
                 Subject = new ClaimsIdentity(new Claim[] {
                     new Claim("uid", foundUser.id.ToString()) }),
+                    //new Claim("role", foundUser.role.ToString("G")) }),
                 Expires = DateTime.UtcNow.Add(config.TokenExpiration),
                 NotBefore = DateTime.UtcNow.AddMinutes(-30),
                 SigningCredentials = new SigningCredentials(
@@ -198,6 +200,7 @@ namespace contentapi.Controllers
             };
 
             var handler = new JwtSecurityTokenHandler();
+            handler.InboundClaimTypeMap.Clear();
             var token = handler.CreateToken(descriptor);
             var tokenString = handler.WriteToken(token);
             return tokenString;
