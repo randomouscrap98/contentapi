@@ -10,6 +10,7 @@ namespace contentapi.Models
         public string title {get;set;}
         public string content {get;set;}
         public string format {get;set;}
+        public string type {get;set;}
         public string baseAccess {get;set;}
 
         public virtual User User {get; set;}
@@ -22,6 +23,7 @@ namespace contentapi.Models
         public string title {get;set;}
         public string content {get;set;}
         public string format {get;set;}
+        public string type {get;set;}
 
         public string baseAccess {get;set;}
         public Dictionary<long, string> accessList {get;set;}

@@ -29,9 +29,18 @@ namespace contentapi.Controllers
     [Authorize]
     public class GenericControllerRaw<T,V,P> : ControllerBase where T : GenericModel where V : class
     {
+        //These may need to be configurable one day
+        public const int DefaultResultCount = 1000;
+        public const int MaxResultCount = 5000;
+        public const string IdSort = "id";
+        public const string CreateSort = "create";
+        public const string AscendingOrder = "asc";
+        public const string DescendingOrder = "desc";
+
         protected ContentDbContext context;
         protected IMapper mapper;
         protected PermissionService permissionService;
+
 
         public GenericControllerRaw(ContentDbContext context, IMapper mapper, PermissionService permissionService)
         {
@@ -40,6 +49,9 @@ namespace contentapi.Controllers
             this.permissionService = permissionService;
         }
 
+        // *************
+        // * UTILITIES *
+        // *************
         protected void ThrowAction(ActionResult<V> result, string message = null)
         {
             if(message != null)
@@ -76,16 +88,6 @@ namespace contentapi.Controllers
             return await context.Users.FindAsync(GetCurrentUid());
         }
 
-        //protected Role GetCurrentRole()
-        //{
-        //    Role result;
-
-        //    if(Role.TryParse(GetCurrentField("role"), out result))
-        //        return result;
-        //    else
-        //        throw new InvalidOperationException("Role in incorrect format! How did this happen???");
-        //}
-
         protected async Task<bool> CanUserAsync(Permission permission)
         {
             var user = await GetCurrentUserAsync();
@@ -94,6 +96,19 @@ namespace contentapi.Controllers
                 return false;
 
             return permissionService.CanDo(user.role, permission);
+        }
+
+        // ************
+        // * OVERRIDE *
+        // ************
+        protected virtual System.Linq.Expressions.Expression<Func<W, object>> GetSorter<W>(string sort) where W : GenericModel 
+        {
+            if(sort == IdSort)
+                return (x) => ((GenericModel)x).id;
+            else if(sort == CreateSort)
+                return (x) => ((GenericModel)x).createDate;
+
+            return null;
         }
 
         protected virtual Task Post_PreConversionCheck(P item) { return Task.CompletedTask; }
@@ -111,7 +126,8 @@ namespace contentapi.Controllers
         protected virtual T Put_ConvertItem(P item, T existing) { return mapper.Map<P, T>(item, existing); }
         protected virtual Task Put_PreInsertCheck(T existing) { return Task.CompletedTask; }
 
-        public Object GetGenericCollectionResult<W>(IEnumerable<W> items, IEnumerable<string> links = null) where W : GenericModel
+        //How to RETURN items (the object we return... maybe make it a real class)
+        public virtual Object GetGenericCollectionResult<W>(IEnumerable<W> items, IEnumerable<string> links = null) where W : GenericModel
         {
             return new { 
                 collection = items.Select(x => mapper.Map<V>(x)),
@@ -120,15 +136,54 @@ namespace contentapi.Controllers
             };
         }
 
+        public async virtual Task<ActionResult<Object>> GenericCollectionEndpoint<W>(IQueryable<W> originSet, CollectionQuery query) where W : GenericModel
+        {
+            //Set some nice defaults for query parameters
+            if(query.count <= 0)
+                query.count = DefaultResultCount;
+
+            if(query.count > MaxResultCount)
+                return BadRequest($"Too many objects! Max: {MaxResultCount}");
+
+            if(string.IsNullOrWhiteSpace(query.sort))
+                query.sort = CreateSort;
+
+            var order = query.order.ToLower();
+            IQueryable<W> orderedSet = originSet;
+            System.Linq.Expressions.Expression<Func<W, object>> sorter = GetSorter<W>(query.sort);
+
+            if(sorter != null)
+            {
+                if (string.IsNullOrWhiteSpace(order) || order == AscendingOrder)
+                    orderedSet = orderedSet.OrderBy(sorter);
+                else if (order == DescendingOrder)
+                    orderedSet = orderedSet.OrderByDescending(sorter);
+                else
+                    return BadRequest($"Unknown order type ({AscendingOrder}/{DescendingOrder})");
+            }
+
+            IQueryable<W> slicedSet = orderedSet;
+
+            try
+            {
+                slicedSet = slicedSet.Skip(query.offset).Take(query.count);
+            }
+            catch
+            {
+                return BadRequest("Offset/count broke set; this is API laziness");
+            }
+
+            return GetGenericCollectionResult<W>(await slicedSet.ToListAsync());
+        }
+
+
         [HttpGet]
         [AllowAnonymous]
-        public async virtual Task<ActionResult<Object>> Get()
+        public async virtual Task<ActionResult<Object>> Get([FromQuery]CollectionQuery query)
         {
-            //Find a way to "fix" these results so you can do fancy sorting/etc.
-            //Will we need this on every endpoint? Won't that be disgusting? How do we
-            //make that "restful"? Look up pagination in REST
-            return GetGenericCollectionResult<T>(await context.GetAll<T>().ToListAsync());
+            return await GenericCollectionEndpoint(context.GetAll<T>(), query);
         }
+
 
         [HttpGet("{id}")]
         [AllowAnonymous]
@@ -136,10 +191,10 @@ namespace contentapi.Controllers
         {
             try
             {
-                var item = await context.GetSingleAsync<T>(id); //FindAsync(id);
+                var item = await context.GetSingleAsync<T>(id);
                 return mapper.Map<V>(item);
             }
-            catch //(Exception ex)
+            catch
             {
                 return NotFound();
             }
@@ -176,10 +231,8 @@ namespace contentapi.Controllers
         {
             try
             {
-                //var set = context.Set<T>();
-
                 //First, see if our "existing" object (by id) even exists
-                var existing = await context.GetSingleAsync<T>(id); //set.FirstAsync(x => x.id == id); //.FindAsync(id);
+                var existing = await context.GetSingleAsync<T>(id); 
 
                 if (existing == null)
                     return NotFound();
