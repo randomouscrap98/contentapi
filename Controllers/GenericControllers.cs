@@ -12,9 +12,19 @@ using AutoMapper;
 using System.Linq;
 using System.Collections.Generic;
 using contentapi.Models;
+using contentapi.Services;
 
 namespace contentapi.Controllers
 {
+    //Query parameters (from url) for searching/querying collections
+    public class CollectionQuery
+    {
+        public int offset {get;set;} = 0;
+        public int count {get;set;} = 0;
+        public string sort {get;set;} = "";
+        public string order {get;set;} = "";
+    }
+
     public class ActionCarryingException<T> : Exception
     {
         public ActionResult<T> Result;
@@ -274,7 +284,7 @@ namespace contentapi.Controllers
     {
         protected AccessService accessService;
 
-        public AccessController(ContentDbContext context, IMapper mapper, PermissionService permissionService, AccessService accessService) : base(context, mapper, permissionService) 
+        public AccessController(ContentDbContext c, IMapper m, PermissionService p, AccessService accessService) : base(c, m, p) 
         { 
             this.accessService = accessService;
         }
@@ -285,16 +295,21 @@ namespace contentapi.Controllers
                 ThrowAction(BadRequest("Malformed access string (CRUD)"));
         }
 
-        protected override Task Post_PreConversionCheck(V view)
+        protected override async Task Post_PreConversionCheck(V view)
         {
+            await base.Post_PreConversionCheck(view);
             CheckAccessFormat(view);
-            return Task.CompletedTask;
         }
 
-        protected override Task Put_PreConversionCheck(V view, T existing)
+        protected override async Task Put_PreConversionCheck(V view, T existing)
         {
+            await base.Put_PreConversionCheck(view, existing);
             CheckAccessFormat(view);
-            return Task.CompletedTask;
+        }
+
+        protected override async Task Put_PreInsertCheck(T existing) 
+        { 
+            await base.Put_PreInsertCheck(existing);
         }
 
         protected override async Task Post_PreInsertCheck(T model)

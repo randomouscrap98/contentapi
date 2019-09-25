@@ -6,6 +6,7 @@ using System.Threading.Tasks;
 using AutoMapper;
 using contentapi.Controllers;
 using contentapi.Models;
+using contentapi.Services;
 using Microsoft.AspNetCore.Authentication.JwtBearer;
 using Microsoft.AspNetCore.Builder;
 using Microsoft.AspNetCore.Hosting;

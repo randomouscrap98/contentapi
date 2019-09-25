@@ -15,6 +15,7 @@ using System.Security.Claims;
 using Microsoft.AspNetCore.Authorization;
 using System.Net.Mail;
 using System.Net;
+using contentapi.Services;
 
 namespace contentapi.Controllers
 {
@@ -53,6 +54,8 @@ namespace contentapi.Controllers
 
         protected override async Task Post_PreConversionCheck(UserCredential user)
         {
+            await base.Post_PreConversionCheck(user);
+
             //One day, fix these so they're the "standard" bad object request from model validation!!
             //Perhaps do custom validation!
             if(user.username == null)

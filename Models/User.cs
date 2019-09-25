@@ -5,6 +5,19 @@ using Microsoft.AspNetCore.Mvc;
 
 namespace contentapi.Models
 {
+    public enum Role
+    {
+        None = 0,
+        SiteAdministrator = 20
+    }
+
+    public enum Permission
+    {
+        CreateCategory,
+        UpdateCategory,
+        DeleteCategory
+    }
+
     //This is the user as they are in the database
     [Table("users")]
     public class User : GenericModel

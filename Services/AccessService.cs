@@ -2,7 +2,7 @@ using System.Collections.Generic;
 using System.Linq;
 using contentapi.Models;
 
-namespace contentapi
+namespace contentapi.Services
 {
     public class AccessService
     {
@@ -42,9 +42,6 @@ namespace contentapi
         public bool CheckAccessFormat(GenericAccessView accessView)
         {
             return (CheckAccessFormat(accessView.baseAccess) && accessView.accessList.All(x => CheckAccessFormat(x.Value)));
-
-            //if(!(CheckAccessFormat(content.baseAccess) && content.accessList.All(x => CheckAccessFormat(x.Value))))
-            //    ThrowAction(BadRequest("Malformed access string (CRUD)"));
         }
     }
 }

@@ -1,21 +1,9 @@
 using System.Collections.Generic;
 using System.Linq;
+using contentapi.Models;
 
-namespace contentapi.Models
+namespace contentapi.Services
 {
-    public enum Role
-    {
-        None = 0,
-        SiteAdministrator = 20
-    }
-
-    public enum Permission
-    {
-        CreateCategory,
-        UpdateCategory,
-        DeleteCategory
-    }
-
     public class PermissionService
     {
         public Dictionary<Role, List<Permission>> ExtraGrants = new Dictionary<Role, List<Permission>>()
