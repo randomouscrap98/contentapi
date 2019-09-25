@@ -37,7 +37,7 @@ namespace contentapi.Controllers
     [Route("api/[controller]")]
     [ApiController]
     [Authorize]
-    public class GenericControllerRaw<T,V,P> : ControllerBase where T : GenericModel where V : class
+    public abstract class GenericControllerRaw<T,V,P> : ControllerBase where T : GenericModel where V : class
     {
         //These may need to be configurable one day
         public const int DefaultResultCount = 1000;
@@ -68,6 +68,28 @@ namespace contentapi.Controllers
                 throw new ActionCarryingException<V>(message) {Result = result};
             else
                 throw new ActionCarryingException<V>() {Result = result};
+        }
+
+        protected async Task LogAct(LogAction action, Action<ActionLog> setField)
+        {
+            var log = new ActionLog()
+            {
+                actionUserId = GetCurrentUid(),
+                createDate = DateTime.Now,
+                contentId = null,
+                categoryId = null,
+                userId = null
+            };
+
+            setField(log);
+
+            await context.Logs.AddAsync(log);
+            await context.SaveChangesAsync();
+        }
+
+        protected async Task LogAct(LogAction action, long id)
+        {
+            await LogAct(action, (l) => SetLogField(l, id));
         }
 
         protected string GetCurrentField(string field)
@@ -111,6 +133,10 @@ namespace contentapi.Controllers
         // ************
         // * OVERRIDE *
         // ************
+
+        //GOTTA OVERRIDE THIS 
+        protected abstract void SetLogField(ActionLog log, long id);
+
         protected virtual System.Linq.Expressions.Expression<Func<W, object>> GetSorter<W>(string sort) where W : GenericModel 
         {
             if(sort == IdSort)
@@ -202,6 +228,7 @@ namespace contentapi.Controllers
             try
             {
                 var item = await context.GetSingleAsync<T>(id);
+                await LogAct(LogAction.View, id);
                 return mapper.Map<V>(item);
             }
             catch
@@ -227,6 +254,8 @@ namespace contentapi.Controllers
                 //Actually add the object??
                 await context.Set<T>().AddAsync(newThing);
                 await context.SaveChangesAsync();
+
+                await LogAct(LogAction.Create, newThing.id);
 
                 return CreatedAtAction(nameof(GetSingle), new { id = newThing.id }, mapper.Map<V>(newThing));
             }
@@ -260,6 +289,8 @@ namespace contentapi.Controllers
                 context.Set<T>().Update(existing);
                 await context.SaveChangesAsync();
 
+                await LogAct(LogAction.Update, existing.id);
+
                 return CreatedAtAction(nameof(GetSingle), new { id = existing.id }, mapper.Map<V>(existing));
             }
             catch(ActionCarryingException<V> ex)
@@ -269,7 +300,7 @@ namespace contentapi.Controllers
         }
     }
 
-    public class GenericController<T,V> : GenericControllerRaw<T,V,V> where T : GenericModel where V : GenericView 
+    public abstract class GenericController<T,V> : GenericControllerRaw<T,V,V> where T : GenericModel where V : GenericView 
     {
         public GenericController(ContentDbContext context, IMapper mapper, PermissionService permissionService) : base(context, mapper, permissionService){}
         protected override Task Put_PreConversionCheck(V item, T existing) 
@@ -280,7 +311,7 @@ namespace contentapi.Controllers
         }
     }
 
-    public class AccessController<T,V> : GenericController<T, V> where T : GenericAccessModel where V : GenericAccessView
+    public abstract class AccessController<T,V> : GenericController<T, V> where T : GenericAccessModel where V : GenericAccessView
     {
         protected AccessService accessService;
 

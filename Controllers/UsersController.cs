@@ -52,6 +52,8 @@ namespace contentapi.Controllers
             this.emailConfig = emailConfig;
         }
 
+        protected override void SetLogField(ActionLog log, long id) { log.userId = id; }
+
         protected override async Task Post_PreConversionCheck(UserCredential user)
         {
             await base.Post_PreConversionCheck(user);

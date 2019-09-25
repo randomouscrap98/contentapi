@@ -21,6 +21,8 @@ namespace contentapi.Controllers
     {
         public CategoriesController(ContentDbContext c, IMapper m, PermissionService p, AccessService a):base(c, m, p, a) { }
 
+        protected override void SetLogField(ActionLog log, long id) { log.categoryId = id; }
+
         protected override async Task Post_PreInsertCheck(Category category)
         {
             await base.Post_PreInsertCheck(category);

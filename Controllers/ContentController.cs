@@ -20,5 +20,7 @@ namespace contentapi.Controllers
     public class ContentController : AccessController<Content, ContentView>
     {
         public ContentController(ContentDbContext c, IMapper m, PermissionService p, AccessService a) : base(c, m, p, a) { }
+
+        protected override void SetLogField(ActionLog log, long id) { log.contentId = id; }
     }
 }

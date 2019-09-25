@@ -16,6 +16,7 @@ namespace contentapi
         public DbSet<User> Users {get;set;}
         public DbSet<Category> Categories {get;set;}
         public DbSet<Content> Content {get;set;}
+        public DbSet<ActionLog> Logs {get;set;}
 
         public IQueryable<T> GetAll<T>(params long[] ids) where T : GenericModel 
         {
