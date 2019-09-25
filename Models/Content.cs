@@ -5,16 +5,15 @@ using System.Linq;
 namespace contentapi.Models
 {
     [Table("content")]
-    public class Content : GenericModel, IGenericAccessModel
+    public class Content : GenericAccessModel, IGenericAccessModel
     {
         public long userId {get;set;}
         public string title {get;set;}
         public string content {get;set;}
         public string format {get;set;}
         public string type {get;set;}
-        public string baseAccess {get;set;}
 
-        public List<IGenericSingleAccess> GenericAccessList 
+        public override List<IGenericSingleAccess> GenericAccessList 
         {
             get { return AccessList.Cast<IGenericSingleAccess>().ToList(); }
         }

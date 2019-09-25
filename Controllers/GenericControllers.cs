@@ -269,4 +269,46 @@ namespace contentapi.Controllers
             return Task.CompletedTask;
         }
     }
+
+    public class AccessController<T,V> : GenericController<T, V> where T : GenericAccessModel where V : GenericAccessView
+    {
+        protected AccessService accessService;
+
+        public AccessController(ContentDbContext context, IMapper mapper, PermissionService permissionService, AccessService accessService) : base(context, mapper, permissionService) 
+        { 
+            this.accessService = accessService;
+        }
+
+        protected void CheckAccessFormat(GenericAccessView accessView)
+        {
+            if(!accessService.CheckAccessFormat(accessView))
+                ThrowAction(BadRequest("Malformed access string (CRUD)"));
+        }
+
+        protected override Task Post_PreConversionCheck(V view)
+        {
+            CheckAccessFormat(view);
+            return Task.CompletedTask;
+        }
+
+        protected override Task Put_PreConversionCheck(V view, T existing)
+        {
+            CheckAccessFormat(view);
+            return Task.CompletedTask;
+        }
+
+        protected override async Task Post_PreInsertCheck(T model)
+        {
+            await base.Post_PreInsertCheck(model);
+
+            if(model.GenericAccessList.Count > 0)
+            {
+                var userIds = model.GenericAccessList.Select(x => x.userId);
+                var users = await context.Users.Where(x => userIds.Contains(x.id)).ToListAsync();
+
+                if(users.Count != model.GenericAccessList.Count)
+                    ThrowAction(BadRequest("Bad access list: nonexistent / duplicate user"));
+            }
+        }
+    }
 }

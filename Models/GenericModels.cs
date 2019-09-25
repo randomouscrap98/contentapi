@@ -41,6 +41,12 @@ namespace contentapi.Models
         public long status {get;set;}
     }
 
+    public class GenericAccessModel : GenericModel, IGenericAccessModel
+    {
+        public string baseAccess {get;set;}
+        public virtual List<IGenericSingleAccess>  GenericAccessList {get {return null;}}
+    }
+
     public class GenericSingleAccess : GenericModel, IGenericSingleAccess
     {
         public long userId {get;set;} 

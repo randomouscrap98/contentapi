@@ -58,6 +58,7 @@ namespace contentapi
             var mapperConfig = new MapperConfiguration(cfg => 
             {
                 cfg.CreateMap<User,UserView>();
+                //Find a way to stop this duplicate code
                 cfg.CreateMap<Category, CategoryView>().ForMember(dest => dest.accessList, opt => opt.MapFrom(src => src.AccessList.ToDictionary(x => x.userId, y => y.access)));
                 cfg.CreateMap<CategoryView,Category>().ForMember(dest => dest.AccessList, opt => opt.MapFrom(src => src.accessList.Select(x => new CategoryAccess() 
                 {
@@ -73,6 +74,7 @@ namespace contentapi
             }); 
             services.AddSingleton(mapperConfig.CreateMapper());
             services.AddSingleton(new PermissionService());
+            services.AddSingleton(new AccessService());
 
             services.AddCors();
             services.AddMvc().SetCompatibilityVersion(CompatibilityVersion.Version_2_2);

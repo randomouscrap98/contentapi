@@ -16,9 +16,9 @@ using Microsoft.AspNetCore.Authorization;
 
 namespace contentapi.Controllers
 {
-    public class CategoriesController : GenericController<Category, CategoryView>
+    public class CategoriesController : AccessController<Category, CategoryView>
     {
-        public CategoriesController(ContentDbContext context, IMapper mapper, PermissionService permissionService):base(context, mapper, permissionService) { }
+        public CategoriesController(ContentDbContext c, IMapper m, PermissionService p, AccessService a):base(c, m, p, a) { }
 
         protected override async Task Post_PreInsertCheck(Category category)
         {

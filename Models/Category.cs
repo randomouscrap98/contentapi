@@ -10,15 +10,14 @@ namespace contentapi.Models
 {
     //This is the user as they are in the database
     [Table("categories")]
-    public class Category : GenericModel, IGenericAccessModel
+    public class Category : GenericAccessModel, IGenericAccessModel
     {
         public long? parentId {get;set;}
         public string name {get;set;}
         public string description {get;set;}
         public string type {get;set;}
-        public string baseAccess {get;set;}
 
-        public List<IGenericSingleAccess> GenericAccessList 
+        public override List<IGenericSingleAccess> GenericAccessList 
         {
             get { return AccessList.Cast<IGenericSingleAccess>().ToList(); }
         }
