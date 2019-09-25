@@ -4,12 +4,48 @@ using System.ComponentModel.DataAnnotations;
 
 namespace contentapi.Models
 {
-    public class GenericModel 
+    // **************
+    // * Interfaces *
+    // **************
+
+    public interface IGenericModel
+    {
+        long id {get; set;}
+        DateTime createDate{get;set;}
+        long status {get;set;}
+    }
+
+    public interface IGenericSingleAccess : IGenericModel
+    {
+        long userId {get;set;}
+        string access {get;set;}
+
+        User User {get;set;}
+    }
+
+    public interface IGenericAccessModel : IGenericModel
+    {
+        string baseAccess {get;set;}
+        List<IGenericSingleAccess>  GenericAccessList {get;}
+    }
+
+    // **********
+    // * Models *
+    // **********
+
+    public class GenericModel : IGenericModel
     {
         [Key]
         public long id {get; set;}
         public DateTime createDate{get;set;}
         public long status {get;set;}
+    }
+
+    public class GenericSingleAccess : GenericModel, IGenericSingleAccess
+    {
+        public long userId {get;set;} 
+        public string access {get;set;}
+        public virtual User User {get;set;}
     }
 
     [Flags]
@@ -18,6 +54,9 @@ namespace contentapi.Models
         Deleted = 1
     }
 
+    // *********
+    // * Views *
+    // *********
     public class GenericView
     {
         public long id {get;set;}
@@ -25,28 +64,9 @@ namespace contentapi.Models
         public List<string> _links {get;set;} = new List<string>();
     }
 
-
-
-    //public class GenericSingleAccess : GenericModel
-    //{
-    //    public long userId {get;set;}
-    //    public string access {get;set;}
-
-    //    public virtual User user {get;set;}
-    //}
-
-    //public class GenericAccessModel : GenericModel
-    //{
-    //    //public string inheritAccess {get;set;} //Some things don't use this, but if you're an access model, anything BELOW you need to inherit access perms
-
-    //    public string baseAccess {get;set;}
-    //    public virtual List<GenericSingleAccess>  accessList {get;set;}= new List<GenericSingleAccess>();
-    //}
-
-    //public class GenericAccessView : GenericView
-    //{
-    //    //public string defaultAccess {get;set;}
-    //    //0 is "default" (simple interface). What if users get rid of 0? it re-inherits OR ignores the removal maybe.
-    //    public Dictionary<long, string>  accessList {get;set;}= new Dictionary<long, string>();
-    //}
+    public class GenericAccessView : GenericView
+    {
+        public string baseAccess {get;set;}
+        public Dictionary<long, string>  accessList {get;set;}= new Dictionary<long, string>();
+    }
 }
