@@ -74,12 +74,22 @@ namespace contentapi.Controllers
         {
             var log = new ActionLog()
             {
-                actionUserId = GetCurrentUid(),
+                action = action,
                 createDate = DateTime.Now,
                 contentId = null,
                 categoryId = null,
                 userId = null
             };
+
+            try
+            {
+                log.actionUserId = GetCurrentUid();
+            }
+            catch
+            {
+                //Eventually we can log here... when are we adding logging?
+                return;
+            }
 
             setField(log);
 
@@ -127,7 +137,7 @@ namespace contentapi.Controllers
             if(user == null)
                 return false;
 
-            return permissionService.CanDo(user.role, permission);
+            return permissionService.CanDo((Role)user.role, permission);
         }
 
         // ************
