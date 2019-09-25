@@ -313,11 +313,12 @@ namespace contentapi.Controllers
     public abstract class GenericController<T,V> : GenericControllerRaw<T,V,V> where T : GenericModel where V : GenericView 
     {
         public GenericController(ContentDbContext context, IMapper mapper, PermissionService permissionService) : base(context, mapper, permissionService){}
-        protected override Task Put_PreConversionCheck(V item, T existing) 
+
+        protected override async Task Put_PreConversionCheck(V item, T existing) 
         { 
+            await base.Put_PreConversionCheck(item, existing);
             item.createDate = existing.createDate;
             item.id = existing.id;
-            return Task.CompletedTask;
         }
     }
 
