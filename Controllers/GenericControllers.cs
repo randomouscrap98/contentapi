@@ -25,9 +25,9 @@ namespace contentapi.Controllers
         public string order {get;set;} = "";
     }
 
-    public class ActionCarryingException<T> : Exception
+    public class ActionCarryingException : Exception
     {
-        public ActionResult<T> Result;
+        public ActionResult Result;
 
         public ActionCarryingException() : base() { }
         public ActionCarryingException(string message) : base(message) {}
@@ -51,6 +51,8 @@ namespace contentapi.Controllers
         protected IMapper mapper;
         protected PermissionService permissionService;
 
+        protected bool DoActionLog = true;
+
 
         public GenericControllerRaw(ContentDbContext context, IMapper mapper, PermissionService permissionService)
         {
@@ -62,16 +64,20 @@ namespace contentapi.Controllers
         // *************
         // * UTILITIES *
         // *************
-        protected void ThrowAction(ActionResult<V> result, string message = null)
+        protected void ThrowAction(ActionResult result, string message = null)
         {
             if(message != null)
-                throw new ActionCarryingException<V>(message) {Result = result};
+                throw new ActionCarryingException(message) {Result = result};
             else
-                throw new ActionCarryingException<V>() {Result = result};
+                throw new ActionCarryingException() {Result = result};
         }
 
         protected async Task LogAct(LogAction action, Action<ActionLog> setField)
         {
+            //Do NOT LOG if we're not set to
+            if(!DoActionLog)
+                return;
+
             var log = new ActionLog()
             {
                 action = action,
@@ -117,12 +123,15 @@ namespace contentapi.Controllers
 
         protected long GetCurrentUid()
         {
-            long result = 0;
-
-            if(long.TryParse(GetCurrentField("uid"), out result))
-                return result;
-            else
-                throw new InvalidOperationException("UID in incorrect format! How did this happen???");
+            try
+            {
+                return long.Parse(GetCurrentField("uid"));
+            }
+            catch(Exception)
+            {
+                //TODO: LOGGING GOES HERE!
+                return -1;
+            }
         }
 
         protected async Task<User> GetCurrentUserAsync()
@@ -140,6 +149,57 @@ namespace contentapi.Controllers
             return permissionService.CanDo((Role)user.role, permission);
         }
 
+        //How to RETURN items (the object we return... maybe make it a real class)
+        public Object GetGenericCollectionResult<W>(IEnumerable<W> items, IEnumerable<string> links = null)
+        {
+            return new { 
+                collection = items, //items.Select(x => mapper.Map<V>(x)),
+                _links = links ?? new List<string>(), //one day, turn this into HATEOS
+                _claims = User.Claims.ToDictionary(x => x.Type, x => x.Value)
+            };
+        }
+
+        //I have NO idea if this IQueryable set is SUPER slow.... guess we'll see.
+        public IQueryable<W> ApplyQuery<W>(IQueryable<W> originSet, CollectionQuery query) where W : GenericModel
+        {
+            //Set some nice defaults for query parameters
+            if(query.count <= 0)
+                query.count = DefaultResultCount;
+
+            if(query.count > MaxResultCount)
+                ThrowAction(BadRequest($"Too many objects! Max: {MaxResultCount}"));
+
+            if(string.IsNullOrWhiteSpace(query.sort))
+                query.sort = CreateSort;
+
+            var order = query.order.ToLower();
+            IQueryable<W> orderedSet = originSet;
+            System.Linq.Expressions.Expression<Func<W, object>> sorter = GetSorter<W>(query.sort);
+
+            if(sorter != null)
+            {
+                if (string.IsNullOrWhiteSpace(order) || order == AscendingOrder)
+                    orderedSet = orderedSet.OrderBy(sorter);
+                else if (order == DescendingOrder)
+                    orderedSet = orderedSet.OrderByDescending(sorter);
+                else
+                    ThrowAction(BadRequest($"Unknown order type ({AscendingOrder}/{DescendingOrder})"));
+            }
+
+            IQueryable<W> slicedSet = orderedSet;
+
+            try
+            {
+                slicedSet = slicedSet.Skip(query.offset).Take(query.count);
+            }
+            catch
+            {
+                ThrowAction(BadRequest("Offset/count broke set; this is API laziness"));
+            }
+
+            return slicedSet;
+        }
+
         // ************
         // * OVERRIDE *
         // ************
@@ -147,15 +207,8 @@ namespace contentapi.Controllers
         //GOTTA OVERRIDE THIS 
         protected abstract void SetLogField(ActionLog log, long id);
 
-        protected virtual System.Linq.Expressions.Expression<Func<W, object>> GetSorter<W>(string sort) where W : GenericModel 
-        {
-            if(sort == IdSort)
-                return (x) => ((GenericModel)x).id;
-            else if(sort == CreateSort)
-                return (x) => ((GenericModel)x).createDate;
-
-            return null;
-        }
+        protected virtual Task<IQueryable<T>> Get_GetBase() { return Task.FromResult((IQueryable<T>)context.Set<T>()); }
+        protected virtual Task GetSingle_PreResult(T item) { return Task.CompletedTask; }
 
         protected virtual Task Post_PreConversionCheck(P item) { return Task.CompletedTask; }
         protected virtual T Post_ConvertItem(P item) { return mapper.Map<T>(item); }
@@ -172,62 +225,32 @@ namespace contentapi.Controllers
         protected virtual T Put_ConvertItem(P item, T existing) { return mapper.Map<P, T>(item, existing); }
         protected virtual Task Put_PreInsertCheck(T existing) { return Task.CompletedTask; }
 
-        //How to RETURN items (the object we return... maybe make it a real class)
-        public virtual Object GetGenericCollectionResult<W>(IEnumerable<W> items, IEnumerable<string> links = null) where W : GenericModel
+        protected virtual System.Linq.Expressions.Expression<Func<W, object>> GetSorter<W>(string sort) where W : GenericModel 
         {
-            return new { 
-                collection = items.Select(x => mapper.Map<V>(x)),
-                _links = links ?? new List<string>(), //one day, turn this into HATEOS
-                _claims = User.Claims.ToDictionary(x => x.Type, x => x.Value)
-            };
+            if(sort == IdSort)
+                return (x) => ((GenericModel)x).id;
+            else if(sort == CreateSort)
+                return (x) => ((GenericModel)x).createDate;
+
+            return null;
         }
-
-        public async virtual Task<ActionResult<Object>> GenericCollectionEndpoint<W>(IQueryable<W> originSet, CollectionQuery query) where W : GenericModel
-        {
-            //Set some nice defaults for query parameters
-            if(query.count <= 0)
-                query.count = DefaultResultCount;
-
-            if(query.count > MaxResultCount)
-                return BadRequest($"Too many objects! Max: {MaxResultCount}");
-
-            if(string.IsNullOrWhiteSpace(query.sort))
-                query.sort = CreateSort;
-
-            var order = query.order.ToLower();
-            IQueryable<W> orderedSet = originSet;
-            System.Linq.Expressions.Expression<Func<W, object>> sorter = GetSorter<W>(query.sort);
-
-            if(sorter != null)
-            {
-                if (string.IsNullOrWhiteSpace(order) || order == AscendingOrder)
-                    orderedSet = orderedSet.OrderBy(sorter);
-                else if (order == DescendingOrder)
-                    orderedSet = orderedSet.OrderByDescending(sorter);
-                else
-                    return BadRequest($"Unknown order type ({AscendingOrder}/{DescendingOrder})");
-            }
-
-            IQueryable<W> slicedSet = orderedSet;
-
-            try
-            {
-                slicedSet = slicedSet.Skip(query.offset).Take(query.count);
-            }
-            catch
-            {
-                return BadRequest("Offset/count broke set; this is API laziness");
-            }
-
-            return GetGenericCollectionResult<W>(await slicedSet.ToListAsync());
-        }
-
 
         [HttpGet]
         [AllowAnonymous]
         public async virtual Task<ActionResult<Object>> Get([FromQuery]CollectionQuery query)
         {
-            return await GenericCollectionEndpoint(context.GetAll<T>(), query);
+            try
+            {
+                //Do stuff in between these (maybe?) in the future or... something.
+                var baseResults = await Get_GetBase();
+                var queryResults = ApplyQuery(baseResults, query);
+                var views = (await queryResults.ToListAsync()).Select(x => mapper.Map<V>(x));
+                return GetGenericCollectionResult(views); //(await queryResults.ToListAsync()).Select(x => x.));
+            }
+            catch(ActionCarryingException ex)
+            {
+                return ex.Result;
+            }
         }
 
 
@@ -238,10 +261,15 @@ namespace contentapi.Controllers
             try
             {
                 var item = await context.GetSingleAsync<T>(id);
+                await GetSingle_PreResult(item);
                 await LogAct(LogAction.View, id);
                 return mapper.Map<V>(item);
             }
-            catch
+            catch(ActionCarryingException ex)
+            {
+                return ex.Result;
+            }
+            catch(Exception)
             {
                 return NotFound();
             }
@@ -269,7 +297,7 @@ namespace contentapi.Controllers
 
                 return CreatedAtAction(nameof(GetSingle), new { id = newThing.id }, mapper.Map<V>(newThing));
             }
-            catch(ActionCarryingException<V> ex)
+            catch(ActionCarryingException ex)
             {
                 return ex.Result;
             }
@@ -303,7 +331,7 @@ namespace contentapi.Controllers
 
                 return CreatedAtAction(nameof(GetSingle), new { id = existing.id }, mapper.Map<V>(existing));
             }
-            catch(ActionCarryingException<V> ex)
+            catch(ActionCarryingException ex)
             {
                 return ex.Result;
             }
@@ -347,6 +375,9 @@ namespace contentapi.Controllers
         {
             await base.Put_PreConversionCheck(view, existing);
             CheckAccessFormat(view);
+
+            if(!accessService.CanUpdate(existing, await GetCurrentUserAsync()))
+                ThrowAction(Unauthorized("You do not have permission to update this record"));
         }
 
         protected override async Task Put_PreInsertCheck(T existing) 
@@ -366,6 +397,18 @@ namespace contentapi.Controllers
                 if(users.Count != model.GenericAccessList.Count)
                     ThrowAction(BadRequest("Bad access list: nonexistent / duplicate user"));
             }
+        }
+
+        protected override async Task GetSingle_PreResult(T model)
+        {
+            if(!accessService.CanRead(model, await GetCurrentUserAsync()))
+                ThrowAction(Unauthorized("You do not have permission to read this record"));
+        }
+
+        protected override async Task<IQueryable<T>> Get_GetBase()
+        {
+            var user = await GetCurrentUserAsync();
+            return (await base.Get_GetBase()).Where(x => accessService.CanRead(x, user));
         }
     }
 }

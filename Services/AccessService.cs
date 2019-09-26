@@ -13,7 +13,7 @@ namespace contentapi.Services
 
         protected bool CanDo(IGenericAccessModel model, User user, char doKey)
         {
-            return model.baseAccess.Contains(doKey) || model.GenericAccessList.Any(x => x.userId == user.id && x.access.Contains(doKey));
+            return model.baseAccess.Contains(doKey) || (user != null && model.GenericAccessList.Any(x => x.userId == user.id && x.access.Contains(doKey)));
         }
 
         public bool CanCreate(IGenericAccessModel model, User user) { return CanDo(model, user, CreateChar); }
