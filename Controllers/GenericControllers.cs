@@ -149,6 +149,19 @@ namespace contentapi.Controllers
             return permissionService.CanDo((Role)user.role, permission);
         }
 
+        protected async Task<T> GetExisting(long id)
+        {
+            try
+            {
+                return await context.GetSingleAsync<T>(id);
+            }
+            catch
+            {
+                ThrowAction(NotFound(id));
+                return null; //just to satisfy the compiler
+            }
+        }
+
         //How to RETURN items (the object we return... maybe make it a real class)
         public Object GetGenericCollectionResult<W>(IEnumerable<W> items, IEnumerable<string> links = null)
         {
@@ -207,8 +220,8 @@ namespace contentapi.Controllers
         //GOTTA OVERRIDE THIS 
         protected abstract void SetLogField(ActionLog log, long id);
 
-        protected virtual Task<IQueryable<T>> Get_GetBase() { return Task.FromResult((IQueryable<T>)context.Set<T>()); }
-        protected virtual Task GetSingle_PreResult(T item) { return Task.CompletedTask; }
+        protected virtual Task<IQueryable<T>> Get_GetBase() { return Task.FromResult(context.GetAll<T>()); }
+        protected virtual Task GetSingle_PreResultCheck(T item) { return Task.CompletedTask; }
 
         protected virtual Task Post_PreConversionCheck(P item) { return Task.CompletedTask; }
         protected virtual T Post_ConvertItem(P item) { return mapper.Map<T>(item); }
@@ -224,6 +237,8 @@ namespace contentapi.Controllers
         protected virtual Task Put_PreConversionCheck(P item, T existing) { return Task.CompletedTask; }
         protected virtual T Put_ConvertItem(P item, T existing) { return mapper.Map<P, T>(item, existing); }
         protected virtual Task Put_PreInsertCheck(T existing) { return Task.CompletedTask; }
+
+        protected virtual Task Delete_PreDeleteCheck(T existing) { return Task.CompletedTask; }
 
         protected virtual System.Linq.Expressions.Expression<Func<W, object>> GetSorter<W>(string sort) where W : GenericModel 
         {
@@ -261,7 +276,7 @@ namespace contentapi.Controllers
             try
             {
                 var item = await context.GetSingleAsync<T>(id);
-                await GetSingle_PreResult(item);
+                await GetSingle_PreResultCheck(item);
                 await LogAct(LogAction.View, id);
                 return mapper.Map<V>(item);
             }
@@ -303,16 +318,13 @@ namespace contentapi.Controllers
             }
         }
 
+        //Note: I don't think you need "Patch" because the way the "put" conversion works just... works.
         [HttpPut("{id}")]
         public async virtual Task<ActionResult<V>> Put([FromRoute]long id, [FromBody]P item)
         {
             try
             {
-                //First, see if our "existing" object (by id) even exists
-                var existing = await context.GetSingleAsync<T>(id); 
-
-                if (existing == null)
-                    return NotFound();
+                var existing = await GetExisting(id);
 
                 //Next, perform some checks. If anything happens, we need to return the result.
                 await Put_PreConversionCheck(item, existing);
@@ -329,7 +341,29 @@ namespace contentapi.Controllers
 
                 await LogAct(LogAction.Update, existing.id);
 
-                return CreatedAtAction(nameof(GetSingle), new { id = existing.id }, mapper.Map<V>(existing));
+                return mapper.Map<V>(existing); //CreatedAtAction(nameof(GetSingle), new { id = existing.id }, mapper.Map<V>(existing));
+            }
+            catch(ActionCarryingException ex)
+            {
+                return ex.Result;
+            }
+        }
+
+        [HttpDelete("{id}")]
+        public async virtual Task<ActionResult<V>> Delete([FromRoute]long id)
+        {
+            try
+            {
+                var existing = await GetExisting(id);
+
+                await Delete_PreDeleteCheck(existing);
+
+                existing.status |= (int)ModelStatus.Deleted;
+                context.Set<T>().Update(existing);
+                await context.SaveChangesAsync();
+                await LogAct(LogAction.Delete, existing.id);
+
+                return mapper.Map<V>(existing); //Deleted(nameof(GetSingle), new { id = existing.id }, mapper.Map<V>(existing));
             }
             catch(ActionCarryingException ex)
             {
@@ -365,12 +399,14 @@ namespace contentapi.Controllers
                 ThrowAction(BadRequest("Malformed access string (CRUD)"));
         }
 
+        //Note: each accessor will need to figure out its own create check (since it'll be the parent)
         protected override async Task Post_PreConversionCheck(V view)
         {
             await base.Post_PreConversionCheck(view);
             CheckAccessFormat(view);
         }
 
+        //Check Update privilege while checking the view's access format
         protected override async Task Put_PreConversionCheck(V view, T existing)
         {
             await base.Put_PreConversionCheck(view, existing);
@@ -378,33 +414,32 @@ namespace contentapi.Controllers
 
             if(!accessService.CanUpdate(existing, await GetCurrentUserAsync()))
                 ThrowAction(Unauthorized("You do not have permission to update this record"));
-        }
 
-        protected override async Task Put_PreInsertCheck(T existing) 
-        { 
-            await base.Put_PreInsertCheck(existing);
-        }
-
-        protected override async Task Post_PreInsertCheck(T model)
-        {
-            await base.Post_PreInsertCheck(model);
-
-            if(model.GenericAccessList.Count > 0)
+            if(view.accessList.Count > 0)
             {
-                var userIds = model.GenericAccessList.Select(x => x.userId);
+                var userIds = view.accessList.Select(x => x.Key);
                 var users = await context.Users.Where(x => userIds.Contains(x.id)).ToListAsync();
 
-                if(users.Count != model.GenericAccessList.Count)
+                if(users.Count != view.accessList.Count)
                     ThrowAction(BadRequest("Bad access list: nonexistent / duplicate user"));
             }
         }
 
-        protected override async Task GetSingle_PreResult(T model)
+        //Check Read privilege before sending the result
+        protected override async Task GetSingle_PreResultCheck(T model)
         {
             if(!accessService.CanRead(model, await GetCurrentUserAsync()))
                 ThrowAction(Unauthorized("You do not have permission to read this record"));
         }
 
+        //Check Delete privilege before deleting
+        protected override async Task Delete_PreDeleteCheck(T model)
+        {
+            if(!accessService.CanDelete(model, await GetCurrentUserAsync()))
+                ThrowAction(Unauthorized("You do not have permission to delete this record"));
+        }
+
+        //Filter results to remove ones we can't read
         protected override async Task<IQueryable<T>> Get_GetBase()
         {
             var user = await GetCurrentUserAsync();

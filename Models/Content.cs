@@ -12,12 +12,14 @@ namespace contentapi.Models
         public string content {get;set;}
         public string format {get;set;}
         public string type {get;set;}
+        public long categoryId {get;set;}
 
         public override List<IGenericSingleAccess> GenericAccessList 
         {
             get { return AccessList.Cast<IGenericSingleAccess>().ToList(); }
         }
 
+        public virtual Category Category {get;set;}
         public virtual User User {get; set;}
         public virtual List<ContentAccess> AccessList {get;set;}
     }
@@ -36,5 +38,6 @@ namespace contentapi.Models
         public string content {get;set;}
         public string format {get;set;}
         public string type {get;set;}
+        public long categoryId {get;set;}
     }
 }
