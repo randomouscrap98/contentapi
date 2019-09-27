@@ -16,15 +16,6 @@ using contentapi.Services;
 
 namespace contentapi.Controllers
 {
-    //Query parameters (from url) for searching/querying collections
-    public class CollectionQuery
-    {
-        public int offset {get;set;} = 0;
-        public int count {get;set;} = 0;
-        public string sort {get;set;} = "";
-        public string order {get;set;} = "";
-    }
-
     public class ActionCarryingException : Exception
     {
         public ActionResult Result;
@@ -34,31 +25,41 @@ namespace contentapi.Controllers
         public ActionCarryingException(string message, Exception inner) : base(message, inner) {}
     }
 
+    //Too much work to manage the list of services for all these derived classes
+    public class GenericControllerServices
+    {
+        public ContentDbContext context;
+        public IMapper mapper;
+        public PermissionService permissionService;
+        public QueryService queryService;
+
+        public GenericControllerServices(ContentDbContext context, IMapper mapper, PermissionService permissionService, QueryService queryService)
+        {
+            this.context = context;
+            this.mapper = mapper;
+            this.permissionService = permissionService;
+            this.queryService = queryService;
+        }
+    }
+
     [Route("api/[controller]")]
     [ApiController]
     [Authorize]
     public abstract class GenericControllerRaw<T,V,P> : ControllerBase where T : GenericModel where V : class
     {
-        //These may need to be configurable one day
-        public const int DefaultResultCount = 1000;
-        public const int MaxResultCount = 5000;
-        public const string IdSort = "id";
-        public const string CreateSort = "create";
-        public const string AscendingOrder = "asc";
-        public const string DescendingOrder = "desc";
-
         protected ContentDbContext context;
         protected IMapper mapper;
         protected PermissionService permissionService;
+        protected QueryService queryService;
 
         protected bool DoActionLog = true;
 
-
-        public GenericControllerRaw(ContentDbContext context, IMapper mapper, PermissionService permissionService)
+        public GenericControllerRaw(GenericControllerServices services)
         {
-            this.context = context;
-            this.mapper = mapper;
-            this.permissionService = permissionService;
+            this.context = services.context;
+            this.mapper = services.mapper;
+            this.permissionService = services.permissionService;
+            this.queryService = services.queryService;
         }
 
         // *************
@@ -172,47 +173,6 @@ namespace contentapi.Controllers
             };
         }
 
-        //I have NO idea if this IQueryable set is SUPER slow.... guess we'll see.
-        public IQueryable<W> ApplyQuery<W>(IQueryable<W> originSet, CollectionQuery query) where W : GenericModel
-        {
-            //Set some nice defaults for query parameters
-            if(query.count <= 0)
-                query.count = DefaultResultCount;
-
-            if(query.count > MaxResultCount)
-                ThrowAction(BadRequest($"Too many objects! Max: {MaxResultCount}"));
-
-            if(string.IsNullOrWhiteSpace(query.sort))
-                query.sort = CreateSort;
-
-            var order = query.order.ToLower();
-            IQueryable<W> orderedSet = originSet;
-            System.Linq.Expressions.Expression<Func<W, object>> sorter = GetSorter<W>(query.sort);
-
-            if(sorter != null)
-            {
-                if (string.IsNullOrWhiteSpace(order) || order == AscendingOrder)
-                    orderedSet = orderedSet.OrderBy(sorter);
-                else if (order == DescendingOrder)
-                    orderedSet = orderedSet.OrderByDescending(sorter);
-                else
-                    ThrowAction(BadRequest($"Unknown order type ({AscendingOrder}/{DescendingOrder})"));
-            }
-
-            IQueryable<W> slicedSet = orderedSet;
-
-            try
-            {
-                slicedSet = slicedSet.Skip(query.offset).Take(query.count);
-            }
-            catch
-            {
-                ThrowAction(BadRequest("Offset/count broke set; this is API laziness"));
-            }
-
-            return slicedSet;
-        }
-
         // ************
         // * OVERRIDE *
         // ************
@@ -240,16 +200,6 @@ namespace contentapi.Controllers
 
         protected virtual Task Delete_PreDeleteCheck(T existing) { return Task.CompletedTask; }
 
-        protected virtual System.Linq.Expressions.Expression<Func<W, object>> GetSorter<W>(string sort) where W : GenericModel 
-        {
-            if(sort == IdSort)
-                return (x) => ((GenericModel)x).id;
-            else if(sort == CreateSort)
-                return (x) => ((GenericModel)x).createDate;
-
-            return null;
-        }
-
         [HttpGet]
         [AllowAnonymous]
         public async virtual Task<ActionResult<Object>> Get([FromQuery]CollectionQuery query)
@@ -257,17 +207,26 @@ namespace contentapi.Controllers
             try
             {
                 //Do stuff in between these (maybe?) in the future or... something.
-                var baseResults = await Get_GetBase();
-                var queryResults = ApplyQuery(baseResults, query);
+                IQueryable<T> baseResults = await Get_GetBase();
+                IQueryable<T> queryResults = null;
+
+                try
+                {
+                    queryResults = queryService.ApplyQuery(baseResults, query);
+                }
+                catch(InvalidOperationException ex)
+                {
+                    ThrowAction(BadRequest(ex.Message));
+                }
+
                 var views = (await queryResults.ToListAsync()).Select(x => mapper.Map<V>(x));
-                return GetGenericCollectionResult(views); //(await queryResults.ToListAsync()).Select(x => x.));
+                return GetGenericCollectionResult(views);
             }
             catch(ActionCarryingException ex)
             {
                 return ex.Result;
             }
         }
-
 
         [HttpGet("{id}")]
         [AllowAnonymous]
@@ -341,7 +300,7 @@ namespace contentapi.Controllers
 
                 await LogAct(LogAction.Update, existing.id);
 
-                return mapper.Map<V>(existing); //CreatedAtAction(nameof(GetSingle), new { id = existing.id }, mapper.Map<V>(existing));
+                return mapper.Map<V>(existing);
             }
             catch(ActionCarryingException ex)
             {
@@ -363,7 +322,7 @@ namespace contentapi.Controllers
                 await context.SaveChangesAsync();
                 await LogAct(LogAction.Delete, existing.id);
 
-                return mapper.Map<V>(existing); //Deleted(nameof(GetSingle), new { id = existing.id }, mapper.Map<V>(existing));
+                return mapper.Map<V>(existing);
             }
             catch(ActionCarryingException ex)
             {
@@ -374,7 +333,7 @@ namespace contentapi.Controllers
 
     public abstract class GenericController<T,V> : GenericControllerRaw<T,V,V> where T : GenericModel where V : GenericView 
     {
-        public GenericController(ContentDbContext context, IMapper mapper, PermissionService permissionService) : base(context, mapper, permissionService){}
+        public GenericController(GenericControllerServices services) : base(services) {}
 
         protected override async Task Put_PreConversionCheck(V item, T existing) 
         { 
@@ -388,7 +347,7 @@ namespace contentapi.Controllers
     {
         protected AccessService accessService;
 
-        public AccessController(ContentDbContext c, IMapper m, PermissionService p, AccessService accessService) : base(c, m, p) 
+        public AccessController(GenericControllerServices services, AccessService accessService) : base(services) 
         { 
             this.accessService = accessService;
         }

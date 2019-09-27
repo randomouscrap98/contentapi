@@ -19,7 +19,7 @@ namespace contentapi.Controllers
 {
     public class ContentController : AccessController<Content, ContentView>
     {
-        public ContentController(ContentDbContext c, IMapper m, PermissionService p, AccessService a) : base(c, m, p, a) { }
+        public ContentController(GenericControllerServices services, AccessService a) : base(services, a) { }
 
         protected override void SetLogField(ActionLog log, long id) { log.contentId = id; }
         
@@ -35,16 +35,10 @@ namespace contentapi.Controllers
         {
             await base.Post_PreInsertCheck(content);
 
-            Category category = null;
+            var category = await context.GetSingleAsync<Category>((long)content.categoryId);
 
-            try
-            {
-                category = await context.GetSingleAsync<Category>((long)content.categoryId);
-            }
-            catch
-            {
+            if(category == null)
                 ThrowAction(BadRequest("Must provide category for content!"));
-            }
 
             var user = await GetCurrentUserAsync();
 

@@ -34,7 +34,7 @@ namespace contentapi
 
         public async Task<T> GetSingleAsync<T>(long id) where T : GenericModel
         {
-            return await GetAll<T>(id).FirstAsync();
+            return await GetAll<T>(id).FirstOrDefaultAsync();
         }
     }
 }

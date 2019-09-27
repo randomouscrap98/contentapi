@@ -19,7 +19,7 @@ namespace contentapi.Controllers
 {
     public class CategoriesController : AccessController<Category, CategoryView>
     {
-        public CategoriesController(ContentDbContext c, IMapper m, PermissionService p, AccessService a):base(c, m, p, a) { }
+        public CategoriesController(GenericControllerServices services, AccessService a):base(services, a) { }
 
         protected override void SetLogField(ActionLog log, long id) { log.categoryId = id; }
 
@@ -32,14 +32,10 @@ namespace contentapi.Controllers
 
             if(category.parentId != null)
             {
-                try
-                {
-                    var parentCategory = await context.GetSingleAsync<Category>((long)category.parentId); //context.GetAll()//Categories.FindAsync(category.parentId);
-                }
-                catch
-                {
+                var parentCategory = await context.GetSingleAsync<Category>((long)category.parentId); //context.GetAll()//Categories.FindAsync(category.parentId);
+
+                if(parentCategory == null)
                     ThrowAction(BadRequest("Nonexistent parent category!"));
-                }
             }
         }
     }

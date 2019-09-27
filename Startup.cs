@@ -74,8 +74,12 @@ namespace contentapi
                 }).ToList()));
             }); 
             services.AddSingleton(mapperConfig.CreateMapper());
-            services.AddSingleton(new PermissionService());
-            services.AddSingleton(new AccessService());
+
+            //My own services
+            services.AddTransient<PermissionService>((s) => new PermissionService());
+            services.AddTransient<AccessService>((s) => new AccessService());
+            services.AddTransient<QueryService>((s) => new QueryService());
+            services.AddTransient<GenericControllerServices>();
 
             services.AddCors();
             services.AddMvc().SetCompatibilityVersion(CompatibilityVersion.Version_2_2);

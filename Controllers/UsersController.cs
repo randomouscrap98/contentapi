@@ -45,8 +45,7 @@ namespace contentapi.Controllers
         protected UsersControllerConfig config;
         protected EmailConfig emailConfig;
 
-        public UsersController(ContentDbContext context, IMapper mapper, PermissionService permissionService, UsersControllerConfig config, EmailConfig emailConfig) : 
-            base (context, mapper, permissionService)
+        public UsersController(GenericControllerServices services, UsersControllerConfig config, EmailConfig emailConfig) : base (services)
         {
             this.config = config;
             this.emailConfig = emailConfig;
