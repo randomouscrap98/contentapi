@@ -87,6 +87,26 @@ namespace contentapi.Controllers
             public string email {get;set;}
         }
 
+        //Override this to do custom email sending... or something.
+        public virtual void SendConfirmationEmail(string recipient, string code)
+        {
+            using(var message = new MailMessage())
+            {
+                message.To.Add(new MailAddress(recipient));
+                message.From = new MailAddress(emailConfig.User);
+                message.Subject = $"{emailConfig.SubjectFront} - Confirm Email";
+                message.Body = $"Your confirmation code is {code}";
+
+                using(var client = new SmtpClient(emailConfig.Host))
+                {
+                    client.Port = emailConfig.Port;
+                    client.Credentials = new NetworkCredential(emailConfig.User, emailConfig.Password);
+                    client.EnableSsl = true;
+                    client.Send(message);
+                }
+            }
+        }
+
         [HttpPost("sendemail")]
         [AllowAnonymous]
         public async Task<ActionResult> SendRegistrationEmail([FromBody]RegistrationData data)
@@ -98,21 +118,7 @@ namespace contentapi.Controllers
             if(foundUser.registerCode == null)
                 return BadRequest("Nothing to do for user");
 
-            using(var message = new MailMessage())
-            {
-                message.To.Add(new MailAddress(data.email));
-                message.From = new MailAddress(emailConfig.User);
-                message.Subject = $"{emailConfig.SubjectFront} - Confirm Email";
-                message.Body = $"Your confirmation code is {foundUser.registerCode}";
-
-                using(var client = new SmtpClient(emailConfig.Host))
-                {
-                    client.Port = emailConfig.Port;
-                    client.Credentials = new NetworkCredential(emailConfig.User, emailConfig.Password);
-                    client.EnableSsl = true;
-                    client.Send(message);
-                }
-            }
+            SendConfirmationEmail(data.email, foundUser.registerCode);
 
             return Ok("Email sent");
         }

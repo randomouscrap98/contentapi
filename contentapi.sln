@@ -7,8 +7,6 @@ Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "contentapi", "contentapi\co
 EndProject
 Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "contentapi.test", "contentapi.test\contentapi.test.csproj", "{9F65E028-84A5-447B-A2F1-FC7E46F3F939}"
 EndProject
-Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "contentapi.hardtests", "contentapi.hardtests\contentapi.hardtests.csproj", "{2F62A854-E158-498C-B954-31DF36137FC8}"
-EndProject
 Global
 	GlobalSection(SolutionConfigurationPlatforms) = preSolution
 		Debug|Any CPU = Debug|Any CPU
@@ -46,17 +44,5 @@ Global
 		{9F65E028-84A5-447B-A2F1-FC7E46F3F939}.Release|x64.Build.0 = Release|Any CPU
 		{9F65E028-84A5-447B-A2F1-FC7E46F3F939}.Release|x86.ActiveCfg = Release|Any CPU
 		{9F65E028-84A5-447B-A2F1-FC7E46F3F939}.Release|x86.Build.0 = Release|Any CPU
-		{2F62A854-E158-498C-B954-31DF36137FC8}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
-		{2F62A854-E158-498C-B954-31DF36137FC8}.Debug|Any CPU.Build.0 = Debug|Any CPU
-		{2F62A854-E158-498C-B954-31DF36137FC8}.Debug|x64.ActiveCfg = Debug|Any CPU
-		{2F62A854-E158-498C-B954-31DF36137FC8}.Debug|x64.Build.0 = Debug|Any CPU
-		{2F62A854-E158-498C-B954-31DF36137FC8}.Debug|x86.ActiveCfg = Debug|Any CPU
-		{2F62A854-E158-498C-B954-31DF36137FC8}.Debug|x86.Build.0 = Debug|Any CPU
-		{2F62A854-E158-498C-B954-31DF36137FC8}.Release|Any CPU.ActiveCfg = Release|Any CPU
-		{2F62A854-E158-498C-B954-31DF36137FC8}.Release|Any CPU.Build.0 = Release|Any CPU
-		{2F62A854-E158-498C-B954-31DF36137FC8}.Release|x64.ActiveCfg = Release|Any CPU
-		{2F62A854-E158-498C-B954-31DF36137FC8}.Release|x64.Build.0 = Release|Any CPU
-		{2F62A854-E158-498C-B954-31DF36137FC8}.Release|x86.ActiveCfg = Release|Any CPU
-		{2F62A854-E158-498C-B954-31DF36137FC8}.Release|x86.Build.0 = Release|Any CPU
 	EndGlobalSection
 EndGlobal
