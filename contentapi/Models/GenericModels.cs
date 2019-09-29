@@ -44,7 +44,7 @@ namespace contentapi.Models
     public class GenericAccessModel : GenericModel, IGenericAccessModel
     {
         public string baseAccess {get;set;}
-        public virtual List<IGenericSingleAccess>  GenericAccessList {get {return null;}}
+        public virtual List<IGenericSingleAccess>  GenericAccessList {get;} = new List<IGenericSingleAccess>();
     }
 
     public class GenericSingleAccess : GenericModel, IGenericSingleAccess

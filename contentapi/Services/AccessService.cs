@@ -11,9 +11,9 @@ namespace contentapi.Services
         public const char UpdateChar = 'U';
         public const char DeleteChar = 'D';
 
-        protected bool CanDo(IGenericAccessModel model, User user, char doKey)
+        public bool CanDo(IGenericAccessModel model, User user, char doKey)
         {
-            return model.baseAccess.Contains(doKey) || (user != null && model.GenericAccessList.Any(x => x.userId == user.id && x.access.Contains(doKey)));
+            return (model.baseAccess != null && model.baseAccess.Contains(doKey)) || (user != null && model.GenericAccessList.Any(x => x.userId == user.id && x.access.Contains(doKey)));
         }
 
         public bool CanCreate(IGenericAccessModel model, User user) { return CanDo(model, user, CreateChar); }

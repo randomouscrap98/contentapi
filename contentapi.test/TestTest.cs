@@ -1,16 +1,14 @@
-using System;
-using Xunit;
 using System.IO;
+using Xunit;
 
 namespace contentapi.test
 {
-    public class UnitTest1
+    public class TestTest
     {
         [Fact]
-        public void Test1()
+        public void DatabaseExists()
         {
             Assert.True(File.Exists("content.db"));
-            //throw new InvalidOperationException("NOPE");
         }
     }
 }
