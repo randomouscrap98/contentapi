@@ -52,6 +52,19 @@ namespace contentapi.test
         }
 
         [Fact]
+        private void CantUserCRUD()
+        {
+            var service = CreateService();
+            var user = new User() {id = 5};
+            var model = new GenericAccessModel() {};
+
+            Assert.False(service.CanCreate(model, user));
+            Assert.False(service.CanRead(model, user));
+            Assert.False(service.CanUpdate(model, user));
+            Assert.False(service.CanDelete(model, user));
+        }
+
+        [Fact]
         public void CanUserCRUD()
         {
             CanUserCRUDBase(5, new GenericAccessModel() {baseAccess = "CRUD"});

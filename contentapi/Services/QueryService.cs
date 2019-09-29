@@ -45,12 +45,6 @@ namespace contentapi.Services
                 return (x) => Sorters[sort].Invoke(x);
 
             return null;
-            //if(sort == IdSort)
-            //    return (x) => ((GenericModel)x).id;
-            //else if(sort == CreateSort)
-            //    return (x) => ((GenericModel)x).createDate;
-
-            //return null;
         }
 
         public IQueryable<W> ApplyQuery<W>(IQueryable<W> originSet, CollectionQuery query) where W : GenericModel
@@ -78,7 +72,6 @@ namespace contentapi.Services
                     orderedSet = orderedSet.OrderByDescending(sorter);
                 else
                     throw new InvalidOperationException($"Unknown order type ({AscendingOrder}/{DescendingOrder})");
-                    //ThrowAction(BadRequest($"Unknown order type ({AscendingOrder}/{DescendingOrder})"));
             }
 
             IQueryable<W> slicedSet = orderedSet;
@@ -89,7 +82,6 @@ namespace contentapi.Services
             }
             catch
             {
-                //ThrowAction(BadRequest("Offset/count broke set; this is API laziness"));
                 throw new InvalidOperationException("Offset/count broke set; this is API laziness");
             }
 
