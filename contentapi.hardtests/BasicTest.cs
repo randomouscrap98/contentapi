@@ -26,6 +26,8 @@ namespace contentapi.hardtests
 
             // Assert
             response.EnsureSuccessStatusCode(); // Status Code 200-299
+            var content = response.Content.ReadAsStringAsync().Result;
+            Assert.True(content.Length > 0);
             //Assert.Equal("application/json; charset=utf-8",
             //    response.Content.Headers.ContentType.ToString());
         }
