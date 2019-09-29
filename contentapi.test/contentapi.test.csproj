@@ -12,4 +12,12 @@
     <PackageReference Include="xunit.runner.visualstudio" Version="2.4.0" />
   </ItemGroup>
 
+  <ItemGroup>
+    <ProjectReference Include="..\contentapi\contentapi.csproj" />
+  </ItemGroup>
+
+  <ItemGroup>
+    <Content Include="..\contentapi\content.db" CopyToOutputDirectory="Always" />
+  </ItemGroup>
+
 </Project>

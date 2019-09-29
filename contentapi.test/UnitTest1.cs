@@ -1,5 +1,6 @@
 using System;
 using Xunit;
+using System.IO;
 
 namespace contentapi.test
 {
@@ -8,7 +9,8 @@ namespace contentapi.test
         [Fact]
         public void Test1()
         {
-
+            Assert.True(File.Exists("content.db"));
+            //throw new InvalidOperationException("NOPE");
         }
     }
 }
