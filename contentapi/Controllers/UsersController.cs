@@ -1,5 +1,3 @@
-using System.Collections.Generic;
-using AutoMapper;
 using contentapi.Models;
 using Microsoft.AspNetCore.Mvc;
 using System.Linq;
@@ -15,7 +13,6 @@ using System.Security.Claims;
 using Microsoft.AspNetCore.Authorization;
 using System.Net.Mail;
 using System.Net;
-using contentapi.Services;
 
 namespace contentapi.Controllers
 {
