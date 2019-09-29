@@ -84,15 +84,10 @@ namespace contentapi.Controllers
                 userId = null
             };
 
-            try
-            {
-                log.actionUserId = GetCurrentUid();
-            }
-            catch
-            {
-                //Eventually we can log here... when are we adding logging?
-                return;
-            }
+            log.actionUserId = GetCurrentUid();
+
+            if(log.actionUserId < 0)
+                log.actionUserId = null;
 
             setField(log);
 
@@ -265,7 +260,8 @@ namespace contentapi.Controllers
 
                 await LogAct(LogAction.Create, newThing.id);
 
-                return CreatedAtAction(nameof(GetSingle), new { id = newThing.id }, mapper.Map<V>(newThing));
+                //return CreatedAtAction(nameof(GetSingle), new { id = newThing.id }, mapper.Map<V>(newThing));
+                return mapper.Map<V>(newThing);
             }
             catch(ActionCarryingException ex)
             {

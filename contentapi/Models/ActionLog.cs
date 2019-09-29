@@ -18,7 +18,7 @@ namespace contentapi.Models
     {
         [Key]
         public long id {get;set;}
-        public long actionUserId {get;set;}
+        public long? actionUserId {get;set;}
         public LogAction action {get;set;}
         public long? contentId {get;set;}
         public long? categoryId {get;set;}

@@ -13,30 +13,10 @@ using System.Security.Claims;
 using Microsoft.AspNetCore.Authorization;
 using System.Net.Mail;
 using System.Net;
+using contentapi.Configs;
 
 namespace contentapi.Controllers
 {
-    public class UsersControllerConfig
-    {
-        public int SaltBits = 256;
-        public int HashBits = 512;
-        public int HashIterations = 10000;
-
-        public TimeSpan TokenExpiration = TimeSpan.FromDays(60);
-
-        public string JwtSecretKey = "nothing";
-    }
-
-    public class EmailConfig
-    {
-        public string Host;
-        public string User;
-        public string Password;
-        public int Port;
-
-        public string SubjectFront;
-    }
-
     public class UsersController : GenericControllerRaw<User, UserView, UserCredential>
     {
         protected UsersControllerConfig config;

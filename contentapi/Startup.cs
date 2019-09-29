@@ -4,6 +4,7 @@ using System.Linq;
 using System.Text;
 using System.Threading.Tasks;
 using AutoMapper;
+using contentapi.Configs;
 using contentapi.Controllers;
 using contentapi.Models;
 using contentapi.Services;
@@ -21,6 +22,7 @@ using Microsoft.IdentityModel.Tokens;
 
 namespace contentapi
 {
+
     public class Startup
     {
         public Startup(IConfiguration configuration)
@@ -30,30 +32,18 @@ namespace contentapi
 
         public IConfiguration Configuration { get; }
 
-        // This method gets called by the runtime. Use this method to add services to the container.
-        public void ConfigureServices(IServiceCollection services)
+        public void ConfigureBasicServices(IServiceCollection services, StartupServiceConfig config)
         {
-            var dataSection = Configuration.GetSection("Data");
-            var tempSection = Configuration.GetSection("Temp");
-            var contentConstring = dataSection.GetValue<string>("ContentConnectionString");
-            var secretKey = tempSection.GetValue<string>("JWTSecret");
-            var secretKeyBytes = Encoding.ASCII.GetBytes(secretKey);
+            var secretKeyBytes = Encoding.ASCII.GetBytes(config.SecretKey);
 
             services.AddSingleton(new UsersControllerConfig()
             {
-                JwtSecretKey = secretKey
+                JwtSecretKey = config.SecretKey
             });
-            services.AddSingleton(new EmailConfig()
-            {
-                User = tempSection.GetValue<string>("smtpEmail"),
-                Password = tempSection.GetValue<string>("smtpPassword"),
-                Port = tempSection.GetValue<int>("smtpPort"),
-                Host = tempSection.GetValue<string>("smtpHost"),
-                SubjectFront = tempSection.GetValue<string>("emailSubjectFront")
-            });
+            services.AddSingleton(config.EmailConfig); 
 
             //Database config
-            services.AddDbContext<ContentDbContext>(options => options.UseLazyLoadingProxies().UseSqlite(contentConstring));
+            services.AddDbContext<ContentDbContext>(options => options.UseLazyLoadingProxies().UseSqlite(config.ContentConString));
 
             //Mapping config
             var mapperConfig = new MapperConfiguration(cfg => 
@@ -100,6 +90,24 @@ namespace contentapi
                     ValidateAudience = false
                 };
             });
+        }
+
+        // This method gets called by the runtime. Use this method to add services to the container.
+        public void ConfigureServices(IServiceCollection services)
+        {
+            var dataSection = Configuration.GetSection("Data");
+            var tempSection = Configuration.GetSection("Temp");
+
+            var config = new StartupServiceConfig()
+            {
+                SecretKey = tempSection.GetValue<string>("JWTSecret"),
+                ContentConString = dataSection.GetValue<string>("ContentConnectionString"),
+                EmailConfig = new EmailConfig()
+            };
+
+            Configuration.Bind("Email", config.EmailConfig);
+
+            ConfigureBasicServices(services, config);
         }
 
         // This method gets called by the runtime. Use this method to configure the HTTP request pipeline.
