@@ -13,7 +13,7 @@ namespace contentapi.test.Controllers
 
         }
 
-        public List<Tuple<string, string>> ConfirmationEmails = new List<Tuple<string, string>>();
+        public static List<Tuple<string, string>> ConfirmationEmails = new List<Tuple<string, string>>();
 
         public override void SendConfirmationEmail(string recipient, string code)
         {

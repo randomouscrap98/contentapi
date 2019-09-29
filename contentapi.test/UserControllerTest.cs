@@ -31,7 +31,7 @@ namespace contentapi.test
             Assert.True(userResult.Value.username == credential.username);
             alterCredential(credential);
             userResult = controller.Post(credential).Result;
-            Assert.True(IsBadRequest(userResult));
+            Assert.True(context.IsBadRequest(userResult.Result));
         }
 
         [Fact]
