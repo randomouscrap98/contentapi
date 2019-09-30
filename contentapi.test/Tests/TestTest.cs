@@ -1,7 +1,7 @@
 using System;
 using System.IO;
 using contentapi.Models;
-using contentapi.test.Controllers;
+using contentapi.test.Overrides;
 using Xunit;
 
 namespace contentapi.test
@@ -57,6 +57,14 @@ namespace contentapi.test
             var origin = TestContextConfirmEmail();
             var result = context.AuthenticateUser(origin.Item1, origin.Item2);
             Assert.True(!String.IsNullOrWhiteSpace(result));
+        }
+
+        [Fact]
+        public void TestContextSession()
+        {
+            Assert.True(context.SessionResult.id > 0);
+            Assert.False(String.IsNullOrWhiteSpace(context.SessionResult.username));
+            Assert.False(String.IsNullOrWhiteSpace(context.SessionAuthToken));
         }
     }
 }

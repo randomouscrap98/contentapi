@@ -5,7 +5,7 @@ using System;
 using System.Linq;
 using Microsoft.AspNetCore.Mvc;
 using System.Net;
-using contentapi.test.Controllers;
+using contentapi.test.Overrides;
 
 namespace contentapi.test
 {

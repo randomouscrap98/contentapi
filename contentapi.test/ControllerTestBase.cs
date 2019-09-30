@@ -8,8 +8,10 @@ using Xunit;
 using System.Linq;
 using contentapi.Controllers;
 using contentapi.Models;
-using contentapi.test.Controllers;
+using contentapi.test.Overrides;
 using Microsoft.AspNetCore.Http;
+using Microsoft.Extensions.DependencyInjection.Extensions;
+using contentapi.Services;
 
 namespace contentapi.test
 {
@@ -23,9 +25,11 @@ namespace contentapi.test
         {
             SessionCredentials = GetNewCredentials();
 
-            var controller = GetUsersController();
+            var provider = GetProvider();
+            var controller = (UsersTestController)ActivatorUtilities.CreateInstance(provider, typeof(UsersTestController));
 
-            //Always create the user
+            //Always create the user. Setting the sessionresult makes ALL controllers created by
+            //the provider use this user.
             SessionResult = CreateUser(SessionCredentials, controller);
             SendAuthEmail(SessionCredentials, controller);
             ConfirmUser(SessionCredentials, controller);
@@ -45,7 +49,7 @@ namespace contentapi.test
         public ActionResult ConfirmUser(UserCredential user, UsersTestController controller)
         {
             return controller.ConfirmEmail(new UsersController.ConfirmationData() {
-                confirmationKey = UsersTestController.ConfirmationEmails.Last(x => x.Item1 == user.email).Item2
+                confirmationKey = controller.ConfirmationEmails.Last(x => x.Item1 == user.email).Item2
             }).Result;
         }
 
@@ -69,14 +73,9 @@ namespace contentapi.test
             };
         }
 
-        public UsersTestController GetUsersController(bool setSession = false)
+        public UsersTestController GetUsersController()
         {
-            var services = GetServices();
-            services.AddTransient<UsersTestController>();
-            var provider = services.BuildServiceProvider();
-            var controller = (UsersTestController)provider.GetService(typeof(UsersTestController));
-            if(setSession) controller.DesiredUserId = SessionResult.id;
-            return controller;
+            return (UsersTestController)ActivatorUtilities.CreateInstance(GetProvider(), typeof(UsersTestController));
         }
 
         public IServiceCollection GetServices()
@@ -89,7 +88,15 @@ namespace contentapi.test
                 EmailConfig = new EmailConfig() { },
                 ContentConString = "Data Source=content.db"
             });
-            services.AddTransient<TestSessionService>();
+            //Use OUR session service instead of whatever the startup provides. This means
+            //that whatever user we create to attach to our context becomes the user for ALL
+            //controllers (or they should, anyway)
+            services.Replace(ServiceDescriptor.Transient<SessionService, TestSessionService>((s) =>
+                new TestSessionService((SessionConfig)s.GetService(typeof(SessionConfig)))
+                {
+                    UidProvider = () => SessionResult?.id
+                }
+            ));
 
             return services;
         }
