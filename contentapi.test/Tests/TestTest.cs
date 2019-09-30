@@ -1,7 +1,9 @@
 using System;
 using System.IO;
+using contentapi.Controllers;
 using contentapi.Models;
 using contentapi.test.Overrides;
+using Microsoft.Extensions.DependencyInjection;
 using Xunit;
 
 namespace contentapi.test
@@ -65,6 +67,13 @@ namespace contentapi.test
             Assert.True(context.SessionResult.id > 0);
             Assert.False(String.IsNullOrWhiteSpace(context.SessionResult.username));
             Assert.False(String.IsNullOrWhiteSpace(context.SessionAuthToken));
+        }
+
+        [Fact]
+        public void TestControllerUidLinking()
+        {
+            var controller = (OpenController)ActivatorUtilities.CreateInstance(context.GetProvider(), typeof(OpenController));
+            Assert.True(controller.GetUid() == context.SessionResult.id);
         }
     }
 }
