@@ -15,11 +15,11 @@ namespace contentapi.test
         }
     }
 
-    public class TestControllerTest : IClassFixture<ControllerContext>
+    public class TestControllerTest : IClassFixture<TestControllerContext>
     {
-        protected ControllerContext context;
+        protected TestControllerContext context;
 
-        public TestControllerTest(ControllerContext context)
+        public TestControllerTest(TestControllerContext context)
         {
             this.context = context;
         }

@@ -11,7 +11,7 @@ namespace contentapi.test
 {
     public class UserControllerTest : ControllerTestBase<UsersTestController>
     {
-        public UserControllerTest(ControllerContext context) : base(context) {}
+        public UserControllerTest(TestControllerContext context) : base(context) {}
 
         [Fact]
         public void TestBasicUserCreate()

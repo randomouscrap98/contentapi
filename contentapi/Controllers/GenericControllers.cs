@@ -28,13 +28,17 @@ namespace contentapi.Controllers
         public IMapper mapper;
         public PermissionService permissionService;
         public QueryService queryService;
+        public SessionService sessionService;
 
-        public GenericControllerServices(ContentDbContext context, IMapper mapper, PermissionService permissionService, QueryService queryService)
+        public GenericControllerServices(ContentDbContext context, IMapper mapper, 
+            PermissionService permissionService, QueryService queryService,
+            SessionService sessionService)
         {
             this.context = context;
             this.mapper = mapper;
             this.permissionService = permissionService;
             this.queryService = queryService;
+            this.sessionService = sessionService;
         }
     }
 
@@ -47,6 +51,7 @@ namespace contentapi.Controllers
         protected IMapper mapper;
         protected PermissionService permissionService;
         protected QueryService queryService;
+        protected SessionService sessionService;
 
         protected bool DoActionLog = true;
 
@@ -56,6 +61,8 @@ namespace contentapi.Controllers
             this.mapper = services.mapper;
             this.permissionService = services.permissionService;
             this.queryService = services.queryService;
+            this.sessionService = services.sessionService;
+            this.sessionService.Context = this;
         }
 
         // *************
@@ -84,7 +91,7 @@ namespace contentapi.Controllers
                 userId = null
             };
 
-            log.actionUserId = GetCurrentUid();
+            log.actionUserId = sessionService.GetCurrentUid();
 
             if(log.actionUserId < 0)
                 log.actionUserId = null;
@@ -100,35 +107,10 @@ namespace contentapi.Controllers
             await LogAct(action, (l) => SetLogField(l, id));
         }
 
-        protected string GetCurrentField(string field)
-        {
-            if(User == null)
-                throw new InvalidOperationException("User is not set! Maybe there was no auth?");
-
-            var value = User.FindFirstValue(field);
-            
-            if(value == null)
-                throw new InvalidOperationException($"No {field} field in User! Maybe there was no auth?");
-
-            return value;
-        }
-
-        protected long GetCurrentUid()
-        {
-            try
-            {
-                return long.Parse(GetCurrentField("uid"));
-            }
-            catch(Exception)
-            {
-                //TODO: LOGGING GOES HERE!
-                return -1;
-            }
-        }
 
         protected async Task<User> GetCurrentUserAsync()
         {
-            return await context.Users.FindAsync(GetCurrentUid());
+            return await context.Users.FindAsync(sessionService.GetCurrentUid());
         }
 
         protected async Task<bool> CanUserAsync(Permission permission)

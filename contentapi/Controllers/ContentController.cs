@@ -15,7 +15,7 @@ namespace contentapi.Controllers
             await base.Post_PreConversionCheck(content);
 
             //Completely ignore whatever UID they gave us.
-            content.userId = GetCurrentUid();
+            content.userId = sessionService.GetCurrentUid();
         }
 
         protected override async Task Post_PreInsertCheck(Content content)

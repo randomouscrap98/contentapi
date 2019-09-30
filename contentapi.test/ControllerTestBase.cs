@@ -9,22 +9,24 @@ using System.Linq;
 using contentapi.Controllers;
 using contentapi.Models;
 using contentapi.test.Controllers;
+using Microsoft.AspNetCore.Http;
 
 namespace contentapi.test
 {
-    public class ControllerContext
+    public class TestControllerContext
     {
         public UserCredential SessionCredentials {get;}
+        public UserView SessionResult {get;}
         public string SessionAuthToken {get;}
 
-        public ControllerContext()
+        public TestControllerContext()
         {
             SessionCredentials = GetNewCredentials();
 
             var controller = GetUsersController();
 
             //Always create the user
-            CreateUser(SessionCredentials, controller);
+            SessionResult = CreateUser(SessionCredentials, controller);
             SendAuthEmail(SessionCredentials, controller);
             ConfirmUser(SessionCredentials, controller);
             SessionAuthToken = AuthenticateUser(SessionCredentials, controller);
@@ -67,12 +69,14 @@ namespace contentapi.test
             };
         }
 
-        public UsersTestController GetUsersController()
+        public UsersTestController GetUsersController(bool setSession = false)
         {
             var services = GetServices();
             services.AddTransient<UsersTestController>();
             var provider = services.BuildServiceProvider();
-            return (UsersTestController)provider.GetService(typeof(UsersTestController));
+            var controller = (UsersTestController)provider.GetService(typeof(UsersTestController));
+            if(setSession) controller.DesiredUserId = SessionResult.id;
+            return controller;
         }
 
         public IServiceCollection GetServices()
@@ -85,6 +89,7 @@ namespace contentapi.test
                 EmailConfig = new EmailConfig() { },
                 ContentConString = "Data Source=content.db"
             });
+            services.AddTransient<TestSessionService>();
 
             return services;
         }
@@ -105,17 +110,28 @@ namespace contentapi.test
         }
     }
 
-    public class ControllerTestBase<T> : IClassFixture<ControllerContext> where T : ControllerBase
+    public class ControllerTestBase<T> : IClassFixture<TestControllerContext> where T : ControllerBase
     {
-        protected ControllerContext context;
+        protected TestControllerContext context;
         protected T controller;
         
-        public ControllerTestBase(ControllerContext context)
+        public ControllerTestBase(TestControllerContext context)
         {
             this.context = context;
             var services = context.GetServices();
             services.AddTransient<T>();
             controller = (T)services.BuildServiceProvider().GetService(typeof(T));
         }
+
+        //public ControllerContext GetContext()
+        //{
+        //    return new ControllerContext()
+        //    {
+        //        HttpContext = new DefaultHttpContext()
+        //        {
+        //            User = context.Sess
+        //        }
+        //    };
+        //}
     }
 }

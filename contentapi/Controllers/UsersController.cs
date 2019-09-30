@@ -67,7 +67,7 @@ namespace contentapi.Controllers
         {
             try
             {
-                return await GetSingle(GetCurrentUid());
+                return await GetSingle(sessionService.GetCurrentUid());
             }
             catch(Exception ex)
             {
@@ -174,23 +174,7 @@ namespace contentapi.Controllers
             if(!hash.SequenceEqual(foundUser.passwordHash))
                 return BadRequest("Password incorrect!");
 
-            var descriptor = new SecurityTokenDescriptor
-            {
-                Subject = new ClaimsIdentity(new Claim[] {
-                    new Claim("uid", foundUser.id.ToString()) }),
-                    //new Claim("role", foundUser.role.ToString("G")) }),
-                Expires = DateTime.UtcNow.Add(config.TokenExpiration),
-                NotBefore = DateTime.UtcNow.AddMinutes(-30),
-                SigningCredentials = new SigningCredentials(
-                    new SymmetricSecurityKey(Encoding.ASCII.GetBytes(config.JwtSecretKey)), 
-                    SecurityAlgorithms.HmacSha256Signature)
-            };
-
-            var handler = new JwtSecurityTokenHandler();
-            handler.InboundClaimTypeMap.Clear();
-            var token = handler.CreateToken(descriptor);
-            var tokenString = handler.WriteToken(token);
-            return tokenString;
+            return sessionService.GetToken(foundUser);
         }
 
         protected byte[] GetSalt()

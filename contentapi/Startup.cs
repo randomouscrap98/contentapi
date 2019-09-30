@@ -36,11 +36,12 @@ namespace contentapi
         {
             var secretKeyBytes = Encoding.ASCII.GetBytes(config.SecretKey);
 
-            services.AddSingleton(new UsersControllerConfig()
-            {
-                JwtSecretKey = config.SecretKey
-            });
+            services.AddSingleton(new UsersControllerConfig());
             services.AddSingleton(config.EmailConfig); 
+            services.AddSingleton(new SessionConfig()
+            {
+                SecretKey = config.SecretKey
+            });
 
             //Database config
             services.AddDbContext<ContentDbContext>(options => options.UseLazyLoadingProxies().UseSqlite(config.ContentConString));
@@ -66,10 +67,11 @@ namespace contentapi
             services.AddSingleton(mapperConfig.CreateMapper());
 
             //My own services
-            services.AddTransient<PermissionService>((s) => new PermissionService());
-            services.AddTransient<AccessService>((s) => new AccessService());
-            services.AddTransient<QueryService>((s) => new QueryService());
-            services.AddTransient<GenericControllerServices>();
+            services.AddTransient<PermissionService>()
+                    .AddTransient<AccessService>()
+                    .AddTransient<QueryService>()
+                    .AddTransient<SessionService>()
+                    .AddTransient<GenericControllerServices>();
 
             services.AddCors();
             services.AddMvc().SetCompatibilityVersion(CompatibilityVersion.Version_2_2);
