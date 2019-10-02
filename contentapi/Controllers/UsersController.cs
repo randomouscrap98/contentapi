@@ -22,12 +22,10 @@ namespace contentapi.Controllers
     public class UsersController : GenericControllerRaw<User, UserView, UserCredential>
     {
         protected UsersControllerConfig config;
-        //protected EmailConfig emailConfig;
 
         public UsersController(GenericControllerServices services, UsersControllerConfig config) : base (services)
         {
             this.config = config;
-            //this.emailConfig = emailConfig;
         }
 
         protected override void SetLogField(ActionLog log, long id) { log.userId = id; }
@@ -92,24 +90,9 @@ namespace contentapi.Controllers
         //Override this to do custom email sending... or something.
         public virtual async Task SendConfirmationEmailAsync(string recipient, string code)
         {
-            var subject = services.language.GetString("ConfirmEmailSubject", "en"); //, new Dictionary<string, object>() {{"subjectFront", }})
+            var subject = services.language.GetString("ConfirmEmailSubject", "en");
             var body = services.language.GetString("ConfirmEmailBody", "en", new Dictionary<string, object>() {{"confirmCode", code}});
             await services.email.SendEmailAsync(new EmailMessage(recipient, subject, body));
-            //using(var message = new MailMessage())
-            //{
-            //    message.To.Add(new MailAddress(recipient));
-            //    message.From = new MailAddress(emailConfig.User);
-            //    message.Subject = $"{emailConfig.SubjectFront} - Confirm Email";
-            //    message.Body = $"Your confirmation code is {code}";
-
-            //    using(var client = new SmtpClient(emailConfig.Host))
-            //    {
-            //        client.Port = emailConfig.Port;
-            //        client.Credentials = new NetworkCredential(emailConfig.User, emailConfig.Password);
-            //        client.EnableSsl = true;
-            //        client.Send(message);
-            //    }
-            //}
         }
 
         [HttpPost("sendemail")]

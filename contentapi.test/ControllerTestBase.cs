@@ -23,7 +23,7 @@ namespace contentapi.test
 
         //We use singleton fakes so we can get data as needed
         public FakeEmailer emailer = new FakeEmailer();
-        public UsersController userController; // = new UsersController()
+        public UsersController userController;
 
         protected FakeLanguage language = new FakeLanguage();
 
@@ -32,34 +32,34 @@ namespace contentapi.test
             SessionCredentials = GetNewCredentials();
 
             var provider = GetProvider();
-            userController = GetUsersController(); //(UsersController)ActivatorUtilities.CreateInstance(provider, typeof(UsersController));
+            userController = GetUsersController();
 
             //Always create the user. Setting the sessionresult makes ALL controllers created by
             //the provider use this user.
-            SessionResult = CreateUser(SessionCredentials); //, controller);
-            SendAuthEmail(SessionCredentials); //, controller);
-            ConfirmUser(SessionCredentials); //, controller);
-            SessionAuthToken = AuthenticateUser(SessionCredentials); //, controller);
+            SessionResult = CreateUser(SessionCredentials);
+            SendAuthEmail(SessionCredentials);
+            ConfirmUser(SessionCredentials);
+            SessionAuthToken = AuthenticateUser(SessionCredentials);
         }
 
-        public UserView CreateUser(UserCredential user)//, UsersController controller)
+        public UserView CreateUser(UserCredential user)
         {
             return userController.Post(user).Result.Value;
         }
 
-        public ActionResult SendAuthEmail(UserCredential user)//, UsersController controller)
+        public ActionResult SendAuthEmail(UserCredential user)
         {
             return userController.SendRegistrationEmail(new UsersController.RegistrationData() {email = user.email}).Result;
         }
 
-        public ActionResult ConfirmUser(UserCredential user) //, UsersController controller)
+        public ActionResult ConfirmUser(UserCredential user)
         {
             return userController.ConfirmEmail(new UsersController.ConfirmationData() {
                 confirmationKey = emailer.Emails.Last(x => x.Recipients.Contains(user.email)).Body
             }).Result;
         }
 
-        public string AuthenticateUser(UserCredential user) //, UsersController controller)
+        public string AuthenticateUser(UserCredential user)
         {
             return userController.Authenticate(user).Result.Value;
         }
@@ -139,16 +139,5 @@ namespace contentapi.test
             services.AddTransient<T>();
             controller = (T)services.BuildServiceProvider().GetService(typeof(T));
         }
-
-        //public ControllerContext GetContext()
-        //{
-        //    return new ControllerContext()
-        //    {
-        //        HttpContext = new DefaultHttpContext()
-        //        {
-        //            User = context.Sess
-        //        }
-        //    };
-        //}
     }
 }

@@ -21,13 +21,10 @@ namespace contentapi.Services
     {
         //Absolutely NO caching right now!
         public LanguageConfig Config;
-        //public string LanguageFolder;
-        //public string DefaultLanguage = Language.en.ToString("g");
 
-        public LanguageService(LanguageConfig config) //string folder)
+        public LanguageService(LanguageConfig config)
         {
             this.Config = config;
-            //LanguageFolder = folder;
         }
 
         public string GetTagReplaceable(string tag)

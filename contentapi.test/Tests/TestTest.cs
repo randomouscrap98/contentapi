@@ -29,8 +29,8 @@ namespace contentapi.test
         [Fact]
         public UserCredential TestContextCreateUser()
         {
-            var result = context.GetNewCredentials(); //Tuple.Create(context.GetNewCredentials(), context.GetUsersController());
-            var view = context.CreateUser(result); //, result.Item2);
+            var result = context.GetNewCredentials();
+            var view = context.CreateUser(result);
             Assert.True(view.username == result.username);
             return result;
         }

@@ -52,11 +52,6 @@ namespace contentapi.Controllers
     [Authorize]
     public abstract class GenericControllerRaw<T,V,P> : ControllerBase where T : GenericModel where V : class
     {
-        //protected ContentDbContext context;
-        //protected IMapper mapper;
-        //protected PermissionService permissionService;
-        //protected QueryService queryService;
-        //protected SessionService sessionService;
         protected GenericControllerServices services;
 
         protected bool DoActionLog = true;
@@ -64,12 +59,6 @@ namespace contentapi.Controllers
         public GenericControllerRaw(GenericControllerServices services)
         {
             this.services = services;
-            //this.context = services.context;
-            //this.mapper = services.mapper;
-            //this.permissionService = services.permissionService;
-            //this.queryService = services.queryService;
-            //this.sessionService = services.sessionService;
-            //this.sessionService.Context = this;
         }
 
         // *************
@@ -147,7 +136,7 @@ namespace contentapi.Controllers
         public Object GetGenericCollectionResult<W>(IEnumerable<W> items, IEnumerable<string> links = null)
         {
             return new { 
-                collection = items, //items.Select(x => mapper.Map<V>(x)),
+                collection = items,
                 _links = links ?? new List<string>(), //one day, turn this into HATEOS
                 _claims = User.Claims.ToDictionary(x => x.Type, x => x.Value)
             };
@@ -249,7 +238,6 @@ namespace contentapi.Controllers
 
                 await LogAct(LogAction.Create, newThing.id);
 
-                //return CreatedAtAction(nameof(GetSingle), new { id = newThing.id }, mapper.Map<V>(newThing));
                 return services.mapper.Map<V>(newThing);
             }
             catch(ActionCarryingException ex)

@@ -76,7 +76,7 @@ namespace contentapi
 
             //REAL interfaced services
             services.AddTransient<IEmailService, EmailService>();
-            services.AddTransient<ILanguageService, LanguageService>(); //(s) => new LanguageService(config.LanguageFolder));
+            services.AddTransient<ILanguageService, LanguageService>();
 
             services.AddCors();
             services.AddMvc().SetCompatibilityVersion(CompatibilityVersion.Version_2_2);
