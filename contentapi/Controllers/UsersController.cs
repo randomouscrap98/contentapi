@@ -21,12 +21,7 @@ namespace contentapi.Controllers
 {
     public class UsersController : GenericControllerRaw<User, UserView, UserCredential>
     {
-        protected UsersControllerConfig config;
-
-        public UsersController(GenericControllerServices services, UsersControllerConfig config) : base (services)
-        {
-            this.config = config;
-        }
+        public UsersController(GenericControllerServices services) : base (services) { }
 
         protected override void SetLogField(ActionLog log, long id) { log.userId = id; }
 
@@ -49,7 +44,7 @@ namespace contentapi.Controllers
 
         protected override User Post_ConvertItem(UserCredential user) 
         {
-            var salt = GetSalt();
+            var salt = services.hash.GetSalt();
 
             return new User()
             {
@@ -57,7 +52,7 @@ namespace contentapi.Controllers
                 createDate = DateTime.Now,
                 email = user.email,
                 passwordSalt = salt,
-                passwordHash = GetHash(user.password, salt),
+                passwordHash = services.hash.GetHash(user.password, salt),
                 registerCode = Guid.NewGuid().ToString()
             };
         }
@@ -157,41 +152,12 @@ namespace contentapi.Controllers
             if(foundUser.registerCode != null)
                 return BadRequest("You must confirm your email first");
 
-            var hash = GetHash(user.password, foundUser.passwordSalt);
+            var hash = services.hash.GetHash(user.password, foundUser.passwordSalt);
 
             if(!hash.SequenceEqual(foundUser.passwordHash))
                 return BadRequest("Password incorrect!");
 
             return services.session.GetToken(foundUser);
-        }
-
-        protected byte[] GetSalt()
-        {
-            byte[] salt = new byte[ config.SaltBits / 8 ];
-
-            using(var rng = RandomNumberGenerator.Create())
-            {
-                rng.GetBytes(salt);
-            }
-
-            return salt;
-        }
-
-        protected byte[] GetHash(string password, byte[] salt)
-        {
-            return KeyDerivation.Pbkdf2(
-                password: password,
-                salt: salt,
-                prf: KeyDerivationPrf.HMACSHA1,
-                iterationCount: config.HashIterations,
-                numBytesRequested: config.HashBits / 8
-            );
-        }
-
-        protected bool VerifyPassword(string password, byte[] hash, byte[] salt)
-        {
-            var newHash = GetHash(password, salt);
-            return hash.SequenceEqual(newHash);
         }
     }
 }

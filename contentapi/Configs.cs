@@ -2,7 +2,7 @@ using System;
 
 namespace contentapi.Configs
 {
-    public class UsersControllerConfig
+    public class HashConfig
     {
         public int SaltBits = 256;
         public int HashBits = 512;
@@ -36,7 +36,9 @@ namespace contentapi.Configs
         public string SecretKey = null;
         public string ContentConString = null;
 
-        public EmailConfig EmailConfig = null;
-        public LanguageConfig LanguageConfig = null;
+        //Just use defaults for all these
+        public EmailConfig EmailConfig = new EmailConfig();
+        public LanguageConfig LanguageConfig = new LanguageConfig();
+        public HashConfig HashConfig = new HashConfig();
     }
 }

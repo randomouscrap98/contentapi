@@ -31,11 +31,12 @@ namespace contentapi.Controllers
         public SessionService session;
         public IEmailService email;
         public ILanguageService language;
+        public IHashService hash;
 
         public GenericControllerServices(ContentDbContext context, IMapper mapper, 
             PermissionService permissionService, QueryService queryService,
             SessionService sessionService, IEmailService emailService, 
-            ILanguageService languageService)
+            ILanguageService languageService, IHashService hashService)
         {
             this.context = context;
             this.mapper = mapper;
@@ -44,6 +45,7 @@ namespace contentapi.Controllers
             this.session = sessionService;
             this.email = emailService;
             this.language = languageService;
+            this.hash = hashService;
         }
     }
 

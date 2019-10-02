@@ -50,9 +50,20 @@ namespace contentapi.test
             var contents = "This is a {what} test";
             var service = CreateService();
             CreateLanguageTag(tag, language, contents);
-            Assert.Equal(service.GetString(tag, language), contents);
+            Assert.Equal(contents, service.GetString(tag, language));
             Assert.Equal("This is a crappy test", service.GetString(tag, language, new Dictionary<string, object>(){{"what", "crappy"}}));
             Assert.Equal("This is a very good test", service.GetString(tag, language, new Dictionary<string, object>(){{"what", "very good"}}));
+        }
+
+        [Fact]
+        public void TestDefaultLanguageFallback()
+        {
+            var tag = "test3";
+            var contents = "Some serious {thing}";
+            var service = CreateService();
+            CreateLanguageTag(tag, "en", contents);
+            Assert.Equal(contents, service.GetString(tag, "fr")); //this should fallback to default
+            Assert.Equal("Some serious donkeys", service.GetString(tag, "fr", new Dictionary<string, object>() {{"thing", "donkeys"}})); //this should fallback to default
         }
     }
 }

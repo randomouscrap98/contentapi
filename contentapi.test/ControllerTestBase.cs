@@ -91,10 +91,7 @@ namespace contentapi.test
             startup.ConfigureBasicServices(services, new StartupServiceConfig()
             {
                 SecretKey = "barelyASecretKey",
-                ContentConString = "Data Source=content.db",
-                //These configs don't matter because we're substituting fake stuff anyway
-                EmailConfig = new EmailConfig() { },
-                LanguageConfig = new LanguageConfig() { }
+                ContentConString = "Data Source=content.db"
             });
             //Use OUR session service instead of whatever the startup provides. This means
             //that whatever user we create to attach to our context becomes the user for ALL
