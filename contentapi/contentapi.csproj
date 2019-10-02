@@ -14,4 +14,8 @@
     <PackageReference Include="Microsoft.IdentityModel.Tokens" Version="5.5.0" />
   </ItemGroup>
 
+  <ItemGroup>
+    <None Include="LanguageFiles\**" CopyToOutputDirectory="Always" />
+  </ItemGroup>
+
 </Project>

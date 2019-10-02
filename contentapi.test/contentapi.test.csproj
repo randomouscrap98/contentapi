@@ -18,7 +18,7 @@
   </ItemGroup>
 
   <ItemGroup>
-    <Content Include="..\contentapi\content.db" CopyToOutputDirectory="Always" />
+    <None Include="..\contentapi\content.db" CopyToOutputDirectory="Always" />
   </ItemGroup>
 
 </Project>
