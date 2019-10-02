@@ -1,6 +1,5 @@
 using System;
 using System.IO;
-using contentapi.Controllers;
 using contentapi.Models;
 using contentapi.test.Overrides;
 using Microsoft.Extensions.DependencyInjection;

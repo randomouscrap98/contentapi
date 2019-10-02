@@ -1,15 +1,12 @@
 using System;
-using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.DependencyInjection;
 using contentapi.Configs;
-using Microsoft.Extensions.Configuration;
 using Microsoft.AspNetCore.Mvc;
 using Xunit;
 using System.Linq;
 using contentapi.Controllers;
 using contentapi.Models;
 using contentapi.test.Overrides;
-using Microsoft.AspNetCore.Http;
 using Microsoft.Extensions.DependencyInjection.Extensions;
 using contentapi.Services;
 

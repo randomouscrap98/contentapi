@@ -2,10 +2,6 @@ using contentapi.Controllers;
 using Xunit;
 using contentapi.Models;
 using System;
-using System.Linq;
-using Microsoft.AspNetCore.Mvc;
-using System.Net;
-using contentapi.test.Overrides;
 
 namespace contentapi.test
 {
