@@ -9,7 +9,7 @@ using contentapi.test.Overrides;
 
 namespace contentapi.test
 {
-    public class UserControllerTest : ControllerTestBase<UsersTestController>
+    public class UserControllerTest : ControllerTestBase<UsersController>
     {
         public UserControllerTest(TestControllerContext context) : base(context) {}
 

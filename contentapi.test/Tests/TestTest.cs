@@ -27,28 +27,28 @@ namespace contentapi.test
         }
 
         [Fact]
-        public Tuple<UserCredential, UsersTestController> TestContextCreateUser()
+        public UserCredential TestContextCreateUser()
         {
-            var result = Tuple.Create(context.GetNewCredentials(), context.GetUsersController());
-            var view = context.CreateUser(result.Item1, result.Item2);
-            Assert.True(view.username == result.Item1.username);
+            var result = context.GetNewCredentials(); //Tuple.Create(context.GetNewCredentials(), context.GetUsersController());
+            var view = context.CreateUser(result); //, result.Item2);
+            Assert.True(view.username == result.username);
             return result;
         }
 
         [Fact]
-        public Tuple<UserCredential, UsersTestController> TestContextSendEmail()
+        public UserCredential TestContextSendEmail()
         {
             var origin = TestContextCreateUser();
-            var result = context.SendAuthEmail(origin.Item1, origin.Item2);
+            var result = context.SendAuthEmail(origin);
             Assert.True(context.IsOkRequest(result));
             return origin;
         }
 
         [Fact]
-        public Tuple<UserCredential, UsersTestController> TestContextConfirmEmail()
+        public UserCredential TestContextConfirmEmail()
         {
             var origin = TestContextSendEmail();
-            var result = context.ConfirmUser(origin.Item1, origin.Item2);
+            var result = context.ConfirmUser(origin);
             Assert.True(context.IsOkRequest(result));
             return origin;
         }
@@ -57,7 +57,7 @@ namespace contentapi.test
         public void TestContextAuthenticate()
         {
             var origin = TestContextConfirmEmail();
-            var result = context.AuthenticateUser(origin.Item1, origin.Item2);
+            var result = context.AuthenticateUser(origin);
             Assert.True(!String.IsNullOrWhiteSpace(result));
         }
 

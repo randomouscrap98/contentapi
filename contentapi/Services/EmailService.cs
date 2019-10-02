@@ -49,7 +49,7 @@ namespace contentapi.Services
             {
                 message.Recipients.ForEach(x => mailMessage.To.Add(new MailAddress(x)));
                 mailMessage.From = new MailAddress(Config.User);
-                mailMessage.Subject = message.Title;
+                mailMessage.Subject = $"{Config.SubjectFront} - {message.Title}";
                 mailMessage.Body = message.Body;
 
                 using(var client = new SmtpClient(Config.Host))

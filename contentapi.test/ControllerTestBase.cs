@@ -21,41 +21,47 @@ namespace contentapi.test
         public UserView SessionResult {get;}
         public string SessionAuthToken {get;}
 
+        //We use singleton fakes so we can get data as needed
+        public FakeEmailer emailer = new FakeEmailer();
+        public UsersController userController; // = new UsersController()
+
+        protected FakeLanguage language = new FakeLanguage();
+
         public TestControllerContext()
         {
             SessionCredentials = GetNewCredentials();
 
             var provider = GetProvider();
-            var controller = (UsersTestController)ActivatorUtilities.CreateInstance(provider, typeof(UsersTestController));
+            userController = GetUsersController(); //(UsersController)ActivatorUtilities.CreateInstance(provider, typeof(UsersController));
 
             //Always create the user. Setting the sessionresult makes ALL controllers created by
             //the provider use this user.
-            SessionResult = CreateUser(SessionCredentials, controller);
-            SendAuthEmail(SessionCredentials, controller);
-            ConfirmUser(SessionCredentials, controller);
-            SessionAuthToken = AuthenticateUser(SessionCredentials, controller);
+            SessionResult = CreateUser(SessionCredentials); //, controller);
+            SendAuthEmail(SessionCredentials); //, controller);
+            ConfirmUser(SessionCredentials); //, controller);
+            SessionAuthToken = AuthenticateUser(SessionCredentials); //, controller);
         }
 
-        public UserView CreateUser(UserCredential user, UsersTestController controller)
+        public UserView CreateUser(UserCredential user)//, UsersController controller)
         {
-            return controller.Post(user).Result.Value;
+            return userController.Post(user).Result.Value;
         }
 
-        public ActionResult SendAuthEmail(UserCredential user, UsersTestController controller)
+        public ActionResult SendAuthEmail(UserCredential user)//, UsersController controller)
         {
-            return controller.SendRegistrationEmail(new UsersController.RegistrationData() {email = user.email}).Result;
+            return userController.SendRegistrationEmail(new UsersController.RegistrationData() {email = user.email}).Result;
         }
 
-        public ActionResult ConfirmUser(UserCredential user, UsersTestController controller)
+        public ActionResult ConfirmUser(UserCredential user) //, UsersController controller)
         {
-            return controller.ConfirmEmail(new UsersController.ConfirmationData() {
-                confirmationKey = controller.ConfirmationEmails.Last(x => x.Item1 == user.email).Item2
+            return userController.ConfirmEmail(new UsersController.ConfirmationData() {
+                confirmationKey = emailer.Emails.Last(x => x.Recipients.Contains(user.email)).Body
             }).Result;
         }
 
-        public string AuthenticateUser(UserCredential user, UsersTestController controller)
+        public string AuthenticateUser(UserCredential user) //, UsersController controller)
         {
-            return controller.Authenticate(user).Result.Value;
+            return userController.Authenticate(user).Result.Value;
         }
 
         public string UniqueSection()
@@ -73,9 +79,9 @@ namespace contentapi.test
             };
         }
 
-        public UsersTestController GetUsersController()
+        public UsersController GetUsersController()
         {
-            return (UsersTestController)ActivatorUtilities.CreateInstance(GetProvider(), typeof(UsersTestController));
+            return (UsersController)ActivatorUtilities.CreateInstance(GetProvider(), typeof(UsersController));
         }
 
         public IServiceCollection GetServices()
@@ -85,8 +91,10 @@ namespace contentapi.test
             startup.ConfigureBasicServices(services, new StartupServiceConfig()
             {
                 SecretKey = "barelyASecretKey",
+                ContentConString = "Data Source=content.db",
+                //These configs don't matter because we're substituting fake stuff anyway
                 EmailConfig = new EmailConfig() { },
-                ContentConString = "Data Source=content.db"
+                LanguageConfig = new LanguageConfig() { }
             });
             //Use OUR session service instead of whatever the startup provides. This means
             //that whatever user we create to attach to our context becomes the user for ALL
@@ -97,6 +105,8 @@ namespace contentapi.test
                     UidProvider = () => SessionResult?.id
                 }
             ));
+            services.Replace(ServiceDescriptor.Singleton<IEmailService>(emailer));
+            services.Replace(ServiceDescriptor.Singleton<ILanguageService>(language));
 
             return services;
         }

@@ -15,7 +15,7 @@ namespace contentapi.test.Overrides
 
         public long GetUid()
         {
-            return sessionService.GetCurrentUid();
+            return services.session.GetCurrentUid();
         }
     }
 }

@@ -19,7 +19,7 @@ namespace contentapi.Controllers
 
             if(category.parentId != null)
             {
-                var parentCategory = await context.GetSingleAsync<Category>((long)category.parentId); //context.GetAll()//Categories.FindAsync(category.parentId);
+                var parentCategory = await services.context.GetSingleAsync<Category>((long)category.parentId);
 
                 if(parentCategory == null)
                     ThrowAction(BadRequest("Nonexistent parent category!"));

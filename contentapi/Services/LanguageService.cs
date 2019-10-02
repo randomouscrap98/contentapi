@@ -2,6 +2,7 @@ using System;
 using System.Collections.Generic;
 using System.IO;
 using System.Text;
+using contentapi.Configs;
 
 namespace contentapi.Services
 {
@@ -19,12 +20,14 @@ namespace contentapi.Services
     public class LanguageService : ILanguageService
     {
         //Absolutely NO caching right now!
-        public string LanguageFolder;
-        public string DefaultLanguage = Language.en.ToString("g");
+        public LanguageConfig Config;
+        //public string LanguageFolder;
+        //public string DefaultLanguage = Language.en.ToString("g");
 
-        public LanguageService(string folder)
+        public LanguageService(LanguageConfig config) //string folder)
         {
-            LanguageFolder = folder;
+            this.Config = config;
+            //LanguageFolder = folder;
         }
 
         public string GetTagReplaceable(string tag)
@@ -38,13 +41,13 @@ namespace contentapi.Services
 
             //Construct the filename
             var filename = $"{tag}_{language}";
-            var filePath = Path.Combine(LanguageFolder, filename);
+            var filePath = Path.Combine(Config.LanguageFolder, filename);
 
             //Rerun with the default language to see if that's THERE, otherwise BLEGH QUIT
             if(!File.Exists(filePath))
             {
-                if(language != DefaultLanguage)
-                    return GetString(tag, DefaultLanguage, values);
+                if(language != Config.DefaultLanguage)
+                    return GetString(tag, Config.DefaultLanguage, values);
                 else
                     throw new InvalidOperationException("Could not find tag specified for given language!");
             }

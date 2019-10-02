@@ -14,18 +14,20 @@ using Microsoft.AspNetCore.Authorization;
 using System.Net.Mail;
 using System.Net;
 using contentapi.Configs;
+using System.Collections.Generic;
+using contentapi.Services;
 
 namespace contentapi.Controllers
 {
     public class UsersController : GenericControllerRaw<User, UserView, UserCredential>
     {
         protected UsersControllerConfig config;
-        protected EmailConfig emailConfig;
+        //protected EmailConfig emailConfig;
 
-        public UsersController(GenericControllerServices services, UsersControllerConfig config, EmailConfig emailConfig) : base (services)
+        public UsersController(GenericControllerServices services, UsersControllerConfig config) : base (services)
         {
             this.config = config;
-            this.emailConfig = emailConfig;
+            //this.emailConfig = emailConfig;
         }
 
         protected override void SetLogField(ActionLog log, long id) { log.userId = id; }
@@ -41,7 +43,7 @@ namespace contentapi.Controllers
             if(user.email == null)
                 ThrowAction(BadRequest("Must provide an email!"));
 
-            var existing = await context.GetAll<User>().FirstOrDefaultAsync(x => x.username == user.username || x.email == user.email);
+            var existing = await services.context.GetAll<User>().FirstOrDefaultAsync(x => x.username == user.username || x.email == user.email);
 
             if(existing != null)
                 ThrowAction(BadRequest("This user already seems to exist!"));
@@ -67,7 +69,7 @@ namespace contentapi.Controllers
         {
             try
             {
-                return await GetSingle(sessionService.GetCurrentUid());
+                return await GetSingle(services.session.GetCurrentUid());
             }
             catch(Exception ex)
             {
@@ -88,37 +90,40 @@ namespace contentapi.Controllers
         }
 
         //Override this to do custom email sending... or something.
-        public virtual void SendConfirmationEmail(string recipient, string code)
+        public virtual async Task SendConfirmationEmailAsync(string recipient, string code)
         {
-            using(var message = new MailMessage())
-            {
-                message.To.Add(new MailAddress(recipient));
-                message.From = new MailAddress(emailConfig.User);
-                message.Subject = $"{emailConfig.SubjectFront} - Confirm Email";
-                message.Body = $"Your confirmation code is {code}";
+            var subject = services.language.GetString("ConfirmEmailSubject", "en"); //, new Dictionary<string, object>() {{"subjectFront", }})
+            var body = services.language.GetString("ConfirmEmailBody", "en", new Dictionary<string, object>() {{"confirmCode", code}});
+            await services.email.SendEmailAsync(new EmailMessage(recipient, subject, body));
+            //using(var message = new MailMessage())
+            //{
+            //    message.To.Add(new MailAddress(recipient));
+            //    message.From = new MailAddress(emailConfig.User);
+            //    message.Subject = $"{emailConfig.SubjectFront} - Confirm Email";
+            //    message.Body = $"Your confirmation code is {code}";
 
-                using(var client = new SmtpClient(emailConfig.Host))
-                {
-                    client.Port = emailConfig.Port;
-                    client.Credentials = new NetworkCredential(emailConfig.User, emailConfig.Password);
-                    client.EnableSsl = true;
-                    client.Send(message);
-                }
-            }
+            //    using(var client = new SmtpClient(emailConfig.Host))
+            //    {
+            //        client.Port = emailConfig.Port;
+            //        client.Credentials = new NetworkCredential(emailConfig.User, emailConfig.Password);
+            //        client.EnableSsl = true;
+            //        client.Send(message);
+            //    }
+            //}
         }
 
         [HttpPost("sendemail")]
         [AllowAnonymous]
         public async Task<ActionResult> SendRegistrationEmail([FromBody]RegistrationData data)
         {
-            var foundUser = await context.GetAll<User>().FirstOrDefaultAsync(x => x.email == data.email);
+            var foundUser = await services.context.GetAll<User>().FirstOrDefaultAsync(x => x.email == data.email);
 
             if(foundUser == null)
                 return BadRequest("No user with that email");
             if(foundUser.registerCode == null)
                 return BadRequest("Nothing to do for user");
 
-            SendConfirmationEmail(data.email, foundUser.registerCode);
+            await SendConfirmationEmailAsync(data.email, foundUser.registerCode);
 
             return Ok("Email sent");
         }
@@ -136,7 +141,7 @@ namespace contentapi.Controllers
             if(string.IsNullOrEmpty(data.confirmationKey))
                 return BadRequest("Must provide a confirmation key in the body");
 
-            var users = context.GetAll<User>();
+            var users = services.context.GetAll<User>();
             var foundUser = await users.FirstOrDefaultAsync(x => x.registerCode == data.confirmationKey);
 
             if(foundUser == null)
@@ -144,8 +149,8 @@ namespace contentapi.Controllers
 
             foundUser.registerCode = null;
 
-            context.Set<User>().Update(foundUser);
-            await context.SaveChangesAsync();
+            services.context.Set<User>().Update(foundUser);
+            await services.context.SaveChangesAsync();
 
             return Ok("Email Confirmed");
         }
@@ -155,7 +160,7 @@ namespace contentapi.Controllers
         public async Task<ActionResult<string>> Authenticate([FromBody]UserCredential user)
         {
             User foundUser = null;
-            var users = context.GetAll<User>();
+            var users = services.context.GetAll<User>();
 
             if(user.username != null)
                 foundUser = await users.FirstOrDefaultAsync(x => x.username == user.username);
@@ -174,7 +179,7 @@ namespace contentapi.Controllers
             if(!hash.SequenceEqual(foundUser.passwordHash))
                 return BadRequest("Password incorrect!");
 
-            return sessionService.GetToken(foundUser);
+            return services.session.GetToken(foundUser);
         }
 
         protected byte[] GetSalt()

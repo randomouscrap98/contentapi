@@ -25,11 +25,18 @@ namespace contentapi.Configs
         public string SubjectFront;
     }
 
+    public class LanguageConfig
+    {
+        public string LanguageFolder = null;
+        public string DefaultLanguage = "en";
+    }
+
     public class StartupServiceConfig
     {
         public string SecretKey = null;
         public string ContentConString = null;
 
         public EmailConfig EmailConfig = null;
+        public LanguageConfig LanguageConfig = null;
     }
 }

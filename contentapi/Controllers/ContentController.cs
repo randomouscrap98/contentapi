@@ -15,14 +15,14 @@ namespace contentapi.Controllers
             await base.Post_PreConversionCheck(content);
 
             //Completely ignore whatever UID they gave us.
-            content.userId = sessionService.GetCurrentUid();
+            content.userId = services.session.GetCurrentUid();
         }
 
         protected override async Task Post_PreInsertCheck(Content content)
         {
             await base.Post_PreInsertCheck(content);
 
-            var category = await context.GetSingleAsync<Category>((long)content.categoryId);
+            var category = await services.context.GetSingleAsync<Category>((long)content.categoryId);
 
             if(category == null)
                 ThrowAction(BadRequest("Must provide category for content!"));

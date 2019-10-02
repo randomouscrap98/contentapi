@@ -38,6 +38,7 @@ namespace contentapi
 
             services.AddSingleton(new UsersControllerConfig());
             services.AddSingleton(config.EmailConfig); 
+            services.AddSingleton(config.LanguageConfig); 
             services.AddSingleton(new SessionConfig()
             {
                 SecretKey = config.SecretKey
@@ -73,6 +74,10 @@ namespace contentapi
                     .AddTransient<SessionService>()
                     .AddTransient<GenericControllerServices>();
 
+            //REAL interfaced services
+            services.AddTransient<IEmailService, EmailService>();
+            services.AddTransient<ILanguageService, LanguageService>(); //(s) => new LanguageService(config.LanguageFolder));
+
             services.AddCors();
             services.AddMvc().SetCompatibilityVersion(CompatibilityVersion.Version_2_2);
 
@@ -104,10 +109,13 @@ namespace contentapi
             {
                 SecretKey = tempSection.GetValue<string>("JWTSecret"),
                 ContentConString = dataSection.GetValue<string>("ContentConnectionString"),
-                EmailConfig = new EmailConfig()
+                EmailConfig = new EmailConfig(),
+                LanguageConfig = new LanguageConfig()
             };
 
+            //Assign the email config from the "Email" section (must exist prior, see how we create an object above)
             Configuration.Bind("Email", config.EmailConfig);
+            Configuration.Bind("Language", config.LanguageConfig);
 
             ConfigureBasicServices(services, config);
         }

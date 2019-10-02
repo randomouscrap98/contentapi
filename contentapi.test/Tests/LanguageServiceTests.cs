@@ -1,6 +1,7 @@
 
 using System.Collections.Generic;
 using System.IO;
+using contentapi.Configs;
 using contentapi.Services;
 using Xunit;
 
@@ -12,7 +13,11 @@ namespace contentapi.test
 
         private LanguageService CreateService()
         {
-            return new LanguageService(LanguageFolder);
+            var config = new LanguageConfig()
+            {
+                LanguageFolder = LanguageFolder
+            };
+            return new LanguageService(config);
         }
 
         private void CreateLanguageTag(string tag, string language, string content)

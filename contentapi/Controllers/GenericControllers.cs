@@ -26,19 +26,24 @@ namespace contentapi.Controllers
     {
         public ContentDbContext context;
         public IMapper mapper;
-        public PermissionService permissionService;
-        public QueryService queryService;
-        public SessionService sessionService;
+        public PermissionService permission;
+        public QueryService query;
+        public SessionService session;
+        public IEmailService email;
+        public ILanguageService language;
 
         public GenericControllerServices(ContentDbContext context, IMapper mapper, 
             PermissionService permissionService, QueryService queryService,
-            SessionService sessionService)
+            SessionService sessionService, IEmailService emailService, 
+            ILanguageService languageService)
         {
             this.context = context;
             this.mapper = mapper;
-            this.permissionService = permissionService;
-            this.queryService = queryService;
-            this.sessionService = sessionService;
+            this.permission = permissionService;
+            this.query = queryService;
+            this.session = sessionService;
+            this.email = emailService;
+            this.language = languageService;
         }
     }
 
@@ -47,22 +52,24 @@ namespace contentapi.Controllers
     [Authorize]
     public abstract class GenericControllerRaw<T,V,P> : ControllerBase where T : GenericModel where V : class
     {
-        protected ContentDbContext context;
-        protected IMapper mapper;
-        protected PermissionService permissionService;
-        protected QueryService queryService;
-        protected SessionService sessionService;
+        //protected ContentDbContext context;
+        //protected IMapper mapper;
+        //protected PermissionService permissionService;
+        //protected QueryService queryService;
+        //protected SessionService sessionService;
+        protected GenericControllerServices services;
 
         protected bool DoActionLog = true;
 
         public GenericControllerRaw(GenericControllerServices services)
         {
-            this.context = services.context;
-            this.mapper = services.mapper;
-            this.permissionService = services.permissionService;
-            this.queryService = services.queryService;
-            this.sessionService = services.sessionService;
-            this.sessionService.Context = this;
+            this.services = services;
+            //this.context = services.context;
+            //this.mapper = services.mapper;
+            //this.permissionService = services.permissionService;
+            //this.queryService = services.queryService;
+            //this.sessionService = services.sessionService;
+            //this.sessionService.Context = this;
         }
 
         // *************
@@ -91,15 +98,15 @@ namespace contentapi.Controllers
                 userId = null
             };
 
-            log.actionUserId = sessionService.GetCurrentUid();
+            log.actionUserId = services.session.GetCurrentUid();
 
             if(log.actionUserId < 0)
                 log.actionUserId = null;
 
             setField(log);
 
-            await context.Logs.AddAsync(log);
-            await context.SaveChangesAsync();
+            await services.context.Logs.AddAsync(log);
+            await services.context.SaveChangesAsync();
         }
 
         protected async Task LogAct(LogAction action, long id)
@@ -110,7 +117,7 @@ namespace contentapi.Controllers
 
         protected async Task<User> GetCurrentUserAsync()
         {
-            return await context.Users.FindAsync(sessionService.GetCurrentUid());
+            return await services.context.Users.FindAsync(services.session.GetCurrentUid());
         }
 
         protected async Task<bool> CanUserAsync(Permission permission)
@@ -120,14 +127,14 @@ namespace contentapi.Controllers
             if(user == null)
                 return false;
 
-            return permissionService.CanDo((Role)user.role, permission);
+            return services.permission.CanDo((Role)user.role, permission);
         }
 
         protected async Task<T> GetExisting(long id)
         {
             try
             {
-                return await context.GetSingleAsync<T>(id);
+                return await services.context.GetSingleAsync<T>(id);
             }
             catch
             {
@@ -153,11 +160,11 @@ namespace contentapi.Controllers
         //GOTTA OVERRIDE THIS 
         protected abstract void SetLogField(ActionLog log, long id);
 
-        protected virtual Task<IQueryable<T>> Get_GetBase() { return Task.FromResult(context.GetAll<T>()); }
+        protected virtual Task<IQueryable<T>> Get_GetBase() { return Task.FromResult(services.context.GetAll<T>()); }
         protected virtual Task GetSingle_PreResultCheck(T item) { return Task.CompletedTask; }
 
         protected virtual Task Post_PreConversionCheck(P item) { return Task.CompletedTask; }
-        protected virtual T Post_ConvertItem(P item) { return mapper.Map<T>(item); }
+        protected virtual T Post_ConvertItem(P item) { return services.mapper.Map<T>(item); }
         protected virtual Task Post_PreInsertCheck(T item) 
         { 
             //Make sure some fields are like... yeah
@@ -168,7 +175,7 @@ namespace contentapi.Controllers
         }
 
         protected virtual Task Put_PreConversionCheck(P item, T existing) { return Task.CompletedTask; }
-        protected virtual T Put_ConvertItem(P item, T existing) { return mapper.Map<P, T>(item, existing); }
+        protected virtual T Put_ConvertItem(P item, T existing) { return services.mapper.Map<P, T>(item, existing); }
         protected virtual Task Put_PreInsertCheck(T existing) { return Task.CompletedTask; }
 
         protected virtual Task Delete_PreDeleteCheck(T existing) { return Task.CompletedTask; }
@@ -185,14 +192,14 @@ namespace contentapi.Controllers
 
                 try
                 {
-                    queryResults = queryService.ApplyQuery(baseResults, query);
+                    queryResults = services.query.ApplyQuery(baseResults, query);
                 }
                 catch(InvalidOperationException ex)
                 {
                     ThrowAction(BadRequest(ex.Message));
                 }
 
-                var views = (await queryResults.ToListAsync()).Select(x => mapper.Map<V>(x));
+                var views = (await queryResults.ToListAsync()).Select(x => services.mapper.Map<V>(x));
                 return GetGenericCollectionResult(views);
             }
             catch(ActionCarryingException ex)
@@ -207,10 +214,10 @@ namespace contentapi.Controllers
         {
             try
             {
-                var item = await context.GetSingleAsync<T>(id);
+                var item = await services.context.GetSingleAsync<T>(id);
                 await GetSingle_PreResultCheck(item);
                 await LogAct(LogAction.View, id);
-                return mapper.Map<V>(item);
+                return services.mapper.Map<V>(item);
             }
             catch(ActionCarryingException ex)
             {
@@ -237,13 +244,13 @@ namespace contentapi.Controllers
                 await Post_PreInsertCheck(newThing);
 
                 //Actually add the object??
-                await context.Set<T>().AddAsync(newThing);
-                await context.SaveChangesAsync();
+                await services.context.Set<T>().AddAsync(newThing);
+                await services.context.SaveChangesAsync();
 
                 await LogAct(LogAction.Create, newThing.id);
 
                 //return CreatedAtAction(nameof(GetSingle), new { id = newThing.id }, mapper.Map<V>(newThing));
-                return mapper.Map<V>(newThing);
+                return services.mapper.Map<V>(newThing);
             }
             catch(ActionCarryingException ex)
             {
@@ -269,12 +276,12 @@ namespace contentapi.Controllers
                 await Put_PreInsertCheck(existing);
 
                 //Actually update the object now? I hope???
-                context.Set<T>().Update(existing);
-                await context.SaveChangesAsync();
+                services.context.Set<T>().Update(existing);
+                await services.context.SaveChangesAsync();
 
                 await LogAct(LogAction.Update, existing.id);
 
-                return mapper.Map<V>(existing);
+                return services.mapper.Map<V>(existing);
             }
             catch(ActionCarryingException ex)
             {
@@ -292,11 +299,11 @@ namespace contentapi.Controllers
                 await Delete_PreDeleteCheck(existing);
 
                 existing.status |= (int)ModelStatus.Deleted;
-                context.Set<T>().Update(existing);
-                await context.SaveChangesAsync();
+                services.context.Set<T>().Update(existing);
+                await services.context.SaveChangesAsync();
                 await LogAct(LogAction.Delete, existing.id);
 
-                return mapper.Map<V>(existing);
+                return services.mapper.Map<V>(existing);
             }
             catch(ActionCarryingException ex)
             {
@@ -351,7 +358,7 @@ namespace contentapi.Controllers
             if(view.accessList.Count > 0)
             {
                 var userIds = view.accessList.Select(x => x.Key);
-                var users = await context.Users.Where(x => userIds.Contains(x.id)).ToListAsync();
+                var users = await services.context.Users.Where(x => userIds.Contains(x.id)).ToListAsync();
 
                 if(users.Count != view.accessList.Count)
                     ThrowAction(BadRequest("Bad access list: nonexistent / duplicate user"));
