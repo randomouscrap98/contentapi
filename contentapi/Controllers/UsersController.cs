@@ -48,6 +48,18 @@ namespace contentapi.Controllers
             };
         }
 
+        protected override Task Delete_PreDeleteCheck(User existing)
+        {
+            //NOBODY can delete users right now because that's a HUGE cascading thing that I'm not implementing right now!
+            ThrowAction(Unauthorized("Deleting users not supported right now!"));
+            return Task.CompletedTask; //just to satisfy the compiler
+
+            //var me = await GetCurrentUserAsync();
+
+            //if(!services.permission.CanDo(me.role, Permission.DeleteUser))
+            //    ThrowAction(Unauthorized("You don't have permission to delete users!"));
+        }
+
         [HttpGet("me")]
         public async Task<ActionResult<UserView>> Me()
         {

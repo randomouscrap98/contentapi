@@ -4,12 +4,21 @@ using contentapi.Models;
 
 namespace contentapi.Services
 {
+    public enum Permission
+    {
+        CreateCategory,
+        UpdateCategory,
+        DeleteCategory,
+        DeleteUser
+    }
+
     public class PermissionService
     {
         public Dictionary<Role, List<Permission>> ExtraGrants = new Dictionary<Role, List<Permission>>()
         {
             { Role.SiteAdministrator, new List<Permission>() {
-                Permission.CreateCategory
+                Permission.CreateCategory,
+                Permission.DeleteUser
             }}
         };
 

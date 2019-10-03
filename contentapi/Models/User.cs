@@ -9,13 +9,6 @@ namespace contentapi.Models
         SiteAdministrator = 20
     }
 
-    public enum Permission
-    {
-        CreateCategory,
-        UpdateCategory,
-        DeleteCategory
-    }
-
     //This is the user as they are in the database
     [Table("users")]
     public class User : GenericModel

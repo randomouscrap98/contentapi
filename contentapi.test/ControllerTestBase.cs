@@ -113,8 +113,15 @@ namespace contentapi.test
             return services;
         }
 
-        public void Login() { session.UidProvider = () => SessionResult?.id; }
-        public void Logout() { session.UidProvider = null; }
+        public void SetLoginState(bool loggedIn)
+        {
+            if(loggedIn)
+                session.UidProvider = () => SessionResult?.id;
+            else
+                session.UidProvider = null;
+        }
+        public void Login() { SetLoginState(true); }
+        public void Logout() { SetLoginState(false); }
 
         public IServiceProvider GetProvider()
         {
@@ -124,6 +131,16 @@ namespace contentapi.test
         public bool IsBadRequest(ActionResult result)
         {
             return result is BadRequestResult || result is BadRequestObjectResult;
+        }
+
+        public bool IsNotFound(ActionResult result)
+        {
+            return result is NotFoundObjectResult || result is NotFoundResult;
+        }
+
+        public bool IsNotAuthorized(ActionResult result)
+        {
+            return result is UnauthorizedObjectResult || result is UnauthorizedResult;
         }
 
         public bool IsOkRequest(ActionResult result)
@@ -144,5 +161,11 @@ namespace contentapi.test
             services.AddTransient<T>();
             controller = (T)services.BuildServiceProvider().GetService(typeof(T));
         }
+
+        //public void TestWhileLoggedIn(Action thing)
+        //{
+        //    context.Login();
+        //    context.Logout();
+        //}
     }
 }
