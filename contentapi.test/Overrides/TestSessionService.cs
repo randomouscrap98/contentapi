@@ -1,23 +1,22 @@
 using System;
 using contentapi.Configs;
+using contentapi.Models;
 using contentapi.Services;
+using Microsoft.AspNetCore.Mvc;
 
 namespace contentapi.test.Overrides
 {
     public class TestSessionService : SessionService
     {
-        public TestSessionService(SessionConfig config) : base(config) {}
-
         public Func<long?> UidProvider = null;
 
-        public override string GetCurrentField(string field)
+        public TestSessionService(SessionConfig config) : base(config) { }
+
+        //The important part: provide OUR uid
+        public override long GetCurrentUid()
         {
-            string result = null;
-
-            if(field == UserIdField)
-                result = UidProvider?.Invoke()?.ToString(); //DesiredUserId?.ToString();
-
-            return ProcessFieldValue(field, result);
+            return UidProvider?.Invoke() ?? -1;
         }
+
     }
 }

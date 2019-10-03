@@ -41,5 +41,24 @@ namespace contentapi.test
         {
             TestUserCreateDupe((c) => c.username += "a");
         }
+
+        [Fact]
+        public void TestUserAuthentivate()
+        {
+            var result = controller.Authenticate(context.SessionCredentials).Result;
+            //Can't check if they're EQUAL, because the expiration will be different.
+            //Just make sure we got SOMETHING.
+            //Assert.True(context.IsOkRequest(result.Result));
+            Assert.False(string.IsNullOrWhiteSpace(result.Value));
+        }
+
+        [Fact]
+        public void TestUserMe()
+        {
+            context.Login();
+            var result = controller.Me().Result;
+            Assert.Equal(context.SessionResult.id, result.Value.id);
+            Assert.Equal(context.SessionResult.username, result.Value.username);
+        }
     }
 }

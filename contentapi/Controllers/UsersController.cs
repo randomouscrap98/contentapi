@@ -61,6 +61,7 @@ namespace contentapi.Controllers
             }
         }
 
+        //Need to override to allow anonymous
         [AllowAnonymous]
         public async override Task<ActionResult<UserView>> Post([FromBody]UserCredential item)
         {
@@ -73,7 +74,6 @@ namespace contentapi.Controllers
             public string email {get;set;}
         }
 
-        //Override this to do custom email sending... or something.
         public virtual async Task SendConfirmationEmailAsync(string recipient, string code)
         {
             var subject = services.language.GetString("ConfirmEmailSubject", "en");

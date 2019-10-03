@@ -8,11 +8,20 @@ using Microsoft.IdentityModel.Tokens;
 
 namespace contentapi.Services
 {
-    public class SessionService
+    public interface ISessionService
     {
-        public ControllerBase Context;
-        public string UserIdField = "uid";
+        ControllerBase Context {get;set;}
 
+        string GetCurrentField(string field);
+        long GetCurrentUid();
+        string GetToken(User user);
+    }
+
+    public class SessionService : ISessionService
+    {
+        public ControllerBase Context {get;set;}
+
+        public string UserIdField = "uid";
         public SessionConfig config;
 
         public SessionService(SessionConfig config)
@@ -36,7 +45,7 @@ namespace contentapi.Services
             return ProcessFieldValue(field, Context.User.FindFirstValue(field));
         }
 
-        public long GetCurrentUid()
+        public virtual long GetCurrentUid()
         {
             try
             {

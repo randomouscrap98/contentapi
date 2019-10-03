@@ -71,8 +71,11 @@ namespace contentapi.test
         [Fact]
         public void TestControllerUidLinking()
         {
+            context.Login(); //make sure we're logged in!
             var controller = (OpenController)ActivatorUtilities.CreateInstance(context.GetProvider(), typeof(OpenController));
             Assert.True(controller.GetUid() == context.SessionResult.id);
+            context.Logout();
+            Assert.True(controller.GetUid() == -1);
         }
     }
 }

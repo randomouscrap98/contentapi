@@ -62,17 +62,17 @@ namespace contentapi
             }); 
             services.AddSingleton(mapperConfig.CreateMapper());
 
-            //My own services
+            //My own services (fix these to be interfaces sometime)
             services.AddTransient<PermissionService>()
                     .AddTransient<AccessService>()
                     .AddTransient<QueryService>()
-                    .AddTransient<SessionService>()
                     .AddTransient<GenericControllerServices>();
 
             //REAL interfaced services
             services.AddTransient<IEmailService, EmailService>();
             services.AddTransient<ILanguageService, LanguageService>();
             services.AddTransient<IHashService, HashService>();
+            services.AddTransient<ISessionService, SessionService>();
 
             services.AddCors();
             services.AddMvc().SetCompatibilityVersion(CompatibilityVersion.Version_2_2);

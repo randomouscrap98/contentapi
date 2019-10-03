@@ -19,10 +19,12 @@ namespace contentapi.test
         public string SessionAuthToken {get;}
 
         //We use singleton fakes so we can get data as needed
-        public FakeEmailer emailer = new FakeEmailer();
+        public FakeEmailer emailer = null; // = new FakeEmailer();
+        public FakeLanguage language = null; //new FakeLanguage();
+        public TestSessionService session = null;
+
         public UsersController userController;
 
-        protected FakeLanguage language = new FakeLanguage();
 
         public TestControllerContext()
         {
@@ -41,7 +43,8 @@ namespace contentapi.test
 
         public UserView CreateUser(UserCredential user)
         {
-            return userController.Post(user).Result.Value;
+            var thing = userController.Post(user).Result;
+            return thing.Value;
         }
 
         public ActionResult SendAuthEmail(UserCredential user)
@@ -90,20 +93,28 @@ namespace contentapi.test
                 SecretKey = "barelyASecretKey",
                 ContentConString = "Data Source=content.db"
             });
+
+            //Unfortunately we can ONLY build the session when we already have our services... kinda funky but whatever,
+            //that's how singletons work (and we want to be able to control login/etc.)
+            var tempProvider = services.BuildServiceProvider();
+
             //Use OUR session service instead of whatever the startup provides. This means
             //that whatever user we create to attach to our context becomes the user for ALL
             //controllers (or they should, anyway)
-            services.Replace(ServiceDescriptor.Transient<SessionService, TestSessionService>((s) =>
-                new TestSessionService((SessionConfig)s.GetService(typeof(SessionConfig)))
-                {
-                    UidProvider = () => SessionResult?.id
-                }
-            ));
+            session = session ?? (TestSessionService)ActivatorUtilities.CreateInstance(tempProvider, typeof(TestSessionService));
+            emailer = emailer ?? (FakeEmailer)ActivatorUtilities.CreateInstance(tempProvider, typeof(FakeEmailer));
+            language = language ?? (FakeLanguage)ActivatorUtilities.CreateInstance(tempProvider, typeof(FakeLanguage));
+
+            //If for whatever reason these can't be singletons anymore... well, idk
+            services.Replace(ServiceDescriptor.Singleton<ISessionService>(session));
             services.Replace(ServiceDescriptor.Singleton<IEmailService>(emailer));
             services.Replace(ServiceDescriptor.Singleton<ILanguageService>(language));
 
             return services;
         }
+
+        public void Login() { session.UidProvider = () => SessionResult?.id; }
+        public void Logout() { session.UidProvider = null; }
 
         public IServiceProvider GetProvider()
         {

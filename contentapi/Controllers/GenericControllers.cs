@@ -27,14 +27,14 @@ namespace contentapi.Controllers
         public IMapper mapper;
         public PermissionService permission;
         public QueryService query;
-        public SessionService session;
+        public ISessionService session;
         public IEmailService email;
         public ILanguageService language;
         public IHashService hash;
 
         public GenericControllerServices(ContentDbContext context, IMapper mapper, 
             PermissionService permissionService, QueryService queryService,
-            SessionService sessionService, IEmailService emailService, 
+            ISessionService sessionService, IEmailService emailService, 
             ILanguageService languageService, IHashService hashService)
         {
             this.context = context;
@@ -60,6 +60,7 @@ namespace contentapi.Controllers
         public GenericControllerRaw(GenericControllerServices services)
         {
             this.services = services;
+            services.session.Context = this; //EEEWWWW
         }
 
         // *************
