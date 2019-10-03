@@ -60,6 +60,13 @@ namespace contentapi.Controllers
             //    ThrowAction(Unauthorized("You don't have permission to delete users!"));
         }
 
+        //Don't support changing username/password/email yet (it's kind of a big process)
+        protected override Task Put_PreConversionCheck(UserCredential item, User existing)
+        {
+            ThrowAction(Unauthorized("You can't change your user credentials yet! Sorry!"));
+            return Task.CompletedTask;
+        }
+
         [HttpGet("me")]
         public async Task<ActionResult<UserView>> Me()
         {

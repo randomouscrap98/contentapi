@@ -9,7 +9,8 @@ namespace contentapi.Services
         CreateCategory,
         UpdateCategory,
         DeleteCategory,
-        DeleteUser
+        DeleteUser,
+        SetRole
     }
 
     public class PermissionService
@@ -18,7 +19,8 @@ namespace contentapi.Services
         {
             { Role.SiteAdministrator, new List<Permission>() {
                 Permission.CreateCategory,
-                Permission.DeleteUser
+                Permission.DeleteUser,
+                Permission.SetRole
             }}
         };
 
