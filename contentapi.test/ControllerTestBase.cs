@@ -43,7 +43,7 @@ namespace contentapi.test
 
         public UserView CreateUser(UserCredential user)
         {
-            var thing = userController.Post(user).Result;
+            var thing = userController.PostCredentials(user).Result;
             return thing.Value;
         }
 
@@ -128,24 +128,17 @@ namespace contentapi.test
             return GetServices().BuildServiceProvider();
         }
 
-        public bool IsBadRequest(ActionResult result)
+        public bool IsBadRequest(ActionResult result) { return result is BadRequestResult || result is BadRequestObjectResult; }
+        public bool IsNotFound(ActionResult result) { return result is NotFoundObjectResult || result is NotFoundResult; }
+        public bool IsNotAuthorized(ActionResult result) { return result is UnauthorizedObjectResult || result is UnauthorizedResult; }
+        public bool IsOkRequest(ActionResult result) { return result is OkObjectResult || result is OkResult; }
+        public bool IsSuccessRequest<T>(ActionResult<T> result)
         {
-            return result is BadRequestResult || result is BadRequestObjectResult;
-        }
-
-        public bool IsNotFound(ActionResult result)
-        {
-            return result is NotFoundObjectResult || result is NotFoundResult;
-        }
-
-        public bool IsNotAuthorized(ActionResult result)
-        {
-            return result is UnauthorizedObjectResult || result is UnauthorizedResult;
-        }
-
-        public bool IsOkRequest(ActionResult result)
-        {
-            return result is OkObjectResult || result is OkResult;
+            //A VERY BAD CHECK but... eeeggghh
+            if(result.Result == null)
+                return result.Value != null;
+            else
+                return IsOkRequest(result.Result);
         }
     }
 

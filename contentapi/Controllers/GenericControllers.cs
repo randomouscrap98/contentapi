@@ -51,13 +51,13 @@ namespace contentapi.Controllers
     [Route("api/[controller]")]
     [ApiController]
     [Authorize]
-    public abstract class GenericControllerRaw<T,V,P> : ControllerBase where T : GenericModel where V : class
+    public abstract class GenericController<T,V> : ControllerBase where T : GenericModel where V : GenericView
     {
         protected GenericControllerServices services;
 
         protected bool DoActionLog = true;
 
-        public GenericControllerRaw(GenericControllerServices services)
+        public GenericController(GenericControllerServices services)
         {
             this.services = services;
             services.session.Context = this; //EEEWWWW
@@ -154,8 +154,8 @@ namespace contentapi.Controllers
         protected virtual Task<IQueryable<T>> Get_GetBase() { return Task.FromResult(services.context.GetAll<T>()); }
         protected virtual Task GetSingle_PreResultCheck(T item) { return Task.CompletedTask; }
 
-        protected virtual Task Post_PreConversionCheck(P item) { return Task.CompletedTask; }
-        protected virtual T Post_ConvertItem(P item) { return services.mapper.Map<T>(item); }
+        protected virtual Task Post_PreConversionCheck(V item) { return Task.CompletedTask; }
+        protected virtual T Post_ConvertItem(V item) { return services.mapper.Map<T>(item); }
         protected virtual Task Post_PreInsertCheck(T item) 
         { 
             //Make sure some fields are like... yeah
@@ -165,8 +165,14 @@ namespace contentapi.Controllers
             return Task.CompletedTask;
         }
 
-        protected virtual Task Put_PreConversionCheck(P item, T existing) { return Task.CompletedTask; }
-        protected virtual T Put_ConvertItem(P item, T existing) { return services.mapper.Map<P, T>(item, existing); }
+        protected virtual Task Put_PreConversionCheck(V item, T existing) 
+        { 
+            item.createDate = existing.createDate;
+            item.id = existing.id;
+            return Task.CompletedTask;
+        }
+        //protected virtual Task Put_PreConversionCheck(P item, T existing) { return Task.CompletedTask; }
+        protected virtual T Put_ConvertItem(V item, T existing) { return services.mapper.Map<V, T>(item, existing); }
         protected virtual Task Put_PreInsertCheck(T existing) { return Task.CompletedTask; }
 
         protected virtual Task Delete_PreDeleteCheck(T existing) { return Task.CompletedTask; }
@@ -221,7 +227,7 @@ namespace contentapi.Controllers
         }
 
         [HttpPost]
-        public async virtual Task<ActionResult<V>> Post([FromBody]P item)
+        public async virtual Task<ActionResult<V>> Post([FromBody]V item)
         {
             try
             {
@@ -250,7 +256,7 @@ namespace contentapi.Controllers
 
         //Note: I don't think you need "Patch" because the way the "put" conversion works just... works.
         [HttpPut("{id}")]
-        public async virtual Task<ActionResult<V>> Put([FromRoute]long id, [FromBody]P item)
+        public async virtual Task<ActionResult<V>> Put([FromRoute]long id, [FromBody]V item)
         {
             try
             {
@@ -302,17 +308,17 @@ namespace contentapi.Controllers
         }
     }
 
-    public abstract class GenericController<T,V> : GenericControllerRaw<T,V,V> where T : GenericModel where V : GenericView 
-    {
-        public GenericController(GenericControllerServices services) : base(services) {}
+    //public abstract class GenericController<T,V> : GenericControllerRaw<T,V,V> where T : GenericModel where V : GenericView 
+    //{
+    //    public GenericController(GenericControllerServices services) : base(services) {}
 
-        protected override async Task Put_PreConversionCheck(V item, T existing) 
-        { 
-            await base.Put_PreConversionCheck(item, existing);
-            item.createDate = existing.createDate;
-            item.id = existing.id;
-        }
-    }
+    //    protected override async Task Put_PreConversionCheck(V item, T existing) 
+    //    { 
+    //        await base.Put_PreConversionCheck(item, existing);
+    //        item.createDate = existing.createDate;
+    //        item.id = existing.id;
+    //    }
+    //}
 
     public abstract class AccessController<T,V> : GenericController<T, V> where T : GenericAccessModel where V : GenericAccessView
     {

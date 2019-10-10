@@ -16,7 +16,7 @@ namespace contentapi.test
         {
             context.SetLoginState(loggedIn);
             var credential = context.GetNewCredentials();
-            var userResult = controller.Post(credential).Result;
+            var userResult = controller.PostCredentials(credential).Result;
             Assert.True(userResult.Value.username == credential.username);
             Assert.True(userResult.Value.id > 0);
             Assert.True(userResult.Value.createDate <= DateTime.Now);
@@ -26,10 +26,10 @@ namespace contentapi.test
         private void TestUserCreateDupe(Action<UserCredential> alterCredential)
         {
             var credential = context.GetNewCredentials();
-            var userResult = controller.Post(credential).Result;
+            var userResult = controller.PostCredentials(credential).Result;
             Assert.True(userResult.Value.username == credential.username);
             alterCredential(credential);
-            userResult = controller.Post(credential).Result;
+            userResult = controller.PostCredentials(credential).Result;
             Assert.True(context.IsBadRequest(userResult.Result));
         }
 
@@ -61,7 +61,8 @@ namespace contentapi.test
             //Can't check if they're EQUAL, because the expiration will be different.
             //Just make sure we got SOMETHING.
             //Assert.True(context.IsOkRequest(result.Result));
-            Assert.False(string.IsNullOrWhiteSpace(result.Value));
+            //Assert.False(string.IsNullOrWhiteSpace(result.Value));
+            Assert.True(context.IsSuccessRequest(result));
         }
 
         [Fact]
@@ -90,7 +91,7 @@ namespace contentapi.test
             //I don't care WHO we are, we can't delete!
             context.SetLoginState(loggedIn);
             var result = controller.Delete(context.SessionResult.id).Result;
-            Assert.True(context.IsNotAuthorized(result.Result));
+            Assert.False(context.IsSuccessRequest(result));
         }
 
         [Fact]
@@ -98,10 +99,10 @@ namespace contentapi.test
         {
             context.Login();
             var creds = context.GetNewCredentials();
-            var newUser = controller.Post(creds).Result;
+            var newUser = controller.PostCredentials(creds).Result;
             Assert.True(newUser.Value.id > 0); //Just make sure a new user was created
             var result = controller.Delete(newUser.Value.id).Result;
-            Assert.True(context.IsNotAuthorized(result.Result));
+            Assert.False(context.IsSuccessRequest(result));
         }
     }
 }
