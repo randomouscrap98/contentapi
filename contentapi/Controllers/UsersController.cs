@@ -10,56 +10,23 @@ using contentapi.Services;
 
 namespace contentapi.Controllers
 {
-    public class UsersController : GenericController<User, UserView> //, UserCredential>
+    public class UsersController : GenericController<User, UserView>
     {
         public UsersController(GenericControllerServices services) : base (services) { }
 
         protected override void SetLogField(ActionLog log, long id) { log.userId = id; }
 
-        protected override Task Post_PreConversionCheck(UserView user) //UserCredential user)
+        protected override Task Post_PreConversionCheck(UserView user)
         {
             ThrowAction(BadRequest("Cannot create users from this endpoint right now! Use credentials endpoint"));
             return Task.CompletedTask;
-            //await base.Post_PreConversionCheck(user);
-
-            ////One day, fix these so they're the "standard" bad object request from model validation!!
-            ////Perhaps do custom validation!
-            //if(user.username == null)
-            //    ThrowAction(BadRequest("Must provide a username!"));
-            //if(user.email == null)
-            //    ThrowAction(BadRequest("Must provide an email!"));
-
-            //var existing = await services.context.GetAll<User>().FirstOrDefaultAsync(x => x.username == user.username || x.email == user.email);
-
-            //if(existing != null)
-            //    ThrowAction(BadRequest("This user already seems to exist!"));
         }
-
-        //protected override User Post_ConvertItem(UserCredential user) 
-        //{
-        //    var salt = services.hash.GetSalt();
-
-        //    return new User()
-        //    {
-        //        username = user.username,
-        //        createDate = DateTime.Now,
-        //        email = user.email,
-        //        passwordSalt = salt,
-        //        passwordHash = services.hash.GetHash(user.password, salt),
-        //        registerCode = Guid.NewGuid().ToString()
-        //    };
-        //}
 
         protected override Task Delete_PreDeleteCheck(User existing)
         {
             //NOBODY can delete users right now because that's a HUGE cascading thing that I'm not implementing right now!
             ThrowAction(BadRequest("Deleting users not supported right now!"));
-            return Task.CompletedTask; //just to satisfy the compiler
-
-            //var me = await GetCurrentUserAsync();
-
-            //if(!services.permission.CanDo(me.role, Permission.DeleteUser))
-            //    ThrowAction(Unauthorized("You don't have permission to delete users!"));
+            return Task.CompletedTask;
         }
 
         //Don't support changing username/password/email yet (it's kind of a big process)
@@ -72,6 +39,7 @@ namespace contentapi.Controllers
         //You 'Create' a new user by posting ONLY 'credentials'. This is different than most other types of things...
         //passwords and emails and such shouldn't be included in every view unlike regular models where every field is there.
         [HttpPost("credentials")]
+        [AllowAnonymous]
         public async Task<ActionResult<UserView>> PostCredentials([FromBody]UserCredential user)
         {
             //One day, fix these so they're the "standard" bad object request from model validation!!
@@ -118,13 +86,6 @@ namespace contentapi.Controllers
                 return BadRequest(ex.Message);
             }
         }
-
-        //Need to override to allow anonymous
-        //[AllowAnonymous]
-        //public async override Task<ActionResult<UserView>> Post([FromBody]UserCredential item)
-        //{
-        //    return await base.Post(item);
-        //}
 
         //Temp class stuff to make life... easier?
         public class RegistrationData

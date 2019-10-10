@@ -171,7 +171,6 @@ namespace contentapi.Controllers
             item.id = existing.id;
             return Task.CompletedTask;
         }
-        //protected virtual Task Put_PreConversionCheck(P item, T existing) { return Task.CompletedTask; }
         protected virtual T Put_ConvertItem(V item, T existing) { return services.mapper.Map<V, T>(item, existing); }
         protected virtual Task Put_PreInsertCheck(T existing) { return Task.CompletedTask; }
 
@@ -307,18 +306,6 @@ namespace contentapi.Controllers
             }
         }
     }
-
-    //public abstract class GenericController<T,V> : GenericControllerRaw<T,V,V> where T : GenericModel where V : GenericView 
-    //{
-    //    public GenericController(GenericControllerServices services) : base(services) {}
-
-    //    protected override async Task Put_PreConversionCheck(V item, T existing) 
-    //    { 
-    //        await base.Put_PreConversionCheck(item, existing);
-    //        item.createDate = existing.createDate;
-    //        item.id = existing.id;
-    //    }
-    //}
 
     public abstract class AccessController<T,V> : GenericController<T, V> where T : GenericAccessModel where V : GenericAccessView
     {
