@@ -135,12 +135,12 @@ namespace contentapi.Controllers
         }
 
         //How to RETURN items (the object we return... maybe make it a real class)
-        public Object GetGenericCollectionResult<W>(IEnumerable<W> items, IEnumerable<string> links = null)
+        public Dictionary<string, object> GetGenericCollectionResult<W>(IEnumerable<W> items, IEnumerable<string> links = null)
         {
-            return new { 
-                collection = items,
-                _links = links ?? new List<string>(), //one day, turn this into HATEOS
-                _claims = User.Claims.ToDictionary(x => x.Type, x => x.Value)
+            return new Dictionary<string, object>{ 
+                { "collection" , items },
+                { "_links",  links ?? new List<string>() }, //one day, turn this into HATEOS
+                //_claims = User.Claims.ToDictionary(x => x.Type, x => x.Value)
             };
         }
 
@@ -178,7 +178,7 @@ namespace contentapi.Controllers
 
         [HttpGet]
         [AllowAnonymous]
-        public async virtual Task<ActionResult<Object>> Get([FromQuery]CollectionQuery query)
+        public async virtual Task<ActionResult<Dictionary<string, object>>> Get([FromQuery]CollectionQuery query)
         {
             try
             {

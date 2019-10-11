@@ -2,6 +2,9 @@ using contentapi.Controllers;
 using Xunit;
 using contentapi.Models;
 using System;
+using contentapi.Services;
+using System.Collections.Generic;
+using System.Linq;
 
 namespace contentapi.test
 {
@@ -58,10 +61,6 @@ namespace contentapi.test
         {
             context.SetLoginState(loggedIn);
             var result = controller.Authenticate(context.SessionCredentials).Result;
-            //Can't check if they're EQUAL, because the expiration will be different.
-            //Just make sure we got SOMETHING.
-            //Assert.True(context.IsOkRequest(result.Result));
-            //Assert.False(string.IsNullOrWhiteSpace(result.Value));
             Assert.True(context.IsSuccessRequest(result));
         }
 
@@ -80,6 +79,7 @@ namespace contentapi.test
             context.Logout();
             var result = controller.Me().Result;
             Assert.True(context.IsBadRequest(result.Result) || context.IsNotFound(result.Result)); //This may not always be a bad request!
+            //Assert.True(context.IsNotAuthorized(result.Result));
             Assert.Null(result.Value);
         }
 
@@ -103,6 +103,24 @@ namespace contentapi.test
             Assert.True(newUser.Value.id > 0); //Just make sure a new user was created
             var result = controller.Delete(newUser.Value.id).Result;
             Assert.False(context.IsSuccessRequest(result));
+        }
+
+        [Fact]
+        public void TestGetUsers()
+        {
+            var result = controller.Get(new CollectionQuery()).Result;
+            Assert.True(context.IsSuccessRequest(result));
+            List<UserView> users = ((IEnumerable<UserView>)result.Value["collection"]).ToList();
+            Assert.True(users.Count > 0);
+            Assert.Contains(users, x => x.id == context.SessionResult.id);
+        }
+
+        [Fact]
+        public void TestGetUserSingle()
+        {
+            var result = controller.GetSingle(context.SessionResult.id).Result;
+            Assert.True(context.IsSuccessRequest(result));
+            Assert.True(result.Value.id == context.SessionResult.id);
         }
     }
 }
