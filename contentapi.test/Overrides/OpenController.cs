@@ -1,10 +1,11 @@
+using System.Linq;
 using contentapi.Controllers;
 using contentapi.Models;
 using contentapi.Services;
 
 namespace contentapi.test.Overrides
 {
-    public class OpenController : AccessController<Content, ContentView>
+    public class OpenController : ContentController //AccessController<Content, ContentView>
     {
         public OpenController(GenericControllerServices services, AccessService accessService) : base(services, accessService) { }
 

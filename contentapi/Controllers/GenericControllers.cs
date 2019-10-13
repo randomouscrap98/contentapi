@@ -316,6 +316,8 @@ namespace contentapi.Controllers
             this.accessService = accessService;
         }
 
+        //protected abstract IQueryable<T> IncludeAccess(IQueryable<T> query) ;
+
         protected void CheckAccessFormat(GenericAccessView accessView)
         {
             if(!accessService.CheckAccessFormat(accessView))
@@ -366,7 +368,10 @@ namespace contentapi.Controllers
         protected override async Task<IQueryable<T>> Get_GetBase()
         {
             var user = await GetCurrentUserAsync();
-            return (await base.Get_GetBase()).Where(x => accessService.CanRead(x, user));
+            var result = await base.Get_GetBase();
+            //Apply magic include BEFORE checking if you can read (I think order matters). HOWEVER: this tolist is BAD!!!
+            result = result.Include("AccessList"); //(await IncludeAccess(result).ToListAsync());
+            return result.Where(x => accessService.CanRead(x, user));
         }
     }
 }

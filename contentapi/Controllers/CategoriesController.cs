@@ -1,6 +1,8 @@
 using contentapi.Models;
 using System.Threading.Tasks;
 using contentapi.Services;
+using System.Linq;
+using Microsoft.EntityFrameworkCore;
 
 namespace contentapi.Controllers
 {
@@ -9,6 +11,8 @@ namespace contentapi.Controllers
         public CategoriesController(GenericControllerServices services, AccessService a):base(services, a) { }
 
         protected override void SetLogField(ActionLog log, long id) { log.categoryId = id; }
+
+        //protected override IQueryable<Category> IncludeAccess(IQueryable<Category> query) { return query.Include(x => x.AccessList); }
 
         protected override async Task Post_PreInsertCheck(Category category)
         {
@@ -25,5 +29,10 @@ namespace contentapi.Controllers
                     ThrowAction(BadRequest("Nonexistent parent category!"));
             }
         }
+
+        //protected override async Task<IQueryable<Category>> Get_GetBase()
+        //{
+        //    return (await base.Get_GetBase()).Include(x => x.AccessList);
+        //}
     }
 }

@@ -1,6 +1,8 @@
 using contentapi.Models;
 using System.Threading.Tasks;
 using contentapi.Services;
+using System.Linq;
+using Microsoft.EntityFrameworkCore;
 
 namespace contentapi.Controllers
 {
@@ -9,6 +11,9 @@ namespace contentapi.Controllers
         public ContentController(GenericControllerServices services, AccessService a) : base(services, a) { }
 
         protected override void SetLogField(ActionLog log, long id) { log.contentId = id; }
+
+        //This is a BAD HACK but for now this is what we can do
+        //protected override IQueryable<Content> IncludeAccess(IQueryable<Content> query) { return query.Include(x => x.AccessList); }
         
         protected override async Task Post_PreConversionCheck(ContentView content)
         {
