@@ -10,30 +10,28 @@ namespace contentapi.test
 {
     public class UserControllerTest : ControllerTestBase<UsersController>
     {
-        public UserControllerTest(TestControllerContext context) : base(context) {}
-
         [Theory]
         [InlineData(true)]
         [InlineData(false)]
         public void TestBasicUserCreate(bool loggedIn)
         {
-            context.SetLoginState(loggedIn);
-            var credential = context.GetNewCredentials();
-            var userResult = controller.PostCredentials(credential).Result;
+            var instance = GetInstance(loggedIn);
+            var credential = GetNewCredentials();
+            var userResult = instance.Controller.PostCredentials(credential).Result;
             Assert.True(userResult.Value.username == credential.username);
             Assert.True(userResult.Value.id > 0);
             Assert.True(userResult.Value.createDate <= DateTime.Now);
             Assert.True(userResult.Value.createDate > DateTime.Now.AddDays(-1));
         }
 
-        private void TestUserCreateDupe(Action<UserCredential> alterCredential)
+        private void TestUserCreateDupe(ControllerInstance<UsersController> instance, Action<UserCredential> alterCredential)
         {
-            var credential = context.GetNewCredentials();
-            var userResult = controller.PostCredentials(credential).Result;
+            var credential = GetNewCredentials();
+            var userResult = instance.Controller.PostCredentials(credential).Result;
             Assert.True(userResult.Value.username == credential.username);
             alterCredential(credential);
-            userResult = controller.PostCredentials(credential).Result;
-            Assert.True(context.IsBadRequest(userResult.Result));
+            userResult = instance.Controller.PostCredentials(credential).Result;
+            Assert.True(IsBadRequest(userResult.Result));
         }
 
         [Theory]
@@ -41,8 +39,7 @@ namespace contentapi.test
         [InlineData(false)]
         public void TestUserCreateDupeUsername(bool loggedIn)
         {
-            context.SetLoginState(loggedIn);
-            TestUserCreateDupe((c) => c.email += "a");
+            TestUserCreateDupe(GetInstance(loggedIn), (c) => c.email += "a");
         }
 
         [Theory]
@@ -50,48 +47,64 @@ namespace contentapi.test
         [InlineData(false)]
         public void TestUserCreateDupeEmail(bool loggedIn)
         {
-            context.SetLoginState(loggedIn);
-            TestUserCreateDupe((c) => c.username += "a");
-        }
-
-        [Theory]
-        [InlineData(true)]
-        [InlineData(false)]
-        public void TestUserAuthenticate(bool loggedIn)
-        {
-            context.SetLoginState(loggedIn);
-            var result = controller.Authenticate(context.SessionCredentials).Result;
-            Assert.True(context.IsSuccessRequest(result));
+            TestUserCreateDupe(GetInstance(loggedIn), (c) => c.username += "a");
         }
 
         [Fact]
         public void TestUserMe()
         {
-            context.Login();
-            var result = controller.Me().Result;
-            Assert.Equal(context.SessionResult.id, result.Value.id);
-            Assert.Equal(context.SessionResult.username, result.Value.username);
+            var instance = GetInstance(true);
+            var result = instance.Controller.Me().Result;
+            Assert.Equal(instance.User.id, result.Value.id);
+            Assert.Equal(instance.User.username, result.Value.username);
         }
 
         [Fact]
-        public void TestUserMeLogout()
+        public void TestUserMeLoggedOut()
         {
-            context.Logout();
-            var result = controller.Me().Result;
-            Assert.True(context.IsBadRequest(result.Result) || context.IsNotFound(result.Result)); //This may not always be a bad request!
-            //Assert.True(context.IsNotAuthorized(result.Result));
+            var instance = GetInstance(false);
+            var result = instance.Controller.Me().Result;
+            Assert.True(IsBadRequest(result.Result) || IsNotFound(result.Result)); //This may not always be a bad request!
             Assert.Null(result.Value);
         }
 
-        [Theory]
-        [InlineData(true)]
-        [InlineData(false)]
-        public void TestUserSelfDeleteFail(bool loggedIn)
+        [Fact]
+        public void TestUserSelfDeleteFail()
         {
             //I don't care WHO we are, we can't delete!
-            context.SetLoginState(loggedIn);
-            var result = controller.Delete(context.SessionResult.id).Result;
-            Assert.False(context.IsSuccessRequest(result));
+            var instance = GetInstance(true);
+            var result = instance.Controller.Delete(instance.User.id).Result;
+            Assert.False(IsSuccessRequest(result));
+        }
+
+        [Fact]
+        public void TestGetUsers()
+        {
+            var instance = GetInstance(true);
+            var result = instance.Controller.Get(new CollectionQuery()).Result;
+            Assert.True(IsSuccessRequest(result));
+            List<UserView> users = ((IEnumerable<UserView>)result.Value["collection"]).ToList();
+            Assert.True(users.Count > 0);
+            Assert.Contains(users, x => x.id == instance.User.id);
+        }
+
+        [Fact]
+        public void TestGetUserSingle()
+        {
+            var instance = GetInstance(true);
+            var result = instance.Controller.GetSingle(instance.User.id).Result;
+            Assert.True(IsSuccessRequest(result));
+            Assert.True(result.Value.id == instance.User.id);
+        }
+
+        /*[Theory]
+        [InlineData(true)]
+        [InlineData(false)]
+        public void TestUserAuthenticate(bool loggedIn)
+        {
+            var instance = GetInstance(loggedIn);
+            var result = instance.Controller.Authenticate(instance.User).Result;
+            Assert.True(context.IsSuccessRequest(result));
         }
 
         [Fact]
@@ -103,24 +116,7 @@ namespace contentapi.test
             Assert.True(newUser.Value.id > 0); //Just make sure a new user was created
             var result = controller.Delete(newUser.Value.id).Result;
             Assert.False(context.IsSuccessRequest(result));
-        }
+        }*/
 
-        [Fact]
-        public void TestGetUsers()
-        {
-            var result = controller.Get(new CollectionQuery()).Result;
-            Assert.True(context.IsSuccessRequest(result));
-            List<UserView> users = ((IEnumerable<UserView>)result.Value["collection"]).ToList();
-            Assert.True(users.Count > 0);
-            Assert.Contains(users, x => x.id == context.SessionResult.id);
-        }
-
-        [Fact]
-        public void TestGetUserSingle()
-        {
-            var result = controller.GetSingle(context.SessionResult.id).Result;
-            Assert.True(context.IsSuccessRequest(result));
-            Assert.True(result.Value.id == context.SessionResult.id);
-        }
     }
 }

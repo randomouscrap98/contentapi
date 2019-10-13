@@ -4,9 +4,9 @@ using Xunit;
 
 namespace contentapi.test
 {
-    public class CategoryControllerTest : ControllerTestBase<CategoriesController>
+    /*public class CategoryControllerTest : ControllerTestBase<CategoriesController>
     {
-        public CategoryControllerTest(TestControllerContext context) : base(context) {}
+        //public CategoryControllerTest(TestControllerContext context) : base(context) {}
 
         public CategoryView QuickCategory(string name)
         {
@@ -29,5 +29,5 @@ namespace contentapi.test
             var result = controller.Post(category).Result;
             Assert.True(context.IsNotAuthorized(result.Result));
         }
-    }
+    }*/
 }

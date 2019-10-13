@@ -106,19 +106,19 @@ namespace contentapi.Controllers
         }
 
 
-        protected async Task<User> GetCurrentUserAsync()
+        public async Task<User> GetCurrentUserAsync()
         {
             return await services.context.Users.FindAsync(services.session.GetCurrentUid());
         }
 
-        protected async Task<bool> CanUserAsync(Permission permission)
+        public async Task<bool> CanUserAsync(Permission permission)
         {
             var user = await GetCurrentUserAsync();
 
             if(user == null)
                 return false;
 
-            return services.permission.CanDo((Role)user.role, permission);
+            return services.permission.CanDo(user.role, permission);
         }
 
         protected async Task<T> GetExisting(long id)
