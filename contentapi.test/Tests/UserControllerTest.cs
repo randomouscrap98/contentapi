@@ -97,26 +97,50 @@ namespace contentapi.test
             Assert.True(result.Value.id == instance.User.id);
         }
 
-        /*[Theory]
+        [Theory]
+        [InlineData(true)]
+        [InlineData(false)]
+        public void TestUserCreate(bool loggedIn)
+        {
+            var instance = GetInstance(loggedIn);
+            var creds = GetNewCredentials();
+            var result = instance.Controller.PostCredentials(creds).Result;
+            Assert.True(IsSuccessRequest(result));
+            Assert.True(result.Value.id > 0);
+        }
+
+        private void DoEmail(ControllerInstance<UsersController> instance, UserCredential creds)
+        {
+            var result = instance.Controller.SendRegistrationEmail(new UsersController.RegistrationData() {email = creds.email}).Result;
+            Assert.True(IsOkRequest(result));
+            var code = instance.Emailer.Emails.Last(x => x.Recipients.Contains(creds.email)).Body;
+            var final = instance.Controller.ConfirmEmail(new UsersController.ConfirmationData() {confirmationKey = code}).Result;
+            Assert.True(IsOkRequest(final));
+        }
+
+        [Theory]
+        [InlineData(true)]
+        [InlineData(false)]
+        public void TestUserEmail(bool loggedIn)
+        {
+            var instance = GetInstance(loggedIn);
+            var creds = GetNewCredentials();
+            var user = instance.Controller.PostCredentials(creds).Result;
+            DoEmail(instance, creds);
+        }
+
+        [Theory]
         [InlineData(true)]
         [InlineData(false)]
         public void TestUserAuthenticate(bool loggedIn)
         {
             var instance = GetInstance(loggedIn);
-            var result = instance.Controller.Authenticate(instance.User).Result;
-            Assert.True(context.IsSuccessRequest(result));
+            var creds = GetNewCredentials();
+            var user = instance.Controller.PostCredentials(creds).Result;
+            DoEmail(instance, creds);
+            var result = instance.Controller.Authenticate(creds).Result;
+            Assert.True(IsSuccessRequest(result));
+            Assert.True(!string.IsNullOrWhiteSpace(result.Value));
         }
-
-        [Fact]
-        public void TestRandomDeleteFail()
-        {
-            context.Login();
-            var creds = context.GetNewCredentials();
-            var newUser = controller.PostCredentials(creds).Result;
-            Assert.True(newUser.Value.id > 0); //Just make sure a new user was created
-            var result = controller.Delete(newUser.Value.id).Result;
-            Assert.False(context.IsSuccessRequest(result));
-        }*/
-
     }
 }
