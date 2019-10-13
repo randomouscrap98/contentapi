@@ -16,6 +16,7 @@ namespace contentapi.test
         public UserCredential Credentials = null;
         public User User = null;
         public FakeEmailer Emailer = null;
+        public ContentDbContext Context = null;
     }
 
     public class ControllerTestBase<T> where T : ControllerBase
@@ -71,6 +72,7 @@ namespace contentapi.test
             var realProvider = services.BuildServiceProvider();
             instance.Controller = (T)ActivatorUtilities.CreateInstance(realProvider, typeof(T));
             instance.Emailer = emailer;
+            instance.Context = (ContentDbContext)realProvider.GetService(typeof(ContentDbContext));
 
             if(loggedIn)
             {
@@ -82,9 +84,8 @@ namespace contentapi.test
                     role = role
                 };
 
-                var context = (ContentDbContext)realProvider.GetService(typeof(ContentDbContext));
-                context.Users.Add(user);
-                context.SaveChanges();
+                instance.Context.Users.Add(user);
+                instance.Context.SaveChanges();
 
                 instance.User = user;
                 session.UidProvider = () => instance.User.id;
@@ -92,14 +93,6 @@ namespace contentapi.test
 
             return instance;
         }
-
-        //public ActionResult ConfirmUser(UserCredential user)
-        //{
-        //    return userController.ConfirmEmail(new UsersController.ConfirmationData() {
-        //        confirmationKey = emailer.Emails.Last(x => x.Recipients.Contains(user.email)).Body
-        //    }).Result;
-        //}
-
 
         public UserCredential GetNewCredentials()
         {

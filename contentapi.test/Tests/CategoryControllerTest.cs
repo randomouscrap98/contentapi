@@ -4,10 +4,8 @@ using Xunit;
 
 namespace contentapi.test
 {
-    /*public class CategoryControllerTest : ControllerTestBase<CategoriesController>
+    public class CategoryControllerTest : ControllerTestBase<CategoriesController>
     {
-        //public CategoryControllerTest(TestControllerContext context) : base(context) {}
-
         public CategoryView QuickCategory(string name)
         {
             return new CategoryView()
@@ -20,14 +18,16 @@ namespace contentapi.test
             };
         }
 
-        [Fact]
-        public void TestCreateCategoryUnauthorized()
+        [Theory]
+        [InlineData(true)]
+        [InlineData(false)]
+        public void TestCreateCategoryUnauthorized(bool loggedIn)
         {
             //By default, our user should not be able to post categories
-            context.Login();
+            var instance = GetInstance(loggedIn);
             var category = QuickCategory("My new category");
-            var result = controller.Post(category).Result;
-            Assert.True(context.IsNotAuthorized(result.Result));
+            var result = instance.Controller.Post(category).Result;
+            Assert.True(IsNotAuthorized(result.Result));
         }
-    }*/
+    }
 }

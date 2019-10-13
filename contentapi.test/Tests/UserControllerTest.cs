@@ -71,9 +71,17 @@ namespace contentapi.test
         [Fact]
         public void TestUserSelfDeleteFail()
         {
-            //I don't care WHO we are, we can't delete!
             var instance = GetInstance(true);
             var result = instance.Controller.Delete(instance.User.id).Result;
+            Assert.False(IsSuccessRequest(result));
+        }
+
+        [Fact]
+        public void TestRandomUserDeleteFail()
+        {
+            var instance = GetInstance(false);
+            var user = instance.Context.Users.Last(x => x.role == Role.None); //Just get SOMEONE with no role
+            var result = instance.Controller.Delete(user.id).Result;
             Assert.False(IsSuccessRequest(result));
         }
 
