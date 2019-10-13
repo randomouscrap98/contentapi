@@ -54,7 +54,7 @@ namespace contentapi.Controllers
     [Route("api/[controller]")]
     [ApiController]
     [Authorize]
-    public abstract class EntityController<T,V> : ControllerBase where T : Entity where V : EntityView
+    public abstract class EntityController<T,V> : ControllerBase where T : EntityChild where V : EntityView
     {
         protected GenericControllerServices services;
 
@@ -174,14 +174,19 @@ namespace contentapi.Controllers
         // * OVERRIDE *
         // ************
 
-        protected virtual Task<IQueryable<T>> GetAllBase(bool showDeleted = false)
+        protected virtual Task<IQueryable<T>> GetAllBase()
         {
-            var queryable = services.context.Set<T>().AsQueryable();
-            
-            if(!showDeleted)
-                queryable = queryable.Where(x => (x.status & EntityStatus.Deleted) == 0);
+            return Task.FromResult(services.context.Set<T>().Include(x => x.Entity).ThenInclude(x => x.AccessList).AsQueryable());
+        }
 
-            return Task.FromResult(queryable);
+        protected virtual void SetNewEntity(T item)
+        {
+            item.Entity = new Entity()
+            {
+                createDate = DateTime.Now,
+                id = 0,
+                status = 0
+            };
         }
 
         //protected virtual Task<IQueryable<T>> Get_GetBase() { return Task.FromResult(services.context.GetAll<T>()); }
@@ -191,17 +196,14 @@ namespace contentapi.Controllers
         protected virtual T Post_ConvertItem(V item) { return services.mapper.Map<T>(item); }
         protected virtual Task Post_PreInsertCheck(T item) 
         { 
-            //Make sure some fields are like... yeah
-            item.createDate = DateTime.Now;
-            item.id = 0;
-            item.status = 0;
+            SetNewEntity(item);
             return Task.CompletedTask;
         }
 
         protected virtual Task Put_PreConversionCheck(V item, T existing) 
         { 
-            item.createDate = existing.createDate;
-            item.id = existing.id;
+            item.createDate = existing.Entity.createDate;
+            item.id = existing.entityId;
             return Task.CompletedTask;
         }
         protected virtual T Put_ConvertItem(V item, T existing) { return services.mapper.Map<V, T>(item, existing); }
@@ -209,26 +211,32 @@ namespace contentapi.Controllers
 
         protected virtual Task Delete_PreDeleteCheck(T existing) { return Task.CompletedTask; }
 
+        public async virtual Task<IQueryable<T>> GetQueryAsync(CollectionQuery query)
+        {
+            //Do stuff in between these (maybe?) in the future or... something.
+            IQueryable<T> baseResults = await GetAllBase();
+            IQueryable<T> queryResults = null;
+
+            try
+            {
+                queryResults = services.query.ApplyQuery(baseResults, query);
+            }
+            catch (InvalidOperationException ex)
+            {
+                ThrowAction(BadRequest(ex.Message));
+            }
+
+            return queryResults;
+        }
+
         [HttpGet]
         [AllowAnonymous]
         public async virtual Task<ActionResult<Dictionary<string, object>>> Get([FromQuery]CollectionQuery query)
         {
             try
             {
-                //Do stuff in between these (maybe?) in the future or... something.
-                IQueryable<T> baseResults = await Get_GetBase();
-                IQueryable<T> queryResults = null;
-
-                try
-                {
-                    queryResults = services.query.ApplyQuery(baseResults, query);
-                }
-                catch(InvalidOperationException ex)
-                {
-                    ThrowAction(BadRequest(ex.Message));
-                }
-
-                var views = (await queryResults.ToListAsync()).Select(x => services.mapper.Map<V>(x));
+                var result = await GetQueryAsync(query);
+                var views = (await result.ToListAsync()).Select(x => services.mapper.Map<V>(x));
                 return GetGenericCollectionResult(views);
             }
             catch(ActionCarryingException ex)
@@ -243,9 +251,10 @@ namespace contentapi.Controllers
         {
             try
             {
-                var item = await services.context.GetSingleAsync<T>(id);
+                var results = await GetQueryAsync(new CollectionQuery() {ids = id.ToString()});
+                var item = await results.FirstAsync();
                 await GetSingle_PreResultCheck(item);
-                await LogAct(LogAction.View, id);
+                await LogAct(EntityAction.View, item.Entity.id);
                 return services.mapper.Map<V>(item);
             }
             catch(ActionCarryingException ex)
@@ -258,7 +267,7 @@ namespace contentapi.Controllers
             }
         }
 
-        [HttpPost]
+        /*[HttpPost]
         public async virtual Task<ActionResult<V>> Post([FromBody]V item)
         {
             try
@@ -284,10 +293,10 @@ namespace contentapi.Controllers
             {
                 return ex.Result;
             }
-        }
+        }*/
 
         //Note: I don't think you need "Patch" because the way the "put" conversion works just... works.
-        [HttpPut("{id}")]
+        /*[HttpPut("{id}")]
         public async virtual Task<ActionResult<V>> Put([FromRoute]long id, [FromBody]V item)
         {
             try
@@ -315,9 +324,9 @@ namespace contentapi.Controllers
             {
                 return ex.Result;
             }
-        }
+        }*/
 
-        [HttpDelete("{id}")]
+        /*[HttpDelete("{id}")]
         public async virtual Task<ActionResult<V>> Delete([FromRoute]long id)
         {
             try
@@ -337,7 +346,7 @@ namespace contentapi.Controllers
             {
                 return ex.Result;
             }
-        }
+        }*/
     }
 
     //public abstract class AccessController<T,V> : GenericController<T, V> where T : GenericAccessModel where V : GenericAccessView

@@ -49,7 +49,7 @@ namespace contentapi.Controllers
             if(user.email == null)
                 return BadRequest("Must provide an email!");
 
-            var existing = await services.context.GetAll<User>().FirstOrDefaultAsync(x => x.username == user.username || x.email == user.email);
+            var existing = await (await GetAllBase()).FirstOrDefaultAsync(x => x.username == user.username || x.email == user.email);
 
             if(existing != null)
                 return BadRequest("This user already seems to exist!");
@@ -59,17 +59,19 @@ namespace contentapi.Controllers
             var createUser = new User()
             {
                 username = user.username,
-                createDate = DateTime.Now,
+                //createDate = DateTime.Now,
                 email = user.email,
                 passwordSalt = salt,
                 passwordHash = services.hash.GetHash(user.password, salt),
                 registerCode = Guid.NewGuid().ToString()
             };
 
+            SetNewEntity(createUser);
+
             await services.context.Set<User>().AddAsync(createUser);
             await services.context.SaveChangesAsync();
 
-            await LogAct(LogAction.Create, createUser.id);
+            await LogAct(EntityAction.Create, createUser.entityId);
 
             return services.mapper.Map<UserView>(createUser);
         }
@@ -104,7 +106,7 @@ namespace contentapi.Controllers
         [AllowAnonymous]
         public async Task<ActionResult> SendRegistrationEmail([FromBody]RegistrationData data)
         {
-            var foundUser = await services.context.GetAll<User>().FirstOrDefaultAsync(x => x.email == data.email);
+            var foundUser = await (await GetAllBase()).FirstOrDefaultAsync(x => x.email == data.email);
 
             if(foundUser == null)
                 return BadRequest("No user with that email");
@@ -129,7 +131,7 @@ namespace contentapi.Controllers
             if(string.IsNullOrEmpty(data.confirmationKey))
                 return BadRequest("Must provide a confirmation key in the body");
 
-            var users = services.context.GetAll<User>();
+            var users = await GetAllBase(); //services.context.GetAll<User>();
             var foundUser = await users.FirstOrDefaultAsync(x => x.registerCode == data.confirmationKey);
 
             if(foundUser == null)
@@ -148,7 +150,7 @@ namespace contentapi.Controllers
         public async Task<ActionResult<string>> Authenticate([FromBody]UserCredential user)
         {
             User foundUser = null;
-            var users = services.context.GetAll<User>();
+            var users = await GetAllBase(); //services.context.GetAll<User>();
 
             if(user.username != null)
                 foundUser = await users.FirstOrDefaultAsync(x => x.username == user.username);

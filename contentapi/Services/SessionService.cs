@@ -63,7 +63,7 @@ namespace contentapi.Services
             var descriptor = new SecurityTokenDescriptor
             {
                 Subject = new ClaimsIdentity(new Claim[] {
-                    new Claim(UserIdField, user.id.ToString()) }),
+                    new Claim(UserIdField, user.entityId.ToString()) }),
                     //new Claim("role", foundUser.role.ToString("G")) }),
                 Expires = DateTime.UtcNow.Add(config.TokenExpiration),
                 NotBefore = DateTime.UtcNow.AddMinutes(-30),

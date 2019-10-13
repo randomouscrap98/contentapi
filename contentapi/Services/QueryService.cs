@@ -32,18 +32,18 @@ namespace contentapi.Services
         public string AscendingOrder = "asc";
         public string DescendingOrder = "desc";
 
-        public Dictionary<string, Func<Entity, object>> Sorters; 
+        public Dictionary<string, Func<EntityChild, object>> Sorters; 
 
         public QueryService()
         {
-            Sorters = new Dictionary<string, Func<Entity, object>>()
+            Sorters = new Dictionary<string, Func<EntityChild, object>>()
             {
-                { IdSort, (x) => x.id },
-                { CreateSort, (x) => x.createDate }
+                { IdSort, (x) => x.entityId },
+                { CreateSort, (x) => x.Entity.createDate }
             };
         }
 
-        public virtual System.Linq.Expressions.Expression<Func<W, object>> GetSorter<W>(string sort) where W : Entity
+        public virtual System.Linq.Expressions.Expression<Func<W, object>> GetSorter<W>(string sort) where W : EntityChild
         {
             if(Sorters.ContainsKey(sort))
                 return (x) => Sorters[sort].Invoke(x);
@@ -51,7 +51,7 @@ namespace contentapi.Services
             return null;
         }
 
-        public IQueryable<W> ApplyQuery<W>(IQueryable<W> originSet, CollectionQuery query) where W : Entity
+        public IQueryable<W> ApplyQuery<W>(IQueryable<W> originSet, CollectionQuery query) where W : EntityChild
         {
             //Set some nice defaults for query parameters
             if(query.count <= 0)
@@ -67,7 +67,7 @@ namespace contentapi.Services
 
             //For now, ALWAYS remove deleted entities. We'll figure out what to do later.
             //if(!query.deleted)
-            subSet = subSet.Where(x => (x.status & EntityStatus.Deleted) == 0);
+            subSet = subSet.Where(x => (x.Entity.status & EntityStatus.Deleted) == 0);
 
             List<long> ids = null;
 
@@ -76,7 +76,7 @@ namespace contentapi.Services
             catch { }
 
             if(ids != null && ids.Count > 0)
-                subSet = subSet.Where(x => ids.Contains(x.id));
+                subSet = subSet.Where(x => ids.Contains(x.entityId));
 
             var order = query.order.ToLower();
             IQueryable<W> orderedSet = originSet;

@@ -1,5 +1,6 @@
 using System;
 using System.Collections.Generic;
+using System.ComponentModel.DataAnnotations;
 using System.ComponentModel.DataAnnotations.Schema;
 using System.Linq;
 
@@ -44,6 +45,14 @@ namespace contentapi.Models
         {
             get { return Log.Where(x => x.action == EntityAction.Update).OrderByDescending(x => x.createDate).FirstOrDefault()?.createDate; }
         }
+    }
+
+    public class EntityChild
+    {
+        [Key]
+        public long entityId {get;set;}
+
+        public virtual Entity Entity {get;set;}
     }
 
     [Table("entityAccess")]

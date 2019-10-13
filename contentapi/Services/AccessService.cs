@@ -1,5 +1,7 @@
+using System;
 using System.Collections.Generic;
 using System.Linq;
+using System.Text;
 using contentapi.Models;
 
 namespace contentapi.Services
@@ -16,7 +18,7 @@ namespace contentapi.Services
 
         public bool CanDo(Entity model, User user, EntityAction action)
         {
-            return (model.baseAllow & action) != 0 || (user != null && model.AccessList.Any(x => x.userId == user.id && (x.allow & action) != 0));
+            return (model.baseAllow & action) != 0 || (user != null && model.AccessList.Any(x => x.userId == user.entityId && (x.allow & action) != 0));
             //(model.baseAllow != null && model.baseAccess.Contains(doKey)) || (user != null && model.AccessList.Any(x => x.userId == user.id && x.access.Contains(doKey)));
         }
 
@@ -32,8 +34,14 @@ namespace contentapi.Services
             foreach(var mapping in ActionMapping)
             {
                 if(access.Contains(mapping.Value))
+                {
                     baseAction = baseAction | mapping.Key;
+                    access = access.Replace(mapping.Value, "");
+                }
             }
+
+            if(!string.IsNullOrWhiteSpace(access))
+                throw new InvalidOperationException($"Malformed access string ({string.Join("", ActionMapping.Values)})");
 
             return baseAction;
         }
