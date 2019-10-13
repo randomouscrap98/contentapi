@@ -4,7 +4,7 @@ using System.Linq;
 
 namespace contentapi.Models
 {
-    [Table("content")]
+    /*[Table("content")]
     public class Content : GenericAccessModel, IGenericAccessModel
     {
         public long userId {get;set;}
@@ -39,5 +39,5 @@ namespace contentapi.Models
         public string format {get;set;}
         public string type {get;set;}
         public long categoryId {get;set;}
-    }
+    }*/
 }

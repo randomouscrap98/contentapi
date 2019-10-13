@@ -8,7 +8,7 @@ namespace contentapi.Models
     // * Interfaces *
     // **************
 
-    public interface IGenericModel
+    /*public interface IGenericModel
     {
         long id {get; set;}
         DateTime createDate{get;set;}
@@ -54,12 +54,6 @@ namespace contentapi.Models
         public virtual User User {get;set;}
     }
 
-    [Flags]
-    public enum ModelStatus
-    {
-        Deleted = 1
-    }
-
     // *********
     // * Views *
     // *********
@@ -74,5 +68,5 @@ namespace contentapi.Models
     {
         public string baseAccess {get;set;}
         public Dictionary<long, string>  accessList {get;set;}= new Dictionary<long, string>();
-    }
+    }*/
 }

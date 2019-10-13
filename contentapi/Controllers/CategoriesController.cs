@@ -6,7 +6,7 @@ using Microsoft.EntityFrameworkCore;
 
 namespace contentapi.Controllers
 {
-    public class CategoriesController : AccessController<Category, CategoryView>
+    /*public class CategoriesController : AccessController<Category, CategoryView>
     {
         public CategoriesController(GenericControllerServices services, AccessService a):base(services, a) { }
 
@@ -34,5 +34,5 @@ namespace contentapi.Controllers
         //{
         //    return (await base.Get_GetBase()).Include(x => x.AccessList);
         //}
-    }
+    }*/
 }

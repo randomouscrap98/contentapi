@@ -7,7 +7,7 @@ using System.Linq;
 namespace contentapi.Models
 {
     //This is the user as they are in the database
-    [Table("categories")]
+    /*[Table("categories")]
     public class Category : GenericAccessModel, IGenericAccessModel
     {
         public long? parentId {get;set;}
@@ -44,5 +44,5 @@ namespace contentapi.Models
 
         public string description {get;set;}
         public string type {get;set;}
-    }
+    }*/
 }

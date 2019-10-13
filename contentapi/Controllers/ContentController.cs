@@ -6,7 +6,7 @@ using Microsoft.EntityFrameworkCore;
 
 namespace contentapi.Controllers
 {
-    public class ContentController : AccessController<Content, ContentView>
+    /*public class ContentController : AccessController<Content, ContentView>
     {
         public ContentController(GenericControllerServices services, AccessService a) : base(services, a) { }
 
@@ -37,5 +37,5 @@ namespace contentapi.Controllers
             if(!accessService.CanCreate(category, user))
                 ThrowAction(Unauthorized("Can't create content in this category!"));
         }
-    }
+    }*/
 }

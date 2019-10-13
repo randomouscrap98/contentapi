@@ -4,7 +4,7 @@ using contentapi.Models;
 
 namespace contentapi.test
 {
-    public class AccessServiceTest
+    /*public class AccessServiceTest
     {
         private AccessService CreateService()
         {
@@ -76,5 +76,5 @@ namespace contentapi.test
             Assert.True(mega.GenericAccessList.Count > 0);
             CanUserCRUDBase(5, mega);
         }
-    }
+    }*/
 }

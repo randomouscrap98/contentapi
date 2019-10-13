@@ -12,6 +12,10 @@ namespace contentapi.Services
         public int count {get;set;} = 0;
         public string sort {get;set;} = "";
         public string order {get;set;} = "";
+        public string ids { get;set;} = "";
+
+        //For now, I don't know WHAT to do for these, so just don't include it
+        //private bool deleted {get;set;} = false;
     }
 
     public class QueryService
@@ -28,18 +32,18 @@ namespace contentapi.Services
         public string AscendingOrder = "asc";
         public string DescendingOrder = "desc";
 
-        public Dictionary<string, Func<GenericModel, object>> Sorters; 
+        public Dictionary<string, Func<Entity, object>> Sorters; 
 
         public QueryService()
         {
-            Sorters = new Dictionary<string, Func<GenericModel, object>>()
+            Sorters = new Dictionary<string, Func<Entity, object>>()
             {
                 { IdSort, (x) => x.id },
                 { CreateSort, (x) => x.createDate }
             };
         }
 
-        public virtual System.Linq.Expressions.Expression<Func<W, object>> GetSorter<W>(string sort) where W : GenericModel 
+        public virtual System.Linq.Expressions.Expression<Func<W, object>> GetSorter<W>(string sort) where W : Entity
         {
             if(Sorters.ContainsKey(sort))
                 return (x) => Sorters[sort].Invoke(x);
@@ -47,7 +51,7 @@ namespace contentapi.Services
             return null;
         }
 
-        public IQueryable<W> ApplyQuery<W>(IQueryable<W> originSet, CollectionQuery query) where W : GenericModel
+        public IQueryable<W> ApplyQuery<W>(IQueryable<W> originSet, CollectionQuery query) where W : Entity
         {
             //Set some nice defaults for query parameters
             if(query.count <= 0)
@@ -55,10 +59,24 @@ namespace contentapi.Services
 
             if(query.count > MaxResultCount)
                 throw new InvalidOperationException($"Too many objects! Max: {MaxResultCount}");
-                //ThrowAction(BadRequest($"Too many objects! Max: {MaxResultCount}"));
 
             if(string.IsNullOrWhiteSpace(query.sort))
                 query.sort = CreateSort;
+            
+            var subSet = originSet;
+
+            //For now, ALWAYS remove deleted entities. We'll figure out what to do later.
+            //if(!query.deleted)
+            subSet = subSet.Where(x => (x.status & EntityStatus.Deleted) == 0);
+
+            List<long> ids = null;
+
+            //One day, put a logger here!
+            try { ids = query.ids.Split(",").Select(x => long.Parse(x)).ToList(); }
+            catch { }
+
+            if(ids != null && ids.Count > 0)
+                subSet = subSet.Where(x => ids.Contains(x.id));
 
             var order = query.order.ToLower();
             IQueryable<W> orderedSet = originSet;

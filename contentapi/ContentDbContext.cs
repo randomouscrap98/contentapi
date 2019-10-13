@@ -14,27 +14,31 @@ namespace contentapi
         public ContentDbContext(DbContextOptions<ContentDbContext> options) : base(options) { }
 
         public DbSet<User> Users {get;set;}
-        public DbSet<Category> Categories {get;set;}
-        public DbSet<Content> Content {get;set;}
-        public DbSet<ActionLog> Logs {get;set;}
+        public DbSet<Entity> Entities {get;set;}
+        public DbSet<EntityAccess> EntityAccess {get;set;}
+        public DbSet<EntityLog> EntityLogs {get;set;}
 
-        public IQueryable<T> GetAll<T>(params long[] ids) where T : GenericModel 
-        {
-            var set = Set<T>();
-            IQueryable<T> result = set;
+        //public DbSet<Category> Categories {get;set;}
+        //public DbSet<Content> Content {get;set;}
+        //public DbSet<ActionLog> Logs {get;set;}
 
-            if(ids != null && ids.Length > 0)
-                result = set.Where(x => ids.Contains(x.id));
+        //public IQueryable<T> GetAll<T>(params long[] ids) where T : GenericModel 
+        //{
+        //    var set = Set<T>();
+        //    IQueryable<T> result = set;
 
-            //Remove deleted stuff
-            result = result.Where(x => (x.status & (int)ModelStatus.Deleted) == 0);
+        //    if(ids != null && ids.Length > 0)
+        //        result = set.Where(x => ids.Contains(x.id));
 
-            return result;
-        }
+        //    //Remove deleted stuff
+        //    result = result.Where(x => (x.status & (int)ModelStatus.Deleted) == 0);
 
-        public async Task<T> GetSingleAsync<T>(long id) where T : GenericModel
-        {
-            return await GetAll<T>(id).FirstOrDefaultAsync();
-        }
+        //    return result;
+        //}
+
+        //public async Task<T> GetSingleAsync<T>(long id) where T : GenericModel
+        //{
+        //    return await GetAll<T>(id).FirstOrDefaultAsync();
+        //}
     }
 }

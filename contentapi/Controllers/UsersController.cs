@@ -10,11 +10,11 @@ using contentapi.Services;
 
 namespace contentapi.Controllers
 {
-    public class UsersController : GenericController<User, UserView>
+    public class UsersController : EntityController<User, UserView>
     {
         public UsersController(GenericControllerServices services) : base (services) { }
 
-        protected override void SetLogField(ActionLog log, long id) { log.userId = id; }
+        //protected override void SetLogField(ActionLog log, long id) { log.userId = id; }
 
         protected override Task Post_PreConversionCheck(UserView user)
         {

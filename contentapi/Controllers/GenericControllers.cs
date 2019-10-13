@@ -31,11 +31,13 @@ namespace contentapi.Controllers
         public IEmailService email;
         public ILanguageService language;
         public IHashService hash;
+        public AccessService access;
 
         public GenericControllerServices(ContentDbContext context, IMapper mapper, 
             PermissionService permissionService, QueryService queryService,
             ISessionService sessionService, IEmailService emailService, 
-            ILanguageService languageService, IHashService hashService)
+            ILanguageService languageService, IHashService hashService,
+            AccessService accessService)
         {
             this.context = context;
             this.mapper = mapper;
@@ -45,19 +47,20 @@ namespace contentapi.Controllers
             this.email = emailService;
             this.language = languageService;
             this.hash = hashService;
+            this.access = accessService;
         }
     }
 
     [Route("api/[controller]")]
     [ApiController]
     [Authorize]
-    public abstract class GenericController<T,V> : ControllerBase where T : GenericModel where V : GenericView
+    public abstract class EntityController<T,V> : ControllerBase where T : Entity where V : EntityView
     {
         protected GenericControllerServices services;
 
         protected bool DoActionLog = true;
 
-        public GenericController(GenericControllerServices services)
+        public EntityController(GenericControllerServices services)
         {
             this.services = services;
             services.session.Context = this; //EEEWWWW
@@ -74,36 +77,59 @@ namespace contentapi.Controllers
                 throw new ActionCarryingException() {Result = result};
         }
 
-        protected async Task LogAct(LogAction action, Action<ActionLog> setField)
+        protected async Task LogAct(EntityAction action, long entityId)
         {
-            //Do NOT LOG if we're not set to
-            if(!DoActionLog)
-                return;
-
-            var log = new ActionLog()
+            var log = new EntityLog()
             {
                 action = action,
                 createDate = DateTime.Now,
-                contentId = null,
-                categoryId = null,
-                userId = null
+                entityId = entityId,
+                userId = services.session.GetCurrentUid()
             };
 
-            log.actionUserId = services.session.GetCurrentUid();
+            if(log.userId < 0)
+                throw new InvalidOperationException("Cannot log actions for anonymous users!");
 
-            if(log.actionUserId < 0)
-                log.actionUserId = null;
-
-            setField(log);
-
-            await services.context.Logs.AddAsync(log);
+            await services.context.EntityLogs.AddAsync(log);
             await services.context.SaveChangesAsync();
         }
 
-        protected async Task LogAct(LogAction action, long id)
-        {
-            await LogAct(action, (l) => SetLogField(l, id));
-        }
+        //protected void CheckAccessFormat(EntityView accessView)
+        //{
+        //    if(!services.access.CheckAccessFormat(accessView))
+        //        ThrowAction(BadRequest("Malformed access string (CRUD)"));
+        //}
+
+        //protected async Task LogAct(LogAction action, Action<ActionLog> setField)
+        //{
+        //    //Do NOT LOG if we're not set to
+        //    if(!DoActionLog)
+        //        return;
+
+        //    var log = new ActionLog()
+        //    {
+        //        action = action,
+        //        createDate = DateTime.Now,
+        //        contentId = null,
+        //        categoryId = null,
+        //        userId = null
+        //    };
+
+        //    log.actionUserId = services.session.GetCurrentUid();
+
+        //    if(log.actionUserId < 0)
+        //        log.actionUserId = null;
+
+        //    setField(log);
+
+        //    await services.context.Logs.AddAsync(log);
+        //    await services.context.SaveChangesAsync();
+        //}
+
+        //protected async Task LogAct(EntityAction action, long id)
+        //{
+        //    await LogAct(action, (l) => SetLogField(l, id));
+        //}
 
 
         public async Task<User> GetCurrentUserAsync()
@@ -121,18 +147,18 @@ namespace contentapi.Controllers
             return services.permission.CanDo(user.role, permission);
         }
 
-        protected async Task<T> GetExisting(long id)
-        {
-            try
-            {
-                return await services.context.GetSingleAsync<T>(id);
-            }
-            catch
-            {
-                ThrowAction(NotFound(id));
-                return null; //just to satisfy the compiler
-            }
-        }
+        //protected async Task<T> GetExisting(long id)
+        //{
+        //    try
+        //    {
+        //        return await services.context.GetSingleAsync<T>(id);
+        //    }
+        //    catch
+        //    {
+        //        ThrowAction(NotFound(id));
+        //        return null; //just to satisfy the compiler
+        //    }
+        //}
 
         //How to RETURN items (the object we return... maybe make it a real class)
         public Dictionary<string, object> GetGenericCollectionResult<W>(IEnumerable<W> items, IEnumerable<string> links = null)
@@ -148,10 +174,17 @@ namespace contentapi.Controllers
         // * OVERRIDE *
         // ************
 
-        //GOTTA OVERRIDE THIS 
-        protected abstract void SetLogField(ActionLog log, long id);
+        protected virtual Task<IQueryable<T>> GetAllBase(bool showDeleted = false)
+        {
+            var queryable = services.context.Set<T>().AsQueryable();
+            
+            if(!showDeleted)
+                queryable = queryable.Where(x => (x.status & EntityStatus.Deleted) == 0);
 
-        protected virtual Task<IQueryable<T>> Get_GetBase() { return Task.FromResult(services.context.GetAll<T>()); }
+            return Task.FromResult(queryable);
+        }
+
+        //protected virtual Task<IQueryable<T>> Get_GetBase() { return Task.FromResult(services.context.GetAll<T>()); }
         protected virtual Task GetSingle_PreResultCheck(T item) { return Task.CompletedTask; }
 
         protected virtual Task Post_PreConversionCheck(V item) { return Task.CompletedTask; }
@@ -243,7 +276,7 @@ namespace contentapi.Controllers
                 await services.context.Set<T>().AddAsync(newThing);
                 await services.context.SaveChangesAsync();
 
-                await LogAct(LogAction.Create, newThing.id);
+                await LogAct(EntityAction.Create, newThing.id);
 
                 return services.mapper.Map<V>(newThing);
             }
@@ -274,7 +307,7 @@ namespace contentapi.Controllers
                 services.context.Set<T>().Update(existing);
                 await services.context.SaveChangesAsync();
 
-                await LogAct(LogAction.Update, existing.id);
+                await LogAct(EntityAction.Update, existing.id);
 
                 return services.mapper.Map<V>(existing);
             }
@@ -307,71 +340,71 @@ namespace contentapi.Controllers
         }
     }
 
-    public abstract class AccessController<T,V> : GenericController<T, V> where T : GenericAccessModel where V : GenericAccessView
-    {
-        protected AccessService accessService;
+    //public abstract class AccessController<T,V> : GenericController<T, V> where T : GenericAccessModel where V : GenericAccessView
+    //{
+    //    protected AccessService accessService;
 
-        public AccessController(GenericControllerServices services, AccessService accessService) : base(services) 
-        { 
-            this.accessService = accessService;
-        }
+    //    public AccessController(GenericControllerServices services, AccessService accessService) : base(services) 
+    //    { 
+    //        this.accessService = accessService;
+    //    }
 
-        //protected abstract IQueryable<T> IncludeAccess(IQueryable<T> query) ;
+    //    //protected abstract IQueryable<T> IncludeAccess(IQueryable<T> query) ;
 
-        protected void CheckAccessFormat(GenericAccessView accessView)
-        {
-            if(!accessService.CheckAccessFormat(accessView))
-                ThrowAction(BadRequest("Malformed access string (CRUD)"));
-        }
+    //    protected void CheckAccessFormat(GenericAccessView accessView)
+    //    {
+    //        if(!accessService.CheckAccessFormat(accessView))
+    //            ThrowAction(BadRequest("Malformed access string (CRUD)"));
+    //    }
 
-        //Note: each accessor will need to figure out its own create check (since it'll be the parent)
-        protected override async Task Post_PreConversionCheck(V view)
-        {
-            await base.Post_PreConversionCheck(view);
-            CheckAccessFormat(view);
-        }
+    //    //Note: each accessor will need to figure out its own create check (since it'll be the parent)
+    //    protected override async Task Post_PreConversionCheck(V view)
+    //    {
+    //        await base.Post_PreConversionCheck(view);
+    //        CheckAccessFormat(view);
+    //    }
 
-        //Check Update privilege while checking the view's access format
-        protected override async Task Put_PreConversionCheck(V view, T existing)
-        {
-            await base.Put_PreConversionCheck(view, existing);
-            CheckAccessFormat(view);
+    //    //Check Update privilege while checking the view's access format
+    //    protected override async Task Put_PreConversionCheck(V view, T existing)
+    //    {
+    //        await base.Put_PreConversionCheck(view, existing);
+    //        CheckAccessFormat(view);
 
-            if(!accessService.CanUpdate(existing, await GetCurrentUserAsync()))
-                ThrowAction(Unauthorized("You do not have permission to update this record"));
+    //        if(!accessService.CanUpdate(existing, await GetCurrentUserAsync()))
+    //            ThrowAction(Unauthorized("You do not have permission to update this record"));
 
-            if(view.accessList.Count > 0)
-            {
-                var userIds = view.accessList.Select(x => x.Key);
-                var users = await services.context.Users.Where(x => userIds.Contains(x.id)).ToListAsync();
+    //        if(view.accessList.Count > 0)
+    //        {
+    //            var userIds = view.accessList.Select(x => x.Key);
+    //            var users = await services.context.Users.Where(x => userIds.Contains(x.id)).ToListAsync();
 
-                if(users.Count != view.accessList.Count)
-                    ThrowAction(BadRequest("Bad access list: nonexistent / duplicate user"));
-            }
-        }
+    //            if(users.Count != view.accessList.Count)
+    //                ThrowAction(BadRequest("Bad access list: nonexistent / duplicate user"));
+    //        }
+    //    }
 
-        //Check Read privilege before sending the result
-        protected override async Task GetSingle_PreResultCheck(T model)
-        {
-            if(!accessService.CanRead(model, await GetCurrentUserAsync()))
-                ThrowAction(Unauthorized("You do not have permission to read this record"));
-        }
+    //    //Check Read privilege before sending the result
+    //    protected override async Task GetSingle_PreResultCheck(T model)
+    //    {
+    //        if(!accessService.CanRead(model, await GetCurrentUserAsync()))
+    //            ThrowAction(Unauthorized("You do not have permission to read this record"));
+    //    }
 
-        //Check Delete privilege before deleting
-        protected override async Task Delete_PreDeleteCheck(T model)
-        {
-            if(!accessService.CanDelete(model, await GetCurrentUserAsync()))
-                ThrowAction(Unauthorized("You do not have permission to delete this record"));
-        }
+    //    //Check Delete privilege before deleting
+    //    protected override async Task Delete_PreDeleteCheck(T model)
+    //    {
+    //        if(!accessService.CanDelete(model, await GetCurrentUserAsync()))
+    //            ThrowAction(Unauthorized("You do not have permission to delete this record"));
+    //    }
 
-        //Filter results to remove ones we can't read
-        protected override async Task<IQueryable<T>> Get_GetBase()
-        {
-            var user = await GetCurrentUserAsync();
-            var result = await base.Get_GetBase();
-            //Apply magic include BEFORE checking if you can read (I think order matters). HOWEVER: this tolist is BAD!!!
-            result = result.Include("AccessList"); //(await IncludeAccess(result).ToListAsync());
-            return result.Where(x => accessService.CanRead(x, user));
-        }
-    }
+    //    //Filter results to remove ones we can't read
+    //    protected override async Task<IQueryable<T>> Get_GetBase()
+    //    {
+    //        var user = await GetCurrentUserAsync();
+    //        var result = await base.Get_GetBase();
+    //        //Apply magic include BEFORE checking if you can read (I think order matters). HOWEVER: this tolist is BAD!!!
+    //        result = result.Include("AccessList"); //(await IncludeAccess(result).ToListAsync());
+    //        return result.Where(x => accessService.CanRead(x, user));
+    //    }
+    //}
 }

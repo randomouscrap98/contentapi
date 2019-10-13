@@ -4,16 +4,8 @@ using System.ComponentModel.DataAnnotations.Schema;
 
 namespace contentapi.Models
 {
-    public enum LogAction
-    {
-        View = 1,
-        Create,
-        Read,
-        Update,
-        Delete
-    }
 
-    [Table("log")]
+    /*[Table("log")]
     public class ActionLog
     {
         [Key]
@@ -27,5 +19,5 @@ namespace contentapi.Models
 
         [ForeignKey("actionUserId")]
         public virtual User ActionUser {get;set;}
-    }
+    }*/
 }

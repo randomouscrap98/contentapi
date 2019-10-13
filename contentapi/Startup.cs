@@ -47,18 +47,18 @@ namespace contentapi
             {
                 cfg.CreateMap<User,UserView>();
                 //Find a way to stop this duplicate code
-                cfg.CreateMap<Category, CategoryView>().ForMember(dest => dest.accessList, opt => opt.MapFrom(src => src.AccessList.ToDictionary(x => x.userId, y => y.access)));
-                cfg.CreateMap<CategoryView,Category>().ForMember(dest => dest.AccessList, opt => opt.MapFrom(src => src.accessList.Select(x => new CategoryAccess() 
-                {
-                    access = x.Value,
-                    userId = x.Key,
-                }).ToList()));
-                cfg.CreateMap<Content, ContentView>().ForMember(dest => dest.accessList, opt => opt.MapFrom(src => src.AccessList.ToDictionary(x => x.userId, y => y.access)));
-                cfg.CreateMap<ContentView, Content>().ForMember(dest => dest.AccessList, opt => opt.MapFrom(src => src.accessList.Select(x => new ContentAccess() 
-                {
-                    access = x.Value,
-                    userId = x.Key,
-                }).ToList()));
+                //cfg.CreateMap<Category, CategoryView>().ForMember(dest => dest.accessList, opt => opt.MapFrom(src => src.AccessList.ToDictionary(x => x.userId, y => y.access)));
+                //cfg.CreateMap<CategoryView,Category>().ForMember(dest => dest.AccessList, opt => opt.MapFrom(src => src.accessList.Select(x => new CategoryAccess() 
+                //{
+                //    access = x.Value,
+                //    userId = x.Key,
+                //}).ToList()));
+                //cfg.CreateMap<Content, ContentView>().ForMember(dest => dest.accessList, opt => opt.MapFrom(src => src.AccessList.ToDictionary(x => x.userId, y => y.access)));
+                //cfg.CreateMap<ContentView, Content>().ForMember(dest => dest.AccessList, opt => opt.MapFrom(src => src.accessList.Select(x => new ContentAccess() 
+                //{
+                //    access = x.Value,
+                //    userId = x.Key,
+                //}).ToList()));
             }); 
             services.AddSingleton(mapperConfig.CreateMapper());
 

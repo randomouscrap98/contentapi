@@ -16,7 +16,7 @@ namespace contentapi.test
         }
     }
 
-    public class TestControllerTest : ControllerTestBase<OpenController>
+    /*public class TestControllerTest : ControllerTestBase<OpenController>
     {
         public TestControllerTest() { }
 
@@ -45,5 +45,5 @@ namespace contentapi.test
             //An extra test just for fun... kinda integration test?
             Assert.True(instance.Controller.CanUserAsync(Permission.CreateCategory).Result);
         }
-    }
+    }*/
 }

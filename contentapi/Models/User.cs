@@ -10,8 +10,8 @@ namespace contentapi.Models
     }
 
     //This is the user as they are in the database
-    [Table("users")]
-    public class User : GenericModel
+    [Table("userEntities")]
+    public class User : Entity//GenericModel
     {
         public string username { get; set; }
         public string email { get; set; }
@@ -22,7 +22,7 @@ namespace contentapi.Models
     }
 
     //This is the user as we give them out
-    public class UserView : GenericView
+    public class UserView : EntityView //GenericView
     {
         public string username { get; set; }
         public string role {get;set;}
