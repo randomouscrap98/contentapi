@@ -18,8 +18,7 @@ namespace contentapi.Services
 
         public bool CanDo(Entity model, User user, EntityAction action)
         {
-            return (model.baseAllow & action) != 0 || (user != null && model.AccessList.Any(x => x.userId == user.entityId && (x.allow & action) != 0));
-            //(model.baseAllow != null && model.baseAccess.Contains(doKey)) || (user != null && model.AccessList.Any(x => x.userId == user.id && x.access.Contains(doKey)));
+            return (model.baseAllow & action) != 0 || (user != null && model.AccessList != null && model.AccessList.Any(x => x.userId == user.entityId && (x.allow & action) != 0));
         }
 
         public bool CanCreate(Entity model, User user) { return CanDo(model, user, EntityAction.Create); }
@@ -35,8 +34,11 @@ namespace contentapi.Services
             {
                 if(access.Contains(mapping.Value))
                 {
+                    var length = access.Length;
                     baseAction = baseAction | mapping.Key;
                     access = access.Replace(mapping.Value, "");
+                    if(length - access.Length > mapping.Value.Length)
+                        throw new InvalidOperationException($"Malformed access string (no duplicates!)");
                 }
             }
 
@@ -59,39 +61,35 @@ namespace contentapi.Services
             return result;
         }
 
-        public void FillEntityAccess(EntityChild entity, EntityView view)
+        public void FillEntityAccess(Entity entity, EntityView view)
         {
-            entity.Entity.baseAllow = StringToAccess(view.baseAccess);
-            entity.Entity.AccessList = view.accessList.Select(x => new EntityAccess()
+            entity.baseAllow = StringToAccess(view.baseAccess);
+            //NOTE: if you DON'T entirely recreate the list, you lose the "paper trail"!
+            entity.AccessList = view.accessList.Select(x => new EntityAccess()
             {
                 id = 0,
                 userId = x.Key,
                 createDate = DateTime.Now,
                 allow = StringToAccess(x.Value)
             }).ToList();
+            ////Remove all access lists that aren't in view
+            //var viewUsers = view.accessList.Keys.ToList();
+            //entity.AccessList.RemoveAll(x => !viewUsers.Contains(x.userId));
+            ////Update access for things that ARE in the view
+            ////Then add only the ones that AREN'T in the view
+            //entity.AccessList.AddRange(view.accessList.Where(x => !entity.AccessList.Any(y => y.userId == x.Key)).Select(x => new EntityAccess()
+            //{
+            //    id = 0,
+            //    userId = x.Key,
+            //    createDate = DateTime.Now,
+            //    allow = StringToAccess(x.Value)
+            //}));
         }
 
-        //public bool CheckAccessFormat(string access)
-        //{
-        //    //Why do this manually? idk...
-        //    Dictionary<char, int> counts = new Dictionary<char, int>();
-
-        //    foreach(var character in access)
-        //    {
-        //        if(character != CreateChar && character != ReadChar && character != UpdateChar && character != DeleteChar)
-        //            return false;
-        //        if(!counts.ContainsKey(character))
-        //            counts.Add(character, 0);
-        //        if(++counts[character] > 1)
-        //            return false;
-        //    }
-
-        //    return true;
-        //}
-
-        //public bool CheckAccessFormat(EntityView accessView)
-        //{
-        //    return (CheckAccessFormat(accessView.baseAccess) && accessView.accessList.All(x => CheckAccessFormat(x.Value)));
-        //}
+        public void FillViewAccess(EntityView view, Entity entity)
+        {
+            view.baseAccess = AccessToString(entity.baseAllow);
+            view.accessList = entity.AccessList.ToDictionary(k => k.userId, v => AccessToString(v.allow));
+        }
     }
 }
