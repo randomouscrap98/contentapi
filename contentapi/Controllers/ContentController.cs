@@ -6,7 +6,7 @@ using Microsoft.EntityFrameworkCore;
 
 namespace contentapi.Controllers
 {
-    /*public class ContentController : AccessController<Content, ContentView>
+    /*public class ContentController : EntityController<Content, ContentView> //AccessController<Content, ContentView>
     {
         public ContentController(GenericControllerServices services, AccessService a) : base(services, a) { }
 

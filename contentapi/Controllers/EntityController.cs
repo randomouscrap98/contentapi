@@ -228,7 +228,7 @@ namespace contentapi.Controllers
             try
             {
                 var result = await GetQueryAsync(query);
-                var views = (await result.ToListAsync()).Select(x => services.mapper.Map<V>(x));
+                var views = (await result.ToListAsync()).Select(x => services.entity.ConvertFromEntity<T, V>(x));
                 return GetGenericCollectionResult(views);
             }
             catch(ActionCarryingException ex)

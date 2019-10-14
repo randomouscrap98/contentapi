@@ -47,6 +47,7 @@ namespace contentapi.Models
         [Key]
         public long entityId {get;set;}
 
+        [ForeignKey(nameof(entityId))]
         public virtual Entity Entity {get;set;}
     }
 

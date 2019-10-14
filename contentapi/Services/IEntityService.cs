@@ -9,6 +9,8 @@ namespace contentapi.Services
     {
         void SetNewEntity(EntityChild item);
         T ConvertFromView<T,V>(V view) where T : EntityChild where V : EntityView;
+        void FillExistingFromView<T,V>(V view, T existing) where T :EntityChild where V :EntityView;
+        V ConvertFromEntity<T,V>(T entity) where T : EntityChild where V : EntityView;
     }
 
     public class EntityService : IEntityService
