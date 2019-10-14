@@ -4,6 +4,7 @@ using contentapi.Models;
 using AutoMapper;
 using System;
 using System.Linq;
+using System.Collections.Generic;
 
 namespace contentapi.test
 {
@@ -20,6 +21,55 @@ namespace contentapi.test
             return new EntityService(mapper, new AccessService());
         }
 
+        private UserView GetSimpleUserView()
+        {
+            return new UserView()
+            {
+                username = "Wow",
+                role = "SiteAdministrator"
+            };
+        }
+
+        private User GetSimpleUser()
+        {
+            return new User()
+            {
+                Entity = new Entity()
+                {
+                    createDate = DateTime.Now,
+                    id = 5,
+                    status = 0,
+                    AccessList = new List<EntityAccess>()
+                },
+                entityId = 5,
+                username = "Wow",
+                role = Role.SiteAdministrator
+            };
+        }
+
+        private void TestEntity(EntityChild entity)
+        {
+            Assert.NotNull(entity.Entity);
+            Assert.NotNull(entity.Entity.AccessList);
+            Assert.NotNull(entity.Entity.baseAllow);
+            Assert.True(entity.Entity.createDate >= DateTime.Now.AddSeconds(-60));
+        }
+
+        private void TestUser(User user, UserView view)
+        {
+            Assert.Equal(view.username, user.username);
+            Assert.Equal(Role.SiteAdministrator, user.role);
+        }
+
+        private void TestView(UserView view, User user)
+        {
+            Assert.Equal(user.username, view.username);
+            Assert.Equal("SiteAdministrator", view.role);
+            Assert.Equal(user.Entity.createDate, view.createDate);
+            Assert.Equal(user.Entity.id, view.id);
+            Assert.Equal(user.entityId, view.id);
+        }
+
         [Fact]
         public void SimpleUserSetEntity()
         {
@@ -28,10 +78,41 @@ namespace contentapi.test
             var user = new User();
             service.SetNewEntity(user);
 
-            Assert.NotNull(user.Entity);
-            Assert.NotNull(user.Entity.AccessList);
-            Assert.NotNull(user.Entity.baseAllow);
-            Assert.True(user.Entity.createDate >= DateTime.Now.AddSeconds(-60));
+            TestEntity(user);
+        }
+
+        [Fact]
+        public void SimpleUserViewConvert()
+        {
+            var service = CreateService();
+
+            var view = GetSimpleUserView();
+            var user = service.ConvertFromView<User, UserView>(view);
+
+            TestEntity(user);
+            TestUser(user, view);
+        }
+
+        [Fact]
+        public void ComplexUserViewConvert()
+        {
+            var service = CreateService();
+
+            var view = GetSimpleUserView();
+            view.baseAccess = "CR";
+            view.accessList = new System.Collections.Generic.Dictionary<long, string>()
+            {
+                { 5, "UD" },
+                { 6, "U" }
+            };
+
+            var user = service.ConvertFromView<User, UserView>(view);
+
+            TestEntity(user);
+            TestUser(user, view);
+            Assert.Equal(EntityAction.Create | EntityAction.Read, user.Entity.baseAllow);
+            Assert.Equal(EntityAction.Update | EntityAction.Delete, user.Entity.AccessList.First(x => x.userId == 5).allow);
+            Assert.Equal(EntityAction.Update, user.Entity.AccessList.First(x => x.userId == 6).allow);
         }
 
         [Fact]
@@ -39,16 +120,11 @@ namespace contentapi.test
         {
             var service = CreateService();
 
-            var user = new UserView()
-            {
-                username = "Wow",
-                role = "SiteAdministrator"
-            };
+            var user = GetSimpleUser();
 
-            var newUser = service.ConvertFromView<User, UserView>(user);
+            var view = service.ConvertFromEntity<User, UserView>(user);
 
-            Assert.Equal(user.username, newUser.username);
-            Assert.Equal(Role.SiteAdministrator, newUser.role);
+            TestView(view, user);
         }
 
         [Fact]
@@ -56,25 +132,21 @@ namespace contentapi.test
         {
             var service = CreateService();
 
-            var user = new UserView()
-            {
-                username = "Wow",
-                role = "SiteAdministrator",
-                baseAccess = "CR",
-                accessList = new System.Collections.Generic.Dictionary<long, string>()
-                {
-                    { 5, "UD" },
-                    { 6, "U" }
-                }
+            var user = GetSimpleUser();
+
+            user.Entity.baseAllow = EntityAction.Create | EntityAction.Delete;
+            user.Entity.AccessList = new List<EntityAccess>() 
+            { 
+                new EntityAccess() {userId = 6, allow = EntityAction.Update},
+                new EntityAccess() {userId = 7, allow = EntityAction.Read | EntityAction.Update}
             };
 
-            var newUser = service.ConvertFromView<User, UserView>(user);
+            var view = service.ConvertFromEntity<User, UserView>(user);
 
-            Assert.Equal(user.username, newUser.username);
-            Assert.Equal(Role.SiteAdministrator, newUser.role);
-            Assert.Equal(EntityAction.Create | EntityAction.Read, newUser.Entity.baseAllow);
-            Assert.Equal(EntityAction.Update | EntityAction.Delete, newUser.Entity.AccessList.First(x => x.userId == 5).allow);
-            Assert.Equal(EntityAction.Update, newUser.Entity.AccessList.First(x => x.userId == 6).allow);
+            TestView(view, user);
+            Assert.Equal("CD", view.baseAccess);
+            Assert.Equal("U", view.accessList[6]);
+            Assert.Equal("RU", view.accessList[7]);
         }
     }
 }

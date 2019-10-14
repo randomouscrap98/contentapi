@@ -1,4 +1,5 @@
 using System;
+using System.Collections.Generic;
 using AutoMapper;
 using contentapi.Models;
 
@@ -29,7 +30,7 @@ namespace contentapi.Services
                 id = 0,
                 status = 0,
                 baseAllow = EntityAction.None,
-                AccessList = new System.Collections.Generic.List<EntityAccess>() //EMPTY (hopefully efcore understands this)
+                AccessList = new List<EntityAccess>() //EMPTY (hopefully efcore understands this)
             };
         }
 
