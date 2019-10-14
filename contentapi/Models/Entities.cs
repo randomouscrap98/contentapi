@@ -80,8 +80,8 @@ namespace contentapi.Models
     {
         public long id {get;set;}
         public DateTime createDate{get;set;}
-        public long? userId {get;set;}
-        public string baseAccess {get;set;}
+        public long? userId {get;set;} = null;
+        public string baseAccess {get;set;} = "";
         public Dictionary<long, string>  accessList {get;set;}= new Dictionary<long, string>();
 
         public List<string> _links {get;set;} = new List<string>();
