@@ -7,7 +7,7 @@ using Xunit;
 
 namespace contentapi.test
 {
-    public class TestTest 
+    public class TestTest : TestBase
     {
         [Fact]
         public void DatabaseExists()

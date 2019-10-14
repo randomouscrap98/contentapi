@@ -59,6 +59,18 @@ namespace contentapi.Services
             return result;
         }
 
+        public void FillEntityAccess(EntityChild entity, EntityView view)
+        {
+            entity.Entity.baseAllow = StringToAccess(view.baseAccess);
+            entity.Entity.AccessList = view.accessList.Select(x => new EntityAccess()
+            {
+                id = 0,
+                userId = x.Key,
+                createDate = DateTime.Now,
+                allow = StringToAccess(x.Value)
+            }).ToList();
+        }
+
         //public bool CheckAccessFormat(string access)
         //{
         //    //Why do this manually? idk...

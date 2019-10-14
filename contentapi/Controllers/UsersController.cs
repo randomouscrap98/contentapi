@@ -16,25 +16,25 @@ namespace contentapi.Controllers
 
         //protected override void SetLogField(ActionLog log, long id) { log.userId = id; }
 
-        protected override Task Post_PreConversionCheck(UserView user)
+        protected override Task<User> Post_ConvertItemAsync(UserView view)//Post_PreConversionCheckAsync(UserView user)
         {
             ThrowAction(BadRequest("Cannot create users from this endpoint right now! Use credentials endpoint"));
-            return Task.CompletedTask;
+            throw new NotImplementedException(); //This will hopefully never be reached
         }
 
-        protected override Task Delete_PreDeleteCheck(User existing)
-        {
-            //NOBODY can delete users right now because that's a HUGE cascading thing that I'm not implementing right now!
-            ThrowAction(BadRequest("Deleting users not supported right now!"));
-            return Task.CompletedTask;
-        }
+        //protected override Task Delete_PreDeleteCheck(User existing)
+        //{
+        //    //NOBODY can delete users right now because that's a HUGE cascading thing that I'm not implementing right now!
+        //    ThrowAction(BadRequest("Deleting users not supported right now!"));
+        //    return Task.CompletedTask;
+        //}
 
-        //Don't support changing username/password/email yet (it's kind of a big process)
-        protected override Task Put_PreConversionCheck(UserView item, User existing)
-        {
-            ThrowAction(BadRequest("You can't change user data yet! Sorry!"));
-            return Task.CompletedTask;
-        }
+        ////Don't support changing username/password/email yet (it's kind of a big process)
+        //protected override Task Put_PreConversionCheck(UserView item, User existing)
+        //{
+        //    ThrowAction(BadRequest("You can't change user data yet! Sorry!"));
+        //    return Task.CompletedTask;
+        //}
 
         //You 'Create' a new user by posting ONLY 'credentials'. This is different than most other types of things...
         //passwords and emails and such shouldn't be included in every view unlike regular models where every field is there.
@@ -49,7 +49,8 @@ namespace contentapi.Controllers
             if(user.email == null)
                 return BadRequest("Must provide an email!");
 
-            var existing = await (await GetAllBase()).FirstOrDefaultAsync(x => x.username == user.username || x.email == user.email);
+            var all = await GetAllBase();
+            var existing = await all.FirstOrDefaultAsync(x => x.username == user.username || x.email == user.email);
 
             if(existing != null)
                 return BadRequest("This user already seems to exist!");
@@ -59,14 +60,13 @@ namespace contentapi.Controllers
             var createUser = new User()
             {
                 username = user.username,
-                //createDate = DateTime.Now,
                 email = user.email,
                 passwordSalt = salt,
                 passwordHash = services.hash.GetHash(user.password, salt),
                 registerCode = Guid.NewGuid().ToString()
             };
 
-            SetNewEntity(createUser);
+            services.entity.SetNewEntity(createUser);
 
             await services.context.Set<User>().AddAsync(createUser);
             await services.context.SaveChangesAsync();

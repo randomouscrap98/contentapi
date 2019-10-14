@@ -10,7 +10,7 @@ namespace contentapi.test
 {
     public class UserControllerTest : ControllerTestBase<UsersController>
     {
-        [Theory]
+        /*[Theory]
         [InlineData(true)]
         [InlineData(false)]
         public void TestBasicUserCreate(bool loggedIn)
@@ -149,6 +149,6 @@ namespace contentapi.test
             var result = instance.Controller.Authenticate(creds).Result;
             Assert.True(IsSuccessRequest(result));
             Assert.True(!string.IsNullOrWhiteSpace(result.Value));
-        }
+        }*/
     }
 }

@@ -32,12 +32,13 @@ namespace contentapi.Controllers
         public ILanguageService language;
         public IHashService hash;
         public AccessService access;
+        public IEntityService entity;
 
         public GenericControllerServices(ContentDbContext context, IMapper mapper, 
             PermissionService permissionService, QueryService queryService,
             ISessionService sessionService, IEmailService emailService, 
             ILanguageService languageService, IHashService hashService,
-            AccessService accessService)
+            AccessService accessService, IEntityService entityService)
         {
             this.context = context;
             this.mapper = mapper;
@@ -48,6 +49,7 @@ namespace contentapi.Controllers
             this.language = languageService;
             this.hash = hashService;
             this.access = accessService;
+            this.entity = entityService;
         }
     }
 
@@ -93,44 +95,6 @@ namespace contentapi.Controllers
             await services.context.EntityLogs.AddAsync(log);
             await services.context.SaveChangesAsync();
         }
-
-        //protected void CheckAccessFormat(EntityView accessView)
-        //{
-        //    if(!services.access.CheckAccessFormat(accessView))
-        //        ThrowAction(BadRequest("Malformed access string (CRUD)"));
-        //}
-
-        //protected async Task LogAct(LogAction action, Action<ActionLog> setField)
-        //{
-        //    //Do NOT LOG if we're not set to
-        //    if(!DoActionLog)
-        //        return;
-
-        //    var log = new ActionLog()
-        //    {
-        //        action = action,
-        //        createDate = DateTime.Now,
-        //        contentId = null,
-        //        categoryId = null,
-        //        userId = null
-        //    };
-
-        //    log.actionUserId = services.session.GetCurrentUid();
-
-        //    if(log.actionUserId < 0)
-        //        log.actionUserId = null;
-
-        //    setField(log);
-
-        //    await services.context.Logs.AddAsync(log);
-        //    await services.context.SaveChangesAsync();
-        //}
-
-        //protected async Task LogAct(EntityAction action, long id)
-        //{
-        //    await LogAct(action, (l) => SetLogField(l, id));
-        //}
-
 
         public async Task<User> GetCurrentUserAsync()
         {
@@ -179,37 +143,65 @@ namespace contentapi.Controllers
             return Task.FromResult(services.context.Set<T>().Include(x => x.Entity).ThenInclude(x => x.AccessList).AsQueryable());
         }
 
-        protected virtual void SetNewEntity(T item)
-        {
-            item.Entity = new Entity()
+        //protected virtual void SetNewEntity(T item)
+        //{
+        //    item.Entity = new Entity()
+        //    {
+        //        createDate = DateTime.Now,
+        //        id = 0,
+        //        status = 0
+        //    };
+        //}
+
+        //protected T ConvertFromView(V view)
+        //{
+        //    //First, fill the easy stuff by creating a new entity thing from the view's basic fields
+        //    var result = services.mapper.Map<T>(view);
+
+        //    //Fill up a new entity
+        //    SetNewEntity(result);
+
+        //    //Now convert the special stuff.
+        //    try
+        //    {
+        //        services.access.FillEntityAccess(result, view);
+        //    }
+        //    catch(Exception ex)
+        //    {
+        //        ThrowAction(BadRequest(ex.Message));
+        //    }
+
+        //    return result;
+        //}
+
+        protected virtual Task GetSingle_PreResultCheckAsync(T item) { return Task.CompletedTask; }
+
+        //protected virtual Task Post_PreConversionCheckAsync(V item) { return Task.CompletedTask; }
+        protected virtual Task<T> Post_ConvertItemAsync(V item) 
+        { 
+            try
             {
-                createDate = DateTime.Now,
-                id = 0,
-                status = 0
-            };
+                return Task.FromResult(services.entity.ConvertFromView<T,V>(item)); //ConvertFromView(item);
+            }
+            catch(InvalidOperationException ex)
+            {
+                ThrowAction(BadRequest(ex.Message));
+                throw ex; //compiler plz (this is actually thrown above)
+                //return Task.FromResult((T)null); //compiler plz
+            }
         }
+        //protected virtual Task Post_PreInsertCheckAsync(T item) { return Task.CompletedTask; }
 
-        //protected virtual Task<IQueryable<T>> Get_GetBase() { return Task.FromResult(services.context.GetAll<T>()); }
-        protected virtual Task GetSingle_PreResultCheck(T item) { return Task.CompletedTask; }
+        //protected virtual Task Put_PreConversionCheckAsync(V item, T existing) 
+        //{ 
+        //    item.createDate = existing.Entity.createDate;
+        //    item.id = existing.entityId;
+        //    return Task.CompletedTask;
+        //}
+        //protected virtual T Put_ConvertItem(V item, T existing) { return services.mapper.Map<V, T>(item, existing); }
+        //protected virtual Task Put_PreInsertCheckAsync(T existing) { return Task.CompletedTask; }
 
-        protected virtual Task Post_PreConversionCheck(V item) { return Task.CompletedTask; }
-        protected virtual T Post_ConvertItem(V item) { return services.mapper.Map<T>(item); }
-        protected virtual Task Post_PreInsertCheck(T item) 
-        { 
-            SetNewEntity(item);
-            return Task.CompletedTask;
-        }
-
-        protected virtual Task Put_PreConversionCheck(V item, T existing) 
-        { 
-            item.createDate = existing.Entity.createDate;
-            item.id = existing.entityId;
-            return Task.CompletedTask;
-        }
-        protected virtual T Put_ConvertItem(V item, T existing) { return services.mapper.Map<V, T>(item, existing); }
-        protected virtual Task Put_PreInsertCheck(T existing) { return Task.CompletedTask; }
-
-        protected virtual Task Delete_PreDeleteCheck(T existing) { return Task.CompletedTask; }
+        //protected virtual Task Delete_PreDeleteCheckAsync(T existing) { return Task.CompletedTask; }
 
         public async virtual Task<IQueryable<T>> GetQueryAsync(CollectionQuery query)
         {
@@ -253,7 +245,7 @@ namespace contentapi.Controllers
             {
                 var results = await GetQueryAsync(new CollectionQuery() {ids = id.ToString()});
                 var item = await results.FirstAsync();
-                await GetSingle_PreResultCheck(item);
+                await GetSingle_PreResultCheckAsync(item);
                 await LogAct(EntityAction.View, item.Entity.id);
                 return services.mapper.Map<V>(item);
             }
@@ -267,25 +259,20 @@ namespace contentapi.Controllers
             }
         }
 
-        /*[HttpPost]
+        [HttpPost]
         public async virtual Task<ActionResult<V>> Post([FromBody]V item)
         {
             try
             {
-                //Check the passed-in object. If anything happens, stop now
-                await Post_PreConversionCheck(item);
-
-                //Convert the user-provided object into a real one
-                var newThing = Post_ConvertItem(item);
-
-                //Perform one last check on the converted item
-                await Post_PreInsertCheck(newThing);
+                //Convert the user-provided object into a real one. Controllers can perform 
+                //checks and whatever on objects during the conversion.
+                var newThing = await Post_ConvertItemAsync(item);
 
                 //Actually add the object??
                 await services.context.Set<T>().AddAsync(newThing);
                 await services.context.SaveChangesAsync();
 
-                await LogAct(EntityAction.Create, newThing.id);
+                await LogAct(EntityAction.Create, newThing.entityId);
 
                 return services.mapper.Map<V>(newThing);
             }
@@ -293,7 +280,7 @@ namespace contentapi.Controllers
             {
                 return ex.Result;
             }
-        }*/
+        }
 
         //Note: I don't think you need "Patch" because the way the "put" conversion works just... works.
         /*[HttpPut("{id}")]

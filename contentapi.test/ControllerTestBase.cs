@@ -17,42 +17,13 @@ namespace contentapi.test
         public User User = null;
         public FakeEmailer Emailer = null;
         public ContentDbContext Context = null;
+        public IEntityService EntityService = null;
     }
 
-    public class ControllerTestBase<T> where T : ControllerBase
+    public class ControllerTestBase<T> : TestBase where T : ControllerBase
     {
         public ControllerTestBase() { }
 
-        public string UniqueSection()
-        {
-            return Guid.NewGuid().ToString().Split("-".ToCharArray()).Last();
-        }
-
-        public bool IsBadRequest(ActionResult result) { return result is BadRequestResult || result is BadRequestObjectResult; }
-        public bool IsNotFound(ActionResult result) { return result is NotFoundObjectResult || result is NotFoundResult; }
-        public bool IsNotAuthorized(ActionResult result) { return result is UnauthorizedObjectResult || result is UnauthorizedResult; }
-        public bool IsOkRequest(ActionResult result) { return result is OkObjectResult || result is OkResult; }
-        public bool IsSuccessRequest<V>(ActionResult<V> result)
-        {
-            //A VERY BAD CHECK but... eeeggghh
-            if(result.Result == null)
-                return result.Value != null;
-            else
-                return IsOkRequest(result.Result);
-        }
-
-        public IServiceCollection GetBaseServices()
-        {
-            var services = new ServiceCollection();
-            var startup = new Startup(null);
-            startup.ConfigureBasicServices(services, new StartupServiceConfig()
-            {
-                SecretKey = "barelyASecretKey",
-                ContentConString = "Data Source=content.db"
-            });
-
-            return services;
-        }
 
         public ControllerInstance<T> GetInstance(bool loggedIn, Role role = Role.None)
         {
@@ -73,6 +44,7 @@ namespace contentapi.test
             instance.Controller = (T)ActivatorUtilities.CreateInstance(realProvider, typeof(T));
             instance.Emailer = emailer;
             instance.Context = (ContentDbContext)realProvider.GetService(typeof(ContentDbContext));
+            instance.EntityService = (IEntityService)realProvider.GetService(typeof(IEntityService));
 
             if(loggedIn)
             {
@@ -84,11 +56,13 @@ namespace contentapi.test
                     role = role
                 };
 
+                instance.EntityService.SetNewEntity(user);
+
                 instance.Context.Users.Add(user);
                 instance.Context.SaveChanges();
 
                 instance.User = user;
-                session.UidProvider = () => instance.User.id;
+                session.UidProvider = () => instance.User.entityId;
             }
 
             return instance;

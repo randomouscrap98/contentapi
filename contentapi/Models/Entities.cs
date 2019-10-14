@@ -36,11 +36,6 @@ namespace contentapi.Models
         public virtual List<EntityAccess> AccessList {get;set;}
         public virtual List<EntityLog> Log {get;set;}
 
-
-        //public EntityLog CreateAction { get => Log.First(x => x.action == EntityAction.Create); }
-        //public DateTime CreateDate { get => CreateAction.createDate; }
-        //public long CreateUserId { get => CreateAction.userId; }
-
         public DateTime? LastEditDate
         {
             get { return Log.Where(x => x.action == EntityAction.Update).OrderByDescending(x => x.createDate).FirstOrDefault()?.createDate; }
