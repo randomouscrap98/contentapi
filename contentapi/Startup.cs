@@ -40,7 +40,8 @@ namespace contentapi
             });
 
             //Database config
-            services.AddDbContext<ContentDbContext>(options => options.UseLazyLoadingProxies().UseSqlite(config.ContentConString));
+            //services.AddDbContext<ContentDbContext>(options => options.UseLazyLoadingProxies().UseSqlite(config.ContentConString));
+            services.AddDbContext<ContentDbContext>(options => options.UseSqlite(config.ContentConString));
 
             //Mapping config
             var mapperConfig = new MapperConfiguration(cfg => 
@@ -67,7 +68,7 @@ namespace contentapi
             services.AddTransient<PermissionService>()
                     .AddTransient<AccessService>()
                     .AddTransient<QueryService>()
-                    .AddTransient<GenericControllerServices>();
+                    .AddTransient<EntityControllerServices>();
 
             //REAL interfaced services
             services.AddTransient<IEmailService, EmailService>();

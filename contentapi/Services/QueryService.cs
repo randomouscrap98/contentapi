@@ -2,6 +2,8 @@ using System;
 using System.Linq;
 using contentapi.Models;
 using System.Collections.Generic;
+using Microsoft.EntityFrameworkCore;
+using System.Text;
 
 namespace contentapi.Services
 {
@@ -32,23 +34,57 @@ namespace contentapi.Services
         public string AscendingOrder = "asc";
         public string DescendingOrder = "desc";
 
-        public Dictionary<string, Func<EntityChild, object>> Sorters; 
+        //public Dictionary<string, Func<EntityChild, object>> Sorters; 
 
         public QueryService()
         {
-            Sorters = new Dictionary<string, Func<EntityChild, object>>()
-            {
-                { IdSort, (x) => x.entityId },
-                { CreateSort, (x) => x.Entity.createDate }
-            };
+            //Sorters = new Dictionary<string, Func<EntityChild, object>>()
+            //{
+            //    { IdSort, (x) => x.entityId },
+            //    { CreateSort, (x) => x.Entity.createDate }
+            //};
         }
 
-        public virtual System.Linq.Expressions.Expression<Func<W, object>> GetSorter<W>(string sort) where W : EntityChild
-        {
-            if(Sorters.ContainsKey(sort))
-                return (x) => Sorters[sort].Invoke(x);
+        //public virtual System.Linq.Expressions.Expression<Func<W, object>> GetSorter<W>(string sort) where W : EntityChild
+        //{
+        //    if(Sorters.ContainsKey(sort))
+        //        return (x) => Sorters[sort].Invoke(x);
 
-            return null;
+        //    return null;
+        //}
+
+        //public IQueryable<W> ApplyQuery<W>(DbSet<W> originSet, CollectionQuery query) where W : EntityChild
+        //{
+        //    StringBuilder sql = new StringBuilder("SELECT * FROM dbo.");
+        //    sql.Append(typeof(W).Name);
+        //    sql.Append(" t, dbo.Entity e ON e.id = t.entityId");
+        //    sql.Append(" WHERE e.status ");
+        //    //originSet.FromSql()
+        //}
+
+        public IQueryable<W> ApplySort<W>(IQueryable<W> originSet, CollectionQuery query) where W : EntityChild
+        {
+            //This is AWFUL but... yeah, entity framework core. Good stuff?
+            if(query.order == AscendingOrder)
+            {
+                if(query.sort == IdSort)
+                    return originSet.OrderBy(x => x.Entity.id);
+                else if(query.sort == CreateSort)
+                    return originSet.OrderBy(x => x.Entity.createDate);
+            }
+            else if (query.order == DescendingOrder)
+            {
+                if(query.sort == IdSort)
+                    return originSet.OrderByDescending(x => x.Entity.id);
+                else if(query.sort == CreateSort)
+                    return originSet.OrderByDescending(x => x.Entity.createDate);
+            }
+            else
+            {
+                throw new InvalidOperationException($"Unknown order type ({AscendingOrder}/{DescendingOrder})");
+            }
+
+            throw new InvalidOperationException($"Unknown sort type");
         }
 
         public IQueryable<W> ApplyQuery<W>(IQueryable<W> originSet, CollectionQuery query) where W : EntityChild
@@ -79,31 +115,37 @@ namespace contentapi.Services
                 subSet = subSet.Where(x => ids.Contains(x.entityId));
 
             var order = query.order.ToLower();
-            IQueryable<W> orderedSet = originSet;
-            System.Linq.Expressions.Expression<Func<W, object>> sorter = GetSorter<W>(query.sort);
-
-            if(sorter != null)
-            {
-                if (string.IsNullOrWhiteSpace(order) || order == AscendingOrder)
-                    orderedSet = orderedSet.OrderBy(sorter);
-                else if (order == DescendingOrder)
-                    orderedSet = orderedSet.OrderByDescending(sorter);
-                else
-                    throw new InvalidOperationException($"Unknown order type ({AscendingOrder}/{DescendingOrder})");
-            }
-
-            IQueryable<W> slicedSet = orderedSet;
+            //System.Linq.Expressions.Expression<Func<W, object>> sorter = GetSorter<W>(query.sort);
 
             try
             {
-                slicedSet = slicedSet.Skip(query.offset).Take(query.count);
+                subSet = ApplySort(subSet, query);
+            }
+            catch //(Exception ex)
+            {
+                //Put logging here! it's ok if the search didnt' work but maybe tell the user somehow!
+            }
+            /*if(sorter != null)
+            {
+                if (string.IsNullOrWhiteSpace(order) || order == AscendingOrder)
+                    subSet = subSet.OrderBy(sorter);
+                else if (order == DescendingOrder)
+                    subSet= subSet.OrderByDescending(sorter);
+                else
+                    throw new InvalidOperationException($"Unknown order type ({AscendingOrder}/{DescendingOrder})");
+            }*/
+            //subSet = subSet.OrderBy(x => x.Entity.createDate);
+
+            try
+            {
+                subSet = subSet.Skip(query.offset).Take(query.count);
             }
             catch
             {
                 throw new InvalidOperationException("Offset/count broke set; this is API laziness");
             }
 
-            return slicedSet;
+            return subSet;
         }
     }
 }

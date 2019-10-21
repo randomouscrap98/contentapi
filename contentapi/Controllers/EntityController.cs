@@ -21,7 +21,7 @@ namespace contentapi.Controllers
     }
 
     //Too much work to manage the list of services for all these derived classes
-    public class GenericControllerServices
+    public class EntityControllerServices
     {
         public ContentDbContext context;
         public IMapper mapper;
@@ -34,7 +34,7 @@ namespace contentapi.Controllers
         public AccessService access;
         public IEntityService entity;
 
-        public GenericControllerServices(ContentDbContext context, IMapper mapper, 
+        public EntityControllerServices(ContentDbContext context, IMapper mapper, 
             PermissionService permissionService, QueryService queryService,
             ISessionService sessionService, IEmailService emailService, 
             ILanguageService languageService, IHashService hashService,
@@ -58,11 +58,11 @@ namespace contentapi.Controllers
     [Authorize]
     public abstract class EntityController<T,V> : ControllerBase where T : EntityChild where V : EntityView
     {
-        protected GenericControllerServices services;
+        protected EntityControllerServices services;
 
         protected bool DoActionLog = true;
 
-        public EntityController(GenericControllerServices services)
+        public EntityController(EntityControllerServices services)
         {
             this.services = services;
             services.session.Context = this; //EEEWWWW
@@ -79,14 +79,14 @@ namespace contentapi.Controllers
                 throw new ActionCarryingException() {Result = result};
         }
 
-        protected async Task LogAct(EntityAction action, long entityId)
+        protected async Task LogAct(EntityAction action, long entityId, long? createUserOverride = null)
         {
             var log = new EntityLog()
             {
                 action = action,
                 createDate = DateTime.Now,
                 entityId = entityId,
-                userId = services.session.GetCurrentUid()
+                userId = createUserOverride ?? services.session.GetCurrentUid()
             };
 
             if(log.userId < 0)
@@ -143,65 +143,20 @@ namespace contentapi.Controllers
             return Task.FromResult(services.context.Set<T>().Include(x => x.Entity).ThenInclude(x => x.AccessList).AsQueryable());
         }
 
-        //protected virtual void SetNewEntity(T item)
-        //{
-        //    item.Entity = new Entity()
-        //    {
-        //        createDate = DateTime.Now,
-        //        id = 0,
-        //        status = 0
-        //    };
-        //}
-
-        //protected T ConvertFromView(V view)
-        //{
-        //    //First, fill the easy stuff by creating a new entity thing from the view's basic fields
-        //    var result = services.mapper.Map<T>(view);
-
-        //    //Fill up a new entity
-        //    SetNewEntity(result);
-
-        //    //Now convert the special stuff.
-        //    try
-        //    {
-        //        services.access.FillEntityAccess(result, view);
-        //    }
-        //    catch(Exception ex)
-        //    {
-        //        ThrowAction(BadRequest(ex.Message));
-        //    }
-
-        //    return result;
-        //}
-
         protected virtual Task GetSingle_PreResultCheckAsync(T item) { return Task.CompletedTask; }
 
-        //protected virtual Task Post_PreConversionCheckAsync(V item) { return Task.CompletedTask; }
         protected virtual Task<T> Post_ConvertItemAsync(V item) 
         { 
             try
             {
-                return Task.FromResult(services.entity.ConvertFromView<T,V>(item)); //ConvertFromView(item);
+                return Task.FromResult(services.entity.ConvertFromView<T,V>(item));
             }
             catch(InvalidOperationException ex)
             {
                 ThrowAction(BadRequest(ex.Message));
                 throw ex; //compiler plz (this is actually thrown above)
-                //return Task.FromResult((T)null); //compiler plz
             }
         }
-        //protected virtual Task Post_PreInsertCheckAsync(T item) { return Task.CompletedTask; }
-
-        //protected virtual Task Put_PreConversionCheckAsync(V item, T existing) 
-        //{ 
-        //    item.createDate = existing.Entity.createDate;
-        //    item.id = existing.entityId;
-        //    return Task.CompletedTask;
-        //}
-        //protected virtual T Put_ConvertItem(V item, T existing) { return services.mapper.Map<V, T>(item, existing); }
-        //protected virtual Task Put_PreInsertCheckAsync(T existing) { return Task.CompletedTask; }
-
-        //protected virtual Task Delete_PreDeleteCheckAsync(T existing) { return Task.CompletedTask; }
 
         public async virtual Task<IQueryable<T>> GetQueryAsync(CollectionQuery query)
         {
@@ -247,7 +202,7 @@ namespace contentapi.Controllers
                 var item = await results.FirstAsync();
                 await GetSingle_PreResultCheckAsync(item);
                 await LogAct(EntityAction.View, item.Entity.id);
-                return services.mapper.Map<V>(item);
+                return services.entity.ConvertFromEntity<T, V>(item);//services.mapper.Map<V>(item);
             }
             catch(ActionCarryingException ex)
             {
@@ -274,7 +229,8 @@ namespace contentapi.Controllers
 
                 await LogAct(EntityAction.Create, newThing.entityId);
 
-                return services.mapper.Map<V>(newThing);
+                return services.entity.ConvertFromEntity<T,V>(newThing);
+                //return services.mapper.Map<V>(newThing);
             }
             catch(ActionCarryingException ex)
             {

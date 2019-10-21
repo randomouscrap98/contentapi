@@ -10,7 +10,7 @@ namespace contentapi.test
 {
     public class UserControllerTest : ControllerTestBase<UsersController>
     {
-        /*[Theory]
+        [Theory]
         [InlineData(true)]
         [InlineData(false)]
         public void TestBasicUserCreate(bool loggedIn)
@@ -55,7 +55,7 @@ namespace contentapi.test
         {
             var instance = GetInstance(true);
             var result = instance.Controller.Me().Result;
-            Assert.Equal(instance.User.id, result.Value.id);
+            Assert.Equal(instance.User.entityId, result.Value.id);
             Assert.Equal(instance.User.username, result.Value.username);
         }
 
@@ -68,7 +68,52 @@ namespace contentapi.test
             Assert.Null(result.Value);
         }
 
+        [Theory]
+        [InlineData(true)]
+        [InlineData(false)]
+        public void TestGetUsers(bool loggedIn)
+        {
+            var instance = GetInstance(loggedIn);
+            var result = instance.Controller.Get(new CollectionQuery()).Result;
+            Assert.True(IsSuccessRequest(result));
+            List<UserView> users = ((IEnumerable<UserView>)result.Value["collection"]).ToList();
+            Assert.True(users.Count > 0);
+
+            if(loggedIn)
+                Assert.Contains(users, x => x.id == instance.User.entityId);
+        }
+
+        [Theory]
+        [InlineData(true)]
+        [InlineData(false)]
+        public void TestGetManyUsers(bool loggedIn)
+        {
+            const int userCount = 5;
+
+            for(int i = 0; i < userCount; i++)
+                TestBasicUserCreate(loggedIn);
+
+            var instance = GetInstance(loggedIn);
+            var result = instance.Controller.Get(new CollectionQuery()).Result;
+            Assert.True(IsSuccessRequest(result));
+            List<UserView> users = ((IEnumerable<UserView>)result.Value["collection"]).ToList();
+            Assert.True(users.Count >= userCount);
+
+            if(loggedIn)
+                Assert.Contains(users, x => x.id == instance.User.entityId);
+        }
+
         [Fact]
+        public void TestGetUserSingle()
+        {
+            var instance = GetInstance(true);
+            var result = instance.Controller.GetSingle(instance.User.entityId).Result;
+            Assert.True(IsSuccessRequest(result));
+            Assert.True(result.Value.id == instance.User.entityId);
+        }
+
+
+        /*[Fact]
         public void TestUserSelfDeleteFail()
         {
             var instance = GetInstance(true);
@@ -83,26 +128,6 @@ namespace contentapi.test
             var user = instance.Context.Users.Last(x => x.role == Role.None); //Just get SOMEONE with no role
             var result = instance.Controller.Delete(user.id).Result;
             Assert.False(IsSuccessRequest(result));
-        }
-
-        [Fact]
-        public void TestGetUsers()
-        {
-            var instance = GetInstance(true);
-            var result = instance.Controller.Get(new CollectionQuery()).Result;
-            Assert.True(IsSuccessRequest(result));
-            List<UserView> users = ((IEnumerable<UserView>)result.Value["collection"]).ToList();
-            Assert.True(users.Count > 0);
-            Assert.Contains(users, x => x.id == instance.User.id);
-        }
-
-        [Fact]
-        public void TestGetUserSingle()
-        {
-            var instance = GetInstance(true);
-            var result = instance.Controller.GetSingle(instance.User.id).Result;
-            Assert.True(IsSuccessRequest(result));
-            Assert.True(result.Value.id == instance.User.id);
         }
 
         [Theory]

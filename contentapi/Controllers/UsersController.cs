@@ -12,11 +12,9 @@ namespace contentapi.Controllers
 {
     public class UsersController : EntityController<User, UserView>
     {
-        public UsersController(GenericControllerServices services) : base (services) { }
+        public UsersController(EntityControllerServices services) : base (services) { }
 
-        //protected override void SetLogField(ActionLog log, long id) { log.userId = id; }
-
-        protected override Task<User> Post_ConvertItemAsync(UserView view)//Post_PreConversionCheckAsync(UserView user)
+        protected override Task<User> Post_ConvertItemAsync(UserView view)
         {
             ThrowAction(BadRequest("Cannot create users from this endpoint right now! Use credentials endpoint"));
             throw new NotImplementedException(); //This will hopefully never be reached
@@ -68,12 +66,16 @@ namespace contentapi.Controllers
 
             services.entity.SetNewEntity(createUser);
 
+            //Everyone can read the user information (not the secret stuff of course)
+            createUser.Entity.baseAllow = EntityAction.Read;
+
             await services.context.Set<User>().AddAsync(createUser);
             await services.context.SaveChangesAsync();
 
-            await LogAct(EntityAction.Create, createUser.entityId);
+            //Note the last parameter: the create user is ALWAYS the user that just got created! The user "creates" itself!
+            await LogAct(EntityAction.Create, createUser.entityId, createUser.entityId);
 
-            return services.mapper.Map<UserView>(createUser);
+            return services.entity.ConvertFromEntity<User, UserView>(createUser); //services.mapper.Map<UserView>(createUser);
         }
 
         [HttpGet("me")]

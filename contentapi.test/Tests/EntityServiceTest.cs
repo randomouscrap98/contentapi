@@ -51,7 +51,7 @@ namespace contentapi.test
         {
             Assert.NotNull(entity.Entity);
             Assert.NotNull(entity.Entity.AccessList);
-            Assert.NotNull(entity.Entity.baseAllow);
+            //Assert.NotEqual(, entity.Entity.baseAllow);
             Assert.True(entity.Entity.createDate >= DateTime.Now.AddSeconds(-60));
         }
 
