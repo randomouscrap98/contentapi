@@ -10,13 +10,21 @@ using Microsoft.EntityFrameworkCore;
 
 namespace contentapi.test
 {
-    public class UserControllerTest : ControllerTestBase<UsersController>, IDisposable
+    public class UserControllerTest : ControllerTestBase<UsersController>
     {
-        public void Dispose()
+        //Every time it starts, clear out the users so each test has a clean slate
+        public UserControllerTest()
         {
             var instance = GetBasicInstance();
             instance.Context.Database.ExecuteSqlCommand("delete from userEntities");
-            instance.Context.SaveChanges();
+        }
+
+        public UserView CreateUser()
+        {
+            var instance = GetInstance(false);
+            var credential = GetNewCredentials();
+            var userResult = instance.Controller.PostCredentials(credential).Result;
+            return userResult.Value;
         }
 
         [Theory]
@@ -82,6 +90,9 @@ namespace contentapi.test
         [InlineData(false)]
         public void TestGetUsers(bool loggedIn)
         {
+            //To have at least ONE user
+            CreateUser();
+
             var instance = GetInstance(loggedIn);
             var result = instance.Controller.Get(new CollectionQuery()).Result;
             Assert.True(IsSuccessRequest(result));
@@ -100,7 +111,7 @@ namespace contentapi.test
             const int userCount = 5;
 
             for(int i = 0; i < userCount; i++)
-                TestBasicUserCreate(loggedIn);
+                CreateUser();
 
             var instance = GetInstance(loggedIn);
             var result = instance.Controller.Get(new CollectionQuery()).Result;
@@ -124,6 +135,8 @@ namespace contentapi.test
         [Fact]
         public void TestUserSelfDeleteFail()
         {
+            CreateUser();
+
             var instance = GetInstance(true);
             var result = instance.Controller.Delete(instance.User.entityId).Result;
             Assert.False(IsSuccessRequest(result));
@@ -132,9 +145,11 @@ namespace contentapi.test
         [Fact]
         public void TestRandomUserDeleteFail()
         {
+            var user = CreateUser();
+
             var instance = GetInstance(false);
-            var user = instance.Context.UserEntities.Last(x => x.role == Role.None); //Just get SOMEONE with no role
-            var result = instance.Controller.Delete(user.entityId).Result;
+            //var user = instance.Context.UserEntities.Last(x => x.role == Role.None); //Just get SOMEONE with no role
+            var result = instance.Controller.Delete(user.id).Result;
             Assert.False(IsSuccessRequest(result));
         }
 
