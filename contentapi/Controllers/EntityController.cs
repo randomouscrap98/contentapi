@@ -138,9 +138,20 @@ namespace contentapi.Controllers
         // * OVERRIDE *
         // ************
 
-        protected virtual Task<IQueryable<T>> GetAllBase()
+        protected virtual async Task<IQueryable<T>> GetAllBase()
         {
-            return Task.FromResult(services.context.Set<T>().Include(x => x.Entity).ThenInclude(x => x.AccessList).AsQueryable());
+            long uid = services.session.GetCurrentUid();
+            return services.access.WhereReadable(
+                services.context.Set<T>()
+                .Include(x => x.Entity)
+                .ThenInclude(x => x.AccessList)
+                .AsQueryable(), await GetCurrentUserAsync());
+        }
+
+        protected virtual async Task<T> GetSingleBase(long id)
+        {
+            var results = await GetQueryAsync(new CollectionQuery() { ids = id.ToString() });
+            return await results.FirstAsync();
         }
 
         protected virtual Task GetSingle_PreResultCheckAsync(T item) { return Task.CompletedTask; }
@@ -156,6 +167,25 @@ namespace contentapi.Controllers
                 ThrowAction(BadRequest(ex.Message));
                 throw ex; //compiler plz (this is actually thrown above)
             }
+        }
+
+        protected virtual Task Put_ConvertItemAsync(V item, T existing) 
+        { 
+            try
+            {
+                services.entity.FillExistingFromView(item, existing);
+                return Task.CompletedTask;
+            }
+            catch(InvalidOperationException ex)
+            {
+                ThrowAction(BadRequest(ex.Message));
+                throw ex; //compiler plz (this is actually thrown above)
+            }
+        }
+
+        protected virtual Task Delete_PrecheckAsync(T item)
+        {
+            return Task.CompletedTask;
         }
 
         public async virtual Task<IQueryable<T>> GetQueryAsync(CollectionQuery query)
@@ -198,11 +228,10 @@ namespace contentapi.Controllers
         {
             try
             {
-                var results = await GetQueryAsync(new CollectionQuery() {ids = id.ToString()});
-                var item = await results.FirstAsync();
+                var item = await GetSingleBase(id); 
                 await GetSingle_PreResultCheckAsync(item);
                 await LogAct(EntityAction.View, item.Entity.id);
-                return services.entity.ConvertFromEntity<T, V>(item);//services.mapper.Map<V>(item);
+                return services.entity.ConvertFromEntity<T, V>(item);
             }
             catch(ActionCarryingException ex)
             {
@@ -230,7 +259,6 @@ namespace contentapi.Controllers
                 await LogAct(EntityAction.Create, newThing.entityId);
 
                 return services.entity.ConvertFromEntity<T,V>(newThing);
-                //return services.mapper.Map<V>(newThing);
             }
             catch(ActionCarryingException ex)
             {
@@ -239,27 +267,24 @@ namespace contentapi.Controllers
         }
 
         //Note: I don't think you need "Patch" because the way the "put" conversion works just... works.
-        /*[HttpPut("{id}")]
+        [HttpPut("{id}")]
         public async virtual Task<ActionResult<V>> Put([FromRoute]long id, [FromBody]V item)
         {
             try
             {
-                var existing = await GetExisting(id);
+                var existing = await GetSingleBase(id);
 
-                //Next, perform some checks. If anything happens, we need to return the result.
-                await Put_PreConversionCheck(item, existing);
+                if(!services.access.CanUpdate(existing.Entity, await GetCurrentUserAsync()))
+                    return Unauthorized("You cannot update this item!");
 
                 //Now actually "convert" the item by placing it "into" the existing (assume existing gets modified in-place?)
-                Put_ConvertItem(item, existing);
-
-                //After conversion, perform one last check before insertion
-                await Put_PreInsertCheck(existing);
+                await Put_ConvertItemAsync(item, existing);
 
                 //Actually update the object now? I hope???
                 services.context.Set<T>().Update(existing);
                 await services.context.SaveChangesAsync();
 
-                await LogAct(EntityAction.Update, existing.id);
+                await LogAct(EntityAction.Update, existing.entityId);
 
                 return services.mapper.Map<V>(existing);
             }
@@ -267,21 +292,24 @@ namespace contentapi.Controllers
             {
                 return ex.Result;
             }
-        }*/
+        }
 
-        /*[HttpDelete("{id}")]
+        [HttpDelete("{id}")]
         public async virtual Task<ActionResult<V>> Delete([FromRoute]long id)
         {
             try
             {
-                var existing = await GetExisting(id);
+                var existing = await GetSingleBase(id);
 
-                await Delete_PreDeleteCheck(existing);
+                if(!services.access.CanDelete(existing.Entity, await GetCurrentUserAsync()))
+                    return Unauthorized("You cannot delete this item!");
 
-                existing.status |= (int)ModelStatus.Deleted;
+                await Delete_PrecheckAsync(existing);
+
+                existing.Entity.status |= EntityStatus.Deleted;
                 services.context.Set<T>().Update(existing);
                 await services.context.SaveChangesAsync();
-                await LogAct(LogAction.Delete, existing.id);
+                await LogAct(EntityAction.Delete, existing.entityId);
 
                 return services.mapper.Map<V>(existing);
             }
@@ -289,7 +317,7 @@ namespace contentapi.Controllers
             {
                 return ex.Result;
             }
-        }*/
+        }
     }
 
     //public abstract class AccessController<T,V> : GenericController<T, V> where T : GenericAccessModel where V : GenericAccessView

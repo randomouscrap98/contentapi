@@ -20,19 +20,19 @@ namespace contentapi.Controllers
             throw new NotImplementedException(); //This will hopefully never be reached
         }
 
-        //protected override Task Delete_PreDeleteCheck(User existing)
-        //{
-        //    //NOBODY can delete users right now because that's a HUGE cascading thing that I'm not implementing right now!
-        //    ThrowAction(BadRequest("Deleting users not supported right now!"));
-        //    return Task.CompletedTask;
-        //}
+        protected override Task Delete_PrecheckAsync(User existing)
+        {
+            //NOBODY can delete users right now because that's a HUGE cascading thing that I'm not implementing right now!
+            ThrowAction(BadRequest("Deleting users not supported right now!"));
+            return Task.CompletedTask;
+        }
 
-        ////Don't support changing username/password/email yet (it's kind of a big process)
-        //protected override Task Put_PreConversionCheck(UserView item, User existing)
-        //{
-        //    ThrowAction(BadRequest("You can't change user data yet! Sorry!"));
-        //    return Task.CompletedTask;
-        //}
+        //Don't support changing username/password/email yet (it's kind of a big process)
+        protected override Task Put_ConvertItemAsync(UserView item, User existing)
+        {
+            ThrowAction(BadRequest("You can't change user data yet! Sorry!"));
+            return Task.CompletedTask;
+        }
 
         //You 'Create' a new user by posting ONLY 'credentials'. This is different than most other types of things...
         //passwords and emails and such shouldn't be included in every view unlike regular models where every field is there.
@@ -81,14 +81,12 @@ namespace contentapi.Controllers
         [HttpGet("me")]
         public async Task<ActionResult<UserView>> Me()
         {
-            try
-            {
-                return await GetSingle(services.session.GetCurrentUid());
-            }
-            catch(Exception ex)
-            {
-                return BadRequest(ex.Message);
-            }
+            var uid = services.session.GetCurrentUid();
+
+            if(uid <= 0)
+                return BadRequest("Not logged in!");
+
+            return await GetSingle(services.session.GetCurrentUid());
         }
 
         //Temp class stuff to make life... easier?

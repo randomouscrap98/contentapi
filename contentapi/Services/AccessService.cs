@@ -26,6 +26,13 @@ namespace contentapi.Services
         public bool CanUpdate(Entity model, User user) { return CanDo(model, user, EntityAction.Update); }
         public bool CanDelete(Entity model, User user) { return CanDo(model, user, EntityAction.Delete); }
 
+        public IQueryable<W> WhereReadable<W>(IQueryable<W> origin, User user) where W : EntityChild
+        {
+            //return origin.Where(x => (x.Entity.baseAllow & EntityAction.Read) > 0 || x.Entity.AccessList.Any(y => y.userId == user.entityId && (y.allow & EntityAction.Read) > 0));
+            long uid = user?.entityId ?? -1;
+            return origin.Where(x => x.Entity.AccessList.Any(y => y.userId == uid && (y.allow & EntityAction.Read) > 0) || (x.Entity.baseAllow & EntityAction.Read) > 0);
+        }
+
         public EntityAction StringToAccess(string access)
         {
             EntityAction baseAction = EntityAction.None;

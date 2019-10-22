@@ -112,12 +112,11 @@ namespace contentapi.test
             Assert.True(result.Value.id == instance.User.entityId);
         }
 
-
-        /*[Fact]
+        [Fact]
         public void TestUserSelfDeleteFail()
         {
             var instance = GetInstance(true);
-            var result = instance.Controller.Delete(instance.User.id).Result;
+            var result = instance.Controller.Delete(instance.User.entityId).Result;
             Assert.False(IsSuccessRequest(result));
         }
 
@@ -126,20 +125,8 @@ namespace contentapi.test
         {
             var instance = GetInstance(false);
             var user = instance.Context.Users.Last(x => x.role == Role.None); //Just get SOMEONE with no role
-            var result = instance.Controller.Delete(user.id).Result;
+            var result = instance.Controller.Delete(user.entityId).Result;
             Assert.False(IsSuccessRequest(result));
-        }
-
-        [Theory]
-        [InlineData(true)]
-        [InlineData(false)]
-        public void TestUserCreate(bool loggedIn)
-        {
-            var instance = GetInstance(loggedIn);
-            var creds = GetNewCredentials();
-            var result = instance.Controller.PostCredentials(creds).Result;
-            Assert.True(IsSuccessRequest(result));
-            Assert.True(result.Value.id > 0);
         }
 
         private void DoEmail(ControllerInstance<UsersController> instance, UserCredential creds)
@@ -174,6 +161,6 @@ namespace contentapi.test
             var result = instance.Controller.Authenticate(creds).Result;
             Assert.True(IsSuccessRequest(result));
             Assert.True(!string.IsNullOrWhiteSpace(result.Value));
-        }*/
+        }
     }
 }

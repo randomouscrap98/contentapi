@@ -58,6 +58,8 @@ namespace contentapi.test
 
                 instance.EntityService.SetNewEntity(user);
 
+                user.Entity.baseAllow = EntityAction.Read;
+
                 instance.Context.Users.Add(user);
                 instance.Context.SaveChanges();
 
