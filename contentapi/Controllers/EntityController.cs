@@ -96,9 +96,9 @@ namespace contentapi.Controllers
             await services.context.SaveChangesAsync();
         }
 
-        public async Task<User> GetCurrentUserAsync()
+        public async Task<UserEntity> GetCurrentUserAsync()
         {
-            return await services.context.Users.FindAsync(services.session.GetCurrentUid());
+            return await services.context.UserEntities.FindAsync(services.session.GetCurrentUid());
         }
 
         public async Task<bool> CanUserAsync(Permission permission)

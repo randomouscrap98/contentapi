@@ -5,10 +5,9 @@ using contentapi.Services;
 
 namespace contentapi.test.Overrides
 {
-    //TODO: MAKE THIS CONTENTCONTROLLER!
-    public class OpenController : UsersController //AccessController<Content, ContentView>
+    public class OpenController : EntityController<UserEntity, UserView>
     {
-        public OpenController(EntityControllerServices services) : base(services) {} //, AccessService accessService) : base(services, accessService) { }
+        public OpenController(EntityControllerServices services) : base(services) {}
 
         public long GetUid()
         {

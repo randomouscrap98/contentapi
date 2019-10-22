@@ -32,7 +32,7 @@ namespace contentapi.Models
         public long? userId {get;set;}
         public EntityAction baseAllow {get;set;}
 
-        public virtual User User {get;set;}
+        public virtual UserEntity User {get;set;}
         public virtual List<EntityAccess> AccessList {get;set;}
         public virtual List<EntityLog> Log {get;set;}
 
@@ -60,7 +60,7 @@ namespace contentapi.Models
         public EntityAction allow {get;set;}
         public DateTime createDate {get;set;}
 
-        public virtual User User {get;set;}
+        public virtual UserEntity User {get;set;}
         public virtual Entity Entity {get;set;}
     }
 
@@ -73,7 +73,7 @@ namespace contentapi.Models
         public EntityAction action {get;set;}
         public DateTime createDate {get;set;}
 
-        public virtual User User {get;set;}
+        public virtual UserEntity User {get;set;}
         public virtual Entity Entity {get;set;}
     }
 

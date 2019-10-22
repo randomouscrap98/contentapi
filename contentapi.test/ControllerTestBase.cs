@@ -14,7 +14,7 @@ namespace contentapi.test
     {
         public T Controller = null;
         public UserCredential Credentials = null;
-        public User User = null;
+        public UserEntity User = null;
         public FakeEmailer Emailer = null;
         public ContentDbContext Context = null;
         public IEntityService EntityService = null;
@@ -49,7 +49,7 @@ namespace contentapi.test
             if(loggedIn)
             {
                 var creds = GetNewCredentials();
-                var user = new User()
+                var user = new UserEntity()
                 {
                     username = creds.username,
                     email = creds.email,
@@ -60,7 +60,7 @@ namespace contentapi.test
 
                 user.Entity.baseAllow = EntityAction.Read;
 
-                instance.Context.Users.Add(user);
+                instance.Context.UserEntities.Add(user);
                 instance.Context.SaveChanges();
 
                 instance.User = user;
@@ -68,6 +68,11 @@ namespace contentapi.test
             }
 
             return instance;
+        }
+
+        public ControllerInstance<T> GetBasicInstance()
+        {
+            return GetInstance(false);
         }
 
         public UserCredential GetNewCredentials()

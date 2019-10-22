@@ -46,8 +46,8 @@ namespace contentapi
             //Mapping config
             var mapperConfig = new MapperConfiguration(cfg => 
             {
-                cfg.CreateMap<User,UserView>();
-                cfg.CreateMap<UserView,User>();
+                cfg.CreateMap<UserEntity,UserView>();
+                cfg.CreateMap<UserView,UserEntity>();
                 //Find a way to stop this duplicate code
                 //cfg.CreateMap<Category, CategoryView>().ForMember(dest => dest.accessList, opt => opt.MapFrom(src => src.AccessList.ToDictionary(x => x.userId, y => y.access)));
                 //cfg.CreateMap<CategoryView,Category>().ForMember(dest => dest.AccessList, opt => opt.MapFrom(src => src.accessList.Select(x => new CategoryAccess() 

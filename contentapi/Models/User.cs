@@ -11,7 +11,7 @@ namespace contentapi.Models
 
     //This is the user as they are in the database
     [Table("userEntities")]
-    public class User : EntityChild
+    public class UserEntity : EntityChild
     {
         public string username { get; set; }
         public string email { get; set; }

@@ -14,7 +14,7 @@ namespace contentapi.Services
 
         string GetCurrentField(string field);
         long GetCurrentUid();
-        string GetToken(User user);
+        string GetToken(UserEntity user);
     }
 
     public class SessionService : ISessionService
@@ -58,7 +58,7 @@ namespace contentapi.Services
             }
         }
 
-        public string GetToken(User user)
+        public string GetToken(UserEntity user)
         {
             var descriptor = new SecurityTokenDescriptor
             {

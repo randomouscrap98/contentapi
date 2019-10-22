@@ -14,8 +14,8 @@ namespace contentapi.test
         {
             var mapperConfig = new MapperConfiguration(cfg => 
             {
-                cfg.CreateMap<User,UserView>();
-                cfg.CreateMap<UserView,User>();
+                cfg.CreateMap<UserEntity,UserView>();
+                cfg.CreateMap<UserView,UserEntity>();
             }); 
             var mapper = mapperConfig.CreateMapper();
             return new EntityService(mapper, new AccessService());
@@ -30,9 +30,9 @@ namespace contentapi.test
             };
         }
 
-        private User GetSimpleUser()
+        private UserEntity GetSimpleUser()
         {
-            return new User()
+            return new UserEntity()
             {
                 Entity = new Entity()
                 {
@@ -55,13 +55,13 @@ namespace contentapi.test
             Assert.True(entity.Entity.createDate >= DateTime.Now.AddSeconds(-60));
         }
 
-        private void TestUser(User user, UserView view)
+        private void TestUser(UserEntity user, UserView view)
         {
             Assert.Equal(view.username, user.username);
             Assert.Equal(Role.SiteAdministrator, user.role);
         }
 
-        private void TestView(UserView view, User user)
+        private void TestView(UserView view, UserEntity user)
         {
             Assert.Equal(user.username, view.username);
             Assert.Equal("SiteAdministrator", view.role);
@@ -75,7 +75,7 @@ namespace contentapi.test
         {
             var service = CreateService();
 
-            var user = new User();
+            var user = new UserEntity();
             service.SetNewEntity(user);
 
             TestEntity(user);
@@ -87,7 +87,7 @@ namespace contentapi.test
             var service = CreateService();
 
             var view = GetSimpleUserView();
-            var user = service.ConvertFromView<User, UserView>(view);
+            var user = service.ConvertFromView<UserEntity, UserView>(view);
 
             TestEntity(user);
             TestUser(user, view);
@@ -106,7 +106,7 @@ namespace contentapi.test
                 { 6, "U" }
             };
 
-            var user = service.ConvertFromView<User, UserView>(view);
+            var user = service.ConvertFromView<UserEntity, UserView>(view);
 
             TestEntity(user);
             TestUser(user, view);
@@ -122,7 +122,7 @@ namespace contentapi.test
 
             var user = GetSimpleUser();
 
-            var view = service.ConvertFromEntity<User, UserView>(user);
+            var view = service.ConvertFromEntity<UserEntity, UserView>(user);
 
             TestView(view, user);
         }
@@ -141,7 +141,7 @@ namespace contentapi.test
                 new EntityAccess() {userId = 7, allow = EntityAction.Read | EntityAction.Update}
             };
 
-            var view = service.ConvertFromEntity<User, UserView>(user);
+            var view = service.ConvertFromEntity<UserEntity, UserView>(user);
 
             TestView(view, user);
             Assert.Equal("CD", view.baseAccess);

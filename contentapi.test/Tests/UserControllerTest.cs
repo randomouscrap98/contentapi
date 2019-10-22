@@ -5,11 +5,20 @@ using System;
 using contentapi.Services;
 using System.Collections.Generic;
 using System.Linq;
+using Microsoft.Extensions.DependencyInjection;
+using Microsoft.EntityFrameworkCore;
 
 namespace contentapi.test
 {
-    public class UserControllerTest : ControllerTestBase<UsersController>
+    public class UserControllerTest : ControllerTestBase<UsersController>, IDisposable
     {
+        public void Dispose()
+        {
+            var instance = GetBasicInstance();
+            instance.Context.Database.ExecuteSqlCommand("delete from userEntities");
+            instance.Context.SaveChanges();
+        }
+
         [Theory]
         [InlineData(true)]
         [InlineData(false)]
@@ -124,7 +133,7 @@ namespace contentapi.test
         public void TestRandomUserDeleteFail()
         {
             var instance = GetInstance(false);
-            var user = instance.Context.Users.Last(x => x.role == Role.None); //Just get SOMEONE with no role
+            var user = instance.Context.UserEntities.Last(x => x.role == Role.None); //Just get SOMEONE with no role
             var result = instance.Controller.Delete(user.entityId).Result;
             Assert.False(IsSuccessRequest(result));
         }
@@ -162,5 +171,6 @@ namespace contentapi.test
             Assert.True(IsSuccessRequest(result));
             Assert.True(!string.IsNullOrWhiteSpace(result.Value));
         }
+
     }
 }

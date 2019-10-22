@@ -69,7 +69,7 @@ namespace contentapi.test
         private void CanUserCRUDBase(int id, Entity model)
         {
             var service = CreateService();
-            var user = new User() {entityId = id};
+            var user = new UserEntity() {entityId = id};
 
             Assert.True(service.CanCreate(model, user));
             Assert.True(service.CanRead(model, user));
@@ -81,7 +81,7 @@ namespace contentapi.test
         private void CantUserCRUD()
         {
             var service = CreateService();
-            var user = new User() {entityId = 5};
+            var user = new UserEntity() {entityId = 5};
             var model = new Entity() {};
 
             Assert.False(service.CanCreate(model, user));

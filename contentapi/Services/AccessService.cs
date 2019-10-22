@@ -16,17 +16,17 @@ namespace contentapi.Services
             { EntityAction.Delete, "D"}
         };
 
-        public bool CanDo(Entity model, User user, EntityAction action)
+        public bool CanDo(Entity model, UserEntity user, EntityAction action)
         {
             return (model.baseAllow & action) != 0 || (user != null && model.AccessList != null && model.AccessList.Any(x => x.userId == user.entityId && (x.allow & action) != 0));
         }
 
-        public bool CanCreate(Entity model, User user) { return CanDo(model, user, EntityAction.Create); }
-        public bool CanRead(Entity model, User user) { return CanDo(model, user, EntityAction.Read); }
-        public bool CanUpdate(Entity model, User user) { return CanDo(model, user, EntityAction.Update); }
-        public bool CanDelete(Entity model, User user) { return CanDo(model, user, EntityAction.Delete); }
+        public bool CanCreate(Entity model, UserEntity user) { return CanDo(model, user, EntityAction.Create); }
+        public bool CanRead(Entity model, UserEntity user) { return CanDo(model, user, EntityAction.Read); }
+        public bool CanUpdate(Entity model, UserEntity user) { return CanDo(model, user, EntityAction.Update); }
+        public bool CanDelete(Entity model, UserEntity user) { return CanDo(model, user, EntityAction.Delete); }
 
-        public IQueryable<W> WhereReadable<W>(IQueryable<W> origin, User user) where W : EntityChild
+        public IQueryable<W> WhereReadable<W>(IQueryable<W> origin, UserEntity user) where W : EntityChild
         {
             //return origin.Where(x => (x.Entity.baseAllow & EntityAction.Read) > 0 || x.Entity.AccessList.Any(y => y.userId == user.entityId && (y.allow & EntityAction.Read) > 0));
             long uid = user?.entityId ?? -1;
