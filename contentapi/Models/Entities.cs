@@ -83,7 +83,7 @@ namespace contentapi.Models
         public DateTime createDate{get;set;}
         public long? userId {get;set;} = null;
         public string baseAccess {get;set;} = "";
-        public Dictionary<long, string>  accessList {get;set;}= new Dictionary<long, string>();
+        public Dictionary<string, string>  accessList {get;set;}= new Dictionary<string, string>();
 
         public List<string> _links {get;set;} = new List<string>();
     }

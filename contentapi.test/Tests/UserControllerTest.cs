@@ -16,7 +16,7 @@ namespace contentapi.test
         public UserControllerTest()
         {
             var instance = GetBasicInstance();
-            instance.Context.Database.ExecuteSqlCommand("delete from userEntities");
+            instance.Context.Database.ExecuteSqlRaw("delete from userEntities");
         }
 
         public UserView CreateUser()

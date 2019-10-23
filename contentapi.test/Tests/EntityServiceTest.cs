@@ -100,10 +100,10 @@ namespace contentapi.test
 
             var view = GetSimpleUserView();
             view.baseAccess = "CR";
-            view.accessList = new System.Collections.Generic.Dictionary<long, string>()
+            view.accessList = new System.Collections.Generic.Dictionary<string, string>()
             {
-                { 5, "UD" },
-                { 6, "U" }
+                { "5", "UD" },
+                { "6", "U" }
             };
 
             var user = service.ConvertFromView<UserEntity, UserView>(view);
@@ -145,8 +145,8 @@ namespace contentapi.test
 
             TestView(view, user);
             Assert.Equal("CD", view.baseAccess);
-            Assert.Equal("U", view.accessList[6]);
-            Assert.Equal("RU", view.accessList[7]);
+            Assert.Equal("U", view.accessList["6"]);
+            Assert.Equal("RU", view.accessList["7"]);
         }
     }
 }

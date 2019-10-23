@@ -75,7 +75,7 @@ namespace contentapi.Services
             entity.AccessList = view.accessList.Select(x => new EntityAccess()
             {
                 id = 0,
-                userId = x.Key,
+                userId = long.Parse(x.Key),
                 createDate = DateTime.Now,
                 allow = StringToAccess(x.Value)
             }).ToList();
@@ -96,7 +96,7 @@ namespace contentapi.Services
         public void FillViewAccess(EntityView view, Entity entity)
         {
             view.baseAccess = AccessToString(entity.baseAllow);
-            view.accessList = entity.AccessList.ToDictionary(k => k.userId, v => AccessToString(v.allow));
+            view.accessList = entity.AccessList.ToDictionary(k => k.userId.ToString(), v => AccessToString(v.allow));
         }
     }
 }

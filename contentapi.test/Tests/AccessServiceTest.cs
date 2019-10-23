@@ -112,7 +112,7 @@ namespace contentapi.test
             var view = new EntityView()
             {
                 baseAccess = "CR",
-                accessList = new Dictionary<long, string>() { {3, "UD"}, {4, "D"}}
+                accessList = new Dictionary<string, string>() { {"3", "UD"}, {"4", "D"}}
             };
             var entity = GetDefaultEntity();
             service.FillEntityAccess(entity, view);
@@ -136,8 +136,8 @@ namespace contentapi.test
             var view = new EntityView();
             service.FillViewAccess(view, entity);
             Assert.True(view.baseAccess == "CR");
-            Assert.True(view.accessList[3] == "UD");
-            Assert.True(view.accessList[4] == "D");
+            Assert.True(view.accessList["3"] == "UD");
+            Assert.True(view.accessList["4"] == "D");
         }
     }
 }
