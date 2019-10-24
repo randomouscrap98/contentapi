@@ -160,7 +160,9 @@ namespace contentapi.Controllers
         { 
             try
             {
-                return Task.FromResult(services.entity.ConvertFromView<T,V>(item));
+                var entity = services.entity.ConvertFromView<T,V>(item);
+                entity.Entity.userId = services.session.GetCurrentUid();
+                return Task.FromResult(entity);
             }
             catch(InvalidOperationException ex)
             {

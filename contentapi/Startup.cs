@@ -48,6 +48,8 @@ namespace contentapi
             {
                 cfg.CreateMap<UserEntity,UserView>();
                 cfg.CreateMap<UserView,UserEntity>();
+                cfg.CreateMap<CategoryEntity,CategoryView>();
+                cfg.CreateMap<CategoryView,CategoryEntity>();
                 //Find a way to stop this duplicate code
                 //cfg.CreateMap<Category, CategoryView>().ForMember(dest => dest.accessList, opt => opt.MapFrom(src => src.AccessList.ToDictionary(x => x.userId, y => y.access)));
                 //cfg.CreateMap<CategoryView,Category>().ForMember(dest => dest.AccessList, opt => opt.MapFrom(src => src.accessList.Select(x => new CategoryAccess() 
@@ -124,11 +126,6 @@ namespace contentapi
             {
                 app.UseDeveloperExceptionPage();
             }
-            /*else
-            {
-                // The default HSTS value is 30 days. You may want to change this for production scenarios, see https://aka.ms/aspnetcore-hsts.
-                app.UseHsts();
-            }*/
 
             //Wide open??? Fix this later maybe!!!
             app.UseCors(x => x.AllowAnyOrigin().AllowAnyMethod().AllowAnyHeader());
