@@ -40,13 +40,54 @@ namespace contentapi.test
             return result.Value;
         }
 
+        public void ConfirmViewSimple(CategoryView view, CategoryView addedView)
+        {
+            Assert.Equal(view.name, addedView.name);
+            Assert.True(addedView.id > 0);
+            Assert.True(addedView.createDate > DateTime.Now.AddHours(-1));
+            Assert.True(addedView.createDate <= DateTime.Now);
+        }
+
         [Fact]
         public void TestBasicCreate()
         {
             var view = CreateView();
             var addedView = CreateEntity(view);
-            Assert.Equal(view.name, addedView.name);
-            Assert.True(addedView.id > 0);
+            ConfirmViewSimple(view, addedView);
+        }
+
+        [Fact]
+        public void TestCreateIgnoreFields()
+        {
+            var view = CreateView();
+            var fakeDate = new DateTime(2000, 1, 28);
+            view.id = 555;
+            view.createDate = fakeDate;
+            var addedView = CreateEntity(view);
+            ConfirmViewSimple(view, addedView);
+            Assert.False(addedView.id == view.id);
+        }
+
+        [Fact]
+        public void TestSimpleRead()
+        {
+            var view = CreateEntity();
+            var result = baseInstance.Controller.GetSingle(view.id).Result;
+            Assert.True(IsSuccessRequest(result));
+            var retrievedView = result.Value;
+            ConfirmViewSimple(view, retrievedView);
+            Assert.Equal(view.id, retrievedView.id);
+        }
+
+        [Fact]
+        public void TestSimpleCantRead()
+        {
+            var view = CreateView("");
+            var addedView = CreateEntity(view); //What happens when you can't read your own view???
+            ConfirmViewSimple(view, addedView);
+            //OK but now we try to read it again
+            var result = baseInstance.Controller.GetSingle(view.id).Result;
+            Assert.False(IsSuccessRequest(result)); //Could be unauthorized... could be not found. IDC which
         }
     }
 }
