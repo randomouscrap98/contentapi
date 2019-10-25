@@ -17,18 +17,18 @@ namespace contentapi.Configs
 
     public class EmailConfig
     {
-        public string Host;
-        public string User;
-        public string Password;
-        public int Port;
+        public string Host {get;set;}
+        public string User {get;set;}
+        public string Password {get;set;}
+        public int Port {get;set;}
 
-        public string SubjectFront;
+        public string SubjectFront {get;set;}
     }
 
     public class LanguageConfig
     {
-        public string LanguageFolder = null;
-        public string DefaultLanguage = "en";
+        public string LanguageFolder {get;set;} = null;
+        public string DefaultLanguage {get;set;} = "en";
     }
 
     public class StartupServiceConfig
