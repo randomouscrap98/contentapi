@@ -1,15 +1,31 @@
 
 using System;
+using System.IO;
 using System.Linq;
 using contentapi.Configs;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Logging;
+using Xunit;
 
 namespace contentapi.test
 {
-    public class TestBase
+    public class TestBase : IDisposable
     {
+        public string DatabaseFile = null;
+
+        //EVERY test base gets its own content.db
+        public TestBase()
+        {
+            DatabaseFile = $"content_{UniqueSection()}.db";
+            File.Copy("content.db", DatabaseFile);
+        }
+
+        public void Dispose()
+        {
+            File.Delete(DatabaseFile);
+        }
+
         public IServiceCollection GetBaseServices()
         {
             var services = new ServiceCollection();
@@ -17,7 +33,7 @@ namespace contentapi.test
             startup.ConfigureBasicServices(services, new StartupServiceConfig()
             {
                 SecretKey = "barelyASecretKey",
-                ContentConString = "Data Source=content.db"
+                ContentConString = $"Data Source={DatabaseFile}"
             });
 
             services.AddSingleton(LoggerFactory.Create(builder =>
@@ -25,8 +41,10 @@ namespace contentapi.test
                 builder
                     .AddFilter("Microsoft", LogLevel.Warning)
                     .AddFilter("System", LogLevel.Warning)
+                    //.SetMinimumLevel(LogLevel.Trace)
                     //.AddFilter("LoggingConsoleApp.Program", LogLevel.Debug)
-                    .AddConsole();
+                    .AddConsole()
+                    .AddDebug();
                     //.AddEventLog();
             }));
 

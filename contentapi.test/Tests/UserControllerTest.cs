@@ -12,13 +12,6 @@ namespace contentapi.test
 {
     public class UserControllerTest : ControllerTestBase<UsersController>
     {
-        //Every time it starts, clear out the users so each test has a clean slate
-        public UserControllerTest()
-        {
-            var instance = GetBasicInstance();
-            instance.Context.Database.ExecuteSqlRaw("delete from userEntities");
-        }
-
         public UserView CreateUser()
         {
             var instance = GetInstance(false);

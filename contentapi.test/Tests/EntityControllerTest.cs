@@ -19,7 +19,7 @@ namespace contentapi.test
         public EntityControllerTest()
         {
             baseInstance = GetInstance(true);
-            baseInstance.Controller.ClearAllEntities();
+            //baseInstance.Controller.ClearAllEntities();
         }
 
         public CategoryView CreateView(string baseAccess = "CRUD")

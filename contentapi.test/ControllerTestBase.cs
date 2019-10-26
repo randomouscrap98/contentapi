@@ -7,6 +7,8 @@ using contentapi.Models;
 using contentapi.test.Overrides;
 using Microsoft.Extensions.DependencyInjection.Extensions;
 using contentapi.Services;
+using Microsoft.Extensions.Logging;
+using System.Diagnostics;
 
 namespace contentapi.test
 {
@@ -18,6 +20,7 @@ namespace contentapi.test
         public FakeEmailer Emailer = null;
         public ContentDbContext Context = null;
         public IEntityService EntityService = null;
+        public ILogger Logger = null;
     }
 
     public class ControllerTestBase<T> : TestBase where T : ControllerBase
@@ -45,6 +48,8 @@ namespace contentapi.test
             instance.Emailer = emailer;
             instance.Context = (ContentDbContext)realProvider.GetService(typeof(ContentDbContext));
             instance.EntityService = (IEntityService)realProvider.GetService(typeof(IEntityService));
+            var factory = (ILoggerFactory)realProvider.GetService(typeof(ILoggerFactory));
+            instance.Logger = factory.CreateLogger(GetType());
 
             if(loggedIn)
             {
@@ -62,6 +67,11 @@ namespace contentapi.test
 
                 instance.Context.UserEntities.Add(user);
                 instance.Context.SaveChanges();
+
+                //// Get call stack
+                //StackTrace stackTrace = new StackTrace();
+                //var caller = stackTrace.GetFrame(1).GetMethod().Name;
+                //instance.Logger.LogWarning($"({caller}) Users: {string.Join(",", instance.Context.UserEntities.Select(x => x.entityId))}({instance.Context.UserEntities.Count()})");
 
                 instance.User = user;
                 session.UidProvider = () => instance.User.entityId;

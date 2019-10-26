@@ -7,7 +7,7 @@ using Xunit;
 
 namespace contentapi.test
 {
-    /*public class CategoryControllerTest : ControllerTestBase<CategoriesController>
+    public class CategoryControllerTest : ControllerTestBase<CategoriesController>
     {
         public const Role CategoryRole = Role.SiteAdministrator;
 
@@ -106,5 +106,5 @@ namespace contentapi.test
             var categories = (IEnumerable<CategoryView>)result.Value["collection"];
             Assert.DoesNotContain(categories, (c) => c.id == category.id);
         }
-    }*/
+    }
 }
