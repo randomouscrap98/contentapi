@@ -4,6 +4,7 @@ using System.Linq;
 using contentapi.Configs;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.Extensions.DependencyInjection;
+using Microsoft.Extensions.Logging;
 
 namespace contentapi.test
 {
@@ -18,6 +19,16 @@ namespace contentapi.test
                 SecretKey = "barelyASecretKey",
                 ContentConString = "Data Source=content.db"
             });
+
+            services.AddSingleton(LoggerFactory.Create(builder =>
+            {
+                builder
+                    .AddFilter("Microsoft", LogLevel.Warning)
+                    .AddFilter("System", LogLevel.Warning)
+                    //.AddFilter("LoggingConsoleApp.Program", LogLevel.Debug)
+                    .AddConsole();
+                    //.AddEventLog();
+            }));
 
             return services;
         }

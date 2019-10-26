@@ -40,7 +40,7 @@ namespace contentapi.test
             return result.Value;
         }
 
-        public void ConfirmViewSimple(CategoryView view, CategoryView addedView)
+        private void ConfirmViewSimple(CategoryView view, CategoryView addedView)
         {
             Assert.Equal(view.name, addedView.name);
             Assert.True(addedView.id > 0);

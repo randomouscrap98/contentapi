@@ -41,7 +41,7 @@ namespace contentapi
 
             //Database config
             //services.AddDbContext<ContentDbContext>(options => options.UseLazyLoadingProxies().UseSqlite(config.ContentConString));
-            services.AddDbContext<ContentDbContext>(options => options.UseSqlite(config.ContentConString));
+            services.AddDbContext<ContentDbContext>(options => options.UseSqlite(config.ContentConString).EnableSensitiveDataLogging(true));
 
             //Mapping config
             var mapperConfig = new MapperConfiguration(cfg => 

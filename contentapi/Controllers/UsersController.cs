@@ -7,6 +7,7 @@ using Microsoft.EntityFrameworkCore;
 using Microsoft.AspNetCore.Authorization;
 using System.Collections.Generic;
 using contentapi.Services;
+using Microsoft.Extensions.Logging;
 
 namespace contentapi.Controllers
 {

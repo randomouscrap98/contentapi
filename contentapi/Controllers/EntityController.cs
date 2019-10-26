@@ -8,6 +8,7 @@ using System.Linq;
 using System.Collections.Generic;
 using contentapi.Models;
 using contentapi.Services;
+using Microsoft.Extensions.Logging;
 
 namespace contentapi.Controllers
 {
@@ -33,12 +34,14 @@ namespace contentapi.Controllers
         public IHashService hash;
         public AccessService access;
         public IEntityService entity;
+        public ILoggerFactory logFactory;
 
         public EntityControllerServices(ContentDbContext context, IMapper mapper, 
             PermissionService permissionService, QueryService queryService,
             ISessionService sessionService, IEmailService emailService, 
             ILanguageService languageService, IHashService hashService,
-            AccessService accessService, IEntityService entityService)
+            AccessService accessService, IEntityService entityService,
+            ILoggerFactory logFactory)
         {
             this.context = context;
             this.mapper = mapper;
@@ -50,6 +53,7 @@ namespace contentapi.Controllers
             this.hash = hashService;
             this.access = accessService;
             this.entity = entityService;
+            this.logFactory = logFactory;
         }
     }
 
@@ -59,6 +63,7 @@ namespace contentapi.Controllers
     public abstract class EntityController<T,V> : ControllerBase where T : EntityChild where V : EntityView
     {
         protected EntityControllerServices services;
+        protected ILogger logger;
 
         protected bool DoActionLog = true;
 
@@ -66,6 +71,7 @@ namespace contentapi.Controllers
         {
             this.services = services;
             services.session.Context = this; //EEEWWWW
+            this.logger = services.logFactory.CreateLogger(GetType());
         }
 
         // *************
@@ -73,6 +79,8 @@ namespace contentapi.Controllers
         // *************
         protected void ThrowAction(ActionResult result, string message = null)
         {
+            logger.LogTrace($"Throwing action {result} : {message}");
+
             if(message != null)
                 throw new ActionCarryingException(message) {Result = result};
             else
@@ -81,6 +89,8 @@ namespace contentapi.Controllers
 
         protected async Task LogAct(EntityAction action, long entityId, long? createUserOverride = null)
         {
+            logger.LogTrace($"Logging action {action}({entityId})");
+
             var log = new EntityLog()
             {
                 action = action,
@@ -111,19 +121,6 @@ namespace contentapi.Controllers
             return services.permission.CanDo(user.role, permission);
         }
 
-        //protected async Task<T> GetExisting(long id)
-        //{
-        //    try
-        //    {
-        //        return await services.context.GetSingleAsync<T>(id);
-        //    }
-        //    catch
-        //    {
-        //        ThrowAction(NotFound(id));
-        //        return null; //just to satisfy the compiler
-        //    }
-        //}
-
         //How to RETURN items (the object we return... maybe make it a real class)
         public Dictionary<string, object> GetGenericCollectionResult<W>(IEnumerable<W> items, IEnumerable<string> links = null)
         {
@@ -140,6 +137,7 @@ namespace contentapi.Controllers
 
         protected virtual async Task<IQueryable<T>> GetAllBase()
         {
+            logger.LogTrace("GetAllBase called");
             long uid = services.session.GetCurrentUid();
             return services.access.WhereReadable(
                 services.context.Set<T>()
@@ -150,6 +148,7 @@ namespace contentapi.Controllers
 
         protected virtual async Task<T> GetSingleBase(long id)
         {
+            logger.LogTrace($"GetSingleBase called for {id}");
             var results = await GetQueryAsync(new CollectionQuery() { ids = id.ToString() });
             return await results.FirstAsync();
         }
@@ -158,6 +157,8 @@ namespace contentapi.Controllers
 
         protected virtual Task<T> Post_ConvertItemAsync(V item) 
         { 
+            logger.LogTrace($"Post_ConvertItemAsync called with {item}");
+
             try
             {
                 var entity = services.entity.ConvertFromView<T,V>(item);
@@ -173,6 +174,8 @@ namespace contentapi.Controllers
 
         protected virtual Task Put_ConvertItemAsync(V item, T existing) 
         { 
+            logger.LogTrace($"Put_ConvertItemAsync called with {item}");
+
             try
             {
                 services.entity.FillExistingFromView(item, existing);
@@ -212,6 +215,8 @@ namespace contentapi.Controllers
         [AllowAnonymous]
         public async virtual Task<ActionResult<Dictionary<string, object>>> Get([FromQuery]CollectionQuery query)
         {
+            logger.LogDebug($"Get called for {query}");
+
             try
             {
                 var result = await GetQueryAsync(query);
@@ -228,6 +233,8 @@ namespace contentapi.Controllers
         [AllowAnonymous]
         public async virtual Task<ActionResult<V>> GetSingle(long id)
         {
+            logger.LogDebug($"GetSingle called for {id}");
+
             try
             {
                 var item = await GetSingleBase(id); 
@@ -248,6 +255,8 @@ namespace contentapi.Controllers
         [HttpPost]
         public async virtual Task<ActionResult<V>> Post([FromBody]V item)
         {
+            logger.LogDebug($"Post called for {item}");
+
             try
             {
                 //Convert the user-provided object into a real one. Controllers can perform 
@@ -272,6 +281,8 @@ namespace contentapi.Controllers
         [HttpPut("{id}")]
         public async virtual Task<ActionResult<V>> Put([FromRoute]long id, [FromBody]V item)
         {
+            logger.LogDebug($"Put called for {id}, {item}");
+
             try
             {
                 var existing = await GetSingleBase(id);
@@ -299,6 +310,8 @@ namespace contentapi.Controllers
         [HttpDelete("{id}")]
         public async virtual Task<ActionResult<V>> Delete([FromRoute]long id)
         {
+            logger.LogDebug($"Delete called for {id}");
+
             try
             {
                 var existing = await GetSingleBase(id);
@@ -321,72 +334,4 @@ namespace contentapi.Controllers
             }
         }
     }
-
-    //public abstract class AccessController<T,V> : GenericController<T, V> where T : GenericAccessModel where V : GenericAccessView
-    //{
-    //    protected AccessService accessService;
-
-    //    public AccessController(GenericControllerServices services, AccessService accessService) : base(services) 
-    //    { 
-    //        this.accessService = accessService;
-    //    }
-
-    //    //protected abstract IQueryable<T> IncludeAccess(IQueryable<T> query) ;
-
-    //    protected void CheckAccessFormat(GenericAccessView accessView)
-    //    {
-    //        if(!accessService.CheckAccessFormat(accessView))
-    //            ThrowAction(BadRequest("Malformed access string (CRUD)"));
-    //    }
-
-    //    //Note: each accessor will need to figure out its own create check (since it'll be the parent)
-    //    protected override async Task Post_PreConversionCheck(V view)
-    //    {
-    //        await base.Post_PreConversionCheck(view);
-    //        CheckAccessFormat(view);
-    //    }
-
-    //    //Check Update privilege while checking the view's access format
-    //    protected override async Task Put_PreConversionCheck(V view, T existing)
-    //    {
-    //        await base.Put_PreConversionCheck(view, existing);
-    //        CheckAccessFormat(view);
-
-    //        if(!accessService.CanUpdate(existing, await GetCurrentUserAsync()))
-    //            ThrowAction(Unauthorized("You do not have permission to update this record"));
-
-    //        if(view.accessList.Count > 0)
-    //        {
-    //            var userIds = view.accessList.Select(x => x.Key);
-    //            var users = await services.context.Users.Where(x => userIds.Contains(x.id)).ToListAsync();
-
-    //            if(users.Count != view.accessList.Count)
-    //                ThrowAction(BadRequest("Bad access list: nonexistent / duplicate user"));
-    //        }
-    //    }
-
-    //    //Check Read privilege before sending the result
-    //    protected override async Task GetSingle_PreResultCheck(T model)
-    //    {
-    //        if(!accessService.CanRead(model, await GetCurrentUserAsync()))
-    //            ThrowAction(Unauthorized("You do not have permission to read this record"));
-    //    }
-
-    //    //Check Delete privilege before deleting
-    //    protected override async Task Delete_PreDeleteCheck(T model)
-    //    {
-    //        if(!accessService.CanDelete(model, await GetCurrentUserAsync()))
-    //            ThrowAction(Unauthorized("You do not have permission to delete this record"));
-    //    }
-
-    //    //Filter results to remove ones we can't read
-    //    protected override async Task<IQueryable<T>> Get_GetBase()
-    //    {
-    //        var user = await GetCurrentUserAsync();
-    //        var result = await base.Get_GetBase();
-    //        //Apply magic include BEFORE checking if you can read (I think order matters). HOWEVER: this tolist is BAD!!!
-    //        result = result.Include("AccessList"); //(await IncludeAccess(result).ToListAsync());
-    //        return result.Where(x => accessService.CanRead(x, user));
-    //    }
-    //}
 }

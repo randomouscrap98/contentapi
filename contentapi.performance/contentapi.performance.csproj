@@ -1,0 +1,17 @@
+<Project Sdk="Microsoft.NET.Sdk">
+
+  <ItemGroup>
+    <ProjectReference Include="..\contentapi\contentapi.csproj" />
+    <ProjectReference Include="..\contentapi.test\contentapi.test.csproj" />
+  </ItemGroup>
+
+  <PropertyGroup>
+    <OutputType>Exe</OutputType>
+    <TargetFramework>netcoreapp3.0</TargetFramework>
+  </PropertyGroup>
+
+  <ItemGroup>
+    <None Include="..\contentapi\content.db" CopyToOutputDirectory="Always" />
+  </ItemGroup>
+
+</Project>

@@ -3,6 +3,7 @@ using contentapi.Controllers;
 using contentapi.Models;
 using contentapi.Services;
 using Microsoft.EntityFrameworkCore;
+using Microsoft.Extensions.Logging;
 
 namespace contentapi.test.Overrides
 {
