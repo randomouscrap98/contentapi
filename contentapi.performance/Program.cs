@@ -22,7 +22,7 @@ namespace contentapi.performance
             var baseTest = new TestBase();
             var controllerTester = new ControllerTestBase<CategoriesController>(baseTest);
             var instance = controllerTester.GetInstance(true);
-            var context = instance.Context;
+            //var context = instance.Context;
             var eService = instance.EntityService;
 
             var stopwatch = new Stopwatch();
@@ -52,8 +52,8 @@ namespace contentapi.performance
                 };
 
                 eService.SetNewEntity(category, EntityAction.Read);
-                context.CategoryEntities.Add(category);
-                context.SaveChanges();
+                instance.Context.CategoryEntities.Add(category);
+                instance.Context.SaveChanges();
 
                 for(int j = 0; j < AddContent; j++)
                 {
@@ -65,8 +65,8 @@ namespace contentapi.performance
                     };
 
                     eService.SetNewEntity(content, EntityAction.Read);
-                    context.ContentEntities.Add(content);
-                    context.SaveChanges();
+                    instance.Context.ContentEntities.Add(content);
+                    instance.Context.SaveChanges();
 
                     for(int k = 0; k < AddSubcontent; k++)
                     {
@@ -77,11 +77,14 @@ namespace contentapi.performance
                         };
 
                         eService.SetNewEntity(sub, EntityAction.Read);
-                        context.SubcontentEntities.Add(sub);
+                        instance.Context.SubcontentEntities.Add(sub);
                     }
 
-                    context.SaveChanges();
+                    instance.Context.SaveChanges();
                     Console.WriteLine($"{(i * AddContent + j)/(double)(AddContent * AddCategories)*100:0.##}%"); 
+
+                    //RECREATE the dbcontext (instance) after every big subcontent insert. this keeps speed up
+                    instance = controllerTester.GetInstance(true);
                 }
             }
 
