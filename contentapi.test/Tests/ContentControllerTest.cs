@@ -3,6 +3,7 @@ using System.Collections.Generic;
 using System.Linq;
 using contentapi.Controllers;
 using contentapi.Models;
+using contentapi.Services;
 using Xunit;
 
 namespace contentapi.test
@@ -45,7 +46,7 @@ namespace contentapi.test
             Assert.Equal(original.categoryId, posted.categoryId);
         }
 
-        protected CategoryView CreateCategory(ControllerInstance<ContentController> instance = null, CategoryView view = null)
+        protected CategoryView CreateCategory(CategoryView view = null, ControllerInstance<ContentController> instance = null)
         {
             instance = instance ?? GetInstance(true, Role.SiteAdministrator);
             view = view ?? CreateCategoryView();
@@ -66,6 +67,19 @@ namespace contentapi.test
             var result = baseInstance.Controller.Post(content).Result;
             Assert.True(IsSuccessRequest(result));
             CompareContent(content, result.Value);
+        }
+
+        [Fact]
+        public void TestSimpleContentCantCreate()
+        {
+            //This category has no create permission
+            var category = CreateCategory(CreateCategoryView("RUD"));
+            var content = CreateContentView(category.id);
+            var result = baseInstance.Controller.Post(content).Result;
+            Assert.False(IsSuccessRequest(result)); //Make sure we can't post
+            //Also make sure the content isn't there (we SHOULD have an empty content list for debugging...)
+            var contents = baseInstance.QueryService.GetCollectionFromResult<ContentView>(baseInstance.Controller.Get(new CollectionQuery()).Result.Value);
+            Assert.False(contents.Any(x => x.title == content.title));
         }
     }
 }
