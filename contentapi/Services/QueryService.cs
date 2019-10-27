@@ -64,7 +64,7 @@ namespace contentapi.Services
             throw new InvalidOperationException($"Unknown sort type");
         }
 
-        public IQueryable<W> ApplyQuery<W>(IQueryable<W> originSet, CollectionQuery query) where W : EntityChild
+        private void FixQuery(CollectionQuery query)
         {
             //Set some nice defaults for query parameters
             if(query.count <= 0)
@@ -75,41 +75,72 @@ namespace contentapi.Services
 
             if(string.IsNullOrWhiteSpace(query.sort))
                 query.sort = CreateSort;
-            
-            var subSet = originSet;
 
-            //For now, ALWAYS remove deleted entities. We'll figure out what to do later.
-            //if(!query.deleted)
-            subSet = subSet.Where(x => (x.Entity.status & EntityStatus.Deleted) == 0);
+            query.order = query.order.ToLower();
+            query.sort = query.sort.ToLower();
+        }
 
+        private List<long> ParseIds(CollectionQuery query)
+        {
             List<long> ids = null;
 
             //One day, put a logger here!
             try { ids = query.ids.Split(",").Select(x => long.Parse(x)).ToList(); }
             catch { }
 
-            if(ids != null && ids.Count > 0)
-                subSet = subSet.Where(x => ids.Contains(x.entityId));
+            return ids;
+        }
 
-            var order = query.order.ToLower();
-
+        private IQueryable<T> ApplyPagination<T>(IQueryable<T> subset, CollectionQuery query)
+        {
             try
             {
-                subSet = ApplySort(subSet, query);
-            }
-            catch //(Exception ex)
-            {
-                //Put logging here! it's ok if the search didnt' work but maybe tell the user somehow!
-            }
-
-            try
-            {
-                subSet = subSet.Skip(query.offset).Take(query.count);
+                return subset.Skip(query.offset).Take(query.count);
             }
             catch
             {
                 throw new InvalidOperationException("Offset/count broke set; this is API laziness");
             }
+        }
+
+        public IQueryable<W> ApplyQuery<W>(IQueryable<W> originSet, CollectionQuery query) where W : EntityChild
+        {
+            FixQuery(query);
+            var subSet = originSet;
+
+            //For now, ALWAYS remove deleted entities. We'll figure out what to do later.
+            //if(!query.deleted)
+            subSet = subSet.Where(x => (x.Entity.status & EntityStatus.Deleted) == 0);
+
+            var ids = ParseIds(query);
+
+            if(ids != null && ids.Count > 0)
+                subSet = subSet.Where(x => ids.Contains(x.entityId));
+
+            //Will it always be ok to fail on bad sort?
+            subSet = ApplySort(subSet, query);
+            subSet = ApplyPagination(subSet, query);
+
+            return subSet;
+        }
+
+        public IQueryable<W> ApplyEntityQuery<W>(IQueryable<W> originSet, CollectionQuery query) where W : Entity
+        {
+            FixQuery(query);
+            var subSet = originSet;
+
+            //For now, ALWAYS remove deleted entities. We'll figure out what to do later.
+            //if(!query.deleted)
+            subSet = subSet.Where(x => (x.status & EntityStatus.Deleted) == 0);
+
+            var ids = ParseIds(query);
+
+            if(ids != null && ids.Count > 0)
+                subSet = subSet.Where(x => ids.Contains(x.id));
+
+            //WARN: NO SORTING ON ENTITY QUERY YET
+            //subSet = ApplySort(subSet, query);
+            subSet = ApplyPagination(subSet, query);
 
             return subSet;
         }
@@ -118,6 +149,12 @@ namespace contentapi.Services
         {
             var query = new CollectionQuery() { ids = id.ToString() };
             return await ApplyQuery(originSet, query).FirstOrDefaultAsync();
+        }
+
+        public async Task<W> GetSingleEntityWithQueryAsync<W>(IQueryable<W> originSet, long id) where W : Entity
+        {
+            var query = new CollectionQuery() { ids = id.ToString() };
+            return await ApplyEntityQuery(originSet, query).FirstOrDefaultAsync();
         }
 
         //How to RETURN items (the object we return... maybe make it a real class)

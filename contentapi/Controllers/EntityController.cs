@@ -138,15 +138,31 @@ namespace contentapi.Controllers
         {
             var parent = await services.query.GetSingleWithQueryAsync(services.context.Set<W>(), parentId);
             var name = typeof(W).Name;
+            var thisName = typeof(T).Name;
 
             if(parent == null)
-                ThrowAction(BadRequest($"Must provide {name} for {typeof(T).Name}!"));
+                ThrowAction(BadRequest($"Must provide {name} for {thisName}!"));
 
             var user = await GetCurrentUserAsync();
             await services.entity.IncludeSingleAsync(parent, services.context);
 
             if(!services.access.CanCreate(parent.Entity, user))
-                ThrowAction(Unauthorized($"You can't create {name} here!"));
+                ThrowAction(Unauthorized($"You can't create {thisName} here!"));
+        }
+
+        public async Task CheckRequiredEntityParentReadAsync(long parentId) //, string name)
+        {
+            var parent = await services.query.GetSingleEntityWithQueryAsync(services.context.Entities, parentId);
+            var thisName = typeof(T).Name;
+
+            if(parent == null)
+                ThrowAction(BadRequest($"Must provide parent for {thisName}!"));
+
+            var user = await GetCurrentUserAsync();
+            await services.context.Entry(parent).Collection(x => x.AccessList).LoadAsync();
+
+            if(!services.access.CanCreate(parent, user))
+                ThrowAction(Unauthorized($"You can't create {thisName} here!"));
         }
 
         // ************

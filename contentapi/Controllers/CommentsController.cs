@@ -10,15 +10,10 @@ namespace contentapi.Controllers
     {
         public CommentsController(EntityControllerServices services) : base(services) { }
 
-        protected override async Task<CommentEntity> Post_ConvertItemAsync(CommentView subcontent)
+        protected override async Task<CommentEntity> Post_ConvertItemAsync(CommentView comment)
         {
-            var result = await base.Post_ConvertItemAsync(subcontent);
-
-            var content = await GetSingleBaseAsync(subcontent.parentId);
-
-            if(content == null)
-                ThrowAction(BadRequest("Must provide content for post!"));
-
+            var result = await base.Post_ConvertItemAsync(comment);
+            await CheckRequiredEntityParentReadAsync(comment.parentId);
             return result;
         }
     }
