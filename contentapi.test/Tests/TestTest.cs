@@ -45,5 +45,15 @@ namespace contentapi.test
             //An extra test just for fun... kinda integration test?
             Assert.True(instance.Controller.CanUserAsync(Permission.CreateCategory).Result);
         }
+
+        [Fact]
+        public void TestInsertRandom()
+        {
+            var instance = GetInstance(true);
+            var views = instance.Controller.InsertRandom(100);
+            Assert.True(views.Count == 100);
+            Assert.All(views, x => Assert.True(x.id > 0));
+            Assert.All(views, x => Assert.True(!String.IsNullOrWhiteSpace(x.name)));
+        }
     }
 }

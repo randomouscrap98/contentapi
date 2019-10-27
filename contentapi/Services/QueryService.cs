@@ -76,6 +76,9 @@ namespace contentapi.Services
             if(string.IsNullOrWhiteSpace(query.sort))
                 query.sort = CreateSort;
 
+            if(string.IsNullOrWhiteSpace(query.order))
+                query.order = AscendingOrder;
+
             query.order = query.order.ToLower();
             query.sort = query.sort.ToLower();
         }

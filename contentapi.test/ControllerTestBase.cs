@@ -22,6 +22,19 @@ namespace contentapi.test
         public IEntityService EntityService = null;
         public QueryService QueryService = null;
         public ILogger Logger = null;
+
+        public ServiceProvider Provider = null;
+
+        public W GetService<W>()
+        {
+            return (W)Provider.GetService(typeof(W));
+        }
+
+        //ALL (of my) controllers created with this instance will have the instance user as login
+        public W GetExtService<W>()
+        {
+            return (W)ActivatorUtilities.CreateInstance(Provider, typeof(W));
+        }
     }
 
     public class ControllerTestBase<T> : TestBase where T : ControllerBase
@@ -46,12 +59,13 @@ namespace contentapi.test
             services.AddTransient<T>();
 
             var realProvider = services.BuildServiceProvider();
+            instance.Provider = realProvider;
             instance.Controller = (T)ActivatorUtilities.CreateInstance(realProvider, typeof(T));
             instance.Emailer = emailer;
-            instance.Context = (ContentDbContext)realProvider.GetService(typeof(ContentDbContext));
-            instance.EntityService = (IEntityService)realProvider.GetService(typeof(IEntityService));
-            instance.QueryService = (QueryService)realProvider.GetService(typeof(QueryService));
-            var factory = (ILoggerFactory)realProvider.GetService(typeof(ILoggerFactory));
+            instance.Context = instance.GetService<ContentDbContext>();
+            instance.EntityService = instance.GetService<IEntityService>();
+            instance.QueryService = instance.GetService<QueryService>();
+            var factory = instance.GetService<ILoggerFactory>();
             instance.Logger = factory.CreateLogger(GetType());
 
             if(loggedIn)
@@ -70,11 +84,6 @@ namespace contentapi.test
 
                 instance.Context.UserEntities.Add(user);
                 instance.Context.SaveChanges();
-
-                //// Get call stack
-                //StackTrace stackTrace = new StackTrace();
-                //var caller = stackTrace.GetFrame(1).GetMethod().Name;
-                //instance.Logger.LogWarning($"({caller}) Users: {string.Join(",", instance.Context.UserEntities.Select(x => x.entityId))}({instance.Context.UserEntities.Count()})");
 
                 instance.User = user;
                 session.UidProvider = () => instance.User.entityId;
