@@ -87,6 +87,18 @@ namespace contentapi.Controllers
                 throw new ActionCarryingException() {Result = result};
         }
 
+        protected async Task LogActIgnoreAnonymous(EntityAction action, long entityId)
+        {
+            var user = services.session.GetCurrentUid();
+
+            if(user > 0)
+                await LogAct(action, entityId, user);
+            else
+                logger.LogDebug($"Tried to log {action}({entityId}) for anonymous user (ignoring)");
+
+            //This may be TOO verbose
+        }
+
         protected async Task LogAct(EntityAction action, long entityId, long? createUserOverride = null)
         {
             logger.LogTrace($"Logging action {action}({entityId})");
@@ -129,6 +141,11 @@ namespace contentapi.Controllers
                 { "_links",  links ?? new List<string>() }, //one day, turn this into HATEOS
                 //_claims = User.Claims.ToDictionary(x => x.Type, x => x.Value)
             };
+        }
+
+        public IEnumerable<W> GetCollectionFromResult<W>(Dictionary<string, object> result)
+        {
+            return (IEnumerable<W>)result["collection"];
         }
 
         // ************
@@ -239,7 +256,7 @@ namespace contentapi.Controllers
             {
                 var item = await GetSingleBase(id); 
                 await GetSingle_PreResultCheckAsync(item);
-                await LogAct(EntityAction.View, item.Entity.id);
+                await LogActIgnoreAnonymous(EntityAction.View, item.Entity.id);
                 return services.entity.ConvertFromEntity<T, V>(item);
             }
             catch(ActionCarryingException ex)

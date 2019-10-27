@@ -4,7 +4,7 @@ using System.Linq;
 
 namespace contentapi.Models
 {
-    [Table("contentEntity")]
+    [Table("contentEntities")]
     public class ContentEntity : EntityChild
     {
         public string title {get;set;}

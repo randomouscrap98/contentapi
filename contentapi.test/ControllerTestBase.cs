@@ -26,6 +26,7 @@ namespace contentapi.test
     public class ControllerTestBase<T> : TestBase where T : ControllerBase
     {
         public ControllerTestBase() { }
+        public ControllerTestBase(TestBase copy) : base (copy) { }
 
 
         public ControllerInstance<T> GetInstance(bool loggedIn, Role role = Role.None)

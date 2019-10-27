@@ -21,6 +21,11 @@ namespace contentapi.test
             File.Copy("content.db", DatabaseFile);
         }
 
+        public TestBase(TestBase copy)
+        {
+            this.DatabaseFile = copy.DatabaseFile;
+        }
+
         public void Dispose()
         {
             File.Delete(DatabaseFile);

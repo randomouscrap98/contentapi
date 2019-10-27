@@ -90,6 +90,16 @@ namespace contentapi.test
             Assert.False(IsSuccessRequest(result)); //Could be unauthorized... could be not found. IDC which
         }
 
+        //ACCIDENTALLY made anonymous users not able to read single views because of logging issues.
+        [Fact]
+        public void RegressionAnonymousRead()
+        {
+            var addedView = CreateEntity();
+            var anonymousInstance = GetInstance(false);
+            var result = anonymousInstance.Controller.GetSingle(addedView.id).Result;
+            Assert.True(IsSuccessRequest(result));
+        }
+
         [Fact]
         public void TestComplexMultiRead()
         {
@@ -114,7 +124,7 @@ namespace contentapi.test
 
             var result = baseInstance.Controller.Get(new CollectionQuery()).Result;
             Assert.True(IsSuccessRequest(result));
-            var allSeeable = ((IEnumerable<CategoryView>)result.Value["collection"]).ToList();
+            var allSeeable = baseInstance.Controller.GetCollectionFromResult<CategoryView>(result.Value).ToList();
             Assert.Equal(3, allSeeable.Count);
             Assert.Equal(2, allSeeable.Count(x => x.baseAccess.Contains("R")));
             Assert.Equal(2, allSeeable.Count(x => x.accessList.Any(y => y.Key == baseInstance.User.entityId.ToString() && y.Value.Contains("R"))));
@@ -122,7 +132,7 @@ namespace contentapi.test
 
             result = anotherContext.Controller.Get(new CollectionQuery()).Result;
             Assert.True(IsSuccessRequest(result));
-            allSeeable = ((IEnumerable<CategoryView>)result.Value["collection"]).ToList();
+            allSeeable = baseInstance.Controller.GetCollectionFromResult<CategoryView>(result.Value).ToList();
             Assert.Equal(3, allSeeable.Count);
             Assert.Equal(2, allSeeable.Count(x => x.baseAccess.Contains("R")));
             Assert.Equal(1, allSeeable.Count(x => x.accessList.Any(y => y.Key == anotherContext.User.entityId.ToString() && y.Value.Contains("R"))));

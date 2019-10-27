@@ -72,7 +72,7 @@ namespace contentapi.test
             var category2 = CreateUniqueCategory(instance);
             var result = instance.Controller.Get(new Services.CollectionQuery()).Result;
             Assert.True(IsSuccessRequest(result));
-            var collection = (IEnumerable<CategoryView>)result.Value["collection"];
+            var collection = instance.Controller.GetCollectionFromResult<CategoryView>(result.Value);
             Assert.True(collection.Count() >= 2);
             Assert.Contains(collection, x => x.id == category.id);
             Assert.Contains(collection, x => x.id == category2.id);
@@ -103,7 +103,7 @@ namespace contentapi.test
             var instance2 = GetInstance(loggedIn);
             var result = instance2.Controller.Get(new Services.CollectionQuery()).Result;
             Assert.True(IsSuccessRequest(result));
-            var categories = (IEnumerable<CategoryView>)result.Value["collection"];
+            var categories = instance.Controller.GetCollectionFromResult<CategoryView>(result.Value);
             Assert.DoesNotContain(categories, (c) => c.id == category.id);
         }
     }

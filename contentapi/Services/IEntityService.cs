@@ -7,7 +7,7 @@ namespace contentapi.Services
 {
     public interface IEntityService
     {
-        void SetNewEntity(EntityChild item);
+        void SetNewEntity(EntityChild item, EntityAction defaultAction = EntityAction.None);
         T ConvertFromView<T,V>(V view) where T : EntityChild where V : EntityView;
         void FillExistingFromView<T,V>(V view, T existing) where T :EntityChild where V :EntityView;
         V ConvertFromEntity<T,V>(T entity) where T : EntityChild where V : EntityView;
@@ -24,14 +24,14 @@ namespace contentapi.Services
             this.accessService = accessService;
         }
 
-        public void SetNewEntity(EntityChild item)
+        public void SetNewEntity(EntityChild item, EntityAction defaultAction = EntityAction.None)
         {
             item.Entity = new Entity()
             {
                 createDate = DateTime.Now,
                 id = 0,
                 status = 0,
-                baseAllow = EntityAction.None,
+                baseAllow = defaultAction,
                 AccessList = new List<EntityAccess>() //EMPTY (hopefully efcore understands this)
             };
         }
