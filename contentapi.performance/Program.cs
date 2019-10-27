@@ -98,7 +98,7 @@ namespace contentapi.performance
                 Math.Max(MinContent / 2, AddContent / 10), AddCategories * AddContent, baseTest);
 
             BasicTest<CategoriesController, CategoryEntity, CategoryView>(
-                Math.Max(MinCategories / 2, AddCategories), AddCategories, baseTest);
+                Math.Max(MinCategories / 2, AddCategories / 2), AddCategories, baseTest);
 
             Console.WriteLine("All done!");
             Console.ReadKey(true);
@@ -121,19 +121,18 @@ namespace contentapi.performance
             var subIntance = subcontentTester.GetInstance(false);
             var name = typeof(U).Name;
 
-            //var count = Math.Max(10, AddSubcontent / 10);
-            Console.WriteLine($"Requesting {count} {name} out of {total}"); //AddCategories * AddContent * AddSubcontent}");
+            Console.WriteLine($"Requesting {count} {name} out of {total}");
             var result = TimeThing(() => subIntance.Controller.Get(new Services.CollectionQuery() { count = count } ).Result, baseTest);
             var items = subIntance.Controller.GetCollectionFromResult<V>(result).ToList();
 
-            Console.WriteLine($"Requesting next {count} {name} out of {total}"); //AddCategories * AddContent * AddSubcontent}");
+            Console.WriteLine($"Requesting next {count} {name} out of {total}");
             var result2 = TimeThing(() => subIntance.Controller.Get(new Services.CollectionQuery() { offset = count, count = count } ).Result, baseTest);
             var items2 = subIntance.Controller.GetCollectionFromResult<V>(result2).ToList();
 
-            Console.WriteLine($"Requesting some random {name} out of {total}"); //AddCategories * AddContent * AddSubcontent}");
+            Console.WriteLine($"Requesting some random {name} out of {total}");
             TimeThing(() => subIntance.Controller.GetSingle(items.First().id).Result, baseTest);
 
-            Console.WriteLine($"Requesting some other random {name} out of {total}"); //AddCategories * AddContent * AddSubcontent}");
+            Console.WriteLine($"Requesting some other random {name} out of {total}");
             TimeThing(() => subIntance.Controller.GetSingle(items2.Last().id).Result, baseTest);
         }
     }
