@@ -20,7 +20,7 @@ namespace contentapi.Controllers
 
             if(category.parentId != null)
             {
-                var parentCategory = await GetSingleBase((long)category.parentId);
+                var parentCategory = await GetSingleBaseAsync((long)category.parentId);
 
                 if(parentCategory == null)
                     ThrowAction(BadRequest("Nonexistent parent category!"));

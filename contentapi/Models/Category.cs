@@ -15,7 +15,7 @@ namespace contentapi.Models
         public string type {get;set;}
 
 
-        [ForeignKey("parentId")]
+        [ForeignKey(nameof(parentId))]
         public virtual CategoryEntity Parent {get;set;}
 
         public virtual List<CategoryEntity> Children {get;set;}

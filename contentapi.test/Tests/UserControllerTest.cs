@@ -89,7 +89,7 @@ namespace contentapi.test
             var instance = GetInstance(loggedIn);
             var result = instance.Controller.Get(new CollectionQuery()).Result;
             Assert.True(IsSuccessRequest(result));
-            List<UserView> users = instance.Controller.GetCollectionFromResult<UserView>(result.Value).ToList();
+            List<UserView> users = instance.QueryService.GetCollectionFromResult<UserView>(result.Value).ToList();
             Assert.True(users.Count > 0);
 
             if(loggedIn)
@@ -109,7 +109,7 @@ namespace contentapi.test
             var instance = GetInstance(loggedIn);
             var result = instance.Controller.Get(new CollectionQuery()).Result;
             Assert.True(IsSuccessRequest(result));
-            List<UserView> users = instance.Controller.GetCollectionFromResult<UserView>(result.Value).ToList();
+            List<UserView> users = instance.QueryService.GetCollectionFromResult<UserView>(result.Value).ToList();
             Assert.True(users.Count >= userCount);
 
             if(loggedIn)

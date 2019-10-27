@@ -124,7 +124,7 @@ namespace contentapi.test
 
             var result = baseInstance.Controller.Get(new CollectionQuery()).Result;
             Assert.True(IsSuccessRequest(result));
-            var allSeeable = baseInstance.Controller.GetCollectionFromResult<CategoryView>(result.Value).ToList();
+            var allSeeable = baseInstance.QueryService.GetCollectionFromResult<CategoryView>(result.Value).ToList();
             Assert.Equal(3, allSeeable.Count);
             Assert.Equal(2, allSeeable.Count(x => x.baseAccess.Contains("R")));
             Assert.Equal(2, allSeeable.Count(x => x.accessList.Any(y => y.Key == baseInstance.User.entityId.ToString() && y.Value.Contains("R"))));
@@ -132,7 +132,7 @@ namespace contentapi.test
 
             result = anotherContext.Controller.Get(new CollectionQuery()).Result;
             Assert.True(IsSuccessRequest(result));
-            allSeeable = baseInstance.Controller.GetCollectionFromResult<CategoryView>(result.Value).ToList();
+            allSeeable = baseInstance.QueryService.GetCollectionFromResult<CategoryView>(result.Value).ToList();
             Assert.Equal(3, allSeeable.Count);
             Assert.Equal(2, allSeeable.Count(x => x.baseAccess.Contains("R")));
             Assert.Equal(1, allSeeable.Count(x => x.accessList.Any(y => y.Key == anotherContext.User.entityId.ToString() && y.Value.Contains("R"))));

@@ -4,20 +4,21 @@ using System.Linq;
 
 namespace contentapi.Models
 {
-    [Table("subcontentEntities")]
-    public class SubcontentEntity : EntityChild
+    [Table("commentEntities")]
+    public class CommentEntity : EntityChild
     {
         public string content {get;set;}
         public string format {get;set;}
-        public long contentId {get;set;}
+        public long parentId {get;set;}
 
-        public virtual ContentEntity Content {get;set;}
+        [ForeignKey(nameof(parentId))]
+        public virtual Entity ParentEntity {get;set;}
     }
 
-    public class SubcontentView : EntityView
+    public class CommentView : EntityView
     {
         public string content {get;set;}
         public string format {get;set;}
-        public long contentId {get;set;}
+        public long parentId {get;set;}
     }
 }

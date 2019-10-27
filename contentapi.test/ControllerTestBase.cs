@@ -20,6 +20,7 @@ namespace contentapi.test
         public FakeEmailer Emailer = null;
         public ContentDbContext Context = null;
         public IEntityService EntityService = null;
+        public QueryService QueryService = null;
         public ILogger Logger = null;
     }
 
@@ -49,6 +50,7 @@ namespace contentapi.test
             instance.Emailer = emailer;
             instance.Context = (ContentDbContext)realProvider.GetService(typeof(ContentDbContext));
             instance.EntityService = (IEntityService)realProvider.GetService(typeof(IEntityService));
+            instance.QueryService = (QueryService)realProvider.GetService(typeof(QueryService));
             var factory = (ILoggerFactory)realProvider.GetService(typeof(ILoggerFactory));
             instance.Logger = factory.CreateLogger(GetType());
 

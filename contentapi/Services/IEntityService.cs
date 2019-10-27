@@ -1,7 +1,10 @@
 using System;
 using System.Collections.Generic;
+using System.Linq;
+using System.Threading.Tasks;
 using AutoMapper;
 using contentapi.Models;
+using Microsoft.EntityFrameworkCore;
 
 namespace contentapi.Services
 {
@@ -11,6 +14,8 @@ namespace contentapi.Services
         T ConvertFromView<T,V>(V view) where T : EntityChild where V : EntityView;
         void FillExistingFromView<T,V>(V view, T existing) where T :EntityChild where V :EntityView;
         V ConvertFromEntity<T,V>(T entity) where T : EntityChild where V : EntityView;
+        IQueryable<T> IncludeSet<T>(IQueryable<T> baseQuery) where T : EntityChild;
+        Task IncludeSingleAsync<T>(T item, DbContext context) where T : EntityChild;
     }
 
     public class EntityService : IEntityService
@@ -72,6 +77,17 @@ namespace contentapi.Services
             accessService.FillViewAccess(result, entity.Entity);
 
             return result;
+        }
+
+        public IQueryable<T> IncludeSet<T>(IQueryable<T> baseQuery) where T : EntityChild
+        {
+            return baseQuery.Include(x => x.Entity).ThenInclude(x => x.AccessList).AsQueryable();
+        }
+
+        public async Task IncludeSingleAsync<T>(T item, DbContext context) where T : EntityChild
+        {
+            await context.Entry(item).Reference(x => x.Entity).LoadAsync(); 
+            await context.Entry(item.Entity).Collection(x => x.AccessList).LoadAsync();
         }
     }
 }

@@ -57,6 +57,7 @@ namespace contentapi.Controllers
         }
     }
 
+    //Keep the class abstract so it can't be used as a route? Maybe?
     [Route("api/[controller]")]
     [ApiController]
     [Authorize]
@@ -133,41 +134,37 @@ namespace contentapi.Controllers
             return services.permission.CanDo(user.role, permission);
         }
 
-        //How to RETURN items (the object we return... maybe make it a real class)
-        public Dictionary<string, object> GetGenericCollectionResult<W>(IEnumerable<W> items, IEnumerable<string> links = null)
+        public async Task CheckRequiredParentReadAsync<W>(long parentId) where W : EntityChild 
         {
-            return new Dictionary<string, object>{ 
-                { "collection" , items },
-                { "_links",  links ?? new List<string>() }, //one day, turn this into HATEOS
-                //_claims = User.Claims.ToDictionary(x => x.Type, x => x.Value)
-            };
-        }
+            var parent = await services.query.GetSingleWithQueryAsync(services.context.Set<W>(), parentId);
+            var name = typeof(W).Name;
 
-        public IEnumerable<W> GetCollectionFromResult<W>(Dictionary<string, object> result)
-        {
-            return (IEnumerable<W>)result["collection"];
+            if(parent == null)
+                ThrowAction(BadRequest($"Must provide {name} for {typeof(T).Name}!"));
+
+            var user = await GetCurrentUserAsync();
+            await services.entity.IncludeSingleAsync(parent, services.context);
+
+            if(!services.access.CanCreate(parent.Entity, user))
+                ThrowAction(Unauthorized($"You can't create {name} here!"));
         }
 
         // ************
         // * OVERRIDE *
         // ************
 
-        protected virtual async Task<IQueryable<T>> GetAllBase()
+        protected virtual async Task<IQueryable<T>> GetAllBaseAsync()
         {
             logger.LogTrace("GetAllBase called");
-            long uid = services.session.GetCurrentUid();
-            return services.access.WhereReadable(
-                services.context.Set<T>()
-                .Include(x => x.Entity)
-                .ThenInclude(x => x.AccessList)
-                .AsQueryable(), await GetCurrentUserAsync());
+            return services.access.WhereReadable(services.entity.IncludeSet(services.context.Set<T>()), await GetCurrentUserAsync());
         }
 
-        protected virtual async Task<T> GetSingleBase(long id)
+        protected virtual async Task<T> GetSingleBaseAsync(long id)
         {
             logger.LogTrace($"GetSingleBase called for {id}");
-            var results = await GetQueryAsync(new CollectionQuery() { ids = id.ToString() });
-            return await results.FirstAsync();
+            return await services.query.GetSingleWithQueryAsync(await GetAllBaseAsync(), id);
+            //var results = //await QueryAsync(new CollectionQuery() { ids = id.ToString() });
+            //return await results.FirstAsync();
         }
 
         protected virtual Task GetSingle_PreResultCheckAsync(T item) { return Task.CompletedTask; }
@@ -210,23 +207,23 @@ namespace contentapi.Controllers
             return Task.CompletedTask;
         }
 
-        public async virtual Task<IQueryable<T>> GetQueryAsync(CollectionQuery query)
-        {
-            //Do stuff in between these (maybe?) in the future or... something.
-            IQueryable<T> baseResults = await GetAllBase();
-            IQueryable<T> queryResults = null;
+        //public async virtual Task<IQueryable<T>> QueryAsync(CollectionQuery query)
+        //{
+        //    //Do stuff in between these (maybe?) in the future or... something.
+        //    IQueryable<T> baseResults = await GetAllBase();
+        //    IQueryable<T> queryResults = null;
 
-            try
-            {
-                queryResults = services.query.ApplyQuery(baseResults, query);
-            }
-            catch (InvalidOperationException ex)
-            {
-                ThrowAction(BadRequest(ex.Message));
-            }
+        //    try
+        //    {
+        //        queryResults = services.query.ApplyQuery(baseResults, query);
+        //    }
+        //    catch (InvalidOperationException ex)
+        //    {
+        //        ThrowAction(BadRequest(ex.Message));
+        //    }
 
-            return queryResults;
-        }
+        //    return queryResults;
+        //}
 
         [HttpGet]
         [AllowAnonymous]
@@ -236,9 +233,9 @@ namespace contentapi.Controllers
 
             try
             {
-                var result = await GetQueryAsync(query);
+                var result = services.query.ApplyQuery(await GetAllBaseAsync(), query);
                 var views = (await result.ToListAsync()).Select(x => services.entity.ConvertFromEntity<T, V>(x));
-                return GetGenericCollectionResult(views);
+                return services.query.GetGenericCollectionResult(views);
             }
             catch(ActionCarryingException ex)
             {
@@ -254,7 +251,7 @@ namespace contentapi.Controllers
 
             try
             {
-                var item = await GetSingleBase(id); 
+                var item = await GetSingleBaseAsync(id); 
                 await GetSingle_PreResultCheckAsync(item);
                 await LogActIgnoreAnonymous(EntityAction.View, item.Entity.id);
                 return services.entity.ConvertFromEntity<T, V>(item);
@@ -302,7 +299,7 @@ namespace contentapi.Controllers
 
             try
             {
-                var existing = await GetSingleBase(id);
+                var existing = await GetSingleBaseAsync(id);
 
                 if(!services.access.CanUpdate(existing.Entity, await GetCurrentUserAsync()))
                     return Unauthorized("You cannot update this item!");
@@ -331,7 +328,7 @@ namespace contentapi.Controllers
 
             try
             {
-                var existing = await GetSingleBase(id);
+                var existing = await GetSingleBaseAsync(id);
 
                 if(!services.access.CanDelete(existing.Entity, await GetCurrentUserAsync()))
                     return Unauthorized("You cannot delete this item!");

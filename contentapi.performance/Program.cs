@@ -70,10 +70,10 @@ namespace contentapi.performance
 
                     for(int k = 0; k < AddSubcontent; k++)
                     {
-                        var sub = new SubcontentEntity()
+                        var sub = new CommentEntity()
                         {
                             content = $"{k}/{j}/{i}",
-                            contentId = content.entityId
+                            parentId = content.entityId
                         };
 
                         eService.SetNewEntity(sub, EntityAction.Read);
@@ -91,10 +91,10 @@ namespace contentapi.performance
             stopwatch.Stop();
             Console.WriteLine($"Adding items took {stopwatch.Elapsed.TotalSeconds:0.##} seconds");
 
-            var subcontentTester = new ControllerTestBase<SubcontentController>(baseTest);
+            var subcontentTester = new ControllerTestBase<CommentsController>(baseTest);
             var subIntance = subcontentTester.GetInstance(false);
 
-            BasicTest<SubcontentController, SubcontentEntity, SubcontentView>(
+            BasicTest<CommentsController, CommentEntity, CommentView>(
                 Math.Max(MinSubcontent / 2, AddSubcontent / 10), AddCategories * AddContent * AddSubcontent, baseTest);
 
             BasicTest<ContentController, ContentEntity, ContentView>(
@@ -126,11 +126,11 @@ namespace contentapi.performance
 
             Console.WriteLine($"Requesting {count} {name} out of {total}");
             var result = TimeThing(() => subIntance.Controller.Get(new Services.CollectionQuery() { count = count } ).Result, baseTest);
-            var items = subIntance.Controller.GetCollectionFromResult<V>(result).ToList();
+            var items = subIntance.QueryService.GetCollectionFromResult<V>(result).ToList();
 
             Console.WriteLine($"Requesting next {count} {name} out of {total}");
             var result2 = TimeThing(() => subIntance.Controller.Get(new Services.CollectionQuery() { offset = count, count = count } ).Result, baseTest);
-            var items2 = subIntance.Controller.GetCollectionFromResult<V>(result2).ToList();
+            var items2 = subIntance.QueryService.GetCollectionFromResult<V>(result2).ToList();
 
             Console.WriteLine($"Requesting some random {name} out of {total}");
             TimeThing(() => subIntance.Controller.GetSingle(items.First().id).Result, baseTest);

@@ -52,8 +52,8 @@ namespace contentapi
                 cfg.CreateMap<CategoryView,CategoryEntity>();
                 cfg.CreateMap<ContentEntity,ContentView>();
                 cfg.CreateMap<ContentView,ContentEntity>();
-                cfg.CreateMap<SubcontentEntity,SubcontentView>();
-                cfg.CreateMap<SubcontentView,SubcontentEntity>();
+                cfg.CreateMap<CommentEntity,CommentView>();
+                cfg.CreateMap<CommentView,CommentEntity>();
             }); 
             services.AddSingleton(mapperConfig.CreateMapper());
 
