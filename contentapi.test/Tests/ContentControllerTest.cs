@@ -79,8 +79,50 @@ namespace contentapi.test
             Assert.False(IsSuccessRequest(result)); //Make sure we can't post
             //Also make sure the content isn't there (we SHOULD have an empty content list for debugging...)
             var contents = baseInstance.QueryService.GetCollectionFromResult<ContentView>(baseInstance.Controller.Get(new CollectionQuery()).Result.Value);
-            //Assert.False(contents.Any(x => x.title == content.title));
             Assert.DoesNotContain(contents, x => x.title == content.title);
+        }
+
+        [Fact]
+        public void TestContentCategoryLimit()
+        {
+            const int CategoryCount = 3;
+            const int ContentCount = 5;
+
+            var categories = new List<CategoryView>();
+            var contents = new List<List<ContentView>>();
+
+            for(int i = 0; i < CategoryCount; i++)
+            {
+                var category = CreateCategory();
+                categories.Add(category);
+                var categoryContents = new List<ContentView>();
+                for(int j = 0; j < ContentCount; j++)
+                {
+                    var postResult = baseInstance.Controller.Post(CreateContentView(category.id)).Result;
+                    Assert.True(IsSuccessRequest(postResult));
+                    categoryContents.Add(postResult.Value);
+                }
+                contents.Add(categoryContents);
+            }
+
+            //Make sure they all still show up.
+            var allResult = baseInstance.Controller.Get(new CollectionQuery()).Result;
+            Assert.True(IsSuccessRequest(allResult));
+            var allContent = baseInstance.QueryService.GetCollectionFromResult<ContentView>(allResult.Value).ToList();
+            Assert.Equal(CategoryCount * ContentCount, allContent.Count);
+
+            //Now make sure each content is exactly the list we added
+            for(int i = 0; i < CategoryCount; i++) //(var category in categories)
+            {
+                var category = categories[i];
+                var expectedContent = contents[i];
+
+                var categoryResult = baseInstance.Controller.Get(new ContentQuery() { categoryId = category.id, order = baseInstance.QueryService.AscendingOrder, sort = baseInstance.QueryService.IdSort }).Result;
+                Assert.True(IsSuccessRequest(allResult));
+                var categoryContent = baseInstance.QueryService.GetCollectionFromResult<ContentView>(categoryResult.Value).ToList();
+                Assert.Equal(expectedContent.Count, categoryContent.Count);
+                Assert.True(expectedContent.Select(x => x.id).SequenceEqual(categoryContent.Select(x => x.id)));
+            }
         }
     }
 }
