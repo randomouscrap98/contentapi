@@ -88,6 +88,18 @@ namespace contentapi.Controllers
                 throw new ActionCarryingException() {Result = result};
         }
 
+        //protected async Task<ActionResult<W>> HandleActionThrowsAsync<W>(Func<Task<ActionResult<W>>> method)
+        //{
+        //    try
+        //    {
+        //        return await method();
+        //    }
+        //    catch(ActionCarryingException ex)
+        //    {
+        //        return ex.Result;
+        //    }
+        //}
+
         protected async Task LogActIgnoreAnonymous(EntityAction action, long entityId)
         {
             var user = services.session.GetCurrentUid();
@@ -169,7 +181,7 @@ namespace contentapi.Controllers
         // * OVERRIDE *
         // ************
 
-        protected virtual async Task<IQueryable<T>> GetAllBaseAsync()
+        protected virtual async Task<IQueryable<T>> GetAllReadableAsync()
         {
             logger.LogTrace("GetAllBase called");
             return services.access.WhereReadable(services.entity.IncludeSet(services.context.Set<T>()), await GetCurrentUserAsync());
@@ -178,9 +190,14 @@ namespace contentapi.Controllers
         protected virtual async Task<T> GetSingleBaseAsync(long id)
         {
             logger.LogTrace($"GetSingleBase called for {id}");
-            return await services.query.GetSingleWithQueryAsync(await GetAllBaseAsync(), id);
-            //var results = //await QueryAsync(new CollectionQuery() { ids = id.ToString() });
-            //return await results.FirstAsync();
+            return await services.query.GetSingleWithQueryAsync(await GetAllReadableAsync(), id);
+        }
+
+        protected virtual async Task<Dictionary<string, object>> GenericGetActionAsync(IQueryable<T> baseCollection, CollectionQuery query)
+        {
+            var result = services.query.ApplyQuery(baseCollection, query);
+            var views = (await result.ToListAsync()).Select(x => services.entity.ConvertFromEntity<T, V>(x));
+            return services.query.GetGenericCollectionResult(views);
         }
 
         protected virtual Task GetSingle_PreResultCheckAsync(T item) { return Task.CompletedTask; }
@@ -223,23 +240,8 @@ namespace contentapi.Controllers
             return Task.CompletedTask;
         }
 
-        //public async virtual Task<IQueryable<T>> QueryAsync(CollectionQuery query)
-        //{
-        //    //Do stuff in between these (maybe?) in the future or... something.
-        //    IQueryable<T> baseResults = await GetAllBase();
-        //    IQueryable<T> queryResults = null;
-
-        //    try
-        //    {
-        //        queryResults = services.query.ApplyQuery(baseResults, query);
-        //    }
-        //    catch (InvalidOperationException ex)
-        //    {
-        //        ThrowAction(BadRequest(ex.Message));
-        //    }
-
-        //    return queryResults;
-        //}
+        //You MUST implement Get to at least have SOME way to retrieve objects, but I won't determine how that works.
+        //public abstract Task<ActionResult<Dictionary<string, object>>> Get([FromQuery]CollectionQuery query);
 
         [HttpGet]
         [AllowAnonymous]
@@ -249,9 +251,7 @@ namespace contentapi.Controllers
 
             try
             {
-                var result = services.query.ApplyQuery(await GetAllBaseAsync(), query);
-                var views = (await result.ToListAsync()).Select(x => services.entity.ConvertFromEntity<T, V>(x));
-                return services.query.GetGenericCollectionResult(views);
+                return await GenericGetActionAsync(await GetAllReadableAsync(), query);
             }
             catch(ActionCarryingException ex)
             {

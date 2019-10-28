@@ -33,6 +33,7 @@ namespace contentapi.Configs
 
     public class StartupServiceConfig
     {
+        public bool SensitiveDataLogging = false;
         public string SecretKey = null;
         public string ContentConString = null;
 

@@ -79,7 +79,8 @@ namespace contentapi.test
             Assert.False(IsSuccessRequest(result)); //Make sure we can't post
             //Also make sure the content isn't there (we SHOULD have an empty content list for debugging...)
             var contents = baseInstance.QueryService.GetCollectionFromResult<ContentView>(baseInstance.Controller.Get(new CollectionQuery()).Result.Value);
-            Assert.False(contents.Any(x => x.title == content.title));
+            //Assert.False(contents.Any(x => x.title == content.title));
+            Assert.DoesNotContain(contents, x => x.title == content.title);
         }
     }
 }

@@ -48,7 +48,7 @@ namespace contentapi.Controllers
             if(user.email == null)
                 return BadRequest("Must provide an email!");
 
-            var all = await GetAllBaseAsync();
+            var all = await GetAllReadableAsync();
             var existing = await all.FirstOrDefaultAsync(x => x.username == user.username || x.email == user.email);
 
             if(existing != null)
@@ -107,7 +107,7 @@ namespace contentapi.Controllers
         [AllowAnonymous]
         public async Task<ActionResult> SendRegistrationEmail([FromBody]RegistrationData data)
         {
-            var foundUser = await (await GetAllBaseAsync()).FirstOrDefaultAsync(x => x.email == data.email);
+            var foundUser = await (await GetAllReadableAsync()).FirstOrDefaultAsync(x => x.email == data.email);
 
             if(foundUser == null)
                 return BadRequest("No user with that email");
@@ -132,7 +132,7 @@ namespace contentapi.Controllers
             if(string.IsNullOrEmpty(data.confirmationKey))
                 return BadRequest("Must provide a confirmation key in the body");
 
-            var users = await GetAllBaseAsync(); //services.context.GetAll<User>();
+            var users = await GetAllReadableAsync(); //services.context.GetAll<User>();
             var foundUser = await users.FirstOrDefaultAsync(x => x.registerCode == data.confirmationKey);
 
             if(foundUser == null)
@@ -151,7 +151,7 @@ namespace contentapi.Controllers
         public async Task<ActionResult<string>> Authenticate([FromBody]UserCredential user)
         {
             UserEntity foundUser = null;
-            var users = await GetAllBaseAsync(); //services.context.GetAll<User>();
+            var users = await GetAllReadableAsync(); //services.context.GetAll<User>();
 
             if(user.username != null)
                 foundUser = await users.FirstOrDefaultAsync(x => x.username == user.username);
