@@ -124,5 +124,44 @@ namespace contentapi.test
                 Assert.True(expectedContent.Select(x => x.id).SequenceEqual(categoryContent.Select(x => x.id)));
             }
         }
+
+        [Theory]
+        [InlineData(0)]
+        [InlineData(1)]
+        [InlineData(2)]
+        public void TestContentTypeSearch(int inserts)
+        {
+            //Create a category to put content into (assume it creates a good category)
+            var category = CreateCategory();
+
+            //Some junk sections
+            for(int i = 0; i < 5; i++)
+            {
+                var content = CreateContentView(category.id);
+                content.type = UniqueSection();
+                var result = baseInstance.Controller.Post(content).Result;
+                Assert.True(IsSuccessRequest(result));
+            }
+
+            var myContents = new List<ContentView>();
+
+            for(int i = 0; i < inserts; i++)
+            {
+                var content = CreateContentView(category.id);
+                content.type = "myType";
+                var result = baseInstance.Controller.Post(content).Result;
+                Assert.True(IsSuccessRequest(result));
+                myContents.Add(result.Value);
+            }
+
+            //And now just make sure we get them all
+            var finalResult = baseInstance.Controller.Get(new ContentQuery(){type = "myType"}).Result;
+            Assert.True(IsSuccessRequest(finalResult));
+            var contents = baseInstance.QueryService.GetCollectionFromResult<ContentView>(finalResult.Value);
+            Assert.Equal(myContents.Count(), contents.Count());
+
+            if(myContents.Count() > 0)
+                Assert.True(contents.Select(x => x.id).OrderBy(x => x).SequenceEqual(myContents.Select(x => x.id).OrderBy(x => x)));
+        }
     }
 }

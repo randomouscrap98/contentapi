@@ -12,6 +12,7 @@ namespace contentapi.Controllers
     public class ContentQuery : CollectionQuery
     {
         public long? categoryId {get;set;} = null;
+        public string type {get;set;} = null;
     }
 
     public class ContentController : EntityController<ContentEntity, ContentView>
@@ -40,6 +41,8 @@ namespace contentapi.Controllers
                 //Limit content by category (if they give it)
                 if(query.categoryId != null)
                     getBase = getBase.Where(x => x.categoryId == query.categoryId);
+                if(query.type != null)
+                    getBase = getBase.Where(x => x.type == query.type);
 
                 return await GenericGetActionAsync(getBase, query);
             }
