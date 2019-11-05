@@ -23,6 +23,18 @@ namespace contentapi.test
             };
         }
 
+        public CategoryView CreateUniqueCategory(ControllerInstance<CategoriesController> instance, Action<CategoryView> alterCategory = null)
+        {
+            var category = QuickCategory("Category_" + UniqueSection());
+            if(alterCategory != null)
+                alterCategory.Invoke(category);
+            var result = instance.Controller.Post(category).Result;
+            Assert.True(IsSuccessRequest(result));
+            Assert.True(result.Value.name == category.name);
+            return result.Value;
+        }
+
+
         [Theory]
         [InlineData(true)]
         [InlineData(false)]
@@ -33,17 +45,6 @@ namespace contentapi.test
             var category = QuickCategory("My new category");
             var result = instance.Controller.Post(category).Result;
             Assert.True(IsNotAuthorized(result.Result));
-        }
-
-        public CategoryView CreateUniqueCategory(ControllerInstance<CategoriesController> instance, Action<CategoryView> alterCategory = null)
-        {
-            var category = QuickCategory("Category_" + UniqueSection());
-            if(alterCategory != null)
-                alterCategory.Invoke(category);
-            var result = instance.Controller.Post(category).Result;
-            Assert.True(IsSuccessRequest(result));
-            Assert.True(result.Value.name == category.name);
-            return result.Value;
         }
 
         [Fact]
@@ -105,6 +106,61 @@ namespace contentapi.test
             Assert.True(IsSuccessRequest(result));
             var categories = instance.QueryService.GetCollectionFromResult<CategoryView>(result.Value);
             Assert.DoesNotContain(categories, (c) => c.id == category.id);
+        }
+
+        [Fact]
+        public void TestNoCategoriesNullParent()
+        {
+            var instance = GetInstance(true, CategoryRole);
+            var result = instance.Controller.Get(new CategoryQuery(){parentId = -1}).Result;
+            Assert.True(IsSuccessRequest(result));
+            var categories = instance.QueryService.GetCollectionFromResult<CategoryView>(result.Value);
+            Assert.Empty(categories);
+        }
+
+        [Theory]
+        [InlineData(false, 1)]
+        [InlineData(false, 2)]
+        [InlineData(true, 0)]
+        [InlineData(true, 1)]
+        [InlineData(true, 2)]
+        public void ComprehensiveParentFilter(bool useParent, int extraCategories)
+        {
+            var instance = GetInstance(true, CategoryRole);
+
+            //Our parent to hold other junk
+            var parent = CreateUniqueCategory(instance);
+            var junkCategories = new List<CategoryView>();
+
+            //Some fake categories outside us to make sure everything is hunky-dory
+            for(int i = 0; i < 5; i++)
+                junkCategories.Add(CreateUniqueCategory(instance, (c) => c.parentId = parent.id));
+            
+            long parentId = -1;
+            var myCategories = new List<CategoryView>();
+
+            if(useParent)
+            {
+                parentId = (long)CreateUniqueCategory(instance).id;
+
+                for(int i = 0; i < extraCategories; i++)
+                    myCategories.Add(CreateUniqueCategory(instance, (c) => c.parentId = parentId));
+            }
+            else
+            {
+                myCategories.Add(parent);
+
+                for(int i = 0; i < extraCategories; i++)
+                    myCategories.Add(CreateUniqueCategory(instance));
+            }
+
+            var result = instance.Controller.Get(new CategoryQuery(){parentId = parentId}).Result;
+            Assert.True(IsSuccessRequest(result));
+            var categories = instance.QueryService.GetCollectionFromResult<CategoryView>(result.Value);
+            Assert.Equal(myCategories.Count(), categories.Count());
+
+            if(myCategories.Count() > 0)
+                Assert.True(categories.Select(x => x.id).OrderBy(x => x).SequenceEqual(myCategories.Select(x => x.id).OrderBy(x => x)));
         }
     }
 }
