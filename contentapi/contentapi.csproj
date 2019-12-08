@@ -15,6 +15,8 @@
 
   <ItemGroup>
     <None Include="LanguageFiles\**" CopyToOutputDirectory="Always" />
+    <None Include="projectData\dbmigrations\**" CopyToOutputDirectory="Always" />
+    <None Include="projectData\migrate.sh" CopyToOutputDirectory="Always" />
   </ItemGroup>
 
 </Project>
