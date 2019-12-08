@@ -1,6 +1,7 @@
 phost=random@oboy.smilebasicsource.com
 port=240
 mtype=linux-x64
+lpfolder="./bin/Release/netcoreapp$corev/$mtype/publish/"
 pfolder=/storage/random/contentapi
 rsync='rsync -zz -avh -e "ssh -p $port"'
 db=content.db
@@ -21,11 +22,11 @@ dotnet publish -r $mtype -c Release
 cd "$dfolder"
   # This part might not be necessary soon, idk.
   ./extractSchema.sh
-  ./copyDependencies.sh "$pfolder"
+  ./copyDependencies.sh "$lpfolder"
 cd "$cwd"
 
 # Now put the stuff on the server!
-hostrsync "./bin/Release/netcoreapp$corev/$mtype/publish/" "$pfolder"
+hostrsync "$lpfolder" "$pfolder"
 
 # And then chmod + migrate!
 ssh $phost -p $port "cd $pfolder; chmod 700 contentapi;"
