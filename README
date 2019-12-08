@@ -1,0 +1,17 @@
+For publishing:
+---------------
+
+ To make ssh life easier, do:
+ 
+ ssh-keygen -t rsa
+ (press enter a bunch of times)
+ ssh-copy-id user@server -p sshPort
+ 
+ Also, if using git bash for all this sh stuff, you need rsync:
+ 
+ http://www2.futureware.at/~nickoe/msys2-mirror/msys/x86_64/rsync-3.1.2-2-x86_64.pkg.tar.xz
+ (https://blog.tiger-workshop.com/add-rsync-to-git-bash-for-windows/)
+ 
+ Also, if on windows, you should add sqlite3 to your path. 
+ 
+ https://sqlite.org/download.html
