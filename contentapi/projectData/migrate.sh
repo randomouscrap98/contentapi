@@ -1,7 +1,7 @@
 OUTPUT="$1"
 ALREADY="$2"
 MIGRATIONS="dbmigrations"
-SQL3="./sqlite3.exe"
+SQL3="sqlite3"
 
 if [ "$OUTPUT" == "" ]
 then

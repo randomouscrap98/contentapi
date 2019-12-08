@@ -4,6 +4,10 @@
     <TargetFramework>netcoreapp3.0</TargetFramework>
 	<!--<PublishTrimmed>true</PublishTrimmed>-->
   </PropertyGroup>
+  
+  <!--<Target Name="MyPreCompileTarget" BeforeTargets="Build">
+	<Exec Command="generateCode.cmd" />
+  </Target>-->
 
   <ItemGroup>
     <PackageReference Include="AutoMapper.Extensions.Microsoft.DependencyInjection" Version="7.0.0" />
@@ -13,10 +17,10 @@
 	<PackageReference Include="Microsoft.AspNetCore.Authentication.JwtBearer" Version="3.0.0" />
   </ItemGroup>
 
-  <ItemGroup>
+  <!--<ItemGroup>
     <None Include="LanguageFiles\**" CopyToOutputDirectory="Always" />
     <None Include="projectData\dbmigrations\**" CopyToOutputDirectory="Always" />
     <None Include="projectData\migrate.sh" CopyToOutputDirectory="Always" />
-  </ItemGroup>
+  </ItemGroup>-->
 
 </Project>

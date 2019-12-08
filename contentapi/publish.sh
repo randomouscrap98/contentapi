@@ -5,9 +5,6 @@ pfolder=/storage/random/contentapi
 rsync='rsync -zz -avh -e "ssh -p $port"'
 db=content.db
 dfolder=projectData
-# cdate='2019-01-01 00:00:00.000000'
-# cdateid="select id from entities where createDate='$cdate'"
-# dbdo="sqlite3 \"$db\""
 corev=3.0
 cwd=`pwd`
 # -p:PublishSingleFile=true
@@ -17,19 +14,18 @@ hostrsync()
    rsync -zz -avh -e "ssh -p $port" "$1" "$phost:$2"
 }
 
-# This part might not be necessary soon, idk. Once you stop always overwriting, 
-# this should become ok.
+# The project itself.
+dotnet publish -r $mtype -c Release 
+
+# Now copy all the dependencies before we rsync
 cd "$dfolder"
-./extractSchema.sh
+  # This part might not be necessary soon, idk.
+  ./extractSchema.sh
+  ./copyDependencies.sh "$pfolder"
 cd "$cwd"
 
-# The project itself. Note that building/etc. puts basically everything you need
-# into the destination folder (such as language files, dbmigrations, etc). Hooraaayyy.
-dotnet publish -r $mtype -c Release 
+# Now put the stuff on the server!
 hostrsync "./bin/Release/netcoreapp$corev/$mtype/publish/" "$pfolder"
 
-hostrsync "$dfolder/dbmigrations" "$pfolder"
-hostrsyng "$dfolder/migrate.sh" "$
-ssh $phost -p $port "cd $pfolder; chmod 700 contentapi; \
- $dbdo \"insert into entities(createDate, status, baseAllow) values ('$cdate', 0, 6)\";\
- $dbdo \"insert into categoryEntities(entityId, name) values (($cdateid), 'sbs-main')\""
+# And then chmod + migrate!
+ssh $phost -p $port "cd $pfolder; chmod 700 contentapi;"
