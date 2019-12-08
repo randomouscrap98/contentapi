@@ -14,7 +14,6 @@ db=content.db
 dfolder=projectData
 
 cwd=`pwd`
-# -p:PublishSingleFile=true
 
 hostrsync()
 {
@@ -22,8 +21,8 @@ hostrsync()
 }
 
 # The project itself. Delete the old folder (probably).
-rm -rf "$lpfolder="
-dotnet publish -r $mtype -c Release 
+rm -rf "$lpfolder"
+dotnet publish -r $mtype -c Release -p:PublishSingleFile=true
 
 # Now copy all the dependencies before we rsync
 cd "$dfolder"
