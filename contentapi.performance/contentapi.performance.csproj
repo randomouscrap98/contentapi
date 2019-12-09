@@ -10,8 +10,8 @@
     <TargetFramework>netcoreapp3.0</TargetFramework>
   </PropertyGroup>
 
-  <ItemGroup>
-    <None Include="..\contentapi\content.db" CopyToOutputDirectory="Always" />
-  </ItemGroup>
-
+  <Target Name="CopyDatabase" AfterTargets="AfterBuild">
+    <Copy SourceFiles="..\contentapi\projectData\content_base.db" DestinationFiles="$(OutDir)\content.db" />
+  </Target>
+  
 </Project>

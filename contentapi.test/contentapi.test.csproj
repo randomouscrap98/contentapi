@@ -16,8 +16,8 @@
     <ProjectReference Include="..\contentapi\contentapi.csproj" />
   </ItemGroup>
 
-  <ItemGroup>
-    <None Include="..\contentapi\content.db" CopyToOutputDirectory="Always" />
-  </ItemGroup>
+  <Target Name="CopyDatabase" AfterTargets="AfterBuild">
+    <Copy SourceFiles="..\contentapi\projectData\content_base.db" DestinationFiles="$(OutDir)\content.db" />
+  </Target>
 
 </Project>
