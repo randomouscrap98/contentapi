@@ -15,6 +15,8 @@ then
 	rm -f "$OUTPUT"
 fi
 
+echo "Migrating from $MIGRATIONS into $OUTPUT"
+
 # NOTE: the migrations path can't have spaces! how to do??!?!
 for sql in $MIGRATIONS/*.sql
 do

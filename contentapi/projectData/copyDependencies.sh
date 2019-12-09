@@ -6,5 +6,7 @@ then
 	exit 1
 fi
 
+echo "Copying dependencies to $DEST"
+
 cp -r LanguageFiles "$DEST"
 cp -r dbmigrations "$DEST"

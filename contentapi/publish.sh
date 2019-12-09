@@ -9,11 +9,14 @@ corev=3.0
 
 # My places!
 lpfolder="./bin/Release/netcoreapp$corev/$mtype/publish/"
-pfolder=/storage/random/contentapi
-db=content.db
-dfolder=projectData
+pfolder="/storage/random/contentapi"
+dfolder="projectData"
+cwd="`pwd`"
 
-cwd=`pwd`
+# Data(base) stuff
+db=content.db
+
+echo "Publishing to $pfolder"
 
 hostrsync()
 {
@@ -35,4 +38,4 @@ cd "$cwd"
 hostrsync "$lpfolder" "$pfolder"
 
 # And then chmod + migrate!
-ssh $phost -p $port "cd $pfolder; chmod 700 contentapi;"
+ssh $phost -p $port "cd $pfolder; chmod 700 contentapi; bash -s" -- < "$dfolder/migrate.sh" "$db"
