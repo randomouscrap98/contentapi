@@ -12,14 +12,9 @@
 	<PackageReference Include="Microsoft.AspNetCore.Authentication.JwtBearer" Version="3.0.0" />
   </ItemGroup>
 
-  <Target Name="MigrateThing" BeforeTargets="AfterBuild"><!--Name="MigrateThing" BeforeTargets="BeforeBuild">-->
-    <!--WorkingDirectory="$(SolutionDir)\contentapi\projectData\" -->
-    <Exec WorkingDirectory="$(SolutionDir)contentapi\projectData\" 
+  <Target Name="MigrateThing" BeforeTargets="AfterBuild">
+    <Exec WorkingDirectory="..\contentapi\projectData\" 
           Command="&quot;C:\Program Files\Git\bin\sh.exe&quot; migrate.sh &quot;$(ProjectDir)content.db&quot;" />
   </Target>
 
-  <!--<Target Name="CopyDatabase" AfterTargets="AfterBuild">
-    <Copy SourceFiles="..\contentapi\projectData\content_base.db" DestinationFiles="$(ProjectDir)\content.db" />
-  </Target>-->
-  
 </Project>

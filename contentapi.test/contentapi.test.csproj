@@ -17,7 +17,7 @@
   </ItemGroup>
 
   <Target Name="MigrateThing" BeforeTargets="AfterBuild">
-    <Exec WorkingDirectory="$(SolutionDir)contentapi\projectData\" 
+    <Exec WorkingDirectory="..\contentapi\projectData\" 
           Command="&quot;C:\Program Files\Git\bin\sh.exe&quot; migrate.sh &quot;$(ProjectDir)$(OutputPath)content.db&quot;" />
   </Target>
 
