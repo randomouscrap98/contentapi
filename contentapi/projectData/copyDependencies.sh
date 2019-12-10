@@ -10,3 +10,4 @@ echo "Copying dependencies to $DEST"
 
 cp -r LanguageFiles "$DEST"
 cp -r dbmigrations "$DEST"
+cp -r publish/dbmigrations "$DEST"
