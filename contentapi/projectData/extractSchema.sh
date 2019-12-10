@@ -12,4 +12,4 @@ echo "Extracting base schema from $BASE to $OUTFILE"
 
 # rm -rf "$DBM/${SCHPRE}*"
 # $SQL3 "content_base.db" ".schema" > "$DBM/${SCHPRE}_$DTNAME.sql"
-$SQL3 "$BASE" ".schema" > "$OUTFILE"
+$SQL3 "$BASE" ".schema" | sed "/CREATE TABLE sqlite_sequence/d" > "$OUTFILE"

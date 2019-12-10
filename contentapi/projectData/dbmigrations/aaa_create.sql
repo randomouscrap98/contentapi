@@ -1,4 +1,3 @@
-CREATE TABLE sqlite_sequence(name,seq);
 CREATE TABLE IF NOT EXISTS "userEntities" (
 	"entityId"	INTEGER NOT NULL,
 	"username"	TEXT NOT NULL UNIQUE,

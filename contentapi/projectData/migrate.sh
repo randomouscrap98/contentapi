@@ -11,7 +11,7 @@ fi
 
 if [ "$ALREADY" == "" ]
 then
-	echo "WARNING: Completely recreating $OUTPUT"
+	echo " * Completely recreating $OUTPUT"
 	rm -f "$OUTPUT"
 fi
 

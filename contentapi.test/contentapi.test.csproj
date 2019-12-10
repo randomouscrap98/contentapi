@@ -16,8 +16,9 @@
     <ProjectReference Include="..\contentapi\contentapi.csproj" />
   </ItemGroup>
 
-  <Target Name="CopyDatabase" AfterTargets="AfterBuild">
-    <Copy SourceFiles="..\contentapi\projectData\content_base.db" DestinationFiles="$(OutDir)\content.db" />
+  <Target Name="MigrateThing" BeforeTargets="AfterBuild">
+    <Exec WorkingDirectory="$(SolutionDir)contentapi\projectData\" 
+          Command="&quot;C:\Program Files\Git\bin\sh.exe&quot; migrate.sh &quot;$(ProjectDir)$(OutputPath)content.db&quot;" />
   </Target>
 
 </Project>
