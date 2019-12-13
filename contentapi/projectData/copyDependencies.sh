@@ -7,7 +7,8 @@ then
 fi
 
 echo "Copying dependencies to $DEST"
+MIGDIR="$DEST/dbmigrations"
 
 cp -r LanguageFiles "$DEST"
-cp -r dbmigrations "$DEST"
-cp -r publish/dbmigrations "$DEST"
+cp dbmigrations/* "$MIGDIR"
+cp dbmigrations/publish/* "$MIGDIR"
