@@ -1,6 +1,8 @@
 using contentapi.Models;
 using Microsoft.EntityFrameworkCore;
 
+//DbContext should be kept a simple place to "declare" sets. Other services
+//will do the complicated things surrounding each model.
 namespace contentapi
 {
     //Every single "MyContext" will essentially look the same: you just add 

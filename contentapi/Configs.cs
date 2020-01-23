@@ -1,5 +1,7 @@
 using System;
 
+// These are ALL config objects pulled from appsettings or whatever it's called. Those
+// json files that are loaded for development and production.
 namespace contentapi.Configs
 {
     public class HashConfig
@@ -31,6 +33,8 @@ namespace contentapi.Configs
         public string DefaultLanguage {get;set;} = "en";
     }
 
+    // This is the exception: this config is only used during startup and not
+    // pulled from the settings: it is instead an amalgamation.
     public class StartupServiceConfig
     {
         public bool SensitiveDataLogging = false;
