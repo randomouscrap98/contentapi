@@ -12,13 +12,8 @@ then
 fi
 
 echo "Copying dependencies to $DEST"
-# MIGDIR="$DEST/"
 
 # Warn: ALL dbmigrations are copied (including ones for various systems). This
 # shouldn't be a problem in practice, just keep it in mind.
 cp -r LanguageFiles "$DEST"
 cp -r "$DBMNAME" "$DEST"
-# mkdir -p "$MIGDIR"
-# cp dbmigrations/*.sql "$MIGDIR"
-# cp dbmigrations/publish/*.sql "$MIGDIR"
-
