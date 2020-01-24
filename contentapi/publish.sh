@@ -61,4 +61,4 @@ hostrsync "$lpfolder" "$pfolder"
 # And then chmod + migrate! The main running file should be executable, and we
 # need to run all migrations. The CURRENT process resets the database and
 # migrates the base and "publish"
-ssh $phost -p $port "cd $pfolder; chmod 700 contentapi; bash -s" -- < "$dfolder/migrate.sh" "$db" "" "publish"
+ssh $phost -p $port "cd $pfolder; chmod 700 contentapi; bash -s" -- < "$dfolder/migrate.sh" "$db" "NUL" "publish"

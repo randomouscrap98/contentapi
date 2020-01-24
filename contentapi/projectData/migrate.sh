@@ -15,6 +15,11 @@ then
 	exit 1
 fi
 
+if [ "$ALREADY" == "NUL" ]
+then
+   ALREADY=""
+fi
+
 # If user does not specify "already" folder, assume the entire database is
 # getting recreated (delete existing database)
 if [ "$ALREADY" == "" ]
