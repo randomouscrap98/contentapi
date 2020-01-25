@@ -33,6 +33,7 @@ namespace contentapi
             services.AddSingleton(config.HashConfig);
             services.AddSingleton(config.EmailConfig); 
             services.AddSingleton(config.LanguageConfig); 
+            services.AddSingleton(config.AccessConfig); 
 
             services.AddSingleton(new SessionConfig()
             {

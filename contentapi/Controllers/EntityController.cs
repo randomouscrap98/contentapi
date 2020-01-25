@@ -158,7 +158,7 @@ namespace contentapi.Controllers
             var user = await GetCurrentUserAsync();
             await services.entity.IncludeSingleAsync(parent, services.context);
 
-            if(!services.access.CanCreate(parent.Entity, user))
+            if(!services.access.CanDo(parent.Entity, user, EntityAction.Create))
                 ThrowAction(Unauthorized($"You can't create {thisName} here!"));
         }
 
@@ -173,7 +173,7 @@ namespace contentapi.Controllers
             var user = await GetCurrentUserAsync();
             await services.context.Entry(parent).Collection(x => x.AccessList).LoadAsync();
 
-            if(!services.access.CanCreate(parent, user))
+            if(!services.access.CanDo(parent, user, EntityAction.Create))
                 ThrowAction(Unauthorized($"You can't create {thisName} here!"));
         }
 
@@ -317,7 +317,7 @@ namespace contentapi.Controllers
             {
                 var existing = await GetSingleBaseAsync(id);
 
-                if(!services.access.CanUpdate(existing.Entity, await GetCurrentUserAsync()))
+                if(!services.access.CanDo(existing.Entity, await GetCurrentUserAsync(), EntityAction.Update))
                     return Unauthorized("You cannot update this item!");
 
                 //Now actually "convert" the item by placing it "into" the existing (assume existing gets modified in-place?)
@@ -346,7 +346,7 @@ namespace contentapi.Controllers
             {
                 var existing = await GetSingleBaseAsync(id);
 
-                if(!services.access.CanDelete(existing.Entity, await GetCurrentUserAsync()))
+                if(!services.access.CanDo(existing.Entity, await GetCurrentUserAsync(), EntityAction.Delete))
                     return Unauthorized("You cannot delete this item!");
 
                 await Delete_PrecheckAsync(existing);

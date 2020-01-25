@@ -58,6 +58,12 @@ namespace contentapi.test
             services.Replace(ServiceDescriptor.Singleton<ILanguageService>(language));
             services.AddTransient<T>();
 
+            //Do special configs
+            services.Replace(ServiceDescriptor.Singleton<AccessConfig>(new AccessConfig()
+            {
+                OwnerPermissions = EntityAction.None
+            }));
+
             var realProvider = services.BuildServiceProvider();
             instance.Provider = realProvider;
             instance.Controller = (T)ActivatorUtilities.CreateInstance(realProvider, typeof(T));

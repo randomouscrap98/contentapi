@@ -11,12 +11,17 @@ namespace contentapi.test
     {
         private AccessService CreateService()
         {
-            return new AccessService();
+            return new AccessService(new Configs.AccessConfig());
         }
 
         private EntityAction GetAllActions()
         {
             return EntityAction.Create | EntityAction.Read | EntityAction.Update | EntityAction.Delete;
+        }
+
+        private IEnumerable<EntityAction> GetAllActionsSeparate()
+        {
+            return ((EntityAction[])Enum.GetValues(typeof(EntityAction))).Where(x => (x & GetAllActions()) > 0);
         }
 
         private Entity GetDefaultEntity()
@@ -29,13 +34,14 @@ namespace contentapi.test
         [InlineData("R", EntityAction.Read)]
         [InlineData("U", EntityAction.Update)]
         [InlineData("D", EntityAction.Delete)]
+        [InlineData("c", EntityAction.Create)]
         [InlineData("CD", EntityAction.Create | EntityAction.Delete)]
         [InlineData("DUR", EntityAction.Delete | EntityAction.Update | EntityAction.Read)]
         [InlineData("RDC", EntityAction.Read | EntityAction.Delete | EntityAction.Create)]
         public void CheckStringToAccess(string format, EntityAction action)
         {
             var service = CreateService();
-            Assert.True(service.StringToAccess(format) == action);
+            Assert.Equal(action, service.StringToAccess(format));
         }
 
         //This test depends on the ORDER of the CRUD! If that's not what you want, fix it!
@@ -50,11 +56,10 @@ namespace contentapi.test
         public void CheckAccessToString(string format, EntityAction action)
         {
             var service = CreateService();
-            Assert.True(service.AccessToString(action) == format);
+            Assert.Equal(format, service.AccessToString(action));
         }
 
         [Theory]
-        [InlineData("c")]
         [InlineData("RUUD")]
         [InlineData("CC")]
         [InlineData("Z")]
@@ -71,10 +76,8 @@ namespace contentapi.test
             var service = CreateService();
             var user = new UserEntity() {entityId = id};
 
-            Assert.True(service.CanCreate(model, user));
-            Assert.True(service.CanRead(model, user));
-            Assert.True(service.CanUpdate(model, user));
-            Assert.True(service.CanDelete(model, user));
+            foreach(var action in GetAllActionsSeparate())
+                Assert.True(service.CanDo(model, user, action));
         }
 
         [Fact]
@@ -84,10 +87,8 @@ namespace contentapi.test
             var user = new UserEntity() {entityId = 5};
             var model = new Entity() {};
 
-            Assert.False(service.CanCreate(model, user));
-            Assert.False(service.CanRead(model, user));
-            Assert.False(service.CanUpdate(model, user));
-            Assert.False(service.CanDelete(model, user));
+            foreach(var action in GetAllActionsSeparate())
+                Assert.False(service.CanDo(model, user, action));
         }
 
         [Fact]

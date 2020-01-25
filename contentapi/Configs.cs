@@ -1,4 +1,6 @@
 using System;
+using System.Collections.Generic;
+using contentapi.Models;
 
 // These are ALL config objects pulled from appsettings or whatever it's called. Those
 // json files that are loaded for development and production.
@@ -15,6 +17,20 @@ namespace contentapi.Configs
     {
         public TimeSpan TokenExpiration = TimeSpan.FromDays(60);
         public string SecretKey = null;
+    }
+
+    public class AccessConfig
+    {
+        //Don't worry about this for now
+        public EntityAction OwnerPermissions = EntityAction.Create | EntityAction.Read | EntityAction.Update;
+
+        public Dictionary<EntityAction, string> ActionMapping = new Dictionary<EntityAction, string>()
+        {
+            { EntityAction.Create, "C" },
+            { EntityAction.Read, "R"},
+            { EntityAction.Update, "U"},
+            { EntityAction.Delete, "D"}
+        };
     }
 
     public class EmailConfig
@@ -45,5 +61,6 @@ namespace contentapi.Configs
         public EmailConfig EmailConfig = new EmailConfig();
         public LanguageConfig LanguageConfig = new LanguageConfig();
         public HashConfig HashConfig = new HashConfig();
+        public AccessConfig AccessConfig = new AccessConfig();
     }
 }

@@ -18,7 +18,7 @@ namespace contentapi.test
                 cfg.CreateMap<UserView,UserEntity>();
             }); 
             var mapper = mapperConfig.CreateMapper();
-            return new EntityService(mapper, new AccessService());
+            return new EntityService(mapper, new AccessService(new Configs.AccessConfig()));
         }
 
         private UserView GetSimpleUserView()

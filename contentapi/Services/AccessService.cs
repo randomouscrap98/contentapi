@@ -2,29 +2,29 @@ using System;
 using System.Collections.Generic;
 using System.Linq;
 using System.Text;
+using contentapi.Configs;
 using contentapi.Models;
 
 namespace contentapi.Services
 {
     public class AccessService
     {
-        public Dictionary<EntityAction, string> ActionMapping = new Dictionary<EntityAction, string>()
+        public AccessConfig Config;
+
+        public AccessService(AccessConfig config)
         {
-            { EntityAction.Create, "C" },
-            { EntityAction.Read, "R"},
-            { EntityAction.Update, "U"},
-            { EntityAction.Delete, "D"}
-        };
+            this.Config = config;
+        }
 
         public bool CanDo(Entity model, UserEntity user, EntityAction action)
         {
+            //OK so SPECIAL THING! If the user owns the model, the user can do anything. THIS MIGHT CHANGE,
+            //that's why it's a separate check
+            if(model.userId != null && model.userId == user?.entityId && (action & Config.OwnerPermissions) != 0)
+                return true;
+
             return (model.baseAllow & action) != 0 || (user != null && model.AccessList != null && model.AccessList.Any(x => x.userId == user.entityId && (x.allow & action) != 0));
         }
-
-        public bool CanCreate(Entity model, UserEntity user) { return CanDo(model, user, EntityAction.Create); }
-        public bool CanRead(Entity model, UserEntity user) { return CanDo(model, user, EntityAction.Read); }
-        public bool CanUpdate(Entity model, UserEntity user) { return CanDo(model, user, EntityAction.Update); }
-        public bool CanDelete(Entity model, UserEntity user) { return CanDo(model, user, EntityAction.Delete); }
 
         public IQueryable<W> WhereReadable<W>(IQueryable<W> origin, UserEntity user) where W : EntityChild
         {
@@ -36,8 +36,9 @@ namespace contentapi.Services
         public EntityAction StringToAccess(string access)
         {
             EntityAction baseAction = EntityAction.None;
+            access = access.ToUpper();
 
-            foreach(var mapping in ActionMapping)
+            foreach(var mapping in Config.ActionMapping.ToDictionary(x => x.Key, y => y.Value.ToUpper()))
             {
                 if(access.Contains(mapping.Value))
                 {
@@ -50,7 +51,7 @@ namespace contentapi.Services
             }
 
             if(!string.IsNullOrWhiteSpace(access))
-                throw new InvalidOperationException($"Malformed access string ({string.Join("", ActionMapping.Values)})");
+                throw new InvalidOperationException($"Malformed access string ({string.Join("", Config.ActionMapping.Values)})");
 
             return baseAction;
         }
@@ -59,7 +60,7 @@ namespace contentapi.Services
         {
             string result = "";
 
-            foreach(var mapping in ActionMapping)
+            foreach(var mapping in Config.ActionMapping)
             {
                 if((action & mapping.Key) != 0)
                     result += mapping.Value;
