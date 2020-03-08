@@ -6,15 +6,15 @@
 
   <ItemGroup>
     <PackageReference Include="AutoMapper.Extensions.Microsoft.DependencyInjection" Version="7.0.0" />
-    <PackageReference Include="Microsoft.EntityFrameworkCore.Proxies" Version = "3.0.0" />
+    <PackageReference Include="Microsoft.EntityFrameworkCore.Proxies" Version="3.0.0" />
     <PackageReference Include="Microsoft.EntityFrameworkCore.Sqlite" Version="3.0.0" />
     <PackageReference Include="Microsoft.IdentityModel.Tokens" Version="5.5.0" />
 	<PackageReference Include="Microsoft.AspNetCore.Authentication.JwtBearer" Version="3.0.0" />
+	<PackageReference Include="Randomous.EntitySystem" Version="1.0.1" />
   </ItemGroup>
 
   <Target Name="MigrateThing" BeforeTargets="AfterBuild">
-    <Exec WorkingDirectory="..\contentapi\projectData\" 
-          Command="&quot;C:\Program Files\Git\bin\sh.exe&quot; migrate.sh &quot;$(ProjectDir)content.db&quot; &quot;&quot; debug" />
+    <Exec WorkingDirectory="..\contentapi\projectData\" Command="&quot;C:\Program Files\Git\bin\sh.exe&quot; migrate.sh &quot;$(ProjectDir)content.db&quot; &quot;&quot; debug" />
   </Target>
 
 </Project>
