@@ -1,3 +1,8 @@
+using System;
+using System.Collections;
+using System.Collections.Generic;
+using System.Linq;
+using System.Linq.Expressions;
 using contentapi.Models;
 using Microsoft.EntityFrameworkCore;
 
@@ -19,4 +24,23 @@ namespace contentapi
         public DbSet<EntityAccess> EntityAccess {get;set;}
         public DbSet<EntityLog> EntityLogs {get;set;}
     }
+
+    /*public class whatever<T> : IQueryable<T>
+    {
+        public IQueryable<T> magic;
+        public Type ElementType => magic.ElementType;
+        public Expression Expression => magic.Expression;
+
+        public IQueryProvider Provider => throw new NotImplementedException();
+
+        public IEnumerator<T> GetEnumerator()
+        {
+            throw new NotImplementedException();
+        }
+
+        IEnumerator IEnumerable.GetEnumerator()
+        {
+            throw new NotImplementedException();
+        }
+    }*/
 }
