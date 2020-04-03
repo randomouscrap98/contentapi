@@ -1,0 +1,8 @@
+3-29-2020:
+-Come up with object system again (user, permissions, categories, etc)
+-Map object system to entity system
+-Figure out how "expand" fits in. If everything expanded, just make simple 
+ CRUD interfaces for each object.
+-NO special things: everything is an object with CRUD (including user registration)
+-User registration objects. Make the client CREATE a registration.
+-Fix "GetServiceOrCreateInstance" in entitysystem
