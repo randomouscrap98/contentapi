@@ -19,6 +19,7 @@ namespace contentapi.Controllers
         protected IEntityProvider entityProvider;
         protected IEmailService emailService;
         protected ILanguageService languageService;
+        protected ITokenService tokenService;
 
         public const string EmailKey = "se";
         public const string PasswordHashKey = "sph";
@@ -26,13 +27,14 @@ namespace contentapi.Controllers
         public const string RegistrationCodeKey = "srk";
 
         public UserController(ILogger<UserController> logger, IHashService hashService, IEntityProvider entityProvider,
-            IEmailService emailService, ILanguageService languageService) 
+            IEmailService emailService, ILanguageService languageService, ITokenService tokenService) 
         { 
             this.logger = logger;
             this.hashService = hashService;
             this.entityProvider = entityProvider;
             this.emailService = emailService;
             this.languageService = languageService;
+            this.tokenService = tokenService;
         }
 
         protected async Task<List<Entity>> FindByUsernameAsync(string username)
@@ -213,18 +215,19 @@ namespace contentapi.Controllers
                 return BadRequest("Must provide a valid username or email!");
             
             var completeUser = (await entityProvider.ExpandAsync(foundUser)).First();
-            //var registrationCode = await FindRegistrationCodeAsync(foundUser);
 
-            if(completeUser.Values.ContainsKey(RegistrationCodeKey)) //registrationCode.Count() > 0) //There's a registration code pending
+            if(completeUser.Values.ContainsKey(RegistrationCodeKey)) //There's a registration code pending
                 return BadRequest("You must confirm your email first");
 
             var hash = hashService.GetHash(user.password, Convert.FromBase64String(completeUser.Values[PasswordSaltKey].First().value));
-            //foundUser.passwordSalt);
 
             if(!hash.SequenceEqual(Convert.FromBase64String(completeUser.Values[PasswordHashKey].First().value)))
                 return BadRequest("Password incorrect!");
 
-            return services.session.GetToken(foundUser);
+            return tokenService.GetToken(new Dictionary<string, string>()
+            {
+                { "uid", completeUser.Entity.id.ToString() }
+            });
         }
     }
 }
