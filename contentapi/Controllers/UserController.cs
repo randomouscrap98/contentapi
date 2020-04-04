@@ -17,17 +17,46 @@ namespace contentapi.Controllers
         protected ILogger<UserController> logger;
         protected IHashService hashService;
         protected IEntityProvider entityProvider;
+        protected IEmailService emailService;
+        protected ILanguageService languageService;
 
         public const string EmailKey = "se";
         public const string PasswordHashKey = "sph";
         public const string PasswordSaltKey = "sps";
         public const string RegistrationCodeKey = "srk";
 
-        public UserController(ILogger<UserController> logger, IHashService hashService, IEntityProvider entityProvider) 
+        public UserController(ILogger<UserController> logger, IHashService hashService, IEntityProvider entityProvider,
+            IEmailService emailService, ILanguageService languageService) 
         { 
             this.logger = logger;
             this.hashService = hashService;
             this.entityProvider = entityProvider;
+            this.emailService = emailService;
+            this.languageService = languageService;
+        }
+
+        protected async Task<List<Entity>> FindByUsernameAsync(string username)
+        {
+            return await entityProvider.GetEntitiesAsync(new EntitySearch() { NameLike = username });
+        }
+
+        protected async Task<List<EntityValue>> FindByEmailAsync(string email)
+        {
+            return await entityProvider.GetEntityValuesAsync(new EntityValueSearch() { KeyLike = EmailKey, ValueLike = email});
+        }
+
+        protected async Task<List<Entity>> FindByIdAsync(long id)
+        {
+            var search = new EntitySearch();
+            search.Ids.Add(id);
+            return await entityProvider.GetEntitiesAsync(search);
+        }
+
+        protected async Task<List<EntityValue>> FindRegistrationCodeAsync(long id)
+        {
+            var valueSearch = new EntityValueSearch() { KeyLike = RegistrationCodeKey };
+            valueSearch.EntityIds.Add(id);
+            return await entityProvider.GetEntityValuesAsync(valueSearch);
         }
 
         //You 'Create' a new user by posting ONLY 'credentials'. This is different than most other types of things...
@@ -43,8 +72,8 @@ namespace contentapi.Controllers
             if(user.email == null)
                 return BadRequest("Must provide an email!");
 
-            var existingByUsername = await entityProvider.GetEntitiesAsync(new EntitySearch() { NameLike = user.username});
-            var existingByEmail = await entityProvider.GetEntityValuesAsync(new EntityValueSearch() { KeyLike = EmailKey, ValueLike = user.email});
+            var existingByUsername = await FindByUsernameAsync(user.username);
+            var existingByEmail = await FindByEmailAsync(user.email);
 
             if(existingByUsername.Count() > 0 || existingByEmail.Count() > 0)
                 return BadRequest("This user already seems to exist!");
@@ -92,7 +121,6 @@ namespace contentapi.Controllers
             };
 
             return view;
-            //return services.entity.ConvertFromEntity<UserEntity, UserView>(createUser); //services.mapper.Map<UserView>(createUser);
         }
 
         //[HttpGet("me")]
@@ -107,86 +135,96 @@ namespace contentapi.Controllers
         //}
 
         //Temp class stuff to make life... easier?
-        public class RegistrationData
+        public class SendEmailBody
         {
             public string email {get;set;}
         }
 
-        //public virtual async Task SendConfirmationEmailAsync(string recipient, string code)
-        //{
-        //    var subject = services.language.GetString("ConfirmEmailSubject", "en");
-        //    var body = services.language.GetString("ConfirmEmailBody", "en", new Dictionary<string, object>() {{"confirmCode", code}});
-        //    await services.email.SendEmailAsync(new EmailMessage(recipient, subject, body));
-        //}
+        public virtual async Task SendConfirmationEmailAsync(string recipient, string code)
+        {
+            var subject = languageService.GetString("ConfirmEmailSubject", "en");
+            var body = languageService.GetString("ConfirmEmailBody", "en", new Dictionary<string, object>() {{"confirmCode", code}});
+            await emailService.SendEmailAsync(new EmailMessage(recipient, subject, body));
+        }
 
         [HttpPost("sendemail")]
         [AllowAnonymous]
-        public async Task<ActionResult> SendRegistrationEmail([FromBody]RegistrationData data)
+        public async Task<ActionResult> SendRegistrationEmail([FromBody]SendEmailBody data)
         {
-            var foundUser = await (await GetAllReadableAsync()).FirstOrDefaultAsync(x => x.email == data.email);
+            var foundValue = await FindByEmailAsync(data.email);
 
-            if(foundUser == null)
+            if(foundValue.Count() == 0)
                 return BadRequest("No user with that email");
-            if(foundUser.registerCode == null)
+
+            //Now look up the registration code (that's all we need from user)
+            var registrationCode = await FindRegistrationCodeAsync(foundValue.First().entityId);
+
+            if(registrationCode.Count() == 0)
                 return BadRequest("Nothing to do for user");
 
-            await SendConfirmationEmailAsync(data.email, foundUser.registerCode);
+            await SendConfirmationEmailAsync(data.email, registrationCode.First().value);
 
             return Ok("Email sent");
         }
 
-        ////Temp class stuff to make life... easier?
-        //public class ConfirmationData
-        //{
-        //    public string confirmationKey {get;set;}
-        //}
+        //Temp class stuff to make life... easier?
+        public class ConfirmBody
+        {
+            public string confirmationKey {get;set;}
+        }
 
-        //[HttpPost("confirm")]
-        //[AllowAnonymous]
-        //public async Task<ActionResult> ConfirmEmail([FromBody]ConfirmationData data)
-        //{
-        //    if(string.IsNullOrEmpty(data.confirmationKey))
-        //        return BadRequest("Must provide a confirmation key in the body");
+        [HttpPost("confirm")]
+        [AllowAnonymous]
+        public async Task<ActionResult> ConfirmEmail([FromBody]ConfirmBody data)
+        {
+            if(string.IsNullOrEmpty(data.confirmationKey))
+                return BadRequest("Must provide a confirmation key in the body");
 
-        //    var users = await GetAllReadableAsync(); //services.context.GetAll<User>();
-        //    var foundUser = await users.FirstOrDefaultAsync(x => x.registerCode == data.confirmationKey);
+            var valueSearch = new EntityValueSearch() { KeyLike = RegistrationCodeKey, ValueLike = data.confirmationKey };
+            var values = await entityProvider.GetEntityValuesAsync(valueSearch);
 
-        //    if(foundUser == null)
-        //        return BadRequest("No user found with confirmation key");
+            if(values.Count() == 0)
+                return BadRequest("No user found with confirmation key");
 
-        //    foundUser.registerCode = null;
+            await entityProvider.DeleteAsync(values.ToArray());
 
-        //    services.context.Set<UserEntity>().Update(foundUser);
-        //    await services.context.SaveChangesAsync();
+            return Ok("Email Confirmed");
+        }
 
-        //    return Ok("Email Confirmed");
-        //}
+        [HttpPost("authenticate")]
+        [AllowAnonymous]
+        public async Task<ActionResult<string>> Authenticate([FromBody]UserCredential user)
+        {
+            Entity foundUser = null;
 
-        //[HttpPost("authenticate")]
-        //[AllowAnonymous]
-        //public async Task<ActionResult<string>> Authenticate([FromBody]UserCredential user)
-        //{
-        //    UserEntity foundUser = null;
-        //    var users = await GetAllReadableAsync(); //services.context.GetAll<User>();
+            if(user.username != null)
+            {
+                foundUser = (await FindByUsernameAsync(user.username)).FirstOrDefault();
+            }
+            else if (user.email != null)
+            {
+                var foundEmail = (await FindByEmailAsync(user.email)).FirstOrDefault();
+                if(foundEmail != null)
+                    foundUser = (await FindByIdAsync(foundEmail.entityId)).FirstOrDefault(); 
+            }
 
-        //    if(user.username != null)
-        //        foundUser = await users.FirstOrDefaultAsync(x => x.username == user.username);
-        //    else if (user.email != null)
-        //        foundUser = await users.FirstOrDefaultAsync(x => x.email == user.email);
+            //Should this be the same as bad password? eeeehhhh
+            if(foundUser == null)
+                return BadRequest("Must provide a valid username or email!");
+            
+            var completeUser = (await entityProvider.ExpandAsync(foundUser)).First();
+            //var registrationCode = await FindRegistrationCodeAsync(foundUser);
 
-        //    //Should this be the same as bad password? eeeehhhh
-        //    if(foundUser == null)
-        //        return BadRequest("Must provide a valid username or email!");
+            if(completeUser.Values.ContainsKey(RegistrationCodeKey)) //registrationCode.Count() > 0) //There's a registration code pending
+                return BadRequest("You must confirm your email first");
 
-        //    if(foundUser.registerCode != null)
-        //        return BadRequest("You must confirm your email first");
+            var hash = hashService.GetHash(user.password, Convert.FromBase64String(completeUser.Values[PasswordSaltKey].First().value));
+            //foundUser.passwordSalt);
 
-        //    var hash = services.hash.GetHash(user.password, foundUser.passwordSalt);
+            if(!hash.SequenceEqual(Convert.FromBase64String(completeUser.Values[PasswordHashKey].First().value)))
+                return BadRequest("Password incorrect!");
 
-        //    if(!hash.SequenceEqual(foundUser.passwordHash))
-        //        return BadRequest("Password incorrect!");
-
-        //    return services.session.GetToken(foundUser);
-        //}
+            return services.session.GetToken(foundUser);
+        }
     }
 }
