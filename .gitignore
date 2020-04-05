@@ -39,4 +39,5 @@ msbuild.wrn
 #mystuff
 contentapi.hardtests
 contentapi/content.db
+contentapi/LanguageFiles
 mytemp

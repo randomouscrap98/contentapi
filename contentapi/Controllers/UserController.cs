@@ -9,12 +9,12 @@ using System.Collections.Generic;
 using contentapi.Services;
 using Microsoft.Extensions.Logging;
 using Randomous.EntitySystem;
+using System.Security.Claims;
 
 namespace contentapi.Controllers
 {
     [Route("api/[controller]")]
     [ApiController]
-    [Authorize]
     public class UserController : ControllerBase
     {
         protected ILogger<UserController> logger;
@@ -23,6 +23,8 @@ namespace contentapi.Controllers
         protected IEmailService emailService;
         protected ILanguageService languageService;
         protected ITokenService tokenService;
+
+        public const string UserIdentifier = "uid";
 
         public const string EmailKey = "se";
         public const string PasswordHashKey = "sph";
@@ -64,10 +66,24 @@ namespace contentapi.Controllers
             return await entityProvider.GetEntityValuesAsync(valueSearch);
         }
 
+        protected UserView GetViewFromExpanded(EntityPackage user, bool includeEmail = false)
+        {
+            var view = new UserView()
+            {
+                id = user.Entity.id,
+                createDate = user.Entity.createDate,
+                username = user.Entity.name,
+            };
+
+            if(includeEmail)
+                view.email = user.Values[EmailKey].First().value; //We're the creator so we get to see the email
+            
+            return view;
+        }
+
         //You 'Create' a new user by posting ONLY 'credentials'. This is different than most other types of things...
         //passwords and emails and such shouldn't be included in every view unlike regular models where every field is there.
-        [HttpPost("credentials")]
-        [AllowAnonymous]
+        [HttpPost("register")]
         public async Task<ActionResult<UserView>> PostCredentials([FromBody]UserCredential user)
         {
             //One day, fix these so they're the "standard" bad object request from model validation!!
@@ -117,27 +133,39 @@ namespace contentapi.Controllers
             //Note the last parameter: the create user is ALWAYS the user that just got created! The user "creates" itself!
             //await LogAct(EntityAction.Create, createUser.entityId, createUser.entityId);
 
-            var view = new UserView()
-            {
-                id = newUser.Entity.id,
-                createDate = newUser.Entity.createDate,
-                username = newUser.Entity.name,
-                email = newUser.Values[EmailKey].First().value //We're the creator so we get to see the email
-            };
-
-            return view;
+            return GetViewFromExpanded(newUser, true);
         }
 
-        //[HttpGet("me")]
-        //public async Task<ActionResult<UserView>> Me()
+        //[HttpGet]
+        //public async Task<ActionResult<List<int>>> GetUsers()
         //{
-        //    var uid = services.session.GetCurrentUid();
 
-        //    if(uid <= 0)
-        //        return BadRequest("Not logged in!");
-
-        //    return await GetSingle(services.session.GetCurrentUid());
         //}
+
+
+        [HttpGet("{id}")]
+        public async Task<ActionResult<UserView>> GetUser([FromRoute]long id)
+        {
+            var user = await FindByIdAsync(id);
+
+            if(user.Count != 1)
+                return NotFound($"User with id {id} not found");
+            
+            var fullUser = (await entityProvider.ExpandAsync(user.First())).First(); //Allow this to throw exceptions (for now)
+            return GetViewFromExpanded(fullUser);
+        }
+
+        [HttpGet("me")]
+        public async Task<ActionResult<UserView>> Me()
+        {
+            //var uid = services.session.GetCurrentUid();
+            var id = User.FindFirstValue(UserIdentifier);
+
+            if(id == null)
+                return BadRequest("Not logged in!");
+
+            return await GetUser(long.Parse(id)); //GetSingle(services.session.GetCurrentUid());
+        }
 
         //Temp class stuff to make life... easier?
         public class SendEmailBody
@@ -152,8 +180,7 @@ namespace contentapi.Controllers
             await emailService.SendEmailAsync(new EmailMessage(recipient, subject, body));
         }
 
-        [HttpPost("sendemail")]
-        [AllowAnonymous]
+        [HttpPost("register/sendemail")]
         public async Task<ActionResult> SendRegistrationEmail([FromBody]SendEmailBody data)
         {
             var foundValue = await FindByEmailAsync(data.email);
@@ -178,8 +205,7 @@ namespace contentapi.Controllers
             public string confirmationKey {get;set;}
         }
 
-        [HttpPost("confirm")]
-        [AllowAnonymous]
+        [HttpPost("register/confirm")]
         public async Task<ActionResult> ConfirmEmail([FromBody]ConfirmBody data)
         {
             if(string.IsNullOrEmpty(data.confirmationKey))
@@ -197,7 +223,6 @@ namespace contentapi.Controllers
         }
 
         [HttpPost("authenticate")]
-        [AllowAnonymous]
         public async Task<ActionResult<string>> Authenticate([FromBody]UserCredential user)
         {
             Entity foundUser = null;

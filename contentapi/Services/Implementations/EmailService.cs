@@ -1,6 +1,7 @@
 using System.Net;
 using System.Net.Mail;
 using System.Threading.Tasks;
+using Microsoft.Extensions.Logging;
 
 namespace contentapi.Services.Implementations
 {
@@ -16,16 +17,13 @@ namespace contentapi.Services.Implementations
 
     public class EmailService : IEmailService
     {
+        protected ILogger<EmailService> logger;
         public EmailConfig Config = null;
 
-        public EmailService(EmailConfig config)
+        public EmailService(ILogger<EmailService> logger, EmailConfig config)
         {
+            this.logger = logger;
             this.Config = config;
-        }
-
-        public void SendEmail(EmailMessage message)
-        {
-            SendEmailAsync(message).Wait();
         }
 
         public async Task SendEmailAsync(EmailMessage message)
@@ -36,6 +34,8 @@ namespace contentapi.Services.Implementations
                 mailMessage.From = new MailAddress(Config.User);
                 mailMessage.Subject = $"{Config.SubjectFront} - {message.Title}";
                 mailMessage.Body = message.Body;
+
+                logger.LogDebug($"Sending email to {string.Join(",", message.Recipients)} using {Config.Host}:{Config.User}");
 
                 using(var client = new SmtpClient(Config.Host))
                 {

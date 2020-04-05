@@ -13,7 +13,7 @@
   </ItemGroup>
 
   <Target Name="CopyFiles" BeforeTargets="AfterBuild">
-    <Exec Command="xcopy ..\projectData\content.db &quot;$(ProjectDir)*&quot; /s /d" />
+    <Exec Command="xcopy ..\projectData\* &quot;$(ProjectDir)*&quot; /s /d" />
   </Target>
   <!--<ItemGroup>
     <None Include="..\projectData\content.db" CopyToOutputDirectory="PreserveNewest" />
