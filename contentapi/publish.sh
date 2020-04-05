@@ -42,6 +42,9 @@ hostrsync()
 rm -rf "$lpfolder"
 dotnet publish -r $mtype -c Release -p:PublishSingleFile=true
 
+# You need these, and they're likely to be the same all the time on every system
+cp -r LanguageFiles "$lpfolder"
+
 # Now put the stuff on the server! A simple direct copy
 hostrsync "$lpfolder" "$pfolder"
 
