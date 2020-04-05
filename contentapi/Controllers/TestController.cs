@@ -21,16 +21,23 @@ namespace contentapi.Controllers
 
         public class TestData
         {
-            public int EntityCount = -1;
+            public int EntityCount {get;set;}= -1;
+            public int ValueCount {get;set;}= -1;
+            public int RelationCount {get;set;}= -1;
         }
 
         [HttpGet]
         public async Task<ActionResult<TestData>> TestGet()
         {
             var entities = await entityProvider.GetEntitiesAsync(new EntitySearch()); //This should get all?
+            var values = await entityProvider.GetEntityValuesAsync(new EntityValueSearch()); //This should get all?
+            var relations = await entityProvider.GetEntityRelationsAsync(new EntityRelationSearch()); //This should get all?
+
             return new TestData()
             {
-                EntityCount = entities.Count
+                EntityCount = entities.Count,
+                ValueCount = values.Count,
+                RelationCount = relations.Count
             };
         }
     }
