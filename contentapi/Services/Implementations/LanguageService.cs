@@ -2,6 +2,7 @@ using System;
 using System.Collections.Generic;
 using System.IO;
 using System.Text;
+using Microsoft.Extensions.Logging;
 
 namespace contentapi.Services.Implementations
 {
@@ -15,10 +16,12 @@ namespace contentapi.Services.Implementations
     {
         //Absolutely NO caching right now!
         public LanguageConfig Config;
+        protected ILogger<LanguageService> logger;
 
-        public LanguageService(LanguageConfig config)
+        public LanguageService(ILogger<LanguageService> logger, LanguageConfig config)
         {
             this.Config = config;
+            this.logger = logger;
         }
 
         public string GetTagReplaceable(string tag)
