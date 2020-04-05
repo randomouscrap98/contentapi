@@ -10,11 +10,13 @@ using Microsoft.AspNetCore.Builder;
 using Microsoft.AspNetCore.Hosting;
 using Microsoft.AspNetCore.HttpsPolicy;
 using Microsoft.AspNetCore.Mvc;
+using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Hosting;
 using Microsoft.Extensions.Logging;
 using Microsoft.IdentityModel.Tokens;
+using Randomous.EntitySystem;
 
 namespace contentapi
 {
@@ -35,6 +37,22 @@ namespace contentapi
             return config;
         }
 
+        /// <summary>
+        /// A temporary function that should eventually be moved into the entitysystem dll
+        /// </summary>
+        /// <param name="services"></param>
+        public void ConfigureEntitySystem(IServiceCollection services, string connectionString)
+        {
+            //services.AddLogging(configure => configure.AddSerilog(new LoggerConfiguration().WriteTo.File($"{GetType()}.txt").CreateLogger()));
+            services.AddSingleton(new GeneralHelper());
+            services.AddTransient<IEntitySearcher, EntitySearcher>();
+            services.AddTransient<IEntityProvider, EntityProviderEfCore>();
+            services.AddTransient<EntityProviderBaseServices>();
+            services.AddTransient<ISignaler<EntityBase>, SignalSystem<EntityBase>>();
+            services.AddDbContext<BaseEntityContext>(options => options.UseSqlite(connectionString)); //.EnableSensitiveDataLogging(true));
+            services.AddScoped<DbContext, BaseEntityContext>();
+        }
+
         // This method gets called by the runtime. Use this method to add services to the container.
         public void ConfigureServices(IServiceCollection services)
         {
@@ -50,6 +68,8 @@ namespace contentapi
             services.AddTransient<ILanguageService, LanguageService>();
             services.AddTransient<ITokenService, TokenService>();
             services.AddTransient<IHashService, HashService>();
+
+            ConfigureEntitySystem(services, dataSection.GetValue<string>("ContentConnectionString"));
 
             services.AddCors();
             services.AddControllers();

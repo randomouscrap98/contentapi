@@ -12,6 +12,9 @@ using Randomous.EntitySystem;
 
 namespace contentapi.Controllers
 {
+    [Route("api/[controller]")]
+    [ApiController]
+    [Authorize]
     public class UserController : ControllerBase
     {
         protected ILogger<UserController> logger;
