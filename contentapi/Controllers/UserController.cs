@@ -145,7 +145,7 @@ namespace contentapi.Controllers
             public string email {get;set;}
         }
 
-        public virtual async Task SendConfirmationEmailAsync(string recipient, string code)
+        protected virtual async Task SendConfirmationEmailAsync(string recipient, string code)
         {
             var subject = languageService.GetString("ConfirmEmailSubject", "en");
             var body = languageService.GetString("ConfirmEmailBody", "en", new Dictionary<string, object>() {{"confirmCode", code}});
