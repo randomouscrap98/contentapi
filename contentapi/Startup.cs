@@ -3,6 +3,7 @@ using System.Collections.Generic;
 using System.Linq;
 using System.Text;
 using System.Threading.Tasks;
+using AutoMapper;
 using contentapi.Services;
 using contentapi.Services.Implementations;
 using Microsoft.AspNetCore.Authentication.JwtBearer;
@@ -74,6 +75,7 @@ namespace contentapi
 
             services.AddCors();
             services.AddControllers();
+            services.AddAutoMapper(typeof(Startup));
 
             //This is all that JWT junk. I hope it still works like this... I just copied this from my core 2.0 project
             services.AddAuthentication(x =>
@@ -123,6 +125,7 @@ namespace contentapi
                 endpoints.MapControllers();
             });
 
+            //Swagger is the API documentation
             app.UseSwagger();
             app.UseSwaggerUI(c =>
             {

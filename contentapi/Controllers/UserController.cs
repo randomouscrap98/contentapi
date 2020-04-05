@@ -10,9 +10,23 @@ using contentapi.Services;
 using Microsoft.Extensions.Logging;
 using Randomous.EntitySystem;
 using System.Security.Claims;
+using AutoMapper;
 
 namespace contentapi.Controllers
 {
+        public class UserSearch : EntitySearchBase
+        {
+            public string Username {get;set;}
+        }
+
+        public class UserSearchProfile : Profile
+        {
+            public UserSearchProfile()
+            {
+                CreateMap<UserSearch, EntitySearch>().ForMember(x => x.NameLike, o => o.MapFrom(s => s.Username));
+            }
+        }
+
     [Route("api/[controller]")]
     [ApiController]
     public class UserController : ControllerBase
@@ -23,6 +37,7 @@ namespace contentapi.Controllers
         protected IEmailService emailService;
         protected ILanguageService languageService;
         protected ITokenService tokenService;
+        protected IMapper mapper;
 
         public const string UserIdentifier = "uid";
 
@@ -32,7 +47,7 @@ namespace contentapi.Controllers
         public const string RegistrationCodeKey = "srk";
 
         public UserController(ILogger<UserController> logger, IHashService hashService, IEntityProvider entityProvider,
-            IEmailService emailService, ILanguageService languageService, ITokenService tokenService) 
+            IEmailService emailService, ILanguageService languageService, ITokenService tokenService, IMapper mapper) 
         { 
             this.logger = logger;
             this.hashService = hashService;
@@ -40,6 +55,7 @@ namespace contentapi.Controllers
             this.emailService = emailService;
             this.languageService = languageService;
             this.tokenService = tokenService;
+            this.mapper = mapper;
         }
 
         protected async Task<List<Entity>> FindByUsernameAsync(string username)
@@ -136,11 +152,16 @@ namespace contentapi.Controllers
             return GetViewFromExpanded(newUser, true);
         }
 
-        //[HttpGet]
-        //public async Task<ActionResult<List<int>>> GetUsers()
-        //{
-
-        //}
+        [HttpGet]
+        public async Task<ActionResult<List<UserView>>> GetUsers([FromQuery]UserSearch search)
+        {
+            var entitySearch = mapper.Map<EntitySearch>(search);
+            if(entitySearch.Limit < 0 || entitySearch.Limit > 1000)
+                entitySearch.Limit = 1000;
+            var entities = await entityProvider.GetEntitiesAsync(entitySearch);
+            var realEntities = await entityProvider.ExpandAsync(entities.ToArray());
+            return realEntities.Select(x => GetViewFromExpanded(x)).ToList();
+        }
 
 
         [HttpGet("{id}")]
