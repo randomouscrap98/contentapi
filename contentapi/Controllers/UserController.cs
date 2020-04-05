@@ -14,26 +14,22 @@ using AutoMapper;
 
 namespace contentapi.Controllers
 {
-        public class UserSearch : EntitySearchBase
-        {
-            public string Username {get;set;}
-        }
-
-        public class UserSearchProfile : Profile
-        {
-            public UserSearchProfile()
-            {
-                CreateMap<UserSearch, EntitySearch>().ForMember(x => x.NameLike, o => o.MapFrom(s => s.Username));
-            }
-        }
-
-    [Route("api/[controller]")]
-    [ApiController]
-    public class UserController : ControllerBase
+    public class UserSearch : EntitySearchBase
     {
-        protected ILogger<UserController> logger;
+        public string Username {get;set;}
+    }
+
+    public class UserSearchProfile : Profile
+    {
+        public UserSearchProfile()
+        {
+            CreateMap<UserSearch, EntitySearch>().ForMember(x => x.NameLike, o => o.MapFrom(s => s.Username));
+        }
+    }
+
+    public class UserController : EntityBaseController
+    {
         protected IHashService hashService;
-        protected IEntityProvider entityProvider;
         protected IEmailService emailService;
         protected ILanguageService languageService;
         protected ITokenService tokenService;
@@ -47,32 +43,20 @@ namespace contentapi.Controllers
         public const string RegistrationCodeKey = "srk";
 
         public UserController(ILogger<UserController> logger, IHashService hashService, IEntityProvider entityProvider,
-            IEmailService emailService, ILanguageService languageService, ITokenService tokenService, IMapper mapper) 
+            IEmailService emailService, ILanguageService languageService, ITokenService tokenService, IMapper mapper) :
+            base(logger, entityProvider)
         { 
-            this.logger = logger;
             this.hashService = hashService;
-            this.entityProvider = entityProvider;
             this.emailService = emailService;
             this.languageService = languageService;
             this.tokenService = tokenService;
             this.mapper = mapper;
         }
 
-        protected async Task<List<Entity>> FindByUsernameAsync(string username)
-        {
-            return await entityProvider.GetEntitiesAsync(new EntitySearch() { NameLike = username });
-        }
 
         protected async Task<List<EntityValue>> FindByEmailAsync(string email)
         {
             return await entityProvider.GetEntityValuesAsync(new EntityValueSearch() { KeyLike = EmailKey, ValueLike = email});
-        }
-
-        protected async Task<List<Entity>> FindByIdAsync(long id)
-        {
-            var search = new EntitySearch();
-            search.Ids.Add(id);
-            return await entityProvider.GetEntitiesAsync(search);
         }
 
         protected async Task<List<EntityValue>> FindRegistrationCodeAsync(long id)
@@ -109,40 +93,22 @@ namespace contentapi.Controllers
             if(user.email == null)
                 return BadRequest("Must provide an email!");
 
-            var existingByUsername = await FindByUsernameAsync(user.username);
+            var existingByUsername = await FindSingleByNameAsync(user.username);
             var existingByEmail = await FindByEmailAsync(user.email);
 
-            if(existingByUsername.Count() > 0 || existingByEmail.Count() > 0)
+            if(existingByUsername != null || existingByEmail.Count() > 0)
                 return BadRequest("This user already seems to exist!");
 
             var salt = hashService.GetSalt();
 
-            var newUser = new EntityPackage()
-            {
-                Entity = new Entity()
-                {
-                    name = user.username,
-                    createDate = DateTime.Now
-                }
-            };
+            var newUser = QuickPackage(user.username);
 
             entityProvider.AddValues(newUser, 
-                new EntityValue() {
-                    key = EmailKey,
-                    value = user.email
-                },
-                new EntityValue() {
-                    key = PasswordSaltKey,
-                    value = Convert.ToBase64String(salt)
-                },
-                new EntityValue() {
-                    key = PasswordHashKey,
-                    value = Convert.ToBase64String(hashService.GetHash(user.password, salt))
-                },
-                new EntityValue() {
-                    key = RegistrationCodeKey,
-                    value = Guid.NewGuid().ToString()
-                });
+                QuickValue(EmailKey, user.email),
+                QuickValue(PasswordSaltKey, Convert.ToBase64String(salt)),
+                QuickValue(PasswordHashKey, Convert.ToBase64String(hashService.GetHash(user.password, salt))),
+                QuickValue(RegistrationCodeKey, Guid.NewGuid().ToString())
+            );
 
             await entityProvider.WriteAsync(newUser);
 
@@ -158,40 +124,32 @@ namespace contentapi.Controllers
             var entitySearch = mapper.Map<EntitySearch>(search);
             if(entitySearch.Limit < 0 || entitySearch.Limit > 1000)
                 entitySearch.Limit = 1000;
-            var entities = await entityProvider.GetEntitiesAsync(entitySearch);
-            var realEntities = await entityProvider.ExpandAsync(entities.ToArray());
-            return realEntities.Select(x => GetViewFromExpanded(x)).ToList();
+            var entities = await SearchAndExpand(entitySearch); 
+            return entities.Select(x => GetViewFromExpanded(x)).ToList();
         }
-
 
         [HttpGet("{id}")]
         public async Task<ActionResult<UserView>> GetUser([FromRoute]long id)
         {
-            var user = await FindByIdAsync(id);
+            var user = await FindSingleByIdAsync(id);
 
-            if(user.Count != 1)
+            if(user == null)
                 return NotFound($"User with id {id} not found");
             
-            var fullUser = (await entityProvider.ExpandAsync(user.First())).First(); //Allow this to throw exceptions (for now)
+            var fullUser = (await entityProvider.ExpandAsync(user)).First(); //Allow this to throw exceptions (for now)
             return GetViewFromExpanded(fullUser);
         }
 
         [HttpGet("me")]
         public async Task<ActionResult<UserView>> Me()
         {
-            //var uid = services.session.GetCurrentUid();
+            //Look for the UID from the JWT 
             var id = User.FindFirstValue(UserIdentifier);
 
             if(id == null)
                 return BadRequest("Not logged in!");
 
-            return await GetUser(long.Parse(id)); //GetSingle(services.session.GetCurrentUid());
-        }
-
-        //Temp class stuff to make life... easier?
-        public class SendEmailBody
-        {
-            public string email {get;set;}
+            return await GetUser(long.Parse(id));
         }
 
         protected virtual async Task SendConfirmationEmailAsync(string recipient, string code)
@@ -202,9 +160,9 @@ namespace contentapi.Controllers
         }
 
         [HttpPost("register/sendemail")]
-        public async Task<ActionResult> SendRegistrationEmail([FromBody]SendEmailBody data)
+        public async Task<ActionResult> SendRegistrationEmail([FromBody]string email)
         {
-            var foundValue = await FindByEmailAsync(data.email);
+            var foundValue = await FindByEmailAsync(email);
 
             if(foundValue.Count() == 0)
                 return BadRequest("No user with that email");
@@ -215,24 +173,19 @@ namespace contentapi.Controllers
             if(registrationCode.Count() == 0)
                 return BadRequest("Nothing to do for user");
 
-            await SendConfirmationEmailAsync(data.email, registrationCode.First().value);
+            await SendConfirmationEmailAsync(email, registrationCode.First().value);
 
             return Ok("Email sent");
         }
 
         //Temp class stuff to make life... easier?
-        public class ConfirmBody
-        {
-            public string confirmationKey {get;set;}
-        }
-
         [HttpPost("register/confirm")]
-        public async Task<ActionResult> ConfirmEmail([FromBody]ConfirmBody data)
+        public async Task<ActionResult> ConfirmEmail([FromBody]string confirmationKey)
         {
-            if(string.IsNullOrEmpty(data.confirmationKey))
+            if(string.IsNullOrEmpty(confirmationKey))
                 return BadRequest("Must provide a confirmation key in the body");
 
-            var valueSearch = new EntityValueSearch() { KeyLike = RegistrationCodeKey, ValueLike = data.confirmationKey };
+            var valueSearch = new EntityValueSearch() { KeyLike = RegistrationCodeKey, ValueLike = confirmationKey };
             var values = await entityProvider.GetEntityValuesAsync(valueSearch);
 
             if(values.Count() == 0)
@@ -250,13 +203,14 @@ namespace contentapi.Controllers
 
             if(user.username != null)
             {
-                foundUser = (await FindByUsernameAsync(user.username)).FirstOrDefault();
+                foundUser = await FindSingleByNameAsync(user.username);
             }
             else if (user.email != null)
             {
                 var foundEmail = (await FindByEmailAsync(user.email)).FirstOrDefault();
+
                 if(foundEmail != null)
-                    foundUser = (await FindByIdAsync(foundEmail.entityId)).FirstOrDefault(); 
+                    foundUser = await FindSingleByIdAsync(foundEmail.entityId);
             }
 
             //Should this be the same as bad password? eeeehhhh
@@ -275,7 +229,7 @@ namespace contentapi.Controllers
 
             return tokenService.GetToken(new Dictionary<string, string>()
             {
-                { "uid", completeUser.Entity.id.ToString() }
+                { UserIdentifier, completeUser.Entity.id.ToString() }
             });
         }
     }
