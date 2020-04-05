@@ -11,8 +11,15 @@
     <PackageReference Include="Randomous.EntitySystem" Version="1.1.0" />
   </ItemGroup>
 
-  <ItemGroup>
+  <Target Name="CopyFiles" BeforeTargets="AfterBuild">
+    <Exec Command="xcopy ..\projectData\content.db &quot;$(ProjectDir)*&quot; /s /d" />
+  </Target>
+  <!--<ItemGroup>
     <None Include="..\projectData\content.db" CopyToOutputDirectory="PreserveNewest" />
-  </ItemGroup>
+  </ItemGroup>-->
+
+  <!--<Target Name="CopyFiles">
+      <Copy SourceFiles="..\projectData\content.db" DestinationFolder="c:\MyProject\Destination" />
+  </Target>-->
 
 </Project>

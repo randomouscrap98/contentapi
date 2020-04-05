@@ -9,8 +9,8 @@ namespace contentapi.Services.Implementations
 {
     public class TokenServiceConfig
     {
-        public TimeSpan TokenExpiration = TimeSpan.FromDays(60);
-        public string SecretKey = null;
+        public TimeSpan TokenExpiration {get;set;} = TimeSpan.FromDays(60);
+        public string SecretKey {get;set;} = null;
     }
 
     public class TokenService : ITokenService

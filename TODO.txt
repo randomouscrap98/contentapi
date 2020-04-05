@@ -6,3 +6,6 @@
 -NO special things: everything is an object with CRUD (including user registration)
 -User registration objects. Make the client CREATE a registration.
 -Fix "GetServiceOrCreateInstance" in entitysystem
+
+4-5-2020:
+-Move entity service setup to entitysystem dll (default services collection)
