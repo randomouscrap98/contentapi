@@ -9,3 +9,10 @@
 
 4-5-2020:
 -Move entity service setup to entitysystem dll (default services collection)
+
+4-6-2020:
+-Re-add or delete EntityPackage (it IS useful... but is it performant?)
+-Add new testing for two queryable services EntityQueryableEfCore + Memory
+-Add ability to inject different queryable to Provider for testing (want to test both in integration)
+-Test other new services + functions added (which ones?)
+-Package new version 2.0

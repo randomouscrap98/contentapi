@@ -33,7 +33,6 @@ namespace contentapi.Controllers
         protected IEmailService emailService;
         protected ILanguageService languageService;
         protected ITokenService tokenService;
-        protected IMapper mapper;
 
         public const string UserIdentifier = "uid";
 
@@ -44,13 +43,12 @@ namespace contentapi.Controllers
 
         public UserController(ILogger<UserController> logger, IHashService hashService, IEntityProvider entityProvider,
             IEmailService emailService, ILanguageService languageService, ITokenService tokenService, IMapper mapper) :
-            base(logger, entityProvider)
+            base(logger, entityProvider, mapper)
         { 
             this.hashService = hashService;
             this.emailService = emailService;
             this.languageService = languageService;
             this.tokenService = tokenService;
-            this.mapper = mapper;
         }
 
 
@@ -66,17 +64,17 @@ namespace contentapi.Controllers
             return await entityProvider.GetEntityValuesAsync(valueSearch);
         }
 
-        protected UserView GetViewFromExpanded(EntityPackage user, bool includeEmail = false)
+        protected UserView GetViewFromExpanded(EntityWrapper user, bool includeEmail = false)
         {
             var view = new UserView()
             {
-                id = user.Entity.id,
-                createDate = user.Entity.createDate,
-                username = user.Entity.name,
+                id = user.id,
+                createDate = user.createDate,
+                username = user.name,
             };
 
             if(includeEmail)
-                view.email = user.Values[EmailKey].First().value; //We're the creator so we get to see the email
+                view.email = user.Values.First(x => x.key == EmailKey).value; //We're the creator so we get to see the email
             
             return view;
         }
@@ -101,14 +99,14 @@ namespace contentapi.Controllers
 
             var salt = hashService.GetSalt();
 
-            var newUser = QuickPackage(user.username);
+            var newUser = QuickEntity(user.username);
 
-            entityProvider.AddValues(newUser, 
+            newUser.Values.AddRange(new[] {
                 QuickValue(EmailKey, user.email),
                 QuickValue(PasswordSaltKey, Convert.ToBase64String(salt)),
                 QuickValue(PasswordHashKey, Convert.ToBase64String(hashService.GetHash(user.password, salt))),
                 QuickValue(RegistrationCodeKey, Guid.NewGuid().ToString())
-            );
+            });
 
             await entityProvider.WriteAsync(newUser);
 
@@ -124,20 +122,22 @@ namespace contentapi.Controllers
             var entitySearch = mapper.Map<EntitySearch>(search);
             if(entitySearch.Limit < 0 || entitySearch.Limit > 1000)
                 entitySearch.Limit = 1000;
-            var entities = await SearchAndExpand(entitySearch); 
-            return entities.Select(x => GetViewFromExpanded(x)).ToList();
+            return (await SearchAsync(entitySearch)).Select(x => GetViewFromExpanded(x)).ToList();
         }
 
         [HttpGet("{id}")]
         public async Task<ActionResult<UserView>> GetUser([FromRoute]long id)
         {
-            var user = await FindSingleByIdAsync(id);
+            //var user = await FindSingleByIdAsync(id);
+
+            var search = new EntitySearch();
+            search.Ids.Add(id);
+            var user = (await SearchAsync(search)).FirstOrDefault(); //Allow this to throw exceptions (for now)
 
             if(user == null)
                 return NotFound($"User with id {id} not found");
             
-            var fullUser = (await entityProvider.ExpandAsync(user)).First(); //Allow this to throw exceptions (for now)
-            return GetViewFromExpanded(fullUser);
+            return GetViewFromExpanded(user);
         }
 
         [HttpGet("me")]
@@ -196,41 +196,43 @@ namespace contentapi.Controllers
             return Ok("Email Confirmed");
         }
 
-        [HttpPost("authenticate")]
-        public async Task<ActionResult<string>> Authenticate([FromBody]UserCredential user)
-        {
-            Entity foundUser = null;
+        //[HttpPost("authenticate")]
+        //public async Task<ActionResult<string>> Authenticate([FromBody]UserCredential user)
+        //{
+        //    Entity foundUser = null;
 
-            if(user.username != null)
-            {
-                foundUser = await FindSingleByNameAsync(user.username);
-            }
-            else if (user.email != null)
-            {
-                var foundEmail = (await FindByEmailAsync(user.email)).FirstOrDefault();
+        //    if(user.username != null)
+        //    {
+        //        foundUser = await FindSingleByNameAsync(user.username);
+        //    }
+        //    else if (user.email != null)
+        //    {
+        //        var foundEmail = (await FindByEmailAsync(user.email)).FirstOrDefault();
 
-                if(foundEmail != null)
-                    foundUser = await FindSingleByIdAsync(foundEmail.entityId);
-            }
+        //        if(foundEmail != null)
+        //            foundUser = await FindSingleByIdAsync(foundEmail.entityId);
+        //    }
 
-            //Should this be the same as bad password? eeeehhhh
-            if(foundUser == null)
-                return BadRequest("Must provide a valid username or email!");
-            
-            var completeUser = (await entityProvider.ExpandAsync(foundUser)).First();
+        //    //Should this be the same as bad password? eeeehhhh
+        //    if(foundUser == null)
+        //        return BadRequest("Must provide a valid username or email!");
+        //    
+        //    var search = new EntitySearch();
+        //    search.Ids.Add(foundUser.id);
+        //    var completeUser = (await SearchAsync(search)).First();
 
-            if(completeUser.Values.ContainsKey(RegistrationCodeKey)) //There's a registration code pending
-                return BadRequest("You must confirm your email first");
+        //    if(completeUser.Values.ContainsKey(RegistrationCodeKey)) //There's a registration code pending
+        //        return BadRequest("You must confirm your email first");
 
-            var hash = hashService.GetHash(user.password, Convert.FromBase64String(completeUser.Values[PasswordSaltKey].First().value));
+        //    var hash = hashService.GetHash(user.password, Convert.FromBase64String(completeUser.Values[PasswordSaltKey].First().value));
 
-            if(!hash.SequenceEqual(Convert.FromBase64String(completeUser.Values[PasswordHashKey].First().value)))
-                return BadRequest("Password incorrect!");
+        //    if(!hash.SequenceEqual(Convert.FromBase64String(completeUser.Values[PasswordHashKey].First().value)))
+        //        return BadRequest("Password incorrect!");
 
-            return tokenService.GetToken(new Dictionary<string, string>()
-            {
-                { UserIdentifier, completeUser.Entity.id.ToString() }
-            });
-        }
+        //    return tokenService.GetToken(new Dictionary<string, string>()
+        //    {
+        //        { UserIdentifier, completeUser.Entity.id.ToString() }
+        //    });
+        //}
     }
 }
