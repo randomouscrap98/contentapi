@@ -19,6 +19,8 @@ namespace contentapi.Controllers
 
         }
 
+        public const string PermissionRelation = "";
+
         protected override CategoryView GetViewFromExpanded(EntityWrapper user)
         {
             throw new System.NotImplementedException();
