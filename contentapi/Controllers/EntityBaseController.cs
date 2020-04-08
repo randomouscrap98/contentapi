@@ -15,11 +15,12 @@ namespace contentapi.Controllers
         public List<EntityRelation> Relations = new List<EntityRelation>();
     }
 
-    public class EntityWrapperProfile : Profile
+    public class EntityControllerProfile : Profile
     {
-        public EntityWrapperProfile()
+        public EntityControllerProfile()
         {
             CreateMap<EntityWrapper, Entity>().ReverseMap();//.ForMember(x => x.NameLike, o => o.MapFrom(s => s.Username));
+            CreateMap<EntitySearch, EntitySearchBase>().ReverseMap();
         }
     }
 
@@ -38,27 +39,57 @@ namespace contentapi.Controllers
             this.mapper = mapper;
         }
 
-        //Move this stuff into a service? It all needs to be testable
-        protected async Task<Entity> FindSingleByNameAsync(string name)
+        protected T OnlySingle<T>(IEnumerable<T> list)
         {
-            var entities = await entityProvider.GetEntitiesAsync(new EntitySearch() { NameLike = name });
-
-            if (entities.Count > 1)
-                throw new InvalidOperationException($"Found more than one entity with name {name}");
-
-            return entities.FirstOrDefault(); //This will be null for 0 entities, which is fine.
+            if(list.Count() > 1)
+                throw new InvalidOperationException("Multiple values found; expected 1");
+            
+            return list.FirstOrDefault();
         }
 
-        protected async Task<Entity> FindSingleByIdAsync(long id)
+        //Move this stuff into a service? It all needs to be testable
+        protected async Task<E> FindByNameAsync<E>(string name) where E : Entity
+        {
+            return OnlySingle(await SearchAsync<E>(new EntitySearch() { NameLike = name}));
+        }
+
+        protected async Task<E> FindByIdAsync<E>(long id) where E : Entity
         {
             var search = new EntitySearch();
             search.Ids.Add(id);
-            var entities = await entityProvider.GetEntitiesAsync(search);
-            
-            if (entities.Count > 1)
-                throw new InvalidOperationException($"Found more than one entity with id {id}");
+            return OnlySingle(await SearchAsync<E>(search));
 
-            return entities.FirstOrDefault(); //This will be null for 0 entities, which is fine.
+            //if(typeof(E) != typeof(EntityWrapper))
+            //    //return OnlySingle(await entityProvider.GetList(entityProvider.ApplyGeneric(entityProvider.GetQueryable<E>(), search)));
+            //else
+            //    return (E)OnlySingle(await LinkedSearchAsync(search));
+        }
+
+        //protected async Task<EntityWrapper> FindByIdAsync(long id)
+        //{
+        //    var search = new EntitySearch();
+        //    search.Ids.Add(id);
+        //    return OnlySingle(await (search));
+        //}
+
+        protected E LimitSearch<E>(E search) where E : EntitySearchBase
+        {
+            if(search.Limit < 0 || search.Limit > 1000)
+                search.Limit = 1000;
+            
+            return search;
+        }
+
+        protected async Task<EntityValue> FindValueAsync(string key, string value)
+        {
+            return OnlySingle(await entityProvider.GetEntityValuesAsync(new EntityValueSearch() { KeyLike = key, ValueLike = value}));
+        }
+
+        protected async Task<EntityValue> FindValueAsync(string key, long id)
+        {
+            var valueSearch = new EntityValueSearch() { KeyLike = key };
+            valueSearch.EntityIds.Add(id);
+            return OnlySingle(await entityProvider.GetEntityValuesAsync(valueSearch));
         }
 
         protected EntityValue QuickValue(string key, string value)
@@ -80,11 +111,32 @@ namespace contentapi.Controllers
                 content = content
             };
         }
-
-        protected async Task<List<EntityWrapper>> SearchAsync(EntitySearch search)
+        
+        protected string GetValue(EntityWrapper entity, string key)
         {
-            //var entities = await entityProvider.GetEntitiesAsync(search); //entityProvider.ApplyEntitySearch(entityProvider.GetQueryable<Entity>(), search);
-            //var wrappers = entities.Select(x => mapper.Map<EntityWrapper>(x));
+            var values = entity.Values.Where(x => x.key == key);
+
+            if(values.Count() != 1)
+                throw new InvalidOperationException($"Not a single value for key: {key}");
+            
+            return values.First().value;
+        }
+
+        protected bool HasValue(EntityWrapper entity, string key)
+        {
+            return entity.Values.Any(x => x.key == key);
+        }
+
+        protected async Task<List<E>> SearchAsync<E>(EntitySearch search) where E : Entity
+        {
+            if(typeof(E) == typeof(Entity))
+                return (await entityProvider.GetEntitiesAsync(search)).Cast<E>().ToList();
+            else
+                return (await SearchAndLinkAsync(search)).Cast<E>().ToList();
+        }
+
+        protected async Task<List<EntityWrapper>> SearchAndLinkAsync(EntitySearch search)
+        {
             var bigGroup = from e in entityProvider.ApplyEntitySearch(entityProvider.GetQueryable<Entity>(), search)
                            join v in entityProvider.GetQueryable<EntityValue>() on e.id equals v.entityId into evs
                            from v in evs.DefaultIfEmpty()
