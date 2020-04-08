@@ -6,8 +6,7 @@ namespace contentapi.test
 {
     public class TokenServiceTests : ServiceConfigTestBase<TokenService, TokenServiceConfig>
     {
-        protected override TokenServiceConfig config { get => new TokenServiceConfig() {SecretKey = 
-            "whydoesthisstringhavetobesodanglong"};}
+        protected override TokenServiceConfig config => new TokenServiceConfig() {SecretKey = "whydoesthisstringhavetobesodanglong"};
 
         [Fact]
         public void CreateToken()

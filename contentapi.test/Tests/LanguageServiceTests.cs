@@ -11,7 +11,7 @@ namespace contentapi.test
     {
         public const string LanguageFolder = "languageTest";
 
-        protected override LanguageConfig config { get => new LanguageConfig() { LanguageFolder = LanguageFolder };}
+        protected override LanguageConfig config => new LanguageConfig() { LanguageFolder = LanguageFolder };
 
         //public LanguageServiceTests() { config.LanguageFolder = LanguageFolder; }
 
