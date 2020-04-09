@@ -7,5 +7,8 @@ namespace contentapi.Models
     {
         public List<EntityValue> Values = new List<EntityValue>();
         public List<EntityRelation> Relations = new List<EntityRelation>();
+
+        public EntityWrapper() {}
+        public EntityWrapper(Entity copy) : base(copy) {}
     }
 }

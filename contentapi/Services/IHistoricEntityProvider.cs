@@ -8,10 +8,6 @@ namespace contentapi.Services
 {
     public interface IHistoricEntityProvider
     {
-        IEntityProvider Provider {get;}
-
-        Task<List<EntityWrapper>> LinkEntitiesAsync(IQueryable<Entity> queryable);
-
         /// <summary>
         /// Regardless of ids in wrapper, write entirely new entity. All ids will be updated
         /// </summary>
@@ -25,7 +21,7 @@ namespace contentapi.Services
         /// </summary>
         /// <param name="entity"></param>
         /// <returns></returns>
-        Task WriteWithHistoryAsync(EntityWrapper entity);
+        Task WriteWithHistoryAsync(EntityWrapper entity, long publicId = 0);
 
         /// <summary>
         /// Get the singular public ID for this entity.

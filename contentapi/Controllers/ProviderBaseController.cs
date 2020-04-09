@@ -4,6 +4,7 @@ using System.Linq;
 using System.Threading.Tasks;
 using AutoMapper;
 using contentapi.Models;
+using contentapi.Services.Extensions;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.Extensions.Logging;
 using Randomous.EntitySystem;
@@ -35,6 +36,39 @@ namespace contentapi
         protected IEntityProvider entityProvider;
         protected IMapper mapper;
 
+        /// <summary>
+        /// Get an easy preformated EntityValue
+        /// </summary>
+        /// <param name="key"></param>
+        /// <param name="value"></param>
+        /// <returns></returns>
+        public static EntityValue QuickValue(string key, string value)
+        {
+            return new EntityValue()
+            {
+                createDate = DateTime.Now,
+                key = key,
+                value = value
+            };
+        }
+
+        /// <summary>
+        /// Get an easy preformated entity
+        /// </summary>
+        /// <param name="name"></param>
+        /// <param name="content"></param>
+        /// <returns></returns>
+        public EntityWrapper QuickEntity(string name, string content = null)
+        {
+            return new EntityWrapper()
+            {
+                createDate = DateTime.Now,
+                name = name,
+                content = content
+            };
+        }
+        
+
         public ProviderBaseController(ILogger<ProviderBaseController> logger, IEntityProvider provider, IMapper mapper)
         {
             this.logger = logger;
@@ -42,18 +76,12 @@ namespace contentapi
             this.mapper = mapper;
         }
 
-        /// <summary>
-        /// Get a single element, return null if none, or fail on multiple (throw exception)
-        /// </summary>
-        /// <param name="list"></param>
-        /// <typeparam name="T"></typeparam>
-        /// <returns></returns>
-        public T OnlySingle<T>(IEnumerable<T> list)
+        public async Task<List<EntityWrapper>> SearchExpandAsync(EntitySearch search, bool expand)
         {
-            if(list.Count() > 1)
-                throw new InvalidOperationException("Multiple values found; expected 1");
-            
-            return list.FirstOrDefault();
+            if(expand)
+                return await entityProvider.SearchAsync(search);
+            else
+                return (await entityProvider.GetEntitiesAsync(search)).Select(x => new EntityWrapper(x)).ToList();
         }
 
         /// <summary>
@@ -64,7 +92,7 @@ namespace contentapi
         /// <returns></returns>
         public async Task<EntityWrapper> FindByNameAsync(string name, bool expand = false)
         {
-            return OnlySingle(await SearchAsync(new EntitySearch() { NameLike = name}, expand));
+            return (await SearchExpandAsync(new EntitySearch() {NameLike = name}, expand)).OnlySingle();
         }
 
         /// <summary>
@@ -77,7 +105,7 @@ namespace contentapi
         {
             var search = new EntitySearch();
             search.Ids.Add(id);
-            return OnlySingle(await SearchAsync(search, expand));
+            return (await SearchExpandAsync(search, expand)).OnlySingle();
         }
 
         /// <summary>
@@ -107,106 +135,7 @@ namespace contentapi
                 valueSearch.ValueLike = value;
             if(id > 0)
                 valueSearch.EntityIds.Add(id);
-            return OnlySingle(await entityProvider.GetEntityValuesAsync(valueSearch));
-        }
-
-        /// <summary>
-        /// Get an easy preformated EntityValue
-        /// </summary>
-        /// <param name="key"></param>
-        /// <param name="value"></param>
-        /// <returns></returns>
-        public EntityValue QuickValue(string key, string value)
-        {
-            return new EntityValue()
-            {
-                createDate = DateTime.Now,
-                key = key,
-                value = value
-            };
-        }
-
-        /// <summary>
-        /// Get an easy preformated entity
-        /// </summary>
-        /// <param name="name"></param>
-        /// <param name="content"></param>
-        /// <returns></returns>
-        public EntityWrapper QuickEntity(string name, string content = null)
-        {
-            return new EntityWrapper()
-            {
-                createDate = DateTime.Now,
-                name = name,
-                content = content
-            };
-        }
-        
-        /// <summary>
-        /// Get a value from a wrapper
-        /// </summary>
-        /// <param name="entity"></param>
-        /// <param name="key"></param>
-        /// <returns></returns>
-        public string GetValue(EntityWrapper entity, string key)
-        {
-            var values = entity.Values.Where(x => x.key == key);
-
-            if(values.Count() != 1)
-                throw new InvalidOperationException($"Not a single value for key: {key}");
-            
-            return values.First().value;
-        }
-
-        public bool HasValue(EntityWrapper entity, string key)
-        {
-            return entity.Values.Any(x => x.key == key);
-        }
-
-        public async Task<List<EntityWrapper>> SearchAsync(EntitySearch search, bool expand)
-        {
-            if(expand)
-                return await SearchAndLinkAsync(search);
-            else
-                return (await entityProvider.GetEntitiesAsync(search)).Select(x => mapper.Map<EntityWrapper>(x)).ToList();
-        }
-
-        public async Task<List<EntityWrapper>> SearchAndLinkAsync(EntitySearch search)
-        {
-            var bigGroup = from e in entityProvider.ApplyEntitySearch(entityProvider.GetQueryable<Entity>(), search)
-                           join v in entityProvider.GetQueryable<EntityValue>() on e.id equals v.entityId into evs
-                           from v in evs.DefaultIfEmpty()
-                           join r in entityProvider.GetQueryable<EntityRelation>() on e.id equals r.entityId2 into evrs
-                           from r in evrs.DefaultIfEmpty()
-                           select new { Entity = e, Value = v, Relation = r};
-            
-            return (await entityProvider.GetList(bigGroup)).ToLookup(x => x.Entity.id).Select(x => mapper.Map(x.First().Entity, new EntityWrapper()
-            {
-                Values = x.Select(x => x.Value).ToList(),
-                Relations = x.Select(x => x.Relation).ToList()
-            })).ToList();
-        }
-
-        public async Task WriteAsync(EntityWrapper entity)
-        {
-            //First, write the entity. Then TRY to write everything else. If ANYTHING fails,
-            //delete the entity.
-            await entityProvider.WriteAsync(entity);
-
-            try
-            {
-                entity.Values.ForEach(x => x.entityId = entity.id);
-                entity.Relations.ForEach(x => x.entityId2 = entity.id); //Assume relations are all parents. a user has perms ON this entity, a category OWNS this entity, etc.
-                var allWrite = new List<EntityBase>();
-                allWrite.AddRange(entity.Values);
-                allWrite.AddRange(entity.Relations);
-                await entityProvider.WriteAsync(allWrite.ToArray());
-            }
-            catch(Exception ex)
-            {
-                logger.LogError($"Exception while writing entitywrapper: {ex}");
-                await entityProvider.DeleteAsync(entity);
-            }
+            return (await entityProvider.GetEntityValuesAsync(valueSearch)).OnlySingle();
         }
     }
 }
