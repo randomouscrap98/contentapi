@@ -36,37 +36,6 @@ namespace contentapi
         protected IEntityProvider entityProvider;
         protected IMapper mapper;
 
-        /// <summary>
-        /// Get an easy preformated EntityValue
-        /// </summary>
-        /// <param name="key"></param>
-        /// <param name="value"></param>
-        /// <returns></returns>
-        public static EntityValue QuickValue(string key, string value)
-        {
-            return new EntityValue()
-            {
-                createDate = DateTime.Now,
-                key = key,
-                value = value
-            };
-        }
-
-        /// <summary>
-        /// Get an easy preformated entity
-        /// </summary>
-        /// <param name="name"></param>
-        /// <param name="content"></param>
-        /// <returns></returns>
-        public EntityWrapper QuickEntity(string name, string content = null)
-        {
-            return new EntityWrapper()
-            {
-                createDate = DateTime.Now,
-                name = name,
-                content = content
-            };
-        }
         
 
         public ProviderBaseController(ILogger<ProviderBaseController> logger, IEntityProvider provider, IMapper mapper)

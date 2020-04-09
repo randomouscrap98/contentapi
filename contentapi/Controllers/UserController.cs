@@ -12,6 +12,7 @@ using Randomous.EntitySystem;
 using System.Security.Claims;
 using AutoMapper;
 using contentapi.Models;
+using contentapi.Services.Extensions;
 
 namespace contentapi.Controllers
 {
@@ -76,7 +77,7 @@ namespace contentapi.Controllers
         public async Task<ActionResult<List<UserView>>> GetAll([FromQuery]UserSearch search)
         {
             var entitySearch = LimitSearch(mapper.Map<EntitySearch>(search));
-            return (await SearchAsync(entitySearch, true)).Select(x => GetViewFromExpanded(x)).ToList();
+            return (await SearchExpandAsync(entitySearch, true)).Select(x => GetViewFromExpanded(x)).ToList();
         }
 
         [HttpGet("{id}")]
@@ -89,7 +90,6 @@ namespace contentapi.Controllers
             
             return GetViewFromExpanded(user);
         }
-
 
         [HttpGet("me")]
         public async Task<ActionResult<UserView>> Me()
@@ -124,12 +124,12 @@ namespace contentapi.Controllers
             if(foundUser == null)
                 return BadRequest("Must provide a valid username or email!");
             
-            if(HasValue(foundUser, RegistrationCodeKey)) //There's a registration code pending
+            if(foundUser.HasValue(RegistrationCodeKey)) //There's a registration code pending
                 return BadRequest("You must confirm your email first");
 
-            var hash = hashService.GetHash(user.password, Convert.FromBase64String(GetValue(foundUser, PasswordSaltKey)));
+            var hash = hashService.GetHash(user.password, Convert.FromBase64String(foundUser.GetValue(PasswordSaltKey)));
 
-            if(!hash.SequenceEqual(Convert.FromBase64String(GetValue(foundUser, PasswordHashKey))))
+            if(!hash.SequenceEqual(Convert.FromBase64String(foundUser.GetValue(PasswordHashKey))))
                 return BadRequest("Password incorrect!");
 
             return tokenService.GetToken(new Dictionary<string, string>()
@@ -164,14 +164,11 @@ namespace contentapi.Controllers
 
             var salt = hashService.GetSalt();
 
-            var newUser = QuickEntity(user.username);
-
-            newUser.Values.AddRange(new[] {
-                QuickValue(EmailKey, user.email),
-                QuickValue(PasswordSaltKey, Convert.ToBase64String(salt)),
-                QuickValue(PasswordHashKey, Convert.ToBase64String(hashService.GetHash(user.password, salt))),
-                QuickValue(RegistrationCodeKey, Guid.NewGuid().ToString())
-            });
+            var newUser = EntityWrapperExtensions.QuickEntity(user.username)
+                .AddValue(EmailKey, user.email)
+                .AddValue(PasswordSaltKey, Convert.ToBase64String(salt))
+                .AddValue(PasswordHashKey, Convert.ToBase64String(hashService.GetHash(user.password, salt)))
+                .AddValue(RegistrationCodeKey, Guid.NewGuid().ToString());
 
             await entityProvider.WriteAsync(newUser);
 
