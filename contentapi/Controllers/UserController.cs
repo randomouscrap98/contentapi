@@ -11,8 +11,8 @@ using Microsoft.Extensions.Logging;
 using Randomous.EntitySystem;
 using System.Security.Claims;
 using AutoMapper;
-using contentapi.Models;
 using contentapi.Services.Extensions;
+using Randomous.EntitySystem.Extensions;
 
 namespace contentapi.Controllers
 {
@@ -29,24 +29,16 @@ namespace contentapi.Controllers
         }
     }
 
-    public class UserController : EntityBaseController<UserView>
+    public class UserController : ProviderBaseController<UserController> //: EntityBaseController<UserView>
     {
         protected IHashService hashService;
         protected ITokenService tokenService;
         protected ILanguageService languageService;
         protected IEmailService emailService;
 
-
-        public const string UserIdentifier = "uid";
-
-        public const string EmailKey = "se";
-        public const string PasswordHashKey = "sph";
-        public const string PasswordSaltKey = "sps";
-        public const string RegistrationCodeKey = "srk";
-
-        public UserController(ILogger<UserController> logger, IHashService hashService, IEntityProvider entityProvider,
-            ITokenService tokenService, IMapper mapper, ILanguageService languageService,
-            IEmailService emailService) : base(logger, entityProvider, mapper)
+        public UserController(ControllerServices<UserController> services, IHashService hashService,
+            ITokenService tokenService, ILanguageService languageService, IEmailService emailService)
+            :base(services)
         { 
             this.hashService = hashService;
             this.tokenService = tokenService;
@@ -54,36 +46,36 @@ namespace contentapi.Controllers
             this.emailService = emailService;
         }
 
-        protected override UserView GetViewFromExpanded(EntityWrapper user)
+        protected UserView GetViewFromExpanded(EntityPackage user)
         {
             var view = new UserView()
             {
-                id = user.id,
-                createDate = user.createDate,
-                username = user.name,
+                id = user.Entity.id,
+                createDate = user.Entity.createDate,
+                username = user.Entity.name,
             };
 
             return view;
         }
 
-        protected UserView GetViewWithEmail(EntityWrapper user)
+        protected UserView GetViewWithEmail(EntityPackage user)
         {
             var view = GetViewFromExpanded(user);
-            view.email = user.Values.First(x => x.key == EmailKey).value; //We're the creator so we get to see the email
+            view.email = user.Values.First(x => x.key == services.keys.EmailKey).value; //We're the creator so we get to see the email
             return view;
         }
 
         [HttpGet]
         public async Task<ActionResult<List<UserView>>> GetAll([FromQuery]UserSearch search)
         {
-            var entitySearch = LimitSearch(mapper.Map<EntitySearch>(search));
-            return (await SearchExpandAsync(entitySearch, true)).Select(x => GetViewFromExpanded(x)).ToList();
+            var entitySearch = LimitSearch(services.mapper.Map<EntitySearch>(search));
+            return (await services.provider.GetEntityPackagesAsync(entitySearch)).Select(x => GetViewFromExpanded(x)).ToList();
         }
 
         [HttpGet("{id}")]
         public async Task<ActionResult<UserView>> GetUser([FromRoute]long id)
         {
-            var user = await FindByIdAsync(id, true);
+            var user = await services.provider.FindByIdAsync(id);
 
             if(user == null)
                 return NotFound($"User with id {id} not found");
@@ -95,7 +87,7 @@ namespace contentapi.Controllers
         public async Task<ActionResult<UserView>> Me()
         {
             //Look for the UID from the JWT 
-            var id = User.FindFirstValue(UserIdentifier);
+            var id = User.FindFirstValue(services.keys.UserIdentifier);
 
             if(id == null)
                 return BadRequest("Not logged in!");
@@ -106,35 +98,35 @@ namespace contentapi.Controllers
         [HttpPost("authenticate")]
         public async Task<ActionResult<string>> Authenticate([FromBody]UserCredential user)
         {
-            EntityWrapper foundUser = null;
+            EntityPackage foundUser = null;
 
             if(user.username != null)
             {
-                foundUser = await FindByNameAsync(user.username, true);
+                foundUser = await services.provider.FindByNameAsync(user.username);
             }
             else if (user.email != null)
             {
-                var foundEmail = await FindValueAsync(EmailKey, user.email);
+                var foundEmail = await services.provider.FindValueAsync(keys.EmailKey, user.email);
 
                 if(foundEmail != null)
-                    foundUser = await FindByIdAsync(foundEmail.entityId, true);
+                    foundUser = await services.provider.FindByIdAsync(foundEmail.entityId);
             }
 
             //Should this be the same as bad password? eeeehhhh
             if(foundUser == null)
                 return BadRequest("Must provide a valid username or email!");
             
-            if(foundUser.HasValue(RegistrationCodeKey)) //There's a registration code pending
+            if(foundUser.HasValue(keys.RegistrationCodeKey)) //There's a registration code pending
                 return BadRequest("You must confirm your email first");
 
-            var hash = hashService.GetHash(user.password, Convert.FromBase64String(foundUser.GetValue(PasswordSaltKey)));
+            var hash = hashService.GetHash(user.password, Convert.FromBase64String(foundUser.GetValue(keys.PasswordSaltKey).value));
 
-            if(!hash.SequenceEqual(Convert.FromBase64String(foundUser.GetValue(PasswordHashKey))))
+            if(!hash.SequenceEqual(Convert.FromBase64String(foundUser.GetValue(keys.PasswordHashKey).value)))
                 return BadRequest("Password incorrect!");
 
             return tokenService.GetToken(new Dictionary<string, string>()
             {
-                { UserIdentifier, foundUser.id.ToString() }
+                { keys.UserIdentifier, foundUser.Entity.id.ToString() }
             });
         }
 
@@ -159,18 +151,18 @@ namespace contentapi.Controllers
             if(user.email == null)
                 return BadRequest("Must provide an email!");
 
-            if(await FindByNameAsync(user.username) != null || await FindValueAsync(EmailKey, user.email) != null)
+            if(await services.provider.FindByNameBaseAsync(user.username) != null || await services.provider.FindValueAsync(keys.EmailKey, user.email) != null)
                 return BadRequest("This user already seems to exist!");
 
             var salt = hashService.GetSalt();
 
-            var newUser = EntityWrapperExtensions.QuickEntity(user.username)
-                .AddValue(EmailKey, user.email)
-                .AddValue(PasswordSaltKey, Convert.ToBase64String(salt))
-                .AddValue(PasswordHashKey, Convert.ToBase64String(hashService.GetHash(user.password, salt)))
-                .AddValue(RegistrationCodeKey, Guid.NewGuid().ToString());
+            var newUser = NewEntity(user.username)
+                .Add(NewValue(keys.EmailKey, user.email))
+                .Add(NewValue(keys.PasswordSaltKey, Convert.ToBase64String(salt)))
+                .Add(NewValue(keys.PasswordHashKey, Convert.ToBase64String(hashService.GetHash(user.password, salt))))
+                .Add(NewValue(keys.RegistrationCodeKey, Guid.NewGuid().ToString()));
 
-            await entityProvider.WriteAsync(newUser);
+            await services.provider.WriteAsync(newUser);
 
             //Note the last parameter: the create user is ALWAYS the user that just got created! The user "creates" itself!
             //await LogAct(EntityAction.Create, createUser.entityId, createUser.entityId);
@@ -181,13 +173,13 @@ namespace contentapi.Controllers
         [HttpPost("register/sendemail")]
         public async Task<ActionResult> SendRegistrationEmail([FromBody]string email)
         {
-            var emailValue = await FindValueAsync(EmailKey, email);
+            var emailValue = await services.provider.FindValueAsync(keys.EmailKey, email);
 
             if(emailValue == null)
                 return BadRequest("No user with that email");
 
             //Now look up the registration code (that's all we need from user)
-            var registrationCode = await FindValueAsync(RegistrationCodeKey, null, emailValue.entityId);
+            var registrationCode = await services.provider.FindValueAsync(keys.RegistrationCodeKey, null, emailValue.entityId);
 
             if(registrationCode == null)
                 return BadRequest("Nothing to do for user");
@@ -203,12 +195,12 @@ namespace contentapi.Controllers
             if(string.IsNullOrEmpty(confirmationKey))
                 return BadRequest("Must provide a confirmation key in the body");
 
-            var confirmValue = await FindValueAsync(RegistrationCodeKey, confirmationKey);
+            var confirmValue = await services.provider.FindValueAsync(keys.RegistrationCodeKey, confirmationKey);
 
             if(confirmValue == null)
                 return BadRequest("No user found with confirmation key");
 
-            await entityProvider.DeleteAsync(confirmValue);
+            await services.provider.DeleteAsync(confirmValue);
 
             return Ok("Email Confirmed");
         }

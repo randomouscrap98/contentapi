@@ -1,4 +1,3 @@
-
 using System.Threading.Tasks;
 using AutoMapper;
 using contentapi.Services.Extensions;
@@ -11,14 +10,10 @@ namespace contentapi.Controllers
 {
     [Route("api/[controller]")]
     [ApiController]
-    public class TestController : ProviderBaseController
+    public class TestController : ProviderBaseController<TestController>
     {
-        public TestController(ILogger<TestController> logger, IEntityProvider entityProvider, IMapper mapper) 
-            : base(logger, entityProvider, mapper)
-        {
-            this.logger = logger;
-            this.entityProvider = entityProvider;
-        }
+        public TestController(ControllerServices<TestController> services)
+            :base(services) { }
 
         public class TestData
         {
@@ -30,9 +25,9 @@ namespace contentapi.Controllers
         [HttpGet]
         public async Task<ActionResult<TestData>> TestGet()
         {
-            var entities = await entityProvider.GetEntitiesAsync(new EntitySearch()); //This should get all?
-            var values = await entityProvider.GetEntityValuesAsync(new EntityValueSearch()); //This should get all?
-            var relations = await entityProvider.GetEntityRelationsAsync(new EntityRelationSearch()); //This should get all?
+            var entities = await services.provider.GetEntitiesAsync(new EntitySearch()); //This should get all?
+            var values = await services.provider.GetEntityValuesAsync(new EntityValueSearch()); //This should get all?
+            var relations = await services.provider.GetEntityRelationsAsync(new EntityRelationSearch()); //This should get all?
 
             return new TestData()
             {

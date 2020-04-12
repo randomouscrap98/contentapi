@@ -48,8 +48,13 @@ namespace contentapi
 
             AddSingletonConfig<EmailConfig>(Configuration, services, "Email");
             AddSingletonConfig<LanguageConfig>(Configuration, services, "Language");
+            AddSingletonConfig<SystemConfig>(Configuration, services, "SystemConfig");
             var tokenConfig = AddSingletonConfig<TokenServiceConfig>(Configuration, services, "Token");
             services.AddSingleton(new HashConfig());    //Just use defaults
+
+            var keys = new Keys();
+            keys.EnsureAllUnique();
+            services.AddSingleton(keys);
 
             services.AddTransient<IEmailService, EmailService>();
             services.AddTransient<ILanguageService, LanguageService>();

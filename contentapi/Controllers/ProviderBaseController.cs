@@ -3,20 +3,29 @@ using System.Collections.Generic;
 using System.Linq;
 using System.Threading.Tasks;
 using AutoMapper;
-using contentapi.Models;
 using contentapi.Services.Extensions;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.Extensions.Logging;
 using Randomous.EntitySystem;
+using Randomous.EntitySystem.Extensions;
 
 namespace contentapi
 {
-    public class ProviderExtensionProfile : Profile 
+    public class ControllerServices<T>
     {
-        public ProviderExtensionProfile()
+        public IEntityProvider provider;
+        public ILogger<T> logger;
+        public IMapper mapper;
+        public Keys keys;
+        public SystemConfig systemConfig;
+
+        public ControllerServices(ILogger<T> logger, IEntityProvider provider, IMapper mapper, Keys keys, SystemConfig systemConfig)
         {
-            CreateMap<EntityWrapper, Entity>().ReverseMap();
-            CreateMap<EntitySearch, EntitySearchBase>().ReverseMap();
+            this.provider = provider;
+            this.logger = logger;
+            this.mapper = mapper;
+            this.keys = keys;
+            this.systemConfig = systemConfig;
         }
     }
 
@@ -30,54 +39,71 @@ namespace contentapi
     /// </remarks>
     [Route("api/[controller]")]
     [ApiController]
-    public abstract class ProviderBaseController : ControllerBase
+    public abstract class ProviderBaseController<T> : ControllerBase
     {
-        protected ILogger<ProviderBaseController> logger;
-        protected IEntityProvider entityProvider;
-        protected IMapper mapper;
-
+        protected ControllerServices<T> services;
         
-        public const string FaceKey = "sf";
-        public const string HistoryPrepend = "h";
+        protected Keys keys => services.keys;
 
-        public ProviderBaseController(ILogger<ProviderBaseController> logger, IEntityProvider provider, IMapper mapper)
+        public ProviderBaseController(ControllerServices<T> services)
         {
-            this.logger = logger;
-            this.entityProvider = provider;
-            this.mapper = mapper;
+            this.services = services;
         }
 
-        protected async Task<List<EntityWrapper>> SearchExpandAsync(EntitySearch search, bool expand)
+        public EntityPackage NewEntity(string name, string content = null)
         {
-            if(expand)
-                return await entityProvider.SearchAsync(search);
-            else
-                return (await entityProvider.GetEntitiesAsync(search)).Select(x => new EntityWrapper(x)).ToList();
+            return new EntityPackage()
+            {
+                Entity = new Entity() { name = name, content = content}
+            };
         }
 
-        /// <summary>
-        /// Find some entity by name
-        /// </summary>
-        /// <param name="name"></param>
-        /// <typeparam name="E"></typeparam>
-        /// <returns></returns>
-        protected async Task<EntityWrapper> FindByNameAsync(string name, bool expand = false)
+        public EntityValue NewValue(string key, string value)
         {
-            return (await SearchExpandAsync(new EntitySearch() {NameLike = name}, expand)).OnlySingle();
+            return new EntityValue() {key = key, value = value};
         }
 
-        /// <summary>
-        /// Find some entity by id 
-        /// </summary>
-        /// <param name="id"></param>
-        /// <typeparam name="E"></typeparam>
-        /// <returns></returns>
-        protected async Task<EntityWrapper> FindByIdAsync(long id, bool expand = false)
+        public EntityRelation NewRelation(long parent, string type, string value = null)
         {
-            var search = new EntitySearch();
-            search.Ids.Add(id);
-            return (await SearchExpandAsync(search, expand)).OnlySingle();
+            return new EntityRelation()
+            {
+                entityId1 = parent,
+                type = type,
+                value = value
+            };
         }
+
+        //protected async Task<List<EntityPackage>> SearchExpandAsync(EntitySearch search, bool expand)
+        //{
+        //    if(expand)
+        //        return await entityProvider.GetEntityPackagesAsync(search);
+        //    else
+        //        return (await entityProvider.GetEntitiesAsync(search)).Select(x => new EntityWrapper(x)).ToList();
+        //}
+
+        ///// <summary>
+        ///// Find some entity by name
+        ///// </summary>
+        ///// <param name="name"></param>
+        ///// <typeparam name="E"></typeparam>
+        ///// <returns></returns>
+        //protected async Task<EntityPackage> FindByNameAsync(string name, bool expand = false)
+        //{
+        //    return (await SearchExpandAsync(new EntitySearch() {NameLike = name}, expand)).OnlySingle();
+        //}
+
+        ///// <summary>
+        ///// Find some entity by id 
+        ///// </summary>
+        ///// <param name="id"></param>
+        ///// <typeparam name="E"></typeparam>
+        ///// <returns></returns>
+        //protected async Task<EntityPackage> FindByIdAsync(long id, bool expand = false)
+        //{
+        //    var search = new EntitySearch();
+        //    search.Ids.Add(id);
+        //    return (await SearchExpandAsync(search, expand)).OnlySingle();
+        //}
 
         /// <summary>
         /// Apply various limits to a search
@@ -150,20 +176,5 @@ namespace contentapi
         //    //    entity.id = faceId;
         //}
 
-        /// <summary>
-        /// Find a value by key/value/id (added constraints)
-        /// </summary>
-        /// <param name="key"></param>
-        /// <param name="value"></param>
-        /// <returns></returns>
-        protected async Task<EntityValue> FindValueAsync(string key, string value = null, long id = -1)
-        {
-            var valueSearch = new EntityValueSearch() { KeyLike = key };
-            if(value != null)
-                valueSearch.ValueLike = value;
-            if(id > 0)
-                valueSearch.EntityIds.Add(id);
-            return (await entityProvider.GetEntityValuesAsync(valueSearch)).OnlySingle();
-        }
     }
 }
