@@ -65,10 +65,20 @@ namespace contentapi.Services.Extensions
             return entity;
         }
 
-        public static EntityWrapper AddRelation(this EntityWrapper entity, long entity1, long entity2, string type, string value = null)
+        public static EntityWrapper AddRelation(this EntityWrapper entity, long entity1, string type, string value = null)
         {
-            entity.Relations.Add(QuickRelation(entity1, entity2, type, value));
+            entity.Relations.Add(QuickRelation(entity1, entity.id, type, value));
             return entity;
+        }
+
+        public static EntityValue GetValueRaw(this EntityWrapper entity, string key)
+        {
+            var values = entity.Values.Where(x => x.key == key);
+
+            if(values.Count() != 1)
+                throw new InvalidOperationException($"Not a single value for key: {key}");
+            
+            return values.First();
         }
 
         /// <summary>
@@ -79,12 +89,7 @@ namespace contentapi.Services.Extensions
         /// <returns></returns>
         public static string GetValue(this EntityWrapper entity, string key)
         {
-            var values = entity.Values.Where(x => x.key == key);
-
-            if(values.Count() != 1)
-                throw new InvalidOperationException($"Not a single value for key: {key}");
-            
-            return values.First().value;
+            return GetValueRaw(entity, key).value;
         }
 
         /// <summary>
@@ -96,6 +101,11 @@ namespace contentapi.Services.Extensions
         public static bool HasValue(this EntityWrapper entity, string key)
         {
             return entity.Values.Any(x => x.key == key);
+        }
+
+        public static bool HasRelation(this EntityWrapper entity, string type)
+        {
+            return entity.Relations.Any(x => x.type == type);
         }
 
         /// <summary>

@@ -212,5 +212,6 @@ namespace contentapi.Controllers
 
             return Ok("Email Confirmed");
         }
+        
     }
 }

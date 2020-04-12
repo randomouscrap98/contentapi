@@ -1,5 +1,8 @@
 
 using System.Threading.Tasks;
+using AutoMapper;
+using contentapi.Services.Extensions;
+using contentapi.Views;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.Extensions.Logging;
 using Randomous.EntitySystem;
@@ -8,12 +11,10 @@ namespace contentapi.Controllers
 {
     [Route("api/[controller]")]
     [ApiController]
-    public class TestController : ControllerBase
+    public class TestController : ProviderBaseController
     {
-        protected ILogger<TestController> logger;
-        protected IEntityProvider entityProvider;
-
-        public TestController(ILogger<TestController> logger, IEntityProvider entityProvider)
+        public TestController(ILogger<TestController> logger, IEntityProvider entityProvider, IMapper mapper) 
+            : base(logger, entityProvider, mapper)
         {
             this.logger = logger;
             this.entityProvider = entityProvider;
@@ -40,5 +41,20 @@ namespace contentapi.Controllers
                 RelationCount = relations.Count
             };
         }
+
+        //[HttpGet("historic")]
+        //public async Task<ActionResult> UserHistoric()
+        //{
+        //    var newWhatever = EntityWrapperExtensions.QuickEntity("someTest")
+        //        .AddValue("value1", "key1")
+        //        .AddValue("value2", "key2")
+        //        .AddRelation(69, "relation1");
+        //    
+        //    await WriteHistoric(newWhatever);
+        //    newWhatever.GetValueRaw("value1").value = "updatedKey (except it's actually value lmao)";
+        //    await WriteHistoric(newWhatever);
+
+        //    return Ok($"it at least completed. id: {newWhatever.id}");
+        //}
     }
 }
