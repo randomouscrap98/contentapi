@@ -11,18 +11,18 @@ using Randomous.EntitySystem.Extensions;
 
 namespace contentapi
 {
-    public class ControllerServices<T>
+    public class ControllerServices//<T>
     {
         public IEntityProvider provider;
-        public ILogger<T> logger;
+        //public ILogger<T> logger;
         public IMapper mapper;
         public Keys keys;
         public SystemConfig systemConfig;
 
-        public ControllerServices(ILogger<T> logger, IEntityProvider provider, IMapper mapper, Keys keys, SystemConfig systemConfig)
+        public ControllerServices(/*ILogger<T> logger,*/ IEntityProvider provider, IMapper mapper, Keys keys, SystemConfig systemConfig)
         {
             this.provider = provider;
-            this.logger = logger;
+            //this.logger = logger;
             this.mapper = mapper;
             this.keys = keys;
             this.systemConfig = systemConfig;
@@ -39,18 +39,18 @@ namespace contentapi
     /// </remarks>
     [Route("api/[controller]")]
     [ApiController]
-    public abstract class ProviderBaseController<T> : ControllerBase
+    public abstract class ProviderBaseController : ControllerBase
     {
-        protected ControllerServices<T> services;
+        protected ControllerServices services;
         
         protected Keys keys => services.keys;
 
-        public ProviderBaseController(ControllerServices<T> services)
+        public ProviderBaseController(ControllerServices services)
         {
             this.services = services;
         }
 
-        public EntityPackage NewEntity(string name, string content = null)
+        protected EntityPackage NewEntity(string name, string content = null)
         {
             return new EntityPackage()
             {
@@ -58,12 +58,12 @@ namespace contentapi
             };
         }
 
-        public EntityValue NewValue(string key, string value)
+        protected EntityValue NewValue(string key, string value)
         {
             return new EntityValue() {key = key, value = value};
         }
 
-        public EntityRelation NewRelation(long parent, string type, string value = null)
+        protected EntityRelation NewRelation(long parent, string type, string value = null)
         {
             return new EntityRelation()
             {

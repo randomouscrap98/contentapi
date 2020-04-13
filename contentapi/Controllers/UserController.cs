@@ -29,14 +29,14 @@ namespace contentapi.Controllers
         }
     }
 
-    public class UserController : ProviderBaseController<UserController> //: EntityBaseController<UserView>
+    public class UserController : ProviderBaseController //: EntityBaseController<UserView>
     {
         protected IHashService hashService;
         protected ITokenService tokenService;
         protected ILanguageService languageService;
         protected IEmailService emailService;
 
-        public UserController(ControllerServices<UserController> services, IHashService hashService,
+        public UserController(ControllerServices services, IHashService hashService,
             ITokenService tokenService, ILanguageService languageService, IEmailService emailService)
             :base(services)
         { 
@@ -170,10 +170,15 @@ namespace contentapi.Controllers
             return GetViewWithEmail(newUser);
         }
 
-        [HttpPost("register/sendemail")]
-        public async Task<ActionResult> SendRegistrationEmail([FromBody]string email)
+        public class RegistrationEmailPost
         {
-            var emailValue = await services.provider.FindValueAsync(keys.EmailKey, email);
+            public string email {get;set;}
+        }
+
+        [HttpPost("register/sendemail")]
+        public async Task<ActionResult> SendRegistrationEmail([FromBody]RegistrationEmailPost post)
+        {
+            var emailValue = await services.provider.FindValueAsync(keys.EmailKey, post.email);
 
             if(emailValue == null)
                 return BadRequest("No user with that email");
@@ -184,18 +189,23 @@ namespace contentapi.Controllers
             if(registrationCode == null)
                 return BadRequest("Nothing to do for user");
 
-            await SendConfirmationEmailAsync(email, registrationCode.value);
+            await SendConfirmationEmailAsync(post.email, registrationCode.value);
 
             return Ok("Email sent");
         }
 
-        [HttpPost("register/confirm")]
-        public async Task<ActionResult> ConfirmEmail([FromBody]string confirmationKey)
+        public class ConfirmEmailPost
         {
-            if(string.IsNullOrEmpty(confirmationKey))
+            public string confirmationKey {get;set;}
+        }
+
+        [HttpPost("register/confirm")]
+        public async Task<ActionResult> ConfirmEmail([FromBody]ConfirmEmailPost post)
+        {
+            if(string.IsNullOrEmpty(post.confirmationKey))
                 return BadRequest("Must provide a confirmation key in the body");
 
-            var confirmValue = await services.provider.FindValueAsync(keys.RegistrationCodeKey, confirmationKey);
+            var confirmValue = await services.provider.FindValueAsync(keys.RegistrationCodeKey, post.confirmationKey);
 
             if(confirmValue == null)
                 return BadRequest("No user found with confirmation key");

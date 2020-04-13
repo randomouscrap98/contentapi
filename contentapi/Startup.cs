@@ -61,6 +61,8 @@ namespace contentapi
             services.AddTransient<ITokenService, TokenService>();
             services.AddTransient<IHashService, HashService>();
 
+            services.AddTransient<ControllerServices>();
+
             var provider = new DefaultServiceProvider();
             provider.AddDefaultServices(services, options => options.UseSqlite(dataSection.GetValue<string>("ContentConnectionString")));
 

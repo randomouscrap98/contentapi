@@ -10,9 +10,9 @@ namespace contentapi.Controllers
 {
     [Route("api/[controller]")]
     [ApiController]
-    public class TestController : ProviderBaseController<TestController>
+    public class TestController : ProviderBaseController
     {
-        public TestController(ControllerServices<TestController> services)
+        public TestController(ControllerServices services)
             :base(services) { }
 
         public class TestData

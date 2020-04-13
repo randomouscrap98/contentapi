@@ -10,9 +10,9 @@ namespace contentapi.Controllers
         public string Name {get;set;}
     }
 
-    public class CategoryController : ProviderBaseController<CategoryController>
+    public class CategoryController : ProviderBaseController
     {
-        public CategoryController(ControllerServices<CategoryController> services)
+        public CategoryController(ControllerServices services)
             : base(services)
         {
 
