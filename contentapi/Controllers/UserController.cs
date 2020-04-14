@@ -29,16 +29,16 @@ namespace contentapi.Controllers
         }
     }
 
-    public class UserController : ProviderBaseController //: EntityBaseController<UserView>
+    public class UserController : EntityBaseController<UserView> //: EntityBaseController<UserView>
     {
         protected IHashService hashService;
         protected ITokenService tokenService;
         protected ILanguageService languageService;
         protected IEmailService emailService;
 
-        public UserController(ControllerServices services, IHashService hashService,
+        public UserController(ILogger<UserController> logger, ControllerServices services, IHashService hashService,
             ITokenService tokenService, ILanguageService languageService, IEmailService emailService)
-            :base(services)
+            :base(services, logger)
         { 
             this.hashService = hashService;
             this.tokenService = tokenService;
@@ -46,7 +46,9 @@ namespace contentapi.Controllers
             this.emailService = emailService;
         }
 
-        protected UserView GetViewFromExpanded(EntityPackage user)
+        protected override string EntityType => keys.TypeUser;
+
+        protected override UserView ConvertToView(EntityPackage user)
         {
             var view = new UserView()
             {
@@ -58,9 +60,14 @@ namespace contentapi.Controllers
             return view;
         }
 
+        protected override EntityPackage ConvertFromView(UserView view)
+        {
+            throw new NotImplementedException();
+        }
+
         protected UserView GetViewWithEmail(EntityPackage user)
         {
-            var view = GetViewFromExpanded(user);
+            var view = ConvertToView(user);
             view.email = user.Values.First(x => x.key == services.keys.EmailKey).value; //We're the creator so we get to see the email
             return view;
         }
@@ -68,20 +75,21 @@ namespace contentapi.Controllers
         [HttpGet]
         public async Task<ActionResult<List<UserView>>> GetAll([FromQuery]UserSearch search)
         {
-            var entitySearch = LimitSearch(services.mapper.Map<EntitySearch>(search));
-            return (await services.provider.GetEntityPackagesAsync(entitySearch)).Select(x => GetViewFromExpanded(x)).ToList();
+            var entitySearch = (EntitySearch)(await ModifySearchAsync(services.mapper.Map<EntitySearch>(search)));
+            return (await services.provider.GetEntityPackagesAsync(entitySearch)).Select(x => ConvertToView(x)).ToList();
         }
 
-        [HttpGet("{id}")]
-        public async Task<ActionResult<UserView>> GetUser([FromRoute]long id)
-        {
-            var user = await services.provider.FindByIdAsync(id);
+        //[HttpGet("{id}")]
+        //public async Task<ActionResult<UserView>> GetSingle([FromRoute]long id)
+        //{
+        //    var user = await services.provider.FindByIdAsync(id);
 
-            if(user == null)
-                return NotFound($"User with id {id} not found");
-            
-            return GetViewFromExpanded(user);
-        }
+        //    if(user == null)
+        //        return NotFound($"User with id {id} not found");
+        //    
+        //    return GetViewFromExpanded(user);
+        //}
+
 
         [HttpGet("me")]
         public async Task<ActionResult<UserView>> Me()
@@ -92,7 +100,9 @@ namespace contentapi.Controllers
             if(id == null)
                 return BadRequest("Not logged in!");
 
-            return await GetUser(long.Parse(id));
+            var search = new UserSearch();
+            search.Ids.Add(long.Parse(id));
+            return (await GetAll(search)).Value.OnlySingle();
         }
 
         [HttpPost("authenticate")]
@@ -161,6 +171,9 @@ namespace contentapi.Controllers
                 .Add(NewValue(keys.PasswordSaltKey, Convert.ToBase64String(salt)))
                 .Add(NewValue(keys.PasswordHashKey, Convert.ToBase64String(hashService.GetHash(user.password, salt))))
                 .Add(NewValue(keys.RegistrationCodeKey, Guid.NewGuid().ToString()));
+            
+            //This is EXTREMELY IMPORTANT and MUST BE DONE EACH TIME SOME ENTITY IS WRITTEN!
+            newUser.Entity.type = keys.TypeUser;
 
             await services.provider.WriteAsync(newUser);
 

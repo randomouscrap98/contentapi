@@ -6,16 +6,26 @@ namespace contentapi
     public class Keys
     {
         public string UserIdentifier => "uid";
+        public string ActiveIdentifier => "a";
+
+        //Overall types of entities
+        public string TypeUser => "tu";
+        public string TypeCategory => "tc";
+        public string TypeContent => "tp"; //p for page/post
+        public string TypeComment => "ta"; //a for addendum or annotation
+        public string TypeStandIn => "ts";
+
+        //Historic keys
+        public string HistoryKey => "_";
+        public string StandInRelation => "ssi";
 
         //User stuff 
-        public string UserKey => "su";
         public string EmailKey => "se";
         public string PasswordHashKey => "sph";
         public string PasswordSaltKey => "sps";
         public string RegistrationCodeKey => "srk";
 
         //Category stuff
-        public string CategoryKey => "sc";
 
         public void EnsureAllUnique()
         {

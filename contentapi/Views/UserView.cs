@@ -10,4 +10,9 @@ namespace contentapi.Views
         public string username { get; set; }
         public string email { get; set; } //This field SHOULDN'T be set unless the user is ourselves.
     }
+
+    public class UserViewFull : UserView
+    {
+        public string password {get;set;}
+    }
 }

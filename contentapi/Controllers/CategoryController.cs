@@ -1,3 +1,4 @@
+using System;
 using AutoMapper;
 using contentapi.Views;
 using Microsoft.Extensions.Logging;
@@ -10,12 +11,21 @@ namespace contentapi.Controllers
         public string Name {get;set;}
     }
 
-    public class CategoryController : ProviderBaseController
+    public class CategoryController : EntityBaseController<CategoryView>
     {
-        public CategoryController(ControllerServices services)
-            : base(services)
-        {
+        public CategoryController(ILogger<CategoryController> logger, ControllerServices services)
+            : base(services, logger) { }
 
+        protected override string EntityType => keys.TypeCategory;
+
+        protected override EntityPackage ConvertFromView(CategoryView view)
+        {
+            throw new NotImplementedException();
+        }
+
+        protected override CategoryView ConvertToView(EntityPackage package)
+        {
+            throw new NotImplementedException();
         }
 
         //protected override CategoryView GetViewFromExpanded(EntityPackage user)

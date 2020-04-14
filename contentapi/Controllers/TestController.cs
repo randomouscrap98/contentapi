@@ -12,8 +12,8 @@ namespace contentapi.Controllers
     [ApiController]
     public class TestController : ProviderBaseController
     {
-        public TestController(ControllerServices services)
-            :base(services) { }
+        public TestController(ILogger<TestController> logger, ControllerServices services)
+            :base(services, logger) { }
 
         public class TestData
         {

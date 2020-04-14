@@ -14,7 +14,6 @@ namespace contentapi
     public class ControllerServices//<T>
     {
         public IEntityProvider provider;
-        //public ILogger<T> logger;
         public IMapper mapper;
         public Keys keys;
         public SystemConfig systemConfig;
@@ -42,12 +41,14 @@ namespace contentapi
     public abstract class ProviderBaseController : ControllerBase
     {
         protected ControllerServices services;
+        protected ILogger<ProviderBaseController> logger;
         
         protected Keys keys => services.keys;
 
-        public ProviderBaseController(ControllerServices services)
+        public ProviderBaseController(ControllerServices services, ILogger<ProviderBaseController> logger)
         {
             this.services = services;
+            this.logger = logger;
         }
 
         protected EntityPackage NewEntity(string name, string content = null)
@@ -73,45 +74,13 @@ namespace contentapi
             };
         }
 
-        //protected async Task<List<EntityPackage>> SearchExpandAsync(EntitySearch search, bool expand)
-        //{
-        //    if(expand)
-        //        return await entityProvider.GetEntityPackagesAsync(search);
-        //    else
-        //        return (await entityProvider.GetEntitiesAsync(search)).Select(x => new EntityWrapper(x)).ToList();
-        //}
-
-        ///// <summary>
-        ///// Find some entity by name
-        ///// </summary>
-        ///// <param name="name"></param>
-        ///// <typeparam name="E"></typeparam>
-        ///// <returns></returns>
-        //protected async Task<EntityPackage> FindByNameAsync(string name, bool expand = false)
-        //{
-        //    return (await SearchExpandAsync(new EntitySearch() {NameLike = name}, expand)).OnlySingle();
-        //}
-
-        ///// <summary>
-        ///// Find some entity by id 
-        ///// </summary>
-        ///// <param name="id"></param>
-        ///// <typeparam name="E"></typeparam>
-        ///// <returns></returns>
-        //protected async Task<EntityPackage> FindByIdAsync(long id, bool expand = false)
-        //{
-        //    var search = new EntitySearch();
-        //    search.Ids.Add(id);
-        //    return (await SearchExpandAsync(search, expand)).OnlySingle();
-        //}
-
         /// <summary>
         /// Apply various limits to a search
         /// </summary>
         /// <param name="search"></param>
         /// <typeparam name="S"></typeparam>
         /// <returns></returns>
-        protected S LimitSearch<S>(S search) where S : EntitySearchBase
+        protected virtual EntitySearch LimitSearch(EntitySearch search) //where S : EntitySearchBase
         {
             if(search.Limit < 0 || search.Limit > 1000)
                 search.Limit = 1000;
