@@ -27,10 +27,5 @@ namespace contentapi.Controllers
         {
             throw new NotImplementedException();
         }
-
-        //protected override CategoryView GetViewFromExpanded(EntityPackage user)
-        //{
-        //    throw new System.NotImplementedException();
-        //}
     }
 }

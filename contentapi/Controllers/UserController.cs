@@ -21,11 +21,13 @@ namespace contentapi.Controllers
         public string Username {get;set;}
     }
 
-    public class UserSearchProfile : Profile
+    public class UserControllerProfile : Profile
     {
-        public UserSearchProfile()
+        public UserControllerProfile()
         {
             CreateMap<UserSearch, EntitySearch>().ForMember(x => x.NameLike, o => o.MapFrom(s => s.Username));
+            CreateMap<UserView, UserViewFull>().ReverseMap();
+            CreateMap<UserCredential, UserViewFull>().ReverseMap();
         }
     }
 
@@ -62,7 +64,16 @@ namespace contentapi.Controllers
 
         protected override EntityPackage ConvertFromView(UserView view)
         {
-            throw new NotImplementedException();
+            var user = (UserViewFull)view;
+            var salt = hashService.GetSalt();
+
+            var newUser = NewEntity(user.username)
+                .Add(NewValue(keys.EmailKey, user.email))
+                .Add(NewValue(keys.PasswordSaltKey, Convert.ToBase64String(salt)))
+                .Add(NewValue(keys.PasswordHashKey, Convert.ToBase64String(hashService.GetHash(user.password, salt))))
+                .Add(NewValue(keys.RegistrationCodeKey, Guid.NewGuid().ToString()));
+
+            return newUser;
         }
 
         protected UserView GetViewWithEmail(EntityPackage user)
@@ -164,23 +175,7 @@ namespace contentapi.Controllers
             if(await services.provider.FindByNameBaseAsync(user.username) != null || await services.provider.FindValueAsync(keys.EmailKey, user.email) != null)
                 return BadRequest("This user already seems to exist!");
 
-            var salt = hashService.GetSalt();
-
-            var newUser = NewEntity(user.username)
-                .Add(NewValue(keys.EmailKey, user.email))
-                .Add(NewValue(keys.PasswordSaltKey, Convert.ToBase64String(salt)))
-                .Add(NewValue(keys.PasswordHashKey, Convert.ToBase64String(hashService.GetHash(user.password, salt))))
-                .Add(NewValue(keys.RegistrationCodeKey, Guid.NewGuid().ToString()));
-            
-            //This is EXTREMELY IMPORTANT and MUST BE DONE EACH TIME SOME ENTITY IS WRITTEN!
-            newUser.Entity.type = keys.TypeUser;
-
-            await services.provider.WriteAsync(newUser);
-
-            //Note the last parameter: the create user is ALWAYS the user that just got created! The user "creates" itself!
-            //await LogAct(EntityAction.Create, createUser.entityId, createUser.entityId);
-
-            return GetViewWithEmail(newUser);
+            return GetViewWithEmail(await WriteViewAsync(services.mapper.Map<UserViewFull>(user)));
         }
 
         public class RegistrationEmailPost
