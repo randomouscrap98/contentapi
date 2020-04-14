@@ -17,7 +17,7 @@ namespace contentapi
 
         //Historic keys
         public string HistoryKey => "_";
-        public string StandInRelation => "ssi";
+        public string StandInRelation => ">";
 
         //User stuff 
         public string EmailKey => "se";

@@ -87,7 +87,7 @@ namespace contentapi.Controllers
         public async Task<ActionResult<List<UserView>>> GetAll([FromQuery]UserSearch search)
         {
             var entitySearch = (EntitySearch)(await ModifySearchAsync(services.mapper.Map<EntitySearch>(search)));
-            return (await services.provider.GetEntityPackagesAsync(entitySearch)).Select(x => ConvertToView(x)).ToList();
+            return (await services.provider.GetEntityPackagesAsync(entitySearch)).Select(x => ConvertToView(SetupPackageForRead(x))).ToList();
         }
 
         //[HttpGet("{id}")]

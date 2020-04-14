@@ -163,6 +163,9 @@ namespace contentapi.Controllers
                 });
 
                 search.Ids = realRelations.Where(x => x.value == keys.ActiveIdentifier).Select(x => x.entityId2).ToList();
+
+                if(search.Ids.Count == 0)
+                    search.Ids.Add(long.MaxValue); //This should never be found, and should ensure nothing is found in the search
             }
 
             return search;
