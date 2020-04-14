@@ -48,7 +48,7 @@ namespace contentapi.Controllers
             this.emailService = emailService;
         }
 
-        protected override string EntityType => keys.TypeUser;
+        protected override string EntityType => keys.UserType;
 
         protected override UserView ConvertToView(EntityPackage user)
         {

@@ -1,8 +1,10 @@
 using System;
+using System.Collections.Generic;
 using AutoMapper;
 using contentapi.Views;
 using Microsoft.Extensions.Logging;
 using Randomous.EntitySystem;
+using Randomous.EntitySystem.Extensions;
 
 namespace contentapi.Controllers
 {
@@ -11,21 +13,29 @@ namespace contentapi.Controllers
         public string Name {get;set;}
     }
 
-    public class CategoryController : EntityBaseController<CategoryView>
+    public class CategoryController : PermissionBaseController<CategoryView>
     {
         public CategoryController(ILogger<CategoryController> logger, ControllerServices services)
-            : base(services, logger) { }
+            : base(services, logger) 
+        { 
+        }
 
-        protected override string EntityType => keys.TypeCategory;
-
+        protected override string EntityType => keys.CategoryType;
+        
         protected override EntityPackage ConvertFromView(CategoryView view)
         {
-            throw new NotImplementedException();
+            var package = NewEntity(view.name, view.description);
+            package = BasicPermissionPackageSetup(package, view);
+            return package;
         }
 
         protected override CategoryView ConvertToView(EntityPackage package)
         {
-            throw new NotImplementedException();
+            var view = new CategoryView();
+            view.name = package.Entity.name;
+            view.description = package.Entity.content;
+            view = BasicPermissionViewSetup(view, package);
+            return view;
         }
     }
 }

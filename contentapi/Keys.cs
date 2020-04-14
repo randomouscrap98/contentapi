@@ -8,16 +8,26 @@ namespace contentapi
         public string UserIdentifier => "uid";
         public string ActiveIdentifier => "a";
 
+        //General stuff
+        public string CreatorRelation => "rc";
+        public string ParentRelation => "rp";
+        public string StandInRelation => ">";
+
+        //Access stuff (I hate that these are individual, hopefully this won't impact performance too bad...)
+        public string CreateAccess => "ac";
+        public string ReadAccess => "ar";
+        public string UpdateAccess => "au";
+        public string DeleteAccess => "ad";
+
         //Overall types of entities
-        public string TypeUser => "tu";
-        public string TypeCategory => "tc";
-        public string TypeContent => "tp"; //p for page/post
-        public string TypeComment => "ta"; //a for addendum or annotation
-        public string TypeStandIn => "ts";
+        public string UserType => "tu";
+        public string CategoryType => "tc";
+        public string ContentType => "tp"; //p for page/post
+        public string CommentType => "ta"; //a for addendum or annotation
+        public string StandInType => "ts";
 
         //Historic keys
         public string HistoryKey => "_";
-        public string StandInRelation => ">";
 
         //User stuff 
         public string EmailKey => "se";

@@ -31,7 +31,7 @@ namespace contentapi.Controllers
         {
             var standin = new Entity()
             {
-                type = keys.TypeStandIn,
+                type = keys.StandInType,
                 content = keys.ActiveIdentifier
             };
 
@@ -59,7 +59,7 @@ namespace contentapi.Controllers
             {
                 var entity = await services.provider.FindByIdBaseAsync(package.Entity.id);
 
-                if(entity?.type != keys.TypeStandIn)
+                if(entity?.type != keys.StandInType)
                     throw new InvalidOperationException($"No entity with id {package.Entity.id}");
                 
                 standinId = package.Entity.id;
