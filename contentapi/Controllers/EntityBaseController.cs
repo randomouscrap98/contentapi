@@ -1,6 +1,7 @@
 using System;
 using System.Collections.Generic;
 using System.Linq;
+using System.Security.Claims;
 using System.Threading.Tasks;
 using AutoMapper;
 using contentapi.Services.Extensions;
@@ -18,8 +19,34 @@ namespace contentapi.Controllers
             :base(services, logger) { }
 
 
-        protected abstract V ConvertToView(EntityPackage user);
-        protected abstract EntityPackage ConvertFromView(V view);
+        /// <summary>
+        /// Create a view with ONLY the unique fields for your controller filled in. You could fill in the
+        /// others I guess, but they will be overwritten
+        /// </summary>
+        /// <param name="package"></param>
+        /// <returns></returns>
+        protected abstract V CreateBaseView(EntityPackage package);
+
+        /// <summary>
+        /// Create a package with ONLY the unique fields for your controller filled in. 
+        /// </summary>
+        /// <param name="view"></param>
+        /// <returns></returns>
+        protected abstract EntityPackage CreateBasePackage(V view);
+
+
+        public V ConvertToView(EntityPackage package)
+        {
+            var view = CreateBaseView(package);
+            return BasicViewSetup(view, package);
+        }
+
+        public EntityPackage ConvertFromView(V view)
+        {
+            var package = CreateBasePackage(view);
+            return BasicPackageSetup(package, view);
+        }
+
         protected abstract string EntityType {get;}
 
         /// <summary>
@@ -39,41 +66,52 @@ namespace contentapi.Controllers
             return standin.id;
         }
 
+        protected long GetRequesterUid()
+        {
+            //Look for the UID from the JWT 
+            var id = User.FindFirstValue(services.keys.UserIdentifier);
+
+            if(id == null)
+                throw new InvalidOperationException("User not logged in!");
+            
+            return long.Parse(id);
+        }
+
         protected async Task<EntityPackage> WriteViewAsync(V view)
         {
             logger.LogTrace("WriteViewAsync called");
 
-            var package = ConvertFromView(view);
-            package.Entity.type = EntityType;
+            var package = ConvertFromView(view); //Assume this does EVERYTHING
+            package.Entity.type = EntityType; //Some setup for writing. guess it doesn't do EVERYTHING
+            package.Entity.id = 0;
 
-            long standinId = -1;
+            //We assume the package was there.
+            var standin = package.GetRelation(keys.StandInRelation);
             bool newPackage = false;
 
-            if(package.Entity.id == 0)
+            if(standin.entityId1 == 0)
             {
                 newPackage = true;
                 logger.LogInformation("Creating standin for apparently new view");
-                standinId = await CreateStandinAsync();
+                standin.entityId1 = await CreateStandinAsync();
             }
             else
             {
-                var entity = await services.provider.FindByIdBaseAsync(package.Entity.id);
+                var entity = await services.provider.FindByIdBaseAsync(standin.entityId1); //go find the standin
 
                 if(entity?.type != keys.StandInType)
                     throw new InvalidOperationException($"No entity with id {package.Entity.id}");
-                
-                standinId = package.Entity.id;
             }
 
             //Set the package up so it's ready for a historic write
-            package = SetupPackageForWrite(standinId, package);
+            //package = SetupPackageForWrite(standinId, package);
             List<EntityBase> restoreCopies = new List<EntityBase>();
 
             //When it's NOT a new package, we have to go update historical records. Oof
             if(!newPackage)
             {
                 //Go find the "previous" active content and relation. Ensure they are null if there are none (it should be ok, just throw a warning)
-                var lastActiveRelation = (await GetActiveRelation(standinId)) ?? throw new InvalidOperationException("Could not find active relation in historic content system");
+                var lastActiveRelation = (await GetActiveRelation(standin.entityId1)) ?? throw new InvalidOperationException("Could not find active relation in historic content system");
                 var lastActiveContent = (await services.provider.FindByIdBaseAsync(lastActiveRelation.entityId2)) ?? throw new InvalidOperationException("Could not find active content in historic content system");
 
                 //The state to restore should everything go south.
@@ -100,7 +138,7 @@ namespace contentapi.Controllers
                 throw;
             }
 
-            return SetupPackageForRead(package);
+            return package; //SetupPackageForRead(package);
         }
 
         /// <summary>
@@ -132,20 +170,20 @@ namespace contentapi.Controllers
             return package;
         }
 
-        /// <summary>
-        /// Modify a package so it can be read transparently (without knowledge of the history system)
-        /// </summary>
-        /// <param name="package"></param>
-        /// <returns></returns>
-        protected EntityPackage SetupPackageForRead(EntityPackage package)
-        {
-            if(!package.HasRelation(keys.StandInRelation))
-                throw new InvalidOperationException("Package has no standin! What package is this?");
-            
-            package.Entity.id = package.GetRelation(keys.StandInRelation).entityId1; //the actual standin entity.
-            
-            return package;
-        }
+        ///// <summary>
+        ///// Modify a package so it can be read transparently (without knowledge of the history system)
+        ///// </summary>
+        ///// <param name="package"></param>
+        ///// <returns></returns>
+        //protected EntityPackage SetupPackageForRead(EntityPackage package)
+        //{
+        //    if(!package.HasRelation(keys.StandInRelation))
+        //        throw new InvalidOperationException("Package has no standin! What package is this?");
+        //    
+        //    package.Entity.id = package.GetRelation(keys.StandInRelation).entityId1; //the actual standin entity.
+        //    
+        //    return package;
+        //}
 
         protected async Task<EntitySearch> ModifySearchAsync(EntitySearch search)
         {
@@ -169,6 +207,40 @@ namespace contentapi.Controllers
             }
 
             return search;
+        }
+
+        /// <summary>
+        /// Fill basic package fields using existing view
+        /// </summary>
+        /// <param name="package"></param>
+        /// <param name="view"></param>
+        /// <returns></returns>
+        protected virtual EntityPackage BasicPackageSetup(EntityPackage package, V view)
+        {
+            //This should be JUST conversion, do not assume this is being setup for writing!
+            package.Entity.createDate = view.createDate;
+            package.Add(NewRelation(view.id, keys.StandInRelation, keys.ActiveIdentifier));
+
+            return package;
+        }
+
+        /// <summary>
+        /// Fill basic view fields using existing package
+        /// </summary>
+        /// <param name="view"></param>
+        /// <param name="package"></param>
+        /// <returns></returns>
+        protected virtual V BasicViewSetup(V view, EntityPackage package)
+        {
+            //This should JUST be conversion, do not assume this is being setup for writing!
+            view.createDate = package.Entity.createDate;
+
+            if(!package.HasRelation(keys.StandInRelation))
+                throw new InvalidOperationException("Package has no stand-in relation, it is not part of the history system!");
+
+            view.id = package.GetRelation(keys.StandInRelation).entityId1; //Entity.id;
+
+            return view;
         }
     }
 }

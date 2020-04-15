@@ -1,6 +1,7 @@
 using System;
 using System.Collections.Generic;
 using System.Linq;
+using System.Threading.Tasks;
 using contentapi.Views;
 using Microsoft.Extensions.Logging;
 using Randomous.EntitySystem;
@@ -24,7 +25,7 @@ namespace contentapi.Controllers
             };
         }
 
-        protected List<EntityRelation> ConvertPermsToRelations(Dictionary<long, string> perms)
+        protected List<EntityRelation> ConvertPermsToRelations(Dictionary<string, string> perms)
         {
             var result = new List<EntityRelation>();
             foreach(var perm in perms)
@@ -33,30 +34,38 @@ namespace contentapi.Controllers
                 {
                     if(!permMapping.ContainsKey(p))
                         throw new InvalidOperationException("Bad character in permission");
+                    
+                    long userId = 0;
 
-                    result.Add(NewRelation(perm.Key, permMapping[p]));
+                    if(!long.TryParse(perm.Key, out userId))
+                        throw new InvalidOperationException("Id not an integer!");
+
+                    result.Add(NewRelation(userId, permMapping[p]));
                 }
             }
             return result;
         }
 
-        protected Dictionary<long, string> ConvertRelationsToPerms(IEnumerable<EntityRelation> relations)
+        protected Dictionary<string, string> ConvertRelationsToPerms(IEnumerable<EntityRelation> relations)
         {
-            var result = new Dictionary<long, string>();
+            var result = new Dictionary<string, string>();
             foreach(var relation in relations)
             {
                 var perm = permMapping.Where(x => x.Value == relation.type);
                 if(perm.Count() != 1)
                     continue;
-                if(!result.ContainsKey(relation.entityId1))
-                    result.Add(relation.entityId1, "");
-                result[relation.entityId1] += (perm.First().Key);
+                var userKey = relation.entityId1.ToString();
+                if(!result.ContainsKey(userKey))
+                    result.Add(userKey, "");
+                result[userKey] += (perm.First().Key);
             }
             return result;
         }
 
-        protected EntityPackage BasicPermissionPackageSetup(EntityPackage package, V view)
+        protected override EntityPackage BasicPackageSetup(EntityPackage package, V view)
         {
+            base.BasicPackageSetup(package, view);
+
             //There HAS to be a creator
             package.Add(NewRelation(view.userId, keys.CreatorRelation));
 
@@ -71,8 +80,10 @@ namespace contentapi.Controllers
             return package;
         }
 
-        protected V BasicPermissionViewSetup(V view, EntityPackage package)
+        protected override V BasicViewSetup(V view, EntityPackage package)
         {
+            base.BasicViewSetup(view, package);
+
             //Set the creator to whatever the relation is
             view.userId = package.GetRelation(keys.CreatorRelation).entityId1;
 
@@ -83,5 +94,20 @@ namespace contentapi.Controllers
 
             return view;
         }
+
+        //protected async Task<V> PostCleanAsync(V view)
+        //{
+        //    //First, if view is "not new", go get the old and override values people can't change.
+        //    if(view.id > 0)
+        //    {
+        //        var 
+        //    }
+        //    else
+        //    {
+        //        //if the view IS new, set the create date and uid to special values
+        //        view.userId = GetRequesterUid();
+        //        view.createDate = DateTime.Now;
+        //    }
+        //}
     }
 }

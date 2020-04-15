@@ -18,11 +18,11 @@ namespace contentapi.Views
         public long parentId {get;set;}
 
         /// <summary>
-        /// All the permissions set on the view
+        /// All the permissions set on the view. The keys unfortunately have to be strings.
         /// </summary>
         /// <typeparam name="long"></typeparam>
         /// <typeparam name="string"></typeparam>
         /// <returns></returns>
-        public Dictionary<long, string> permissions {get;set;} = new Dictionary<long, string>();
+        public Dictionary<string, string> permissions {get;set;} = new Dictionary<string, string>();
     }
 }

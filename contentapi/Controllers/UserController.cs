@@ -50,23 +50,18 @@ namespace contentapi.Controllers
 
         protected override string EntityType => keys.UserType;
 
-        protected override UserView ConvertToView(EntityPackage user)
+        protected override UserView CreateBaseView(EntityPackage user)
         {
-            var view = new UserView()
-            {
-                id = user.Entity.id,
-                createDate = user.Entity.createDate,
-                username = user.Entity.name,
-            };
-
-            return view;
+            return new UserView() { username = user.Entity.name, email = user.GetValue(keys.EmailKey).value };
         }
 
-        protected override EntityPackage ConvertFromView(UserView view)
+        protected override EntityPackage CreateBasePackage(UserView view)
         {
             var user = (UserViewFull)view;
             var salt = hashService.GetSalt();
 
+            //This is incorrect: we are not necessarily making a NEW user, we are setting up a package 
+            //to look like the given view. This should work this way but be careful and fix later.
             var newUser = NewEntity(user.username)
                 .Add(NewValue(keys.EmailKey, user.email))
                 .Add(NewValue(keys.PasswordSaltKey, Convert.ToBase64String(salt)))
@@ -76,19 +71,28 @@ namespace contentapi.Controllers
             return newUser;
         }
 
-        protected UserView GetViewWithEmail(EntityPackage user)
+        //protected UserView GetViewWithEmail(EntityPackage user)
+        //{
+        //    var view = ConvertToView(user);
+        //    view.email = user.Values.First(x => x.key == services.keys.EmailKey).value; //We're the creator so we get to see the email
+        //    return view;
+        //}
+
+        protected async Task<List<EntityPackage>> GetAll(UserSearch search)
         {
-            var view = ConvertToView(user);
-            view.email = user.Values.First(x => x.key == services.keys.EmailKey).value; //We're the creator so we get to see the email
-            return view;
+            var entitySearch = (EntitySearch)(await ModifySearchAsync(services.mapper.Map<EntitySearch>(search)));
+            return await services.provider.GetEntityPackagesAsync(entitySearch);//.ToList();
         }
 
         [HttpGet]
-        [Authorize]
-        public async Task<ActionResult<List<UserView>>> GetAll([FromQuery]UserSearch search)
+        public async Task<ActionResult<List<UserView>>> Get([FromQuery]UserSearch search)
         {
-            var entitySearch = (EntitySearch)(await ModifySearchAsync(services.mapper.Map<EntitySearch>(search)));
-            return (await services.provider.GetEntityPackagesAsync(entitySearch)).Select(x => ConvertToView(SetupPackageForRead(x))).ToList();
+            return (await GetAll(search)).Select(x => 
+            {
+                var view = ConvertToView(x);
+                view.email = null; //disable emails for general gets (even if it's yours)
+                return view;
+            }).ToList();
         }
 
         //[HttpGet("{id}")]
@@ -107,15 +111,15 @@ namespace contentapi.Controllers
         [Authorize]
         public async Task<ActionResult<UserView>> Me()
         {
-            //Look for the UID from the JWT 
-            var id = User.FindFirstValue(services.keys.UserIdentifier);
-
-            if(id == null)
-                return BadRequest("Not logged in!");
+            long id = 0;
+            
+            try { id = GetRequesterUid(); }
+            catch(Exception ex) { return BadRequest(ex.Message); }
 
             var search = new UserSearch();
-            search.Ids.Add(long.Parse(id));
-            return (await GetAll(search)).Value.OnlySingle();
+            search.Ids.Add(id);
+            var users = await GetAll(search);
+            return ConvertToView(users.OnlySingle());
         }
 
         [HttpPost("authenticate")]
@@ -149,7 +153,7 @@ namespace contentapi.Controllers
 
             return tokenService.GetToken(new Dictionary<string, string>()
             {
-                { keys.UserIdentifier, foundUser.Entity.id.ToString() }
+                { keys.UserIdentifier, ConvertToView(foundUser).id.ToString() }
             });
         }
 
@@ -177,7 +181,7 @@ namespace contentapi.Controllers
             if(await services.provider.FindByNameBaseAsync(user.username) != null || await services.provider.FindValueAsync(keys.EmailKey, user.email) != null)
                 return BadRequest("This user already seems to exist!");
 
-            return GetViewWithEmail(await WriteViewAsync(services.mapper.Map<UserViewFull>(user)));
+            return ConvertToView(await WriteViewAsync(services.mapper.Map<UserViewFull>(user)));
         }
 
         public class RegistrationEmailPost
