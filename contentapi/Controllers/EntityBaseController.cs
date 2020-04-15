@@ -77,6 +77,30 @@ namespace contentapi.Controllers
             return long.Parse(id);
         }
 
+        //protected async Task<List<EntityPackage>> Search(object search)
+        //{
+        //    var entitySearch = (EntitySearch)(await ModifySearchAsync(services.mapper.Map<EntitySearch>(search)));
+        //    return await services.provider.GetEntityPackagesAsync(entitySearch);//.ToList();
+        //}
+
+        /// <summary>
+        /// Find an entity by its STAND IN id (not the regular ID, use the service for that)
+        /// </summary>
+        /// <param name="standinId"></param>
+        /// <returns></returns>
+        protected async Task<EntityPackage> FindByIdAsync(long standinId)
+        {
+            var realIds = await ConvertStandInIdsAsync(standinId);
+
+            if(realIds.Count() == 0)
+                return null;
+            else if(realIds.Count() > 1)
+                throw new InvalidOperationException("Multiple entities for given standin, are there trailing history elements?");
+            
+            return await services.provider.FindByIdAsync(realIds.First());
+        }
+
+
         protected async Task<EntityPackage> WriteViewAsync(V view)
         {
             logger.LogTrace("WriteViewAsync called");
@@ -138,7 +162,7 @@ namespace contentapi.Controllers
                 throw;
             }
 
-            return package; //SetupPackageForRead(package);
+            return package;
         }
 
         /// <summary>
@@ -155,35 +179,21 @@ namespace contentapi.Controllers
             return result.Where(x => x.value == keys.ActiveIdentifier).OnlySingle();
         }
 
-        /// <summary>
-        /// Modify a package so it is written as historic
-        /// </summary>
-        /// <param name="package"></param>
-        /// <returns></returns>
-        protected EntityPackage SetupPackageForWrite(long standinKey, EntityPackage package)
+        protected async Task<List<long>> ConvertStandInIdsAsync(List<long> ids)
         {
-            if(package.HasRelation(keys.StandInRelation))
-                throw new InvalidOperationException("Package already has standin key! Don't add this yourself!");
-            
-            package.Add(NewRelation(standinKey, keys.StandInRelation, keys.ActiveIdentifier));
-            package.Entity.id = 0;
-            return package;
+            var realRelations = await services.provider.GetEntityRelationsAsync(new EntityRelationSearch()
+            {
+                EntityIds1 = ids,
+                TypeLike = keys.StandInRelation
+            });
+
+            return realRelations.Where(x => x.value == keys.ActiveIdentifier).Select(x => x.entityId2).ToList();
         }
 
-        ///// <summary>
-        ///// Modify a package so it can be read transparently (without knowledge of the history system)
-        ///// </summary>
-        ///// <param name="package"></param>
-        ///// <returns></returns>
-        //protected EntityPackage SetupPackageForRead(EntityPackage package)
-        //{
-        //    if(!package.HasRelation(keys.StandInRelation))
-        //        throw new InvalidOperationException("Package has no standin! What package is this?");
-        //    
-        //    package.Entity.id = package.GetRelation(keys.StandInRelation).entityId1; //the actual standin entity.
-        //    
-        //    return package;
-        //}
+        protected Task<List<long>> ConvertStandInIdsAsync(params long[] ids)
+        {
+            return ConvertStandInIdsAsync(ids.ToList());
+        }
 
         protected async Task<EntitySearch> ModifySearchAsync(EntitySearch search)
         {
@@ -194,13 +204,7 @@ namespace contentapi.Controllers
             //We have to find the rEAL ids that they want. This is the only big thing...?
             if(search.Ids.Count > 0)
             {
-                var realRelations = await services.provider.GetEntityRelationsAsync(new EntityRelationSearch()
-                {
-                    EntityIds1 = search.Ids,
-                    TypeLike = keys.StandInRelation
-                });
-
-                search.Ids = realRelations.Where(x => x.value == keys.ActiveIdentifier).Select(x => x.entityId2).ToList();
+                search.Ids = await ConvertStandInIdsAsync(search.Ids);
 
                 if(search.Ids.Count == 0)
                     search.Ids.Add(long.MaxValue); //This should never be found, and should ensure nothing is found in the search

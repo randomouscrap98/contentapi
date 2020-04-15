@@ -59,6 +59,7 @@ namespace contentapi.Controllers
         [Authorize]
         public async Task<ActionResult<CategoryView>> PostCredentials([FromBody]CategoryView view)
         {
+            view = await PostCleanAsync(view);
             return ConvertToView(await WriteViewAsync(view));
         }
     }

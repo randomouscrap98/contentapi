@@ -95,19 +95,37 @@ namespace contentapi.Controllers
             return view;
         }
 
-        //protected async Task<V> PostCleanAsync(V view)
-        //{
-        //    //First, if view is "not new", go get the old and override values people can't change.
-        //    if(view.id > 0)
-        //    {
-        //        var 
-        //    }
-        //    else
-        //    {
-        //        //if the view IS new, set the create date and uid to special values
-        //        view.userId = GetRequesterUid();
-        //        view.createDate = DateTime.Now;
-        //    }
-        //}
+        protected async Task<V> PostCleanAsync(V view)
+        {
+            //First, if view is "not new", go get the old and override values people can't change.
+            if(view.id > 0)
+            {
+                var existing = await FindByIdAsync(view.id);
+
+                if(existing == null)
+                    throw new InvalidOperationException($"No existing entity with id {view.id}");
+                
+                //Don't allow the user to change these things.
+                view.userId = existing.GetRelation(keys.CreatorRelation).entityId1;
+                view.createDate = existing.Entity.createDate;
+            }
+            else
+            {
+                //if the view IS new, set the create date and uid to special values
+                view.userId = GetRequesterUid();
+                view.createDate = DateTime.Now;
+            }
+
+            //Oh also make sure the parent exists.
+            if(view.parentId > 0)
+            {
+                var existing = await FindByIdAsync(view.parentId); //wait is this the standin? uhh yes always.
+
+                if(existing == null)
+                    throw new InvalidOperationException($"No parent with id {view.id}");
+            }
+            
+            return view;
+        }
     }
 }

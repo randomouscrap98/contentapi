@@ -116,10 +116,7 @@ namespace contentapi.Controllers
             try { id = GetRequesterUid(); }
             catch(Exception ex) { return BadRequest(ex.Message); }
 
-            var search = new UserSearch();
-            search.Ids.Add(id);
-            var users = await GetAll(search);
-            return ConvertToView(users.OnlySingle());
+            return ConvertToView(await FindByIdAsync(id));
         }
 
         [HttpPost("authenticate")]
