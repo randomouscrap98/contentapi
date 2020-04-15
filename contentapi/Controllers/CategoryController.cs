@@ -57,9 +57,20 @@ namespace contentapi.Controllers
 
         [HttpPost]
         [Authorize]
-        public async Task<ActionResult<CategoryView>> PostCredentials([FromBody]CategoryView view)
+        public async Task<ActionResult<CategoryView>> PostAsync([FromBody]CategoryView view)
         {
-            view = await PostCleanAsync(view);
+            try
+            {
+                //Only super users can create categories. Flat out.
+                FailUnlessRequestSuper(); 
+
+                view = await PostCleanAsync(view);
+            }
+            catch(Exception ex)
+            {
+                return BadRequest(ex.Message);
+            }
+
             return ConvertToView(await WriteViewAsync(view));
         }
     }

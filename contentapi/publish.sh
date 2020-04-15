@@ -14,7 +14,7 @@
 # - Set up remote system (permissions, services(?), dbmigrations, etc)
 
 # Stuff for connecting
-phost=random@oboy.smilebasicsource.com    # The production server (and user to connect)
+phost=random@192.168.1.102 # The production server (and user to connect)
 port=240
 rsync='rsync -zz -avh -e "ssh -p $port"' 
 

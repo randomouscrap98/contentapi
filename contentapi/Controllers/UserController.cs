@@ -26,6 +26,7 @@ namespace contentapi.Controllers
         public UserControllerProfile()
         {
             CreateMap<UserSearch, EntitySearch>().ForMember(x => x.NameLike, o => o.MapFrom(s => s.Username));
+            CreateMap<UserView, UserViewBasic>().ReverseMap();
             CreateMap<UserView, UserViewFull>().ReverseMap();
             CreateMap<UserCredential, UserViewFull>().ReverseMap();
         }
@@ -52,7 +53,12 @@ namespace contentapi.Controllers
 
         protected override UserView CreateBaseView(EntityPackage user)
         {
-            return new UserView() { username = user.Entity.name, email = user.GetValue(keys.EmailKey).value };
+            return new UserView() 
+            { 
+                username = user.Entity.name, 
+                email = user.GetValue(keys.EmailKey).value, 
+                super = services.systemConfig.SuperUsers.Contains(user.GetRelation(keys.StandInRelation).entityId1)
+            };
         }
 
         protected override EntityPackage CreateBasePackage(UserView view)
@@ -64,9 +70,9 @@ namespace contentapi.Controllers
             //to look like the given view. This should work this way but be careful and fix later.
             var newUser = NewEntity(user.username)
                 .Add(NewValue(keys.EmailKey, user.email))
-                .Add(NewValue(keys.PasswordSaltKey, Convert.ToBase64String(salt)))
-                .Add(NewValue(keys.PasswordHashKey, Convert.ToBase64String(hashService.GetHash(user.password, salt))))
-                .Add(NewValue(keys.RegistrationCodeKey, Guid.NewGuid().ToString()));
+                .Add(NewValue(keys.PasswordSaltKey, user.salt)) //Convert.ToBase64String(user.salt)))
+                .Add(NewValue(keys.PasswordHashKey, user.password)) //Convert.ToBase64String(hashService.GetHash(user.password, salt))))
+                .Add(NewValue(keys.RegistrationCodeKey, user.registrationKey)); //Guid.NewGuid().ToString()));
 
             return newUser;
         }
@@ -85,14 +91,14 @@ namespace contentapi.Controllers
         }
 
         [HttpGet]
-        public async Task<ActionResult<List<UserView>>> Get([FromQuery]UserSearch search)
+        public async Task<ActionResult<List<UserViewBasic>>> Get([FromQuery]UserSearch search)
         {
-            return (await GetAll(search)).Select(x => 
-            {
-                var view = ConvertToView(x);
-                view.email = null; //disable emails for general gets (even if it's yours)
-                return view;
-            }).ToList();
+            return (await GetAll(search)).Select(x => services.mapper.Map<UserViewBasic>(ConvertToView(x))).ToList();
+            //{
+            //    var view = ConvertToView(x);
+            //    view.email = null; //disable emails for general gets (even if it's yours)
+            //    return view;
+            //}).ToList();
         }
 
         //[HttpGet("{id}")]
@@ -177,8 +183,17 @@ namespace contentapi.Controllers
 
             if(await services.provider.FindByNameBaseAsync(user.username) != null || await services.provider.FindValueAsync(keys.EmailKey, user.email) != null)
                 return BadRequest("This user already seems to exist!");
+            
+            var salt = hashService.GetSalt();
+            var fullUser = services.mapper.Map<UserViewFull>(user);
 
-            return ConvertToView(await WriteViewAsync(services.mapper.Map<UserViewFull>(user)));
+            fullUser.salt = Convert.ToBase64String(salt);
+            fullUser.password = Convert.ToBase64String(hashService.GetHash(fullUser.password, salt));
+            fullUser.registrationKey = Guid.NewGuid().ToString();
+
+            await PostCleanAsync(fullUser);
+
+            return ConvertToView(await WriteViewAsync(fullUser));
         }
 
         public class RegistrationEmailPost

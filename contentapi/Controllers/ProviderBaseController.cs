@@ -1,6 +1,7 @@
 using System;
 using System.Collections.Generic;
 using System.Linq;
+using System.Security.Claims;
 using System.Threading.Tasks;
 using AutoMapper;
 using contentapi.Services.Extensions;
@@ -50,6 +51,23 @@ namespace contentapi
         {
             this.services = services;
             this.logger = logger;
+        }
+
+        protected long GetRequesterUid()
+        {
+            //Look for the UID from the JWT 
+            var id = User.FindFirstValue(services.keys.UserIdentifier);
+
+            if(id == null)
+                throw new InvalidOperationException("User not logged in!");
+            
+            return long.Parse(id);
+        }
+
+        protected void FailUnlessRequestSuper()
+        {
+            if(!services.systemConfig.SuperUsers.Contains(GetRequesterUid()))
+                throw new InvalidOperationException("Must be super user to perform this action!");
         }
 
         protected EntityPackage NewEntity(string name, string content = null)

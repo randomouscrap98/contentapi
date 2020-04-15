@@ -35,16 +35,18 @@ namespace contentapi.Controllers
         protected abstract EntityPackage CreateBasePackage(V view);
 
 
-        public V ConvertToView(EntityPackage package)
+        protected V ConvertToView(EntityPackage package)
         {
             var view = CreateBaseView(package);
             return BasicViewSetup(view, package);
         }
 
-        public EntityPackage ConvertFromView(V view)
+        protected EntityPackage ConvertFromView(V view)
         {
             var package = CreateBasePackage(view);
-            return BasicPackageSetup(package, view);
+            package.Entity.type = EntityType + (package.Entity.type ?? ""); //Steal the type directly from whatever they created
+            package = BasicPackageSetup(package, view);
+            return package;
         }
 
         protected abstract string EntityType {get;}
@@ -64,17 +66,6 @@ namespace contentapi.Controllers
 
             await services.provider.WriteAsync(standin);
             return standin.id;
-        }
-
-        protected long GetRequesterUid()
-        {
-            //Look for the UID from the JWT 
-            var id = User.FindFirstValue(services.keys.UserIdentifier);
-
-            if(id == null)
-                throw new InvalidOperationException("User not logged in!");
-            
-            return long.Parse(id);
         }
 
         //protected async Task<List<EntityPackage>> Search(object search)
@@ -106,8 +97,8 @@ namespace contentapi.Controllers
             logger.LogTrace("WriteViewAsync called");
 
             var package = ConvertFromView(view); //Assume this does EVERYTHING
-            package.Entity.type = EntityType; //Some setup for writing. guess it doesn't do EVERYTHING
             package.Entity.id = 0;
+            package.Entity.createDate = DateTime.Now; //Because of history, we always want it now.
 
             //We assume the package was there.
             var standin = package.GetRelation(keys.StandInRelation);
@@ -181,6 +172,10 @@ namespace contentapi.Controllers
 
         protected async Task<List<long>> ConvertStandInIdsAsync(List<long> ids)
         {
+            //This bites me every time. I need to fix the entity search system.
+            if(ids.Count == 0)
+                return new List<long>();
+
             var realRelations = await services.provider.GetEntityRelationsAsync(new EntityRelationSearch()
             {
                 EntityIds1 = ids,
@@ -243,6 +238,19 @@ namespace contentapi.Controllers
                 throw new InvalidOperationException("Package has no stand-in relation, it is not part of the history system!");
 
             view.id = package.GetRelation(keys.StandInRelation).entityId1; //Entity.id;
+
+            return view;
+        }
+
+        protected virtual async Task<V> PostCleanAsync(V view)
+        {
+            if(view.id > 0)
+            {
+                var realIds = await ConvertStandInIdsAsync(view.id);
+
+                if(realIds.Count() != 1)
+                    throw new InvalidOperationException($"No existing entity with id {view.id}");
+            }
 
             return view;
         }

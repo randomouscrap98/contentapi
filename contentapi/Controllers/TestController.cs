@@ -1,3 +1,4 @@
+using System;
 using System.Collections.Generic;
 using System.Threading.Tasks;
 using AutoMapper;
@@ -53,19 +54,10 @@ namespace contentapi.Controllers
             };
         }
 
-        //[HttpGet("historic")]
-        //public async Task<ActionResult> UserHistoric()
-        //{
-        //    var newWhatever = EntityWrapperExtensions.QuickEntity("someTest")
-        //        .AddValue("value1", "key1")
-        //        .AddValue("value2", "key2")
-        //        .AddRelation(69, "relation1");
-        //    
-        //    await WriteHistoric(newWhatever);
-        //    newWhatever.GetValueRaw("value1").value = "updatedKey (except it's actually value lmao)";
-        //    await WriteHistoric(newWhatever);
-
-        //    return Ok($"it at least completed. id: {newWhatever.id}");
-        //}
+        [HttpGet("exception")]
+        public ActionResult GetException()
+        {
+            throw new InvalidOperationException("This is the exception message");
+        }
     }
 }
