@@ -3,6 +3,7 @@ using System.Collections.Generic;
 using System.IdentityModel.Tokens.Jwt;
 using System.Linq;
 using System.Security.Claims;
+using Microsoft.Extensions.Options;
 using Microsoft.IdentityModel.Tokens;
 
 namespace contentapi.Services.Implementations
@@ -18,9 +19,9 @@ namespace contentapi.Services.Implementations
         public string UserIdField = "uid";
         public TokenServiceConfig config;
 
-        public TokenService(TokenServiceConfig config)
+        public TokenService(IOptionsMonitor<TokenServiceConfig> config)
         {
-            this.config = config;
+            this.config = config.CurrentValue;
         }
 
         //protected string ProcessFieldValue(string field, string value)

@@ -6,6 +6,7 @@ using AutoMapper;
 using contentapi.Services.Extensions;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.Extensions.Logging;
+using Microsoft.Extensions.Options;
 using Randomous.EntitySystem;
 using Randomous.EntitySystem.Extensions;
 
@@ -18,13 +19,13 @@ namespace contentapi
         public Keys keys;
         public SystemConfig systemConfig;
 
-        public ControllerServices(/*ILogger<T> logger,*/ IEntityProvider provider, IMapper mapper, Keys keys, SystemConfig systemConfig)
+        public ControllerServices(/*ILogger<T> logger,*/ IEntityProvider provider, IMapper mapper, Keys keys, IOptionsMonitor<SystemConfig> systemConfig)
         {
             this.provider = provider;
             //this.logger = logger;
             this.mapper = mapper;
             this.keys = keys;
-            this.systemConfig = systemConfig;
+            this.systemConfig = systemConfig.CurrentValue;
         }
     }
 

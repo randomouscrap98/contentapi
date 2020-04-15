@@ -16,6 +16,7 @@ using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Hosting;
 using Microsoft.Extensions.Logging;
+using Microsoft.Extensions.Options;
 using Microsoft.IdentityModel.Tokens;
 using Microsoft.OpenApi.Models;
 using Randomous.EntitySystem;
@@ -44,12 +45,14 @@ namespace contentapi
         public void ConfigureServices(IServiceCollection services)
         {
             var dataSection = Configuration.GetSection("Data");
-            //ContentConString = dataSection.GetValue<string>("ContentConnectionString")
+            var tokenSection = Configuration.GetSection(nameof(TokenServiceConfig));
 
-            AddSingletonConfig<EmailConfig>(Configuration, services, "Email");
-            AddSingletonConfig<LanguageConfig>(Configuration, services, "Language");
-            AddSingletonConfig<SystemConfig>(Configuration, services, "SystemConfig");
-            var tokenConfig = AddSingletonConfig<TokenServiceConfig>(Configuration, services, "Token");
+            services.Configure<EmailConfig>(Configuration.GetSection(nameof(EmailConfig)))
+                    .Configure<LanguageConfig>(Configuration.GetSection(nameof(LanguageConfig)))
+                    .Configure<SystemConfig>(Configuration.GetSection(nameof(SystemConfig)))
+                    .Configure<TokenServiceConfig>(tokenSection);
+
+            //var tokenConfig = AddSingletonConfig<TokenServiceConfig>(Configuration, services, "Token");
             services.AddSingleton(new HashConfig());    //Just use defaults
 
             var keys = new Keys();
@@ -70,6 +73,14 @@ namespace contentapi
             services.AddControllers();
             services.AddAutoMapper(typeof(Startup));
 
+            services.AddTransient(p => new TokenValidationParameters()
+            {
+                ValidateIssuerSigningKey = true,
+                IssuerSigningKey = new SymmetricSecurityKey(Encoding.UTF8.GetBytes(p.GetService<IOptions<TokenServiceConfig>>().Value.SecretKey)),
+                ValidateIssuer = false,
+                ValidateAudience = false
+            });
+
             //This is all that JWT junk. I hope it still works like this... I just copied this from my core 2.0 project
             services.AddAuthentication(x =>
             {
@@ -79,10 +90,10 @@ namespace contentapi
             {
                 x.RequireHttpsMetadata = false;
                 x.SaveToken = true;
-                x.TokenValidationParameters = new TokenValidationParameters
+                x.TokenValidationParameters = new TokenValidationParameters()
                 {
                     ValidateIssuerSigningKey = true,
-                    IssuerSigningKey = new SymmetricSecurityKey(Encoding.UTF8.GetBytes(tokenConfig.SecretKey)),
+                    IssuerSigningKey = new SymmetricSecurityKey(Encoding.UTF8.GetBytes(tokenSection.GetValue<string>("SecretKey"))),
                     ValidateIssuer = false,
                     ValidateAudience = false
                 };
@@ -91,6 +102,31 @@ namespace contentapi
             services.AddSwaggerGen(c =>
             {
                 c.SwaggerDoc("v1", new OpenApiInfo { Title = "New SBS API", Version = "v1" });
+                c.AddSecurityDefinition("Bearer", new OpenApiSecurityScheme
+                {
+                    Description = @"Bearer [space] token",
+                    Name = "Authorization",
+                    In = ParameterLocation.Header,
+                    Type = SecuritySchemeType.ApiKey,
+                    Scheme = "Bearer"
+                });
+                c.AddSecurityRequirement(new OpenApiSecurityRequirement()
+                {
+                    { 
+                        new OpenApiSecurityScheme
+                        {
+                            Reference = new OpenApiReference
+                            {
+                                Type = ReferenceType.SecurityScheme,
+                                Id = "Bearer"
+                            },
+                            Scheme = "oauth2",
+                            Name = "Bearer",
+                            In = ParameterLocation.Header,
+                        },
+                        new List<string>()
+                    }
+                });
             });
         }
 

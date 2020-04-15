@@ -29,7 +29,7 @@ namespace contentapi.Controllers
             var result = new List<EntityRelation>();
             foreach(var perm in perms)
             {
-                foreach(var p in perm.Value.ToLower().Select(x => x.ToString()))
+                foreach(var p in perm.Value.ToLower().Distinct().Select(x => x.ToString()))
                 {
                     if(!permMapping.ContainsKey(p))
                         throw new InvalidOperationException("Bad character in permission");

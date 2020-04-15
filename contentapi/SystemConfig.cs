@@ -4,7 +4,7 @@ namespace contentapi
 {
     public class SystemConfig
     {
-        public List<long> SuperUsers {get;set;}
+        public List<long> SuperUsers {get;set;} = new List<long>();
         public bool SuperRootCategories {get;set;}
     }
 }

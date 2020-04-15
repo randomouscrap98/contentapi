@@ -1,3 +1,4 @@
+using System.Collections.Generic;
 using System.Threading.Tasks;
 using AutoMapper;
 using contentapi.Services.Extensions;
@@ -34,6 +35,21 @@ namespace contentapi.Controllers
                 EntityCount = entities.Count,
                 ValueCount = values.Count,
                 RelationCount = relations.Count
+            };
+        }
+        
+        public class SystemData
+        {
+            public List<long> SuperUsers {get;set;}
+        }
+
+        [HttpGet("system")]
+        public ActionResult<SystemData> GetSystem()
+        {
+            //var config = services.systemConfig;
+            return new SystemData()
+            {
+                SuperUsers = services.systemConfig.SuperUsers
             };
         }
 

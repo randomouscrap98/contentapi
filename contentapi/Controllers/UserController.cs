@@ -84,6 +84,7 @@ namespace contentapi.Controllers
         }
 
         [HttpGet]
+        [Authorize]
         public async Task<ActionResult<List<UserView>>> GetAll([FromQuery]UserSearch search)
         {
             var entitySearch = (EntitySearch)(await ModifySearchAsync(services.mapper.Map<EntitySearch>(search)));
@@ -103,6 +104,7 @@ namespace contentapi.Controllers
 
 
         [HttpGet("me")]
+        [Authorize]
         public async Task<ActionResult<UserView>> Me()
         {
             //Look for the UID from the JWT 
