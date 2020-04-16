@@ -66,5 +66,15 @@ namespace contentapi.Controllers
             
             return existing.value;
         }
+
+        [HttpDelete("{key}")]
+        public async Task<ActionResult<string>> DeleteAsync([FromRoute] string key)
+        {
+            var result = await GetVariable(key);
+            if(result == null)
+                return NotFound();
+            await services.provider.DeleteAsync(result);
+            return result.value;
+        }
     }
 }
