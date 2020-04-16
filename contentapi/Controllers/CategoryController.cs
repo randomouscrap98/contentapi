@@ -64,14 +64,7 @@ namespace contentapi.Controllers
                 group e by e.id into g
                 select new EntityBase() { id = g.Key };
             
-            var ids = services.provider.ApplyFinal(idHusk, entitySearch).Select(x => x.id);
-            var finalQueryable =    
-                from e in services.provider.GetQueryable<Entity>()
-                where ids.Contains(e.id)
-                select e;
-
-            var packages = await services.provider.LinkAsync(finalQueryable);
-            return packages.Select(x => ConvertToView(x)).ToList();
+            return await ViewResult(FinalizeHusk(idHusk, entitySearch));
         }
 
         [HttpPost]

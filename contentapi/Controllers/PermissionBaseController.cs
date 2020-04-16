@@ -208,5 +208,34 @@ namespace contentapi.Controllers
 
             return result;
         }
+
+        protected IQueryable<EntityBase> BasicPermissionHusk(long user, EntitySearch search)
+        {
+            return 
+                from e in services.provider.ApplyEntitySearch(services.provider.GetQueryable<Entity>(), search, false)
+                join r in services.provider.GetQueryable<EntityRelation>()
+                    on  e.id equals r.entityId2
+                where (r.type == keys.CreatorRelation && r.entityId1 == user) ||
+                      (r.type == keys.ReadAccess && (r.entityId1 == 0 || r.entityId1 == user))
+                group e by e.id into g
+                select new EntityBase() { id = g.Key };
+        }
+
+        /// <summary>
+        /// Given a completed IQueryable, apply the final touches to get a real list of entities
+        /// </summary>
+        /// <param name="foundEntities"></param>
+        /// <param name="search"></param>
+        /// <returns></returns>
+        protected IQueryable<Entity> FinalizeHusk(IQueryable<EntityBase> foundEntities, EntitySearch search)
+        {
+            var ids = services.provider.ApplyFinal(foundEntities, search).Select(x => x.id);
+
+            return    
+                from e in services.provider.GetQueryable<Entity>()
+                where ids.Contains(e.id)
+                select e;
+        }
+            
     }
 }

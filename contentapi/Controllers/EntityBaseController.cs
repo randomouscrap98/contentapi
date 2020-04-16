@@ -298,5 +298,11 @@ namespace contentapi.Controllers
 
             return view;
         }
+
+        protected async Task<List<V>> ViewResult(IQueryable<Entity> query)
+        {
+            var packages = await services.provider.LinkAsync(query);
+            return packages.Select(x => ConvertToView(x)).ToList();
+        }
     }
 }

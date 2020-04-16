@@ -87,18 +87,6 @@ namespace contentapi.Controllers
             return (await GetAll(search)).Select(x => services.mapper.Map<UserViewBasic>(ConvertToView(x))).ToList();
         }
 
-        //[HttpGet("{id}")]
-        //public async Task<ActionResult<UserView>> GetSingle([FromRoute]long id)
-        //{
-        //    var user = await services.provider.FindByIdAsync(id);
-
-        //    if(user == null)
-        //        return NotFound($"User with id {id} not found");
-        //    
-        //    return GetViewFromExpanded(user);
-        //}
-
-
         [HttpGet("me")]
         [Authorize]
         public async Task<ActionResult<UserView>> Me()

@@ -16,3 +16,11 @@
 -Add ability to inject different queryable to Provider for testing (want to test both in integration)
 -Test other new services + functions added (which ones?)
 -Package new version 2.0
+
+
+
+content search:
+-users (list?)
+-categories (list)
+-type (careful with %, you add one too)
+-don't list content within unreadable parents (this might be complicated to implement)
