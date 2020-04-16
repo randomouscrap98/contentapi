@@ -6,6 +6,7 @@ using AutoMapper;
 using contentapi.Views;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
+using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.Logging;
 using Randomous.EntitySystem;
 using Randomous.EntitySystem.Extensions;
@@ -80,8 +81,24 @@ namespace contentapi.Controllers
 
             var initial = BasicPermissionQuery(user, entitySearch);
 
+            //Right now, entities are matched with very specific read relations and MAYBE some creator ones.
+            //Be VERY CAREFUL, I get the feeling the entity count can get blown out of proportion with this massive join.
+
             if(search.CategoryIds.Count > 0)
-                initial = initial.Where(x => search.CategoryIds.Contains(x.relation.entityId1));
+            {
+                initial = initial
+                    .Join(services.provider.GetQueryable<EntityRelation>(), e => e.entity.id, r => r.entityId2, 
+                          (e,r) => new EntityRelationGroup() { entity = e.entity, relation = r})
+                    .Where(x => x.relation.type == keys.ParentRelation && search.CategoryIds.Contains(x.relation.entityId1));
+            }
+
+            if(!string.IsNullOrWhiteSpace(search.Keyword))
+            {
+                initial = initial
+                    .Join(services.provider.GetQueryable<EntityValue>(), e => e.entity.id, v => v.entityId, 
+                          (e,v) => new EntityFullGroup() { entity = e.entity, relation = e.relation, value = v})
+                    .Where(x => x.value.key == keys.KeywordKey && EF.Functions.Like(x.value.value, search.Keyword));
+            }
 
             var idHusk = ConvertToHusk(initial);
 
