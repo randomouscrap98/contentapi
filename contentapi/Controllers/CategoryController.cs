@@ -55,15 +55,9 @@ namespace contentapi.Controllers
 
             var user = GetRequesterUidNoFail();
 
-            var idHusk =    
-                from e in services.provider.ApplyEntitySearch(services.provider.GetQueryable<Entity>(), entitySearch, false)
-                join r in services.provider.GetQueryable<EntityRelation>()
-                    on  e.id equals r.entityId2
-                where (r.type == keys.CreatorRelation && r.entityId1 == user) ||
-                      (r.type == keys.ReadAccess && (r.entityId1 == 0 || r.entityId1 == user))
-                group e by e.id into g
-                select new EntityBase() { id = g.Key };
-            
+            var perms = BasicPermissionQuery(user, entitySearch);
+            var idHusk = ConvertToHusk(perms);
+
             return await ViewResult(FinalizeHusk(idHusk, entitySearch));
         }
 

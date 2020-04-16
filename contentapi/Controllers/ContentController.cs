@@ -17,6 +17,7 @@ namespace contentapi.Controllers
         public string Title {get;set;}
         public string Keyword {get;set;}
         public string Type {get;set;}
+        public List<long> CategoryIds {get;set;} = new List<long>();
     }
 
     public class ContentControllerProfile : Profile
@@ -77,15 +78,13 @@ namespace contentapi.Controllers
 
             var user = GetRequesterUidNoFail();
 
-            var idHusk =    
-                from e in services.provider.ApplyEntitySearch(services.provider.GetQueryable<Entity>(), entitySearch, false)
-                join r in services.provider.GetQueryable<EntityRelation>()
-                    on  e.id equals r.entityId2
-                where (r.type == keys.CreatorRelation && r.entityId1 == user) ||
-                      (r.type == keys.ReadAccess && (r.entityId1 == 0 || r.entityId1 == user))
-                group e by e.id into g
-                select new EntityBase() { id = g.Key };
-            
+            var initial = BasicPermissionQuery(user, entitySearch);
+
+            if(search.CategoryIds.Count > 0)
+                initial = initial.Where(x => search.CategoryIds.Contains(x.relation.entityId1));
+
+            var idHusk = ConvertToHusk(initial);
+
             return await ViewResult(FinalizeHusk(idHusk, entitySearch));
         }
 

@@ -209,15 +209,38 @@ namespace contentapi.Controllers
             return result;
         }
 
-        protected IQueryable<EntityBase> BasicPermissionHusk(long user, EntitySearch search)
+        //protected IQueryable<EntityBase> BasicPermissionHusk(long user, EntitySearch search)
+        //{
+        //    return 
+        //        from e in services.provider.ApplyEntitySearch(services.provider.GetQueryable<Entity>(), search, false)
+        //        join r in services.provider.GetQueryable<EntityRelation>()
+        //            on  e.id equals r.entityId2
+        //        where (r.type == keys.CreatorRelation && r.entityId1 == user) ||
+        //              (r.type == keys.ReadAccess && (r.entityId1 == 0 || r.entityId1 == user))
+        //        group e by e.id into g
+        //        select new EntityBase() { id = g.Key };
+        //}
+
+        protected class EntityRelationGroup
+        {
+            public Entity entity;
+            public EntityRelation relation;
+        }
+
+        protected IQueryable<EntityRelationGroup> BasicPermissionQuery(long user, EntitySearch search)
+        {
+            return   
+                services.provider.ApplyEntitySearch(services.provider.GetQueryable<Entity>(), search, false)
+                .Join(services.provider.GetQueryable<EntityRelation>(), e => e.id, r => r.entityId2, (e,r) => new EntityRelationGroup() { entity = e, relation = r})
+                .Where(x => (x.relation.type == keys.CreatorRelation && x.relation.entityId1 == user) ||
+                      (x.relation.type == keys.ReadAccess && (x.relation.entityId1 == 0 || x.relation.entityId1 == user)));
+        }
+
+        protected IQueryable<EntityBase> ConvertToHusk(IQueryable<EntityRelationGroup> groups)
         {
             return 
-                from e in services.provider.ApplyEntitySearch(services.provider.GetQueryable<Entity>(), search, false)
-                join r in services.provider.GetQueryable<EntityRelation>()
-                    on  e.id equals r.entityId2
-                where (r.type == keys.CreatorRelation && r.entityId1 == user) ||
-                      (r.type == keys.ReadAccess && (r.entityId1 == 0 || r.entityId1 == user))
-                group e by e.id into g
+                from x in groups
+                group x by x.entity.id into g
                 select new EntityBase() { id = g.Key };
         }
 
