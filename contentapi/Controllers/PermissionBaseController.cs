@@ -230,11 +230,19 @@ namespace contentapi.Controllers
         protected IQueryable<Entity> FinalizeHusk(IQueryable<EntityBase> foundEntities, EntitySearch search)
         {
             var ids = services.provider.ApplyFinal(foundEntities, search).Select(x => x.id);
-
-            return    
+            var join =
                 from e in services.provider.GetQueryable<Entity>()
                 where ids.Contains(e.id)
                 select e;
+
+            //This is REPEAT CODE! FIGURE OUT HOW TO FIX THIS! This is required because order is not preserved
+            //after the "join" (the fake join using in-memory data oof)
+            if(search.Reverse)
+                join = join.OrderByDescending(x => x.id);
+            else
+                join = join.OrderBy(x => x.id);
+
+            return join;
         }
             
     }

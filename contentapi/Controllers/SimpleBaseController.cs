@@ -79,13 +79,18 @@ namespace contentapi
         {
             return new EntityPackage()
             {
-                Entity = new Entity() { name = name, content = content}
+                Entity = new Entity() { name = name, content = content }
             };
         }
 
         protected EntityValue NewValue(string key, string value)
         {
-            return new EntityValue() {key = key, value = value};
+            return new EntityValue() 
+            {
+                key = key, 
+                value = value, 
+                createDate = null 
+            };
         }
 
         protected EntityRelation NewRelation(long parent, string type, string value = null)
@@ -94,7 +99,8 @@ namespace contentapi
             {
                 entityId1 = parent,
                 type = type,
-                value = value
+                value = value,
+                createDate = null
             };
         }
 
