@@ -105,18 +105,23 @@ namespace contentapi
         }
 
         //Parameters are like reading: is x y
-        protected bool TypeIs(string type, string expected)
+        protected bool TypeIs(string given, string expected)
         {
-            if(type == null)
+            if(given == null)
                 return false;
 
-            return type.StartsWith(expected);
+            return given.StartsWith(expected);
         }
 
         //Parameters are like reading: set x to y
         protected string TypeSet(string existing, string type)
         {
             return type + (existing ?? "");
+        }
+
+        protected string TypeSub(string given, string mainType)
+        {
+            return given.Substring(mainType.Length);
         }
 
         /// <summary>

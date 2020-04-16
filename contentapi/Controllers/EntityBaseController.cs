@@ -244,6 +244,10 @@ namespace contentapi.Controllers
         {
             //The easy modifications
             search = LimitSearch(search);
+
+            if(string.IsNullOrWhiteSpace(search.TypeLike))
+                search.TypeLike = "%";
+
             search.TypeLike = TypeSet(search.TypeLike, EntityType); 
 
             //We have to find the rEAL ids that they want. This is the only big thing...?
