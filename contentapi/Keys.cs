@@ -15,6 +15,8 @@ namespace contentapi
 
         //General keys
         public string VariableKey => "v:";
+        public string KeywordKey => "k";
+        public string AssociatedValueKey => "@";
 
 
         //Access stuff (I hate that these are individual, hopefully this won't impact performance too bad...)
