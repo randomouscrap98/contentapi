@@ -20,10 +20,9 @@ namespace contentapi
         public Keys keys;
         public SystemConfig systemConfig;
 
-        public ControllerServices(/*ILogger<T> logger,*/ IEntityProvider provider, IMapper mapper, Keys keys, IOptionsMonitor<SystemConfig> systemConfig)
+        public ControllerServices(IEntityProvider provider, IMapper mapper, Keys keys, IOptionsMonitor<SystemConfig> systemConfig)
         {
             this.provider = provider;
-            //this.logger = logger;
             this.mapper = mapper;
             this.keys = keys;
             this.systemConfig = systemConfig.CurrentValue;
@@ -64,9 +63,15 @@ namespace contentapi
             return long.Parse(id);
         }
 
+        protected long GetRequesterUidNoFail()
+        {
+            try { return GetRequesterUid(); }
+            catch { return -1; }
+        }
+
         protected void FailUnlessRequestSuper()
         {
-            if(!services.systemConfig.SuperUsers.Contains(GetRequesterUid()))
+            if(!services.systemConfig.SuperUsers.Contains(GetRequesterUidNoFail()))
                 throw new InvalidOperationException("Must be super user to perform this action!");
         }
 
@@ -106,63 +111,6 @@ namespace contentapi
             
             return search;
         }
-
-        //protected long GetFaceId(EntityWrapper entity)
-        //{
-        //    if(!entity.HasValue(FaceKey))
-        //        throw new InvalidOperationException("Entity has no historic link!");
-        //    
-        //    entity.id = long.Parse(entity.GetValue(FaceKey));
-        //}
-
-        //protected void SetAsHistory(Entity entity)
-        //{
-        //    entity.type = HistoryPrepend + entity.type;
-        //}
-
-        //protected Entity GetNewFaceEntity()
-        //{
-        //    var face = EntityWrapperExtensions.QuickEntity(FaceKey);
-        //    face.type = FaceKey;
-        //    //await entityProvider.WriteAsync(face);
-        //    return face;
-        //}
-
-        ///// <summary>
-        ///// Write a history-aware entity. Assumes the ID is actually the linkage base id and not 
-        ///// the other thing.
-        ///// </summary>
-        ///// <param name="entity"></param>
-        ///// <returns></returns>
-        //protected async Task WriteHistoric(EntityWrapper entity) //, bool setFaceIdAsId = true)
-        //{
-        //    //var faceId = entity.id;
-        //    var face = entity.Relations.FirstOrDefault(x => x.type == FaceKey);
-
-        //    //if(faceId == 0)
-        //    if(face == null)//!entity.HasRelation(FaceKey)) //!entity.HasValue(FaceKey))
-        //    {   
-        //        var faceEntity = GetNewFaceEntity();
-        //        await entityProvider.WriteAsync(faceEntity);
-        //        face = EntityWrapperExtensions.QuickRelation(faceEntity.id, entity.id, FaceKey);
-        //        entity.Relations.Add(face); //AddRelation(faceEntity.id, FaceKey);
-        //    }
-        //        //faceId = (await WriteNewFaceAsync()).id;
-
-        //    //Now set the entity as "new" and write it WITH the face relation.
-        //    entity.SetEntityAsNew();
-        //    //entity.AddRelation(faceId, FaceKey);
-        //    await entityProvider.WriteAsync(entity);
-
-        //    //Go back to the last entity with this face and set the type
-        //    var otherEntities = await entityProvider.GetListAsync(entityProvider.GetQueryable<EntityRelation>().Where(x => x.type == FaceKey && x.entityId1 == face.id && x.entityId2 != entity.id));
-        //    var updateEntities = await entityProvider.GetEntitiesAsync(new EntitySearch() {Ids = otherEntities.Select(x => x.entityId1).ToList()});
-        //    updateEntities.ForEach(x => SetAsHistory(x));
-        //    await entityProvider.WriteAsync(updateEntities.ToArray());
-
-        //    //if(setFaceIdAsId)
-        //    //    entity.id = faceId;
-        //}
 
     }
 }

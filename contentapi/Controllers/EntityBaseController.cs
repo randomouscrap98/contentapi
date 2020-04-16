@@ -44,7 +44,7 @@ namespace contentapi.Controllers
         protected EntityPackage ConvertFromView(V view)
         {
             var package = CreateBasePackage(view);
-            package.Entity.type = EntityType + (package.Entity.type ?? ""); //Steal the type directly from whatever they created
+            package.Entity.type = TypeSet(package.Entity.type, EntityType); //Steal the type directly from whatever they created
             package = BasicPackageSetup(package, view);
             return package;
         }
@@ -56,8 +56,9 @@ namespace contentapi.Controllers
         /// special history system to function.
         /// </summary>
         /// <returns></returns>
-        protected async Task<long> CreateStandinAsync()
+        protected async Task<long> CreateStandInAsync()
         {
+            //Create date is now and will never be changed
             var standin = new Entity()
             {
                 type = keys.StandInType,
@@ -65,14 +66,9 @@ namespace contentapi.Controllers
             };
 
             await services.provider.WriteAsync(standin);
+
             return standin.id;
         }
-
-        //protected async Task<List<EntityPackage>> Search(object search)
-        //{
-        //    var entitySearch = (EntitySearch)(await ModifySearchAsync(services.mapper.Map<EntitySearch>(search)));
-        //    return await services.provider.GetEntityPackagesAsync(entitySearch);//.ToList();
-        //}
 
         /// <summary>
         /// Find an entity by its STAND IN id (not the regular ID, use the service for that)
@@ -89,6 +85,34 @@ namespace contentapi.Controllers
                 throw new InvalidOperationException("Multiple entities for given standin, are there trailing history elements?");
             
             return await services.provider.FindByIdAsync(realIds.First());
+        }
+
+        /// <summary>
+        /// Mark the currently active entities/relations etc for the given standin as inactive. Return a copy
+        /// of the objects as they were before being edited (for rollback purposes)
+        /// </summary>
+        /// <param name="standinId"></param>
+        /// <returns></returns>
+        protected async Task<List<EntityBase>> MarkLatestInactive(long standinId)
+        {
+            var restoreCopies = new List<EntityBase>();
+
+            //Go find the "previous" active content and relation. Ensure they are null if there are none (it should be ok, just throw a warning)
+            var lastActiveRelation = (await GetActiveRelation(standinId)) ?? throw new InvalidOperationException("Could not find active relation in historic content system");
+            var lastActiveContent = (await services.provider.FindByIdBaseAsync(lastActiveRelation.entityId2)) ?? throw new InvalidOperationException("Could not find active content in historic content system");
+
+            //The state to restore should everything go south.
+            restoreCopies.Add(new EntityRelation(lastActiveRelation));
+            restoreCopies.Add(new Entity(lastActiveContent));
+
+            //Mark the last content as historic
+            lastActiveRelation.value = ""; //This marks it inactive
+            lastActiveContent.type = TypeSet(lastActiveContent.type, keys.HistoryKey); //Prepend to the old type just to keep it around
+
+            //Update old values FIRST so there's NO active content
+            await services.provider.WriteAsync<EntityBase>(lastActiveContent, lastActiveRelation);
+
+            return restoreCopies;
         }
 
 
@@ -108,14 +132,14 @@ namespace contentapi.Controllers
             {
                 newPackage = true;
                 logger.LogInformation("Creating standin for apparently new view");
-                standin.entityId1 = await CreateStandinAsync();
+                standin.entityId1 = await CreateStandInAsync();
             }
             else
             {
                 var entity = await services.provider.FindByIdBaseAsync(standin.entityId1); //go find the standin
 
-                if(entity?.type != keys.StandInType)
-                    throw new InvalidOperationException($"No entity with id {package.Entity.id}");
+                if(!TypeIs(entity?.type, keys.StandInType))
+                    throw new InvalidOperationException($"No entity with id {standin.entityId1}");
             }
 
             //Set the package up so it's ready for a historic write
@@ -124,22 +148,7 @@ namespace contentapi.Controllers
 
             //When it's NOT a new package, we have to go update historical records. Oof
             if(!newPackage)
-            {
-                //Go find the "previous" active content and relation. Ensure they are null if there are none (it should be ok, just throw a warning)
-                var lastActiveRelation = (await GetActiveRelation(standin.entityId1)) ?? throw new InvalidOperationException("Could not find active relation in historic content system");
-                var lastActiveContent = (await services.provider.FindByIdBaseAsync(lastActiveRelation.entityId2)) ?? throw new InvalidOperationException("Could not find active content in historic content system");
-
-                //The state to restore should everything go south.
-                restoreCopies.Add(new EntityRelation(lastActiveRelation));
-                restoreCopies.Add(new Entity(lastActiveContent));
-
-                //Mark the last content as historic
-                lastActiveRelation.value = ""; //This marks it inactive
-                lastActiveContent.type = keys.HistoryKey + lastActiveContent.type; //Prepend to the old type just to keep it around
-
-                //Update old values FIRST so there's NO active content
-                await services.provider.WriteAsync<EntityBase>(lastActiveContent, lastActiveRelation);
-            }
+                restoreCopies = await MarkLatestInactive(standin.entityId1);
 
             try
             {
@@ -156,6 +165,46 @@ namespace contentapi.Controllers
             return package;
         }
 
+        //Parameters are like reading: is x y
+        protected bool TypeIs(string type, string expected)
+        {
+            if(type == null)
+                return false;
+
+            return type.StartsWith(expected);
+        }
+
+        //Parameters are like reading: set x to y
+        protected string TypeSet(string existing, string type)
+        {
+            return type + (existing ?? "");
+        }
+
+        /// <summary>
+        /// Allow "fake" deletion of ANY historic entity (of any type)
+        /// </summary>
+        /// <param name="standinId"></param>
+        /// <returns></returns>
+        protected Task DeleteEntity(long standinId)
+        {
+            return MarkLatestInactive(standinId);
+        }
+
+        /// <summary>
+        /// Check the entity for deletion. Throw exception if can't
+        /// </summary>
+        /// <param name="standinId"></param>
+        /// <returns></returns>
+        protected async virtual Task<EntityPackage> DeleteEntityCheck(long standinId)
+        {
+            var last = await FindByIdAsync(standinId);
+
+            if(last == null || !TypeIs(last.Entity.type, EntityType))
+                throw new InvalidOperationException("No entity with that ID and type!");
+            
+            return last;
+        }
+
         /// <summary>
         /// Find the relation that represents the current active content for the given standin 
         /// </summary>
@@ -170,6 +219,11 @@ namespace contentapi.Controllers
             return result.Where(x => x.value == keys.ActiveIdentifier).OnlySingle();
         }
 
+        /// <summary>
+        /// Convert stand-in ids (from the users) to real ids (that I use for searching actual entities)
+        /// </summary>
+        /// <param name="ids"></param>
+        /// <returns></returns>
         protected async Task<List<long>> ConvertStandInIdsAsync(List<long> ids)
         {
             //This bites me every time. I need to fix the entity search system.
@@ -190,11 +244,16 @@ namespace contentapi.Controllers
             return ConvertStandInIdsAsync(ids.ToList());
         }
 
+        /// <summary>
+        /// Modify a search converted from users so it works with real entities
+        /// </summary>
+        /// <param name="search"></param>
+        /// <returns></returns>
         protected async Task<EntitySearch> ModifySearchAsync(EntitySearch search)
         {
             //The easy modifications
             search = LimitSearch(search);
-            search.TypeLike = (search.TypeLike ?? "" ) + EntityType;
+            search.TypeLike = TypeSet(search.TypeLike, EntityType); //(search.TypeLike ?? "" ) + EntityType;
 
             //We have to find the rEAL ids that they want. This is the only big thing...?
             if(search.Ids.Count > 0)

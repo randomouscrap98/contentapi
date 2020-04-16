@@ -9,6 +9,12 @@ using Randomous.EntitySystem.Extensions;
 
 namespace contentapi.Controllers
 {
+    public class AuthorizationException : Exception
+    {
+        public AuthorizationException() : base() {}
+        public AuthorizationException(string message) : base(message) { } //, Exception inner) : base(message, inner) {}
+    }
+
     public abstract class PermissionBaseController<V> : EntityBaseController<V> where V : PermissionView
     {
         protected Dictionary<string, string> permMapping;
@@ -24,6 +30,8 @@ namespace contentapi.Controllers
                 {"d", keys.DeleteAccess}
             };
         }
+
+        protected abstract string ParentType {get;}
 
         protected List<EntityRelation> ConvertPermsToRelations(Dictionary<string, string> perms)
         {
@@ -95,27 +103,6 @@ namespace contentapi.Controllers
             return view;
         }
 
-        protected async Task FixBasicFields(V view)
-        {
-            //First, if view is "not new", go get the old and override values people can't change.
-            if(view.id > 0)
-            {
-                //This might be too heavy
-                var existing = await FindByIdAsync(view.id);
-
-                if(!existing.Entity.type.StartsWith(EntityType))
-                    throw new InvalidOperationException($"No entity of proper type with id {view.id}");
-                
-                //Don't allow the user to change these things.
-                view.userId = existing.GetRelation(keys.CreatorRelation).entityId1;
-            }
-            else
-            {
-                //if the view IS new, set the create date and uid to special values
-                view.userId = GetRequesterUid();
-            }
-        }
-
         protected async Task CheckPermissionUsersAsync(V view)
         {
             //And now make sure every single user exists
@@ -132,8 +119,11 @@ namespace contentapi.Controllers
             }
 
             userIds = userIds.Distinct().ToList();
+            userIds.Remove(0); //Don't include the default
             var realIds = await ConvertStandInIdsAsync(userIds);
 
+            //Note: there is NO type checking. Is this safe? Do you want people to be able to set permissions for 
+            //things that aren't users? What about the 0 id?
             if(realIds.Count != userIds.Count)
                 throw new InvalidOperationException("One or more permission users not found!");
         }
@@ -147,31 +137,76 @@ namespace contentapi.Controllers
             }
         }
 
-        //protected bool CanUser(string key)
-        //{
+        protected bool CanUser(long user, string key, EntityPackage package)
+        {
+            return (package.GetRelation(keys.CreatorRelation).entityId1 == user) ||
+                (package.Relations.Any(x => x.type == key && (x.entityId1 == user || x.entityId1 == 0)));
+        }
 
-        //}
-            
+        protected bool CanCurrentUser(string key, EntityPackage package)
+        {
+            return CanUser(GetRequesterUidNoFail(), key, package);
+        }
 
         protected override async Task<V> PostCleanAsync(V view)
         {
             view = await base.PostCleanAsync(view);
 
-            await FixBasicFields(view);
+            //First, if view is "not new", go get the old and override values people can't change.
+            if(view.id > 0)
+            {
+                //This might be too heavy
+                var existing = await FindByIdAsync(view.id);
+
+                if(!TypeIs(existing.Entity.type, EntityType))
+                    throw new InvalidOperationException($"No entity of proper type with id {view.id}");
+                
+                //Don't allow the user to change these things.
+                view.userId = existing.GetRelation(keys.CreatorRelation).entityId1;
+
+                if(!CanCurrentUser(keys.UpdateAccess, existing))
+                    throw new AuthorizationException("User cannot update this entity");
+            }
+            else
+            {
+                //if the view IS new, set the create date and uid to special values
+                view.userId = GetRequesterUid();
+            }
 
             //Oh also make sure the parent exists.
             if(view.parentId > 0)
             {
-                var existing = await FindByIdAsync(view.parentId); //wait is this the standin? uhh yes always.
+                var parent = await FindByIdAsync(view.parentId); //wait is this the standin? uhh yes always.
 
-                if(existing == null)
+                if(parent == null)
                     throw new InvalidOperationException($"No parent with id {view.id}");
+
+                if(!TypeIs(parent.Entity.type, ParentType))
+                    throw new InvalidOperationException("Wrong parent type!");
+
+                if(!CanCurrentUser(keys.CreateAccess, parent))
+                    throw new AuthorizationException($"User cannot create entities in parent {view.parentId}");
+            }
+            else
+            {
+                //Only super users can create parentless entities... for now. This is a safety feature and may be removed
+                FailUnlessRequestSuper();
             }
 
             await CheckPermissionUsersAsync(view);
             CheckPermissionValues(view);
 
             return view;
+        }
+
+        protected async override Task<EntityPackage> DeleteEntityCheck(long standinId)
+        {
+            var result = await base.DeleteEntityCheck(standinId);
+
+            if(!CanCurrentUser(keys.DeleteAccess, result))
+                throw new InvalidOperationException("No permission to delete");
+
+            return result;
         }
     }
 }

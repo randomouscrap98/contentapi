@@ -67,19 +67,14 @@ namespace contentapi
             services.AddTransient<ControllerServices>();
 
             var provider = new DefaultServiceProvider();
-            provider.AddDefaultServices(services, options => options.UseSqlite(dataSection.GetValue<string>("ContentConnectionString")));
+            provider.AddDefaultServices(services, options => 
+                options.UseSqlite(dataSection.GetValue<string>("ContentConnectionString"))
+                        .EnableSensitiveDataLogging(true)
+            );
 
             services.AddCors();
             services.AddControllers();
             services.AddAutoMapper(typeof(Startup));
-
-            services.AddTransient(p => new TokenValidationParameters()
-            {
-                ValidateIssuerSigningKey = true,
-                IssuerSigningKey = new SymmetricSecurityKey(Encoding.UTF8.GetBytes(p.GetService<IOptions<TokenServiceConfig>>().Value.SecretKey)),
-                ValidateIssuer = false,
-                ValidateAudience = false
-            });
 
             //This is all that JWT junk. I hope it still works like this... I just copied this from my core 2.0 project
             services.AddAuthentication(x =>

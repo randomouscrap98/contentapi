@@ -31,6 +31,7 @@ namespace contentapi.Controllers
             : base(services, logger) { }
 
         protected override string EntityType => keys.CategoryType;
+        protected override string ParentType => keys.CategoryType;
         
         protected override EntityPackage CreateBasePackage(CategoryView view)
         {
@@ -51,7 +52,25 @@ namespace contentapi.Controllers
         public async Task<ActionResult<List<CategoryView>>> GetAsync([FromQuery]CategorySearch search)
         {
             var entitySearch = (EntitySearch)(await ModifySearchAsync(services.mapper.Map<EntitySearch>(search)));
-            var packages = await services.provider.GetEntityPackagesAsync(entitySearch);
+
+            var user = GetRequesterUidNoFail();
+
+            var idHusk =    
+                from e in services.provider.ApplyEntitySearch(services.provider.GetQueryable<Entity>(), entitySearch, false)
+                join r in services.provider.GetQueryable<EntityRelation>()
+                    on  e.id equals r.entityId2
+                where (r.type == keys.CreatorRelation && r.entityId1 == user) ||
+                      (r.type == keys.ReadAccess && (r.entityId1 == 0 || r.entityId1 == user))
+                group e by e.id into g
+                select new EntityBase() { id = g.Key };
+            
+            var ids = services.provider.ApplyFinal(idHusk, entitySearch).Select(x => x.id);
+            var finalQueryable =    
+                from e in services.provider.GetQueryable<Entity>()
+                where ids.Contains(e.id)
+                select e;
+
+            var packages = await services.provider.LinkAsync(finalQueryable);
             return packages.Select(x => ConvertToView(x)).ToList();
         }
 
@@ -66,12 +85,39 @@ namespace contentapi.Controllers
 
                 view = await PostCleanAsync(view);
             }
+            catch(AuthorizationException ex)
+            {
+                return Unauthorized(ex.Message);
+            }
             catch(Exception ex)
             {
                 return BadRequest(ex.Message);
             }
 
             return ConvertToView(await WriteViewAsync(view));
+        }
+
+        [HttpDelete("{id}")]
+        [Authorize]
+        public async Task<ActionResult<CategoryView>> DeleteAsync([FromRoute]long id)
+        {
+            EntityPackage result = null;
+
+            try
+            {
+                result = await DeleteEntityCheck(id);
+            }
+            catch(AuthorizationException ex)
+            {
+                return Unauthorized(ex.Message);
+            }
+            catch(Exception ex)
+            {
+                return BadRequest(ex.Message);
+            }
+
+            await DeleteEntity(id);
+            return ConvertToView(result);
         }
     }
 }
