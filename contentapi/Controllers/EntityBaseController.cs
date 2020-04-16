@@ -13,7 +13,7 @@ using Randomous.EntitySystem.Extensions;
 
 namespace contentapi.Controllers
 {
-    public abstract class EntityBaseController<V> : ProviderBaseController where V : ViewBase
+    public abstract class EntityBaseController<V> : SimpleBaseController where V : ViewBase
     {
         public EntityBaseController(ControllerServices services, ILogger<EntityBaseController<V>> logger)
             :base(services, logger) { }
@@ -163,21 +163,6 @@ namespace contentapi.Controllers
             }
 
             return package;
-        }
-
-        //Parameters are like reading: is x y
-        protected bool TypeIs(string type, string expected)
-        {
-            if(type == null)
-                return false;
-
-            return type.StartsWith(expected);
-        }
-
-        //Parameters are like reading: set x to y
-        protected string TypeSet(string existing, string type)
-        {
-            return type + (existing ?? "");
         }
 
         /// <summary>

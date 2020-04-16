@@ -8,18 +8,23 @@ namespace contentapi
         public string UserIdentifier => "uid";
         public string ActiveIdentifier => "a";
 
-        //General stuff
+        //General Relation keys
         public string CreatorRelation => "rc";
         public string ParentRelation => "rp";
         public string StandInRelation => ">";
 
+        //General keys
+        public string VariableKey => "v:";
+
+
         //Access stuff (I hate that these are individual, hopefully this won't impact performance too bad...)
+        //These are also relations
         public string CreateAccess => "ac";
         public string ReadAccess => "ar";
         public string UpdateAccess => "au";
         public string DeleteAccess => "ad";
 
-        //Overall types of entities
+        //Overall types of entities (entity types)
         public string UserType => "tu";
         public string CategoryType => "tc";
         public string ContentType => "tp"; //p for page/post
@@ -29,7 +34,7 @@ namespace contentapi
         //Historic keys
         public string HistoryKey => "_";
 
-        //User stuff 
+        //User stuff  (keys for entity values)
         public string EmailKey => "se";
         public string PasswordHashKey => "sph";
         public string PasswordSaltKey => "sps";

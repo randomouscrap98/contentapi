@@ -39,14 +39,14 @@ namespace contentapi
     /// </remarks>
     [Route("api/[controller]")]
     [ApiController]
-    public abstract class ProviderBaseController : ControllerBase
+    public abstract class SimpleBaseController : ControllerBase
     {
         protected ControllerServices services;
-        protected ILogger<ProviderBaseController> logger;
+        protected ILogger<SimpleBaseController> logger;
         
         protected Keys keys => services.keys;
 
-        public ProviderBaseController(ControllerServices services, ILogger<ProviderBaseController> logger)
+        public SimpleBaseController(ControllerServices services, ILogger<SimpleBaseController> logger)
         {
             this.services = services;
             this.logger = logger;
@@ -96,6 +96,21 @@ namespace contentapi
                 type = type,
                 value = value
             };
+        }
+
+        //Parameters are like reading: is x y
+        protected bool TypeIs(string type, string expected)
+        {
+            if(type == null)
+                return false;
+
+            return type.StartsWith(expected);
+        }
+
+        //Parameters are like reading: set x to y
+        protected string TypeSet(string existing, string type)
+        {
+            return type + (existing ?? "");
         }
 
         /// <summary>

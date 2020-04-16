@@ -32,7 +32,7 @@ namespace contentapi.Controllers
         }
     }
 
-    public class UserController : EntityBaseController<UserView> //: EntityBaseController<UserView>
+    public class UserController : EntityBaseController<UserView>
     {
         protected IHashService hashService;
         protected ITokenService tokenService;
@@ -66,23 +66,14 @@ namespace contentapi.Controllers
             var user = (UserViewFull)view;
             var salt = hashService.GetSalt();
 
-            //This is incorrect: we are not necessarily making a NEW user, we are setting up a package 
-            //to look like the given view. This should work this way but be careful and fix later.
             var newUser = NewEntity(user.username)
                 .Add(NewValue(keys.EmailKey, user.email))
-                .Add(NewValue(keys.PasswordSaltKey, user.salt)) //Convert.ToBase64String(user.salt)))
-                .Add(NewValue(keys.PasswordHashKey, user.password)) //Convert.ToBase64String(hashService.GetHash(user.password, salt))))
-                .Add(NewValue(keys.RegistrationCodeKey, user.registrationKey)); //Guid.NewGuid().ToString()));
+                .Add(NewValue(keys.PasswordSaltKey, user.salt))
+                .Add(NewValue(keys.PasswordHashKey, user.password))
+                .Add(NewValue(keys.RegistrationCodeKey, user.registrationKey));
 
             return newUser;
         }
-
-        //protected UserView GetViewWithEmail(EntityPackage user)
-        //{
-        //    var view = ConvertToView(user);
-        //    view.email = user.Values.First(x => x.key == services.keys.EmailKey).value; //We're the creator so we get to see the email
-        //    return view;
-        //}
 
         protected async Task<List<EntityPackage>> GetAll(UserSearch search)
         {
@@ -94,11 +85,6 @@ namespace contentapi.Controllers
         public async Task<ActionResult<List<UserViewBasic>>> Get([FromQuery]UserSearch search)
         {
             return (await GetAll(search)).Select(x => services.mapper.Map<UserViewBasic>(ConvertToView(x))).ToList();
-            //{
-            //    var view = ConvertToView(x);
-            //    view.email = null; //disable emails for general gets (even if it's yours)
-            //    return view;
-            //}).ToList();
         }
 
         //[HttpGet("{id}")]

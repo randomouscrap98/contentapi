@@ -12,7 +12,7 @@ namespace contentapi.Controllers
 {
     [Route("api/[controller]")]
     [ApiController]
-    public class TestController : ProviderBaseController
+    public class TestController : SimpleBaseController
     {
         public TestController(ILogger<TestController> logger, ControllerServices services)
             :base(services, logger) { }
