@@ -12,7 +12,7 @@ namespace contentapi.Controllers
     public class AuthorizationException : Exception
     {
         public AuthorizationException() : base() {}
-        public AuthorizationException(string message) : base(message) { } //, Exception inner) : base(message, inner) {}
+        public AuthorizationException(string message) : base(message) { }
     }
 
     public abstract class PermissionBaseController<V> : EntityBaseController<V> where V : PermissionView
@@ -24,10 +24,10 @@ namespace contentapi.Controllers
         { 
             permMapping = new Dictionary<string, string>()
             {
-                {"c", keys.CreateAccess},
-                {"r", keys.ReadAccess},
-                {"u", keys.UpdateAccess},
-                {"d", keys.DeleteAccess}
+                {"c", keys.CreateAction},
+                {"r", keys.ReadAction},
+                {"u", keys.UpdateAction},
+                {"d", keys.DeleteAction}
             };
         }
 
@@ -70,9 +70,9 @@ namespace contentapi.Controllers
             return result;
         }
 
-        protected override EntityPackage BasicPackageSetup(EntityPackage package, V view)
+        protected override EntityPackage ConvertFromView(V view)
         {
-            base.BasicPackageSetup(package, view);
+            var package = base.ConvertFromView(view);
 
             //There HAS to be a creator
             package.Add(NewRelation(view.userId, keys.CreatorRelation));
@@ -88,9 +88,9 @@ namespace contentapi.Controllers
             return package;
         }
 
-        protected override V BasicViewSetup(V view, EntityPackage package)
+        protected override V ConvertToView(EntityPackage package)
         {
-            base.BasicViewSetup(view, package);
+            var view = base.ConvertToView(package);
 
             //Set the creator to whatever the relation is
             view.userId = package.GetRelation(keys.CreatorRelation).entityId1;
@@ -148,30 +148,41 @@ namespace contentapi.Controllers
             return CanUser(GetRequesterUidNoFail(), key, package);
         }
 
+        /// <summary>
+        /// Do this on post update
+        /// </summary>
+        /// <param name="view"></param>
+        /// <param name="standin"></param>
+        /// <param name="existing"></param>
+        /// <returns></returns>
+        protected override V PostCleanUpdateAsync(V view, Entity standin, EntityPackage existing)
+        {
+            view = base.PostCleanUpdateAsync(view, standin, existing);
+
+            //Don't allow the user to change these things.
+            view.userId = existing.GetRelation(keys.CreatorRelation).entityId1;
+
+            if (!CanCurrentUser(keys.UpdateAction, existing))
+                throw new AuthorizationException("User cannot update this entity");
+
+            return view;
+        }
+
+        /// <summary>
+        /// Do this on post clean
+        /// </summary>
+        /// <param name="view"></param>
+        /// <returns></returns>
+        protected override V PostCleanCreateAsync(V view)
+        {
+            view = base.PostCleanCreateAsync(view);
+            view.userId = GetRequesterUid();
+            return view;
+        }
+
         protected override async Task<V> PostCleanAsync(V view)
         {
             view = await base.PostCleanAsync(view);
-
-            //First, if view is "not new", go get the old and override values people can't change.
-            if(view.id > 0)
-            {
-                //This might be too heavy
-                var existing = await FindByIdAsync(view.id);
-
-                if(!TypeIs(existing.Entity.type, EntityType))
-                    throw new InvalidOperationException($"No entity of proper type with id {view.id}");
-                
-                //Don't allow the user to change these things.
-                view.userId = existing.GetRelation(keys.CreatorRelation).entityId1;
-
-                if(!CanCurrentUser(keys.UpdateAccess, existing))
-                    throw new AuthorizationException("User cannot update this entity");
-            }
-            else
-            {
-                //if the view IS new, set the create date and uid to special values
-                view.userId = GetRequesterUid();
-            }
 
             //Oh also make sure the parent exists.
             if(view.parentId > 0)
@@ -184,7 +195,7 @@ namespace contentapi.Controllers
                 if(!TypeIs(parent.Entity.type, ParentType))
                     throw new InvalidOperationException("Wrong parent type!");
 
-                if(!CanCurrentUser(keys.CreateAccess, parent))
+                if(!CanCurrentUser(keys.CreateAction, parent))
                     throw new AuthorizationException($"User cannot create entities in parent {view.parentId}");
             }
             else
@@ -203,7 +214,7 @@ namespace contentapi.Controllers
         {
             var result = await base.DeleteEntityCheck(standinId);
 
-            if(!CanCurrentUser(keys.DeleteAccess, result))
+            if(!CanCurrentUser(keys.DeleteAction, result))
                 throw new InvalidOperationException("No permission to delete");
 
             return result;
@@ -226,7 +237,7 @@ namespace contentapi.Controllers
                 services.provider.ApplyEntitySearch(services.provider.GetQueryable<Entity>(), search, false)
                 .Join(services.provider.GetQueryable<EntityRelation>(), e => e.id, r => r.entityId2, (e,r) => new EntityRelationGroup() { entity = e, relation = r})
                 .Where(x => (x.relation.type == keys.CreatorRelation && x.relation.entityId1 == user) ||
-                      (x.relation.type == keys.ReadAccess && (x.relation.entityId1 == 0 || x.relation.entityId1 == user)));
+                      (x.relation.type == keys.ReadAction && (x.relation.entityId1 == 0 || x.relation.entityId1 == user)));
         }
 
         protected IQueryable<EntityBase> ConvertToHusk(IQueryable<EntityRelationGroup> groups)

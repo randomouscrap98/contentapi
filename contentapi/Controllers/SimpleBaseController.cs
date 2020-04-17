@@ -79,7 +79,11 @@ namespace contentapi
         {
             return new EntityPackage()
             {
-                Entity = new Entity() { name = name, content = content }
+                Entity = new Entity() { 
+                    name = name, 
+                    content = content ,
+                    createDate = DateTime.UtcNow
+                }
             };
         }
 
@@ -123,6 +127,8 @@ namespace contentapi
         {
             return given.Substring(mainType.Length);
         }
+
+        //protected 
 
         /// <summary>
         /// Apply various limits to a search

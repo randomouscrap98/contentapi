@@ -7,6 +7,7 @@ using AutoMapper;
 using contentapi.Services.Extensions;
 using contentapi.Views;
 using Microsoft.AspNetCore.Mvc;
+using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.Logging;
 using Randomous.EntitySystem;
 using Randomous.EntitySystem.Extensions;
@@ -18,6 +19,7 @@ namespace contentapi.Controllers
         public EntityBaseController(ControllerServices services, ILogger<EntityBaseController<V>> logger)
             :base(services, logger) { }
 
+        protected abstract string EntityType {get;}
 
         /// <summary>
         /// Create a view with ONLY the unique fields for your controller filled in. You could fill in the
@@ -34,22 +36,39 @@ namespace contentapi.Controllers
         /// <returns></returns>
         protected abstract EntityPackage CreateBasePackage(V view);
 
-
-        protected V ConvertToView(EntityPackage package)
+        protected virtual V ConvertToView(EntityPackage package)
         {
             var view = CreateBaseView(package);
-            return BasicViewSetup(view, package);
+
+            //We are able to pull both the edit and create because all the info is in the package. we can't
+            //go the other way (see above) because the view doesn't necessarily have the data we need.
+            view.editDate = (DateTime)package.GetRelation(keys.StandInRelation).createDate;
+            view.createDate = (DateTime)package.Entity.createDate;
+
+            if(!package.HasRelation(keys.StandInRelation))
+                throw new InvalidOperationException("Package has no stand-in relation, it is not part of the history system!");
+
+            view.id = package.GetRelation(keys.StandInRelation).entityId1;
+
+            return view;
         }
 
-        protected EntityPackage ConvertFromView(V view)
+        //TRUST the view. Assume it is written correctly, that createdate is set properly, etc.
+        protected virtual EntityPackage ConvertFromView(V view)
         {
             var package = CreateBasePackage(view);
+            package.Entity.id = 0; //History dictates this must be 0, all entities for ANY view are new
             package.Entity.type = TypeSet(package.Entity.type, EntityType); //Steal the type directly from whatever they created
-            package = BasicPackageSetup(package, view);
+            package.Entity.createDate = view.createDate; //trust the create date from the view.
+
+            //Assume any new view is active
+            var relation = NewRelation(view.id, keys.StandInRelation, keys.ActiveValue);
+            relation.createDate = DateTime.UtcNow;
+            package.Add(relation);
+
             return package;
         }
 
-        protected abstract string EntityType {get;}
 
         /// <summary>
         /// Create the "base" entity that serves as a parent to all actual content. It allows the 
@@ -59,14 +78,20 @@ namespace contentapi.Controllers
         protected async Task<Entity> CreateStandInAsync()
         {
             //Create date is now and will never be changed
-            var standin = new Entity()
-            {
-                type = keys.StandInType,
-                content = keys.ActiveIdentifier
-            };
-
+            var standin = NewEntity(null, keys.ActiveValue).Entity; 
+            standin.type = keys.StandInType;
             await services.provider.WriteAsync(standin);
 
+            return standin;
+        }
+
+        protected async Task<Entity> GetStandInAsync(long id)
+        {
+            var standin = await services.provider.FindByIdBaseAsync(id); //go find the standin
+
+            if(!TypeIs(standin?.type, keys.StandInType))
+                throw new InvalidOperationException($"No entity with id {id}");
+            
             return standin;
         }
 
@@ -93,7 +118,7 @@ namespace contentapi.Controllers
         /// </summary>
         /// <param name="standinId"></param>
         /// <returns></returns>
-        protected async Task<List<EntityBase>> MarkLatestInactive(long standinId)
+        protected async Task<List<EntityBase>> MarkLatestInactive(long standinId, string subValue = null)
         {
             var restoreCopies = new List<EntityBase>();
 
@@ -105,8 +130,8 @@ namespace contentapi.Controllers
             restoreCopies.Add(new EntityRelation(lastActiveRelation));
             restoreCopies.Add(new Entity(lastActiveContent));
 
-            //Mark the last content as historic
-            lastActiveRelation.value = ""; //This marks it inactive
+            //Mark the last content as historic (also set override sub-value if given, otherwise use what existed before)
+            lastActiveRelation.value = TypeSet((subValue ?? TypeSub(lastActiveRelation.value, keys.ActiveValue)), keys.InactiveValue);
             lastActiveContent.type = TypeSet(lastActiveContent.type, keys.HistoryKey); //Prepend to the old type just to keep it around
 
             //Update old values FIRST so there's NO active content
@@ -121,8 +146,6 @@ namespace contentapi.Controllers
             logger.LogTrace("WriteViewAsync called");
 
             var package = ConvertFromView(view); //Assume this does EVERYTHING
-            package.Entity.id = 0;
-            package.Entity.createDate = DateTime.Now; //Because of history, we always want it now.
 
             //We assume the package was there.
             var standinRelation = package.GetRelation(keys.StandInRelation);
@@ -131,6 +154,7 @@ namespace contentapi.Controllers
 
             if(standinRelation.entityId1 == 0)
             {
+                //Link in a new standin
                 newPackage = true;
                 logger.LogInformation("Creating standin for apparently new view");
                 standin = await CreateStandInAsync();
@@ -138,18 +162,9 @@ namespace contentapi.Controllers
             }
             else
             {
-                standin = await services.provider.FindByIdBaseAsync(standinRelation.entityId1); //go find the standin
-
-                if(!TypeIs(standin?.type, keys.StandInType))
-                    throw new InvalidOperationException($"No entity with id {standinRelation.entityId1}");
+                standin = await GetStandInAsync(standinRelation.entityId1);
             }
 
-            //Now, set the standin relation createdate to match the standin. this will PROBABLY come back to bite me... oh well
-            //it's a nice optimization for views
-            standinRelation.createDate = standin.createDate;
-
-            //Set the package up so it's ready for a historic write
-            //package = SetupPackageForWrite(standinId, package);
             List<EntityBase> restoreCopies = new List<EntityBase>();
 
             //When it's NOT a new package, we have to go update historical records. Oof
@@ -178,7 +193,7 @@ namespace contentapi.Controllers
         /// <returns></returns>
         protected Task DeleteEntity(long standinId)
         {
-            return MarkLatestInactive(standinId);
+            return MarkLatestInactive(standinId, keys.DeleteAction);
         }
 
         /// <summary>
@@ -207,7 +222,7 @@ namespace contentapi.Controllers
             search.EntityIds1.Add(standinId);
             search.TypeLike = keys.StandInRelation;
             var result = await services.provider.GetEntityRelationsAsync(search);
-            return result.Where(x => x.value == keys.ActiveIdentifier).OnlySingle();
+            return result.Where(x => TypeIs(x.value, keys.ActiveValue)).OnlySingle();
         }
 
         /// <summary>
@@ -221,13 +236,15 @@ namespace contentapi.Controllers
             if(ids.Count == 0)
                 return new List<long>();
 
-            var realRelations = await services.provider.GetEntityRelationsAsync(new EntityRelationSearch()
-            {
-                EntityIds1 = ids,
-                TypeLike = keys.StandInRelation
-            });
+            var relations = services.provider.GetQueryable<EntityRelation>();
+            relations = services.provider.ApplyEntityRelationSearch(relations, 
+                new EntityRelationSearch()
+                {
+                    EntityIds1 = ids,
+                    TypeLike = keys.StandInRelation
+                });
 
-            return realRelations.Where(x => x.value == keys.ActiveIdentifier).Select(x => x.entityId2).ToList();
+            return await services.provider.GetListAsync(relations.Where(x => EF.Functions.Like(x.value, $"{keys.ActiveValue}%")).Select(x => x.entityId2));
         }
 
         protected Task<List<long>> ConvertStandInIdsAsync(params long[] ids)
@@ -262,43 +279,21 @@ namespace contentapi.Controllers
             return search;
         }
 
-        /// <summary>
-        /// Fill basic package fields using existing view
-        /// </summary>
-        /// <param name="package"></param>
-        /// <param name="view"></param>
-        /// <returns></returns>
-        protected virtual EntityPackage BasicPackageSetup(EntityPackage package, V view)
+        protected virtual V PostCleanUpdateAsync(V view, Entity standin, EntityPackage existing)
         {
-            //This should be JUST conversion, do not assume this is being setup for writing!
-            package.Entity.createDate = view.editDate;
-            var relation = NewRelation(view.id, keys.StandInRelation, keys.ActiveIdentifier);
-            //relation.createDate = view.createDate;
-            package.Add(relation);
+            view.createDate = (DateTime)standin.createDate;
 
-            return package;
+            //Don't allow posting over some other entity! THIS IS SUUUUPER IMPORTANT!!!
+            if(!TypeIs(existing.Entity.type, EntityType))
+                throw new InvalidOperationException($"No entity of proper type with id {view.id}");
+            
+            return view;
         }
 
-        /// <summary>
-        /// Fill basic view fields using existing package
-        /// </summary>
-        /// <param name="view"></param>
-        /// <param name="package"></param>
-        /// <returns></returns>
-        protected virtual V BasicViewSetup(V view, EntityPackage package)
+        protected virtual V PostCleanCreateAsync(V view)
         {
-            //This should JUST be conversion, do not assume this is being setup for writing!
-
-            //We are able to pull both the edit and create because all the info is in the package. we can't
-            //go the other way (see above) because the view doesn't necessarily have the data we need.
-            view.editDate = (DateTime)package.Entity.createDate;
-            view.createDate = (DateTime)package.GetRelation(keys.StandInRelation).createDate;
-
-            if(!package.HasRelation(keys.StandInRelation))
-                throw new InvalidOperationException("Package has no stand-in relation, it is not part of the history system!");
-
-            view.id = package.GetRelation(keys.StandInRelation).entityId1; //Entity.id;
-
+            //Create date should be NOOOWW
+            view.createDate = DateTime.UtcNow;
             return view;
         }
 
@@ -306,13 +301,17 @@ namespace contentapi.Controllers
         {
             if(view.id > 0)
             {
-                var realIds = await ConvertStandInIdsAsync(view.id);
+                //This might be too heavy
+                //This will already throw an exception if there isn't one.
+                var standin = await GetStandInAsync(view.id);
+                var existing = await FindByIdAsync(view.id);
 
-                if(realIds.Count() != 1)
-                    throw new InvalidOperationException($"No existing entity with id {view.id}");
+                view = PostCleanUpdateAsync(view, await GetStandInAsync(view.id), await FindByIdAsync(view.id));
             }
-
-            //view.createDate = DateTime.Now; //Always now
+            else
+            {
+                view = PostCleanCreateAsync(view);
+            }
 
             return view;
         }

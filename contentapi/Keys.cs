@@ -6,25 +6,36 @@ namespace contentapi
     public class Keys
     {
         public string UserIdentifier => "uid";
-        public string ActiveIdentifier => "a";
 
-        //General Relation keys
-        public string CreatorRelation => "rc";
-        public string ParentRelation => "rp";
+
+        //Symbolic value stuff (these are prepended to actual values)
+        public string ActiveValue => "+";
+        public string InactiveValue => "-";
+
+
+        //Symbolic key stuff (these are all prepended to something else)
+        public string AssociatedValueKey => "@";
+        public string VariableKey => "v:";
+        public string HistoryKey => "_";
+
+
+        //General Relation keys (just relations, no appending)
+        public string CreatorRelation => "$";
+        public string ParentRelation => "/";
         public string StandInRelation => ">";
 
-        //General keys
-        public string VariableKey => "v:";
-        public string KeywordKey => "k";
-        public string AssociatedValueKey => "@";
+
+        //General Value keys
+        public string KeywordKey => "#";
 
 
         //Access stuff (I hate that these are individual, hopefully this won't impact performance too bad...)
         //These are also relations
-        public string CreateAccess => "ac";
-        public string ReadAccess => "ar";
-        public string UpdateAccess => "au";
-        public string DeleteAccess => "ad";
+        public string CreateAction => "!c";
+        public string ReadAction => "!r";
+        public string UpdateAction => "!u";
+        public string DeleteAction => "!d";
+
 
         //Overall types of entities (entity types)
         public string UserType => "tu";
@@ -33,8 +44,6 @@ namespace contentapi
         public string CommentType => "ta"; //a for addendum or annotation
         public string StandInType => "ts";
 
-        //Historic keys
-        public string HistoryKey => "_";
 
         //User stuff  (keys for entity values)
         public string EmailKey => "se";
@@ -42,7 +51,6 @@ namespace contentapi
         public string PasswordSaltKey => "sps";
         public string RegistrationCodeKey => "srk";
 
-        //Category stuff
 
         public void EnsureAllUnique()
         {
