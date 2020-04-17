@@ -88,7 +88,7 @@ namespace contentapi.Controllers
             {
                 initial = initial
                     .Join(services.provider.GetQueryable<EntityRelation>(), e => e.entity.id, r => r.entityId2, 
-                          (e,r) => new EntityRelationGroup() { entity = e.entity, relation = r})
+                          (e,r) => new EntityREGroup() { entity = e.entity, relation = r})
                     .Where(x => x.relation.type == keys.ParentRelation && search.CategoryIds.Contains(x.relation.entityId1));
             }
 
@@ -96,31 +96,19 @@ namespace contentapi.Controllers
             {
                 initial = initial
                     .Join(services.provider.GetQueryable<EntityValue>(), e => e.entity.id, v => v.entityId, 
-                          (e,v) => new EntityFullGroup() { entity = e.entity, relation = e.relation, value = v})
+                          (e,v) => new EntityREVGroup() { entity = e.entity, relation = e.relation, value = v})
                     .Where(x => x.value.key == keys.KeywordKey && EF.Functions.Like(x.value.value, search.Keyword));
             }
 
             var idHusk = ConvertToHusk(initial);
 
-            return await ViewResult(FinalizeHusk(idHusk, entitySearch));
+            return await ViewResult(FinalizeHusk<Entity>(idHusk, entitySearch));
         }
 
-        protected async Task<ActionResult<ContentView>> PostBase(ContentView view)
+        protected Task<ActionResult<ContentView>> PostBase(ContentView view)
         {
-            try
-            {
-                view = await PostCleanAsync(view);
-            }
-            catch(AuthorizationException ex)
-            {
-                return Unauthorized(ex.Message);
-            }
-            catch(Exception ex)
-            {
-                return BadRequest(ex.Message);
-            }
-
-            return ConvertToView(await WriteViewAsync(view));
+            return ThrowToAction(async() => view = await PostCleanAsync(view), 
+                async() => ConvertToView(await WriteViewAsync(view)));
         }
 
         [HttpPost]
@@ -141,25 +129,19 @@ namespace contentapi.Controllers
 
         [HttpDelete("{id}")]
         [Authorize]
-        public async Task<ActionResult<ContentView>> DeleteAsync([FromRoute]long id)
+        public Task<ActionResult<ContentView>> DeleteAsync([FromRoute]long id)
         {
             EntityPackage result = null;
 
-            try
+            return ThrowToAction(async() => 
             {
                 result = await DeleteEntityCheck(id);
-            }
-            catch(AuthorizationException ex)
+            }, 
+            async() =>
             {
-                return Unauthorized(ex.Message);
-            }
-            catch(Exception ex)
-            {
-                return BadRequest(ex.Message);
-            }
-
-            await DeleteEntity(id);
-            return ConvertToView(result);
+                await DeleteEntity(id);
+                return ConvertToView(result);
+            });
         }
     }
 }

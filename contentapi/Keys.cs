@@ -52,6 +52,10 @@ namespace contentapi
         public string RegistrationCodeKey => "srk";
 
 
+        //Awful hacks
+        public string CommentHack => "Zc";
+
+
         public void EnsureAllUnique()
         {
             var properties = GetType().GetProperties();

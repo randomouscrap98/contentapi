@@ -58,28 +58,21 @@ namespace contentapi.Controllers
             var perms = BasicPermissionQuery(user, entitySearch);
             var idHusk = ConvertToHusk(perms);
 
-            return await ViewResult(FinalizeHusk(idHusk, entitySearch));
+            return await ViewResult(FinalizeHusk<Entity>(idHusk, entitySearch));
         }
 
-        protected async Task<ActionResult<CategoryView>> PostBase(CategoryView view)
+        protected Task<ActionResult<CategoryView>> PostBase(CategoryView view)
         {
-            try
+            return ThrowToAction(async() =>
             {
                 //Only super users can create categories. Flat out.
                 FailUnlessRequestSuper(); 
-
                 view = await PostCleanAsync(view);
-            }
-            catch(AuthorizationException ex)
+            }, 
+            async () => 
             {
-                return Unauthorized(ex.Message);
-            }
-            catch(Exception ex)
-            {
-                return BadRequest(ex.Message);
-            }
-
-            return ConvertToView(await WriteViewAsync(view));
+                return ConvertToView(await WriteViewAsync(view));
+            });
         }
 
         [HttpPost]
@@ -100,25 +93,19 @@ namespace contentapi.Controllers
 
         [HttpDelete("{id}")]
         [Authorize]
-        public async Task<ActionResult<CategoryView>> DeleteAsync([FromRoute]long id)
+        public Task<ActionResult<CategoryView>> DeleteAsync([FromRoute]long id)
         {
             EntityPackage result = null;
 
-            try
+            return ThrowToAction<CategoryView>(async () => 
             {
                 result = await DeleteEntityCheck(id);
-            }
-            catch(AuthorizationException ex)
+            },
+            async() =>
             {
-                return Unauthorized(ex.Message);
-            }
-            catch(Exception ex)
-            {
-                return BadRequest(ex.Message);
-            }
-
-            await DeleteEntity(id);
-            return ConvertToView(result);
+                await DeleteEntity(id);
+                return ConvertToView(result);
+            });
         }
     }
 }

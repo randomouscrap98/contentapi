@@ -4,6 +4,7 @@ using System.Linq;
 using System.Text;
 using System.Threading.Tasks;
 using AutoMapper;
+using contentapi.Controllers;
 using contentapi.Services;
 using contentapi.Services.Implementations;
 using Microsoft.AspNetCore.Authentication.JwtBearer;
@@ -71,6 +72,9 @@ namespace contentapi
                 options.UseSqlite(dataSection.GetValue<string>("ContentConnectionString"))
                         .EnableSensitiveDataLogging(true)
             );
+
+            //The above is broken for signalling. Do this instead
+            services.AddSingleton<ISignaler<EntityBase>, SignalSystem<EntityBase>>();
 
             services.AddCors();
             services.AddControllers();

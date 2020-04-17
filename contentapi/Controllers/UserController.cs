@@ -89,14 +89,22 @@ namespace contentapi.Controllers
 
         [HttpGet("me")]
         [Authorize]
-        public async Task<ActionResult<UserView>> Me()
+        public Task<ActionResult<UserView>> Me()
         {
             long id = 0;
+            EntityPackage user = null;
             
-            try { id = GetRequesterUid(); }
-            catch(Exception ex) { return BadRequest(ex.Message); }
+            return ThrowToAction<UserView>(async () => 
+            {
+                id = GetRequesterUid();
 
-            return ConvertToView(await FindByIdAsync(id));
+                user = await FindByIdAsync(id);
+
+                //A VERY SPECIFIC glitch you really only get in production
+                if(user == null)
+                    throw new UnauthorizedAccessException($"No user with uid {id}");
+            }, 
+            () => Task.FromResult(ConvertToView(user)) );
         }
 
         [HttpPost("authenticate")]

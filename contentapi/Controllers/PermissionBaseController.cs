@@ -137,17 +137,6 @@ namespace contentapi.Controllers
             }
         }
 
-        protected bool CanUser(long user, string key, EntityPackage package)
-        {
-            return (package.GetRelation(keys.CreatorRelation).entityId1 == user) ||
-                (package.Relations.Any(x => x.type == key && (x.entityId1 == user || x.entityId1 == 0)));
-        }
-
-        protected bool CanCurrentUser(string key, EntityPackage package)
-        {
-            return CanUser(GetRequesterUidNoFail(), key, package);
-        }
-
         /// <summary>
         /// Do this on post update
         /// </summary>
@@ -220,57 +209,12 @@ namespace contentapi.Controllers
             return result;
         }
 
-        protected class EntityRelationGroup
-        {
-            public Entity entity;
-            public EntityRelation relation;
-        }
-
-        protected class EntityFullGroup : EntityRelationGroup
-        {
-            public EntityValue value;
-        }
-
-        protected IQueryable<EntityRelationGroup> BasicPermissionQuery(long user, EntitySearch search)
-        {
-            return   
-                services.provider.ApplyEntitySearch(services.provider.GetQueryable<Entity>(), search, false)
-                .Join(services.provider.GetQueryable<EntityRelation>(), e => e.id, r => r.entityId2, (e,r) => new EntityRelationGroup() { entity = e, relation = r})
-                .Where(x => (x.relation.type == keys.CreatorRelation && x.relation.entityId1 == user) ||
-                      (x.relation.type == keys.ReadAction && (x.relation.entityId1 == 0 || x.relation.entityId1 == user)));
-        }
-
-        protected IQueryable<EntityBase> ConvertToHusk(IQueryable<EntityRelationGroup> groups)
+        protected IQueryable<EntityBase> ConvertToHusk(IQueryable<EntityREGroup> groups)
         {
             return 
                 from x in groups
                 group x by x.entity.id into g
                 select new EntityBase() { id = g.Key };
         }
-
-        /// <summary>
-        /// Given a completed IQueryable, apply the final touches to get a real list of entities
-        /// </summary>
-        /// <param name="foundEntities"></param>
-        /// <param name="search"></param>
-        /// <returns></returns>
-        protected IQueryable<Entity> FinalizeHusk(IQueryable<EntityBase> foundEntities, EntitySearch search)
-        {
-            var ids = services.provider.ApplyFinal(foundEntities, search).Select(x => x.id);
-            var join =
-                from e in services.provider.GetQueryable<Entity>()
-                where ids.Contains(e.id)
-                select e;
-
-            //This is REPEAT CODE! FIGURE OUT HOW TO FIX THIS! This is required because order is not preserved
-            //after the "join" (the fake join using in-memory data oof)
-            if(search.Reverse)
-                join = join.OrderByDescending(x => x.id);
-            else
-                join = join.OrderBy(x => x.id);
-
-            return join;
-        }
-            
     }
 }

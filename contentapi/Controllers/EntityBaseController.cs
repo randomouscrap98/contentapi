@@ -95,23 +95,6 @@ namespace contentapi.Controllers
         }
 
         /// <summary>
-        /// Find an entity by its STAND IN id (not the regular ID, use the service for that)
-        /// </summary>
-        /// <param name="standinId"></param>
-        /// <returns></returns>
-        protected async Task<EntityPackage> FindByIdAsync(long standinId)
-        {
-            var realIds = await ConvertStandInIdsAsync(standinId);
-
-            if(realIds.Count() == 0)
-                return null;
-            else if(realIds.Count() > 1)
-                throw new InvalidOperationException("Multiple entities for given standin, are there trailing history elements?");
-            
-            return await services.provider.FindByIdAsync(realIds.First());
-        }
-
-        /// <summary>
         /// Mark the currently active entities/relations etc for the given standin as inactive. Return a copy
         /// of the objects as they were before being edited (for rollback purposes)
         /// </summary>
@@ -224,33 +207,6 @@ namespace contentapi.Controllers
             search.TypeLike = keys.StandInRelation;
             var result = await services.provider.GetEntityRelationsAsync(search);
             return result.Where(x => TypeIs(x.value, keys.ActiveValue)).OnlySingle();
-        }
-
-        /// <summary>
-        /// Convert stand-in ids (from the users) to real ids (that I use for searching actual entities)
-        /// </summary>
-        /// <param name="ids"></param>
-        /// <returns></returns>
-        protected async Task<List<long>> ConvertStandInIdsAsync(List<long> ids)
-        {
-            //This bites me every time. I need to fix the entity search system.
-            if(ids.Count == 0)
-                return new List<long>();
-
-            var relations = services.provider.GetQueryable<EntityRelation>();
-            relations = services.provider.ApplyEntityRelationSearch(relations, 
-                new EntityRelationSearch()
-                {
-                    EntityIds1 = ids,
-                    TypeLike = keys.StandInRelation
-                });
-
-            return await services.provider.GetListAsync(relations.Where(x => EF.Functions.Like(x.value, $"{keys.ActiveValue}%")).Select(x => x.entityId2));
-        }
-
-        protected Task<List<long>> ConvertStandInIdsAsync(params long[] ids)
-        {
-            return ConvertStandInIdsAsync(ids.ToList());
         }
 
         /// <summary>
