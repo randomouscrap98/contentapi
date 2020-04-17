@@ -5,7 +5,7 @@ namespace contentapi.Views
     public class ViewBase
     {
         public long id {get;set;}
-        public DateTime editDate {get;set;}
-        public DateTime createDate {get;set;}
+        public DateTimeOffset editDate {get;set;}
+        public DateTimeOffset createDate {get;set;}
     }
 }

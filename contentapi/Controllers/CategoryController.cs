@@ -61,9 +61,7 @@ namespace contentapi.Controllers
             return await ViewResult(FinalizeHusk(idHusk, entitySearch));
         }
 
-        [HttpPost]
-        [Authorize]
-        public async Task<ActionResult<CategoryView>> PostAsync([FromBody]CategoryView view)
+        protected async Task<ActionResult<CategoryView>> PostBase(CategoryView view)
         {
             try
             {
@@ -82,6 +80,22 @@ namespace contentapi.Controllers
             }
 
             return ConvertToView(await WriteViewAsync(view));
+        }
+
+        [HttpPost]
+        [Authorize]
+        public Task<ActionResult<CategoryView>> PostAsync([FromBody]CategoryView view)
+        {
+            view.id = 0;
+            return PostBase(view);
+        }
+
+        [HttpPut("{id}")]
+        [Authorize]
+        public Task<ActionResult<CategoryView>> PostAsync([FromRoute] long id, [FromBody]CategoryView view)
+        {
+            view.id = id;
+            return PostBase(view);
         }
 
         [HttpDelete("{id}")]

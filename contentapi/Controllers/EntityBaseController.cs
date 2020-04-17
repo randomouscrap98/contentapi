@@ -42,8 +42,8 @@ namespace contentapi.Controllers
 
             //We are able to pull both the edit and create because all the info is in the package. we can't
             //go the other way (see above) because the view doesn't necessarily have the data we need.
-            view.editDate = (DateTime)package.GetRelation(keys.StandInRelation).createDate;
-            view.createDate = (DateTime)package.Entity.createDate;
+            view.editDate = (DateTimeOffset)package.GetRelation(keys.StandInRelation).createDate;
+            view.createDate = (DateTimeOffset)package.Entity.createDate;
 
             if(!package.HasRelation(keys.StandInRelation))
                 throw new InvalidOperationException("Package has no stand-in relation, it is not part of the history system!");
@@ -61,8 +61,7 @@ namespace contentapi.Controllers
             package.Entity.type = TypeSet(package.Entity.type, EntityType); //Steal the type directly from whatever they created
             package.Entity.createDate = view.createDate; //trust the create date from the view.
 
-            //Assume any new view is active
-            var relation = NewRelation(view.id, keys.StandInRelation, keys.ActiveValue);
+            var relation = NewRelation(view.id, keys.StandInRelation); //, keys.ActiveValue);
             relation.createDate = DateTime.UtcNow;
             package.Add(relation);
 
@@ -159,10 +158,12 @@ namespace contentapi.Controllers
                 logger.LogInformation("Creating standin for apparently new view");
                 standin = await CreateStandInAsync();
                 standinRelation.entityId1 = standin.id;
+                standinRelation.value = TypeSet(keys.CreateAction, keys.ActiveValue); //standinRelation.value, keys.CreateAction); //This is new
             }
             else
             {
                 standin = await GetStandInAsync(standinRelation.entityId1);
+                standinRelation.value = TypeSet(keys.UpdateAction, keys.ActiveValue); //TypeSet(standinRelation.value, keys.UpdateAction); //This is an update
             }
 
             List<EntityBase> restoreCopies = new List<EntityBase>();
@@ -281,7 +282,7 @@ namespace contentapi.Controllers
 
         protected virtual V PostCleanUpdateAsync(V view, Entity standin, EntityPackage existing)
         {
-            view.createDate = (DateTime)standin.createDate;
+            view.createDate = (DateTimeOffset)standin.createDate;
 
             //Don't allow posting over some other entity! THIS IS SUUUUPER IMPORTANT!!!
             if(!TypeIs(existing.Entity.type, EntityType))

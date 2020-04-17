@@ -20,8 +20,8 @@ namespace contentapi
 
 
         //General Relation keys (just relations, no appending)
-        public string CreatorRelation => "$";
-        public string ParentRelation => "/";
+        public string CreatorRelation => "rc";
+        public string ParentRelation => "rp";
         public string StandInRelation => ">";
 
 
