@@ -21,10 +21,6 @@ namespace contentapi
                 .ConfigureWebHostDefaults(webBuilder =>
                 {
                     webBuilder.UseStartup<Startup>();
-                        //.ConfigureAppConfiguration(builder =>
-                        //{
-                        //    builder.AddJsonFile("secrets.json");
-                        //});
                 });
     }
 }
