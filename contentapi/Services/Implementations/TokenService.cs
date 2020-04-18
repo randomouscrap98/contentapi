@@ -53,12 +53,12 @@ namespace contentapi.Services.Implementations
         //    }
         //}
 
-        public string GetToken(Dictionary<string, string> tokenData)
+        public string GetToken(Dictionary<string, string> tokenData, TimeSpan? expireOverride = null)
         {
             var descriptor = new SecurityTokenDescriptor
             {
                 Subject = new ClaimsIdentity(tokenData.Select(x => new Claim(x.Key, x.Value)).ToArray()),
-                Expires = DateTime.UtcNow.Add(config.TokenExpiration),
+                Expires = DateTime.UtcNow.Add(expireOverride ?? config.TokenExpiration),
                 NotBefore = DateTime.UtcNow.AddMinutes(-30),
                 SigningCredentials = new SigningCredentials(
                     new SymmetricSecurityKey(System.Text.Encoding.ASCII.GetBytes(config.SecretKey)), 

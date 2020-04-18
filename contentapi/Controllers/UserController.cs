@@ -94,6 +94,7 @@ namespace contentapi.Controllers
             long id = 0;
             EntityPackage user = null;
             
+            //The first is check, the second is return
             return ThrowToAction<UserView>(async () => 
             {
                 id = GetRequesterUid();
@@ -104,11 +105,14 @@ namespace contentapi.Controllers
                 if(user == null)
                     throw new UnauthorizedAccessException($"No user with uid {id}");
             }, 
-            async () => await ViewResult(user));
+            async () => 
+            {
+                return await ViewResult(user);
+            });
         }
 
         [HttpPost("authenticate")]
-        public async Task<ActionResult<string>> Authenticate([FromBody]UserCredential user)
+        public async Task<ActionResult<string>> Authenticate([FromBody]UserAuthenticate user)
         {
             EntityPackage foundUser = null;
 
@@ -136,10 +140,17 @@ namespace contentapi.Controllers
             if(!hash.SequenceEqual(Convert.FromBase64String(foundUser.GetValue(keys.PasswordHashKey).value)))
                 return BadRequest("Password incorrect!");
 
+            TimeSpan? expireOverride = null;
+
+            //Note: this allows users to create ultimate super long tokens for use like... forever. Until we get
+            //the token expirer set up, this will be SCARY
+            if(user.ExpireSeconds > 0)
+                expireOverride = TimeSpan.FromSeconds(user.ExpireSeconds);
+
             return tokenService.GetToken(new Dictionary<string, string>()
             {
                 { keys.UserIdentifier, (await ViewResult(foundUser)).id.ToString() }
-            });
+            }, expireOverride);
         }
 
 

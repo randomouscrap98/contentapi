@@ -1,3 +1,4 @@
+using System;
 using System.Collections.Generic;
 
 namespace contentapi.Services
@@ -9,6 +10,6 @@ namespace contentapi.Services
 
     public interface ITokenService
     {
-        string GetToken(Dictionary<string, string> data);
+        string GetToken(Dictionary<string, string> data, TimeSpan? expireOverride = null);
     }
 }
