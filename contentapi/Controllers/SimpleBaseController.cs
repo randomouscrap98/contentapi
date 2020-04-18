@@ -73,7 +73,7 @@ namespace contentapi.Controllers
         protected void FailUnlessRequestSuper()
         {
             if(!services.systemConfig.SuperUsers.Contains(GetRequesterUidNoFail()))
-                throw new InvalidOperationException("Must be super user to perform this action!");
+                throw new UnauthorizedAccessException("Must be super user to perform this action!");
         }
 
         protected EntityPackage NewEntity(string name, string content = null)

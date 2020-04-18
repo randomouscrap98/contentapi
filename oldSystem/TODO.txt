@@ -1,4 +1,0 @@
--Force always create/read/update/delete(?) perms on self (on update/etc).
--make website set global perms on content create read (others can post and read the content)
--make website display list of content
--make spa
