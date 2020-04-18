@@ -43,6 +43,7 @@ namespace contentapi.Controllers
         {
             var view = services.mapper.Map<CommentView>(relation);
             view.userId *= -1;
+            view.editDate = view.createDate; //Oh well, we'll fix this later
             return view;
         }
 

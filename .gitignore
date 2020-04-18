@@ -41,3 +41,6 @@ contentapi.hardtests
 contentapi/content.db
 contentapi/LanguageFiles
 mytemp
+secrets.json
+appsettings.json
+appsettings.Development.json
