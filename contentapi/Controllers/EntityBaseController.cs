@@ -61,8 +61,9 @@ namespace contentapi.Controllers
             package.Entity.type = TypeSet(package.Entity.type, EntityType); //Steal the type directly from whatever they created
             package.Entity.createDate = view.createDate; //trust the create date from the view.
 
-            var relation = NewRelation(view.id, keys.StandInRelation); //, keys.ActiveValue);
-            relation.createDate = DateTime.UtcNow;
+            //The standin pointer gets the real edit date.
+            var relation = NewRelation(view.id, keys.StandInRelation);
+            relation.createDate = view.editDate;
             package.Add(relation);
 
             return package;
@@ -101,11 +102,11 @@ namespace contentapi.Controllers
             return standin;
         }
 
-        protected async Task<Entity> GetStandInAsync(long id)
+        protected async Task<EntityPackage> GetStandInAsync(long id)
         {
-            var standin = await services.provider.FindByIdBaseAsync(id); //go find the standin
+            var standin = await services.provider.FindByIdAsync(id); //go find the standin
 
-            if(!TypeIs(standin?.type, keys.StandInType))
+            if(standin == null || !TypeIs(standin.Entity.type, keys.StandInType))
                 throw new InvalidOperationException($"No entity with id {id}");
             
             return standin;
@@ -148,7 +149,7 @@ namespace contentapi.Controllers
 
             //We assume the package was there.
             var standinRelation = package.GetRelation(keys.StandInRelation);
-            Entity standin = null; //This MAY be needed for some future stuff.
+            EntityPackage standin = null; //This MAY be needed for some future stuff.
             bool newPackage = false;
 
             if(standinRelation.entityId1 == 0)
@@ -156,8 +157,8 @@ namespace contentapi.Controllers
                 //Link in a new standin
                 newPackage = true;
                 logger.LogInformation("Creating standin for apparently new view");
-                standin = (await CreateStandInAsync()).Entity;
-                standinRelation.entityId1 = standin.id;
+                standin = await CreateStandInAsync();
+                standinRelation.entityId1 = standin.Entity.id;
                 standinRelation.value = TypeSet(keys.CreateAction, keys.ActiveValue); //standinRelation.value, keys.CreateAction); //This is new
             }
             else
@@ -253,9 +254,10 @@ namespace contentapi.Controllers
             return search;
         }
 
-        protected virtual V PostCleanUpdateAsync(V view, Entity standin, EntityPackage existing)
+        protected virtual V PostCleanUpdateAsync(V view, EntityPackage standin, EntityPackage existing)
         {
-            view.createDate = (DateTimeOffset)standin.createDate;
+            view.createDate = (DateTimeOffset)standin.Entity.createDate;
+            view.editDate = DateTime.UtcNow; //On update, edit is NOW (updating now etc idk)
 
             //Don't allow posting over some other entity! THIS IS SUUUUPER IMPORTANT!!!
             if(!TypeIs(existing.Entity.type, EntityType))
@@ -268,6 +270,7 @@ namespace contentapi.Controllers
         {
             //Create date should be NOOOWW
             view.createDate = DateTime.UtcNow;
+            view.editDate = view.createDate; //Edit date should be EXACTLY the same as create date
             return view;
         }
 
@@ -293,17 +296,7 @@ namespace contentapi.Controllers
         protected async virtual Task<List<V>> ViewResult(IQueryable<Entity> query)
         {
             var packages = await services.provider.LinkAsync(query);
-            return await ViewResult(packages);
-        }
-
-        protected virtual Task<List<V>> ViewResult(IEnumerable<EntityPackage> packages)
-        {
-            return Task.FromResult(packages.Select(x => ConvertToView(x)).ToList());
-        }
-
-        protected async Task<V> ViewResult(EntityPackage package)
-        {
-            return (await ViewResult(new [] {package})).FirstOrDefault();
+            return packages.Select(x => ConvertToView(x)).ToList();
         }
     }
 }

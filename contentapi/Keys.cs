@@ -20,7 +20,10 @@ namespace contentapi
 
 
         //General Relation keys (just relations, no appending)
-        public string CreatorRelation => "rc";
+
+        //Creator meaning is twofold: entityid1 is the creator of THIS content (as it should be), 
+        //and the value is the creator of the STANDIN (the original creator)
+        public string CreatorRelation => "rc"; 
         public string ParentRelation => "rp";
         public string StandInRelation => ">";
 

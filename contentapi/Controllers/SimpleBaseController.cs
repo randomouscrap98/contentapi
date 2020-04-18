@@ -129,15 +129,13 @@ namespace contentapi.Controllers
             return given.Substring(mainType.Length);
         }
 
-        //protected 
-
         /// <summary>
         /// Apply various limits to a search
         /// </summary>
         /// <param name="search"></param>
         /// <typeparam name="S"></typeparam>
         /// <returns></returns>
-        protected virtual E LimitSearch<E>(E search) where E : EntitySearchBase//where S : EntitySearchBase
+        protected virtual E LimitSearch<E>(E search) where E : EntitySearchBase
         {
             if(search.Limit < 0 || search.Limit > 1000)
                 search.Limit = 1000;
@@ -152,7 +150,7 @@ namespace contentapi.Controllers
 
         protected IQueryable<E> PermissionWhere<E>(IQueryable<E> query, long user) where E : EntityRGroup
         {
-            return query.Where(x => (x.relation.type == keys.CreatorRelation && x.relation.entityId1 == user) ||
+            return query.Where(x => (x.relation.type == keys.CreatorRelation && x.relation.value == user.ToString()) ||
                 (x.relation.type == keys.ReadAction && (x.relation.entityId1 == 0 || x.relation.entityId1 == user)));
         }
 
@@ -236,7 +234,7 @@ namespace contentapi.Controllers
 
         protected bool CanUser(long user, string key, EntityPackage package)
         {
-            return (package.GetRelation(keys.CreatorRelation).entityId1 == user) ||
+            return (package.GetRelation(keys.CreatorRelation).value == user.ToString()) ||
                 (package.Relations.Any(x => x.type == key && (x.entityId1 == user || x.entityId1 == 0)));
         }
 

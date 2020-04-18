@@ -109,7 +109,7 @@ namespace contentapi.Controllers
         {
             return ThrowToAction(
                 async() => view = await PostCleanAsync(view), 
-                async() => await ViewResult(await WriteViewAsync(view)));
+                async() => ConvertToView(await WriteViewAsync(view)));
         }
 
         [HttpPost]
@@ -141,7 +141,7 @@ namespace contentapi.Controllers
             async() =>
             {
                 await DeleteEntity(id);
-                return await ViewResult(result);
+                return ConvertToView(result);
             });
         }
     }

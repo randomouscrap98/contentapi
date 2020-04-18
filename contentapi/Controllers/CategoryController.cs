@@ -71,7 +71,7 @@ namespace contentapi.Controllers
             }, 
             async () => 
             {
-                return await ViewResult(await WriteViewAsync(view));
+                return ConvertToView(await WriteViewAsync(view));
             });
         }
 
@@ -104,7 +104,7 @@ namespace contentapi.Controllers
             async() =>
             {
                 await DeleteEntity(id);
-                return await ViewResult(result);
+                return ConvertToView(result);
             });
         }
     }
