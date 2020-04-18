@@ -107,8 +107,9 @@ namespace contentapi.Controllers
 
         protected Task<ActionResult<ContentView>> PostBase(ContentView view)
         {
-            return ThrowToAction(async() => view = await PostCleanAsync(view), 
-                async() => ConvertToView(await WriteViewAsync(view)));
+            return ThrowToAction(
+                async() => view = await PostCleanAsync(view), 
+                async() => await ViewResult(await WriteViewAsync(view)));
         }
 
         [HttpPost]
@@ -140,7 +141,7 @@ namespace contentapi.Controllers
             async() =>
             {
                 await DeleteEntity(id);
-                return ConvertToView(result);
+                return await ViewResult(result);
             });
         }
     }

@@ -15,6 +15,19 @@ namespace contentapi.Controllers
         public AuthorizationException(string message) : base(message) { }
     }
 
+    //public class EntityPackageCreator : EntityPackage
+    //{
+    //    public EntityRelation CreatorRelation {get;set;}
+
+    //    public EntityPackageCreator() : base() {}
+    //    public EntityPackageCreator(EntityPackage copy) : base(copy) {}
+
+    //    public EntityPackageCreator(EntityPackageCreator copy) : base(copy) 
+    //    {
+    //        CreatorRelation = copy.CreatorRelation;
+    //    }
+    //}
+
     public abstract class PermissionBaseController<V> : EntityBaseController<V> where V : PermissionView
     {
         protected Dictionary<string, string> permMapping;
@@ -74,7 +87,8 @@ namespace contentapi.Controllers
         {
             var package = base.ConvertFromView(view);
 
-            //There HAS to be a creator
+            //There HAS to be a creator. Creator in this case is the creator OF THIS REVISION,
+            //not of the whole dang thing. The original creator will be the first one
             package.Add(NewRelation(view.userId, keys.CreatorRelation));
 
             //There doesn't HAVE to be a parent
@@ -92,8 +106,9 @@ namespace contentapi.Controllers
         {
             var view = base.ConvertToView(package);
 
-            //Set the creator to whatever the relation is
-            view.userId = package.GetRelation(keys.CreatorRelation).entityId1;
+            //The creator of this REVISION is the editor, not the creator. the creator is the one
+            //associated with the standin.
+            view.editUserId = package.GetRelation(keys.CreatorRelation).entityId1;
 
             if(package.HasRelation(keys.ParentRelation))
                 view.parentId = package.GetRelation(keys.ParentRelation).entityId1;
@@ -102,6 +117,11 @@ namespace contentapi.Controllers
 
             return view;
         }
+
+        //protected override async Task<Entity> CreateStandInAsync()
+        //{
+        //    var entity = await base.CreateStandInAsync();
+        //}
 
         protected async Task CheckPermissionUsersAsync(V view)
         {
@@ -149,7 +169,7 @@ namespace contentapi.Controllers
             view = base.PostCleanUpdateAsync(view, standin, existing);
 
             //Don't allow the user to change these things.
-            view.userId = existing.GetRelation(keys.CreatorRelation).entityId1;
+            //view.userId = existing.GetRelation(keys.CreatorRelation).entityId1;
 
             if (!CanCurrentUser(keys.UpdateAction, existing))
                 throw new AuthorizationException("User cannot update this entity");
@@ -165,13 +185,15 @@ namespace contentapi.Controllers
         protected override V PostCleanCreateAsync(V view)
         {
             view = base.PostCleanCreateAsync(view);
-            view.userId = GetRequesterUid();
             return view;
         }
 
         protected override async Task<V> PostCleanAsync(V view)
         {
             view = await base.PostCleanAsync(view);
+
+            //userid is always... us. we're doing it.
+            view.userId = GetRequesterUid();
 
             //Oh also make sure the parent exists.
             if(view.parentId > 0)
@@ -189,7 +211,7 @@ namespace contentapi.Controllers
             }
             else
             {
-                //Only super users can create parentless entities... for now. This is a safety feature and may be removed
+                //Only super users can create parentless entities... for now. This is a safety feature and may (never) be removed
                 FailUnlessRequestSuper();
             }
 
@@ -216,5 +238,25 @@ namespace contentapi.Controllers
                 group x by x.entity.id into g
                 select new EntityBase() { id = g.Key };
         }
+
+        protected async override Task<List<V>> ViewResult(IEnumerable<EntityPackage> packages)
+        {
+            var packagesStandin = packages.Select(x => new { package = x, standinId = x.GetRelation(keys.StandInRelation).entityId1 });
+
+            var search = new EntityRelationSearch() { EntityIds2 = packagesStandin.Select(x => x.standinId).ToList() }; //packages.Select(x => x.GetRelation(keys.StandInRelation).entityId1).ToList() };
+            var creators = await services.provider.GetEntityRelationsAsync(search);
+
+            var linked = from p in packagesStandin
+                         join c in creators on p.standinId equals c.entityId2 into g
+                         select new { package = p.package, creator = g.First() };
+
+            return linked.Select(x => 
+            {
+                var view = ConvertToView(x.package);
+                view.userId = x.creator.entityId1;
+                return view;
+            }).ToList();
+        }
+
     }
 }

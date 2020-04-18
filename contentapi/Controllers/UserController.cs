@@ -104,7 +104,7 @@ namespace contentapi.Controllers
                 if(user == null)
                     throw new UnauthorizedAccessException($"No user with uid {id}");
             }, 
-            () => Task.FromResult(ConvertToView(user)) );
+            async () => await ViewResult(user));
         }
 
         [HttpPost("authenticate")]
@@ -138,7 +138,7 @@ namespace contentapi.Controllers
 
             return tokenService.GetToken(new Dictionary<string, string>()
             {
-                { keys.UserIdentifier, ConvertToView(foundUser).id.ToString() }
+                { keys.UserIdentifier, (await ViewResult(foundUser)).id.ToString() }
             });
         }
 
@@ -175,7 +175,7 @@ namespace contentapi.Controllers
 
             await PostCleanAsync(fullUser);
 
-            return ConvertToView(await WriteViewAsync(fullUser));
+            return await ViewResult(await WriteViewAsync(fullUser)); //ConvertToView(await WriteViewAsync(fullUser));
         }
 
         public class RegistrationEmailPost

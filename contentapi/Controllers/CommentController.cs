@@ -104,7 +104,7 @@ namespace contentapi.Controllers
                     search.EntityIds1.Add(parentId);
                     search = LimitSearch(search);
 
-                    var comments = await services.provider.ListenNewAsync<EntityRelation>(lastId, TimeSpan.FromSeconds(120),
+                    var comments = await services.provider.ListenNewAsync<EntityRelation>(lastId, TimeSpan.FromSeconds(300),
                         (q) => {
                             return services.provider.ApplyEntityRelationSearch(q, search);
                         });

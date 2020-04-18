@@ -74,11 +74,28 @@ namespace contentapi.Controllers
         /// special history system to function.
         /// </summary>
         /// <returns></returns>
-        protected async Task<Entity> CreateStandInAsync()
+        protected virtual async Task<EntityPackage> CreateStandInAsync()
         {
             //Create date is now and will never be changed
-            var standin = NewEntity(null, keys.ActiveValue).Entity; 
-            standin.type = keys.StandInType;
+            var standin = NewEntity(null, keys.ActiveValue); 
+            standin.Entity.type = keys.StandInType;
+
+            //Link in the current user as the creator. Just a fun little thing. Allow the date here just in case it's needed
+            var userId = GetRequesterUidNoFail();
+
+            if(userId > 0)
+            {
+                //Don't need a datetime here right now. Hopefully we won't need it later... you can always remove it,
+                //but you can't add it back in.... let's hope this isn't awful. If you need date, link into standin to get it.
+                //They are created at the same time.
+                var userLink = NewRelation(userId, keys.CreatorRelation);
+                standin.Add(userLink);
+            }
+            else
+            {
+                logger.LogWarning("No user logged in while creating standin. It may just be a new user."); 
+            }
+
             await services.provider.WriteAsync(standin);
 
             return standin;
@@ -139,7 +156,7 @@ namespace contentapi.Controllers
                 //Link in a new standin
                 newPackage = true;
                 logger.LogInformation("Creating standin for apparently new view");
-                standin = await CreateStandInAsync();
+                standin = (await CreateStandInAsync()).Entity;
                 standinRelation.entityId1 = standin.id;
                 standinRelation.value = TypeSet(keys.CreateAction, keys.ActiveValue); //standinRelation.value, keys.CreateAction); //This is new
             }
@@ -273,10 +290,20 @@ namespace contentapi.Controllers
             return view;
         }
 
-        protected async Task<List<V>> ViewResult(IQueryable<Entity> query)
+        protected async virtual Task<List<V>> ViewResult(IQueryable<Entity> query)
         {
             var packages = await services.provider.LinkAsync(query);
-            return packages.Select(x => ConvertToView(x)).ToList();
+            return await ViewResult(packages);
+        }
+
+        protected virtual Task<List<V>> ViewResult(IEnumerable<EntityPackage> packages)
+        {
+            return Task.FromResult(packages.Select(x => ConvertToView(x)).ToList());
+        }
+
+        protected async Task<V> ViewResult(EntityPackage package)
+        {
+            return (await ViewResult(new [] {package})).FirstOrDefault();
         }
     }
 }

@@ -12,6 +12,12 @@ namespace contentapi.Views
         public long userId {get;set;}
 
         /// <summary>
+        /// The editor of the view
+        /// </summary>
+        /// <value></value>
+        public long editUserId {get;set;}
+
+        /// <summary>
         /// The direct parent of the view (can be empty sometimes!)
         /// </summary>
         /// <value></value>
