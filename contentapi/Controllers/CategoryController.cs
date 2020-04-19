@@ -51,7 +51,7 @@ namespace contentapi.Controllers
         [HttpGet]
         public async Task<ActionResult<List<CategoryView>>> GetAsync([FromQuery]CategorySearch search)
         {
-            var entitySearch = (EntitySearch)(await ModifySearchAsync(services.mapper.Map<EntitySearch>(search)));
+            var entitySearch = ModifySearch(services.mapper.Map<EntitySearch>(search));
 
             var user = GetRequesterUidNoFail();
 
@@ -61,18 +61,11 @@ namespace contentapi.Controllers
             return await ViewResult(FinalizeHusk<Entity>(idHusk, entitySearch));
         }
 
-        protected Task<ActionResult<CategoryView>> PostBase(CategoryView view)
+        protected override Task<CategoryView> CleanViewGeneralAsync(CategoryView view)
         {
-            return ThrowToAction(async() =>
-            {
-                //Only super users can create categories. Flat out.
-                FailUnlessRequestSuper(); 
-                view = await PostCleanAsync(view);
-            }, 
-            async () => 
-            {
-                return ConvertToView(await WriteViewAsync(view));
-            });
+            //Always fail unless super, nobody can write categories etc.
+            FailUnlessRequestSuper();
+            return base.CleanViewGeneralAsync(view);
         }
 
         [HttpPost]
@@ -80,32 +73,32 @@ namespace contentapi.Controllers
         public Task<ActionResult<CategoryView>> PostAsync([FromBody]CategoryView view)
         {
             view.id = 0;
-            return PostBase(view);
+            return ThrowToAction(() => WriteViewAsync(view));
         }
 
         [HttpPut("{id}")]
         [Authorize]
-        public Task<ActionResult<CategoryView>> PostAsync([FromRoute] long id, [FromBody]CategoryView view)
+        public Task<ActionResult<CategoryView>> PutAsync([FromRoute] long id, [FromBody]CategoryView view)
         {
             view.id = id;
-            return PostBase(view);
+            return ThrowToAction(() => WriteViewAsync(view));
         }
 
-        [HttpDelete("{id}")]
-        [Authorize]
-        public Task<ActionResult<CategoryView>> DeleteAsync([FromRoute]long id)
-        {
-            EntityPackage result = null;
+        //[HttpDelete("{id}")]
+        //[Authorize]
+        //public Task<ActionResult<CategoryView>> DeleteAsync([FromRoute]long id)
+        //{
+        //    EntityPackage result = null;
 
-            return ThrowToAction<CategoryView>(async () => 
-            {
-                result = await DeleteEntityCheck(id);
-            },
-            async() =>
-            {
-                await DeleteEntity(id);
-                return ConvertToView(result);
-            });
-        }
+        //    return ThrowToAction<CategoryView>(async () => 
+        //    {
+        //        result = await DeleteEntityCheck(id);
+        //    },
+        //    async() =>
+        //    {
+        //        await DeleteEntity(id);
+        //        return ConvertToView(result);
+        //    });
+        //}
     }
 }

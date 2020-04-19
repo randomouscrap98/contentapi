@@ -28,7 +28,7 @@ namespace contentapi.Controllers
                 .ForMember(x => x.EntityIds2, o => o.MapFrom(s => s.UserIds.Select(x => -x).ToList()));
             CreateMap<CommentView, EntityRelation>()
                 .ForMember(x => x.entityId1, o => o.MapFrom(s => s.parentId))
-                .ForMember(x => x.entityId2, o => o.MapFrom(s => s.userId))
+                .ForMember(x => x.entityId2, o => o.MapFrom(s => s.createUserId))
                 .ForMember(x => x.value, o => o.MapFrom(s => s.content))
                 .ReverseMap();
         }
@@ -42,7 +42,7 @@ namespace contentapi.Controllers
         protected CommentView ConvertToView(EntityRelation relation)
         {
             var view = services.mapper.Map<CommentView>(relation);
-            view.userId *= -1;
+            view.createUserId *= -1;
             view.editDate = view.createDate; //Oh well, we'll fix this later
             return view;
         }
@@ -65,18 +65,13 @@ namespace contentapi.Controllers
             var user = GetRequesterUidNoFail();
 
             var query = services.provider.ApplyEntityRelationSearch(services.provider.GetQueryable<EntityRelation>(), relationSearch, false)
-                //First join links comments to the latest (active) standin //and rewrites the ids to be the proper id
-                .Join(services.provider.GetQueryable<EntityRelation>(), r => r.entityId1, r2 => r2.entityId1, 
-                      (r,r2) => new EntityRRGroup() { relation = r, relation2 = r2 })
-                .Where(x => x.relation2.type == keys.StandInRelation && EF.Functions.Like(x.relation2.value, $"{keys.ActiveValue}%"))
-                .Join(services.provider.GetQueryable<EntityRelation>(), r => r.relation2.entityId2, r2 => r2.entityId2,
-                      (r,r2) => new EntityRRGroup() { relation = r2, relation2 = r.relation});
-                //.Join(services.provider.GetQueryable<EntityRelation>(), r => r.entityId1, r2 => r2.entityId2, (r,r2) => new EntityRRGroup() { relation = r2, relation2 = r});
+                .Join(services.provider.GetQueryable<EntityRelation>(), r => r.entityId1, r2 => r2.entityId2,
+                      (r,r2) => new EntityRRGroup() { relation = r2, relation2 = r });
 
                 //NOTE: the relations are SWAPPED because the intial group we applied the search to is the COMMENTS,
                 //but permission where expects the FIRST relation to be permissions
             
-            query = PermissionWhere(query, user);
+            query = PermissionWhere(query, user, keys.ReadAction);
 
             var idHusk =
                 from x in query 
@@ -89,12 +84,10 @@ namespace contentapi.Controllers
         [HttpGet("listen/{parentId}")]
         public Task<ActionResult<List<CommentView>>> ListenAsync([FromRoute]long parentId, [FromQuery]long lastId)
         {
-            return ThrowToAction(() => 
+            return ThrowToAction(async () => 
             {
-                return ParentCheckAync(parentId, keys.ReadAction);
-            }, 
-            async () =>
-            {
+                await ParentCheckAync(parentId, keys.ReadAction);
+
                 try
                 {
                     var search = new EntityRelationSearch()
@@ -106,9 +99,7 @@ namespace contentapi.Controllers
                     search = LimitSearch(search);
 
                     var comments = await services.provider.ListenNewAsync<EntityRelation>(lastId, TimeSpan.FromSeconds(300),
-                        (q) => {
-                            return services.provider.ApplyEntityRelationSearch(q, search);
-                        });
+                        (q) => services.provider.ApplyEntityRelationSearch(q, search));
 
                     return comments.Select(x => ConvertToView(x)).ToList();
                 }
@@ -119,39 +110,38 @@ namespace contentapi.Controllers
             });
         }
 
-        protected async Task ParentCheckAync(long parentId, string permission)
+        protected async Task ParentCheckAync(long parentId, string permission = null)
         {
-            //Go find the parent. If it's not content, BAD BAD BAD
-            var parent = await FindByIdAsync(parentId);
+            var parent = await provider.FindByIdAsync(parentId);
 
-            if (parent == null || !TypeIs(parent.Entity.type, keys.ContentType))
+            //Parent must be content
+            if (parent == null || !parent.Entity.type.StartsWith(keys.ContentType))
                 throw new InvalidOperationException("Parent is not content!");
 
-            if(!CanCurrentUser(permission, parent))
+            //Full inheritance from parent, that seems wrong.
+            if(!string.IsNullOrEmpty(permission) && !CanCurrentUser(permission, parent))
                 throw new UnauthorizedAccessException($"Cannot perform this action in content {parentId}");
         }
 
         protected Task<ActionResult<CommentView>> PostBase(CommentView view)
         {
-            return ThrowToAction<CommentView>(() =>
+            return ThrowToAction<CommentView>(async () =>
             {
                 //Don't allow updates right now
                 if(view.id > 0)
                     throw new InvalidOperationException("No comment editing right now!");
                 
                 view.createDate = DateTime.UtcNow;  //Ignore create date, it's always now
-                view.userId = GetRequesterUid();    //Always requester
+                view.createUserId = GetRequesterUid();    //Always requester
 
                 //Go find the parent. If it's not content, BAD BAD BAD
-                return ParentCheckAync(view.parentId, keys.CreateAction);
-            }, 
-            async () =>
-            {
+                await ParentCheckAync(view.parentId, keys.CreateAction);
+
                 //now actually write the dang thing.
                 var relation = ConvertFromView(view);
                 await services.provider.WriteAsync(relation);
                 return ConvertToView(relation);
-            });
+            }); 
         }
 
         [HttpPost]

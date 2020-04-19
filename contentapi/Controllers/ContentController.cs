@@ -48,7 +48,7 @@ namespace contentapi.Controllers
                 package.Add(NewValue(keys.KeywordKey, keyword));
             
             foreach(var v in view.values)
-                package.Add(NewValue(TypeSet(v.Key, keys.AssociatedValueKey), v.Value));
+                package.Add(NewValue(keys.AssociatedValueKey + v.Key, v.Value));
             
             //Bad coding, too many dependencies. We set the type without the base because someone else will do it for us.
             package.Entity.type = view.type;
@@ -61,13 +61,13 @@ namespace contentapi.Controllers
             var view = new ContentView();
             view.title = package.Entity.name;
             view.content = package.Entity.content;
-            view.type = TypeSub(package.Entity.type, EntityType);
+            view.type = package.Entity.type.Substring(EntityType.Length);
 
             foreach(var keyword in package.Values.Where(x => x.key == keys.KeywordKey))
                 view.keywords.Add(keyword.value);
             
-            foreach(var v in package.Values.Where(x => TypeIs(x.key, keys.AssociatedValueKey)))
-                view.values.Add(TypeSub(v.key, keys.AssociatedValueKey), v.value);
+            foreach(var v in package.Values.Where(x => x.key.StartsWith(keys.AssociatedValueKey)))
+                view.values.Add(v.key.Substring(keys.AssociatedValueKey.Length), v.value);
 
             return view; //view;
         }
@@ -75,7 +75,7 @@ namespace contentapi.Controllers
         [HttpGet]
         public async Task<ActionResult<List<ContentView>>> GetAsync([FromQuery]ContentSearch search)
         {
-            var entitySearch = (EntitySearch)(await ModifySearchAsync(services.mapper.Map<EntitySearch>(search)));
+            var entitySearch = ModifySearch(services.mapper.Map<EntitySearch>(search));
 
             var user = GetRequesterUidNoFail();
 
@@ -87,7 +87,7 @@ namespace contentapi.Controllers
             if(search.CategoryIds.Count > 0)
             {
                 initial = initial
-                    .Join(services.provider.GetQueryable<EntityRelation>(), e => e.entity.id, r => r.entityId2, 
+                    .Join(provider.GetQueryable<EntityRelation>(), e => e.entity.id, r => r.entityId2, 
                           (e,r) => new EntityREGroup() { entity = e.entity, relation = r})
                     .Where(x => x.relation.type == keys.ParentRelation && search.CategoryIds.Contains(x.relation.entityId1));
             }
@@ -95,7 +95,7 @@ namespace contentapi.Controllers
             if(!string.IsNullOrWhiteSpace(search.Keyword))
             {
                 initial = initial
-                    .Join(services.provider.GetQueryable<EntityValue>(), e => e.entity.id, v => v.entityId, 
+                    .Join(provider.GetQueryable<EntityValue>(), e => e.entity.id, v => v.entityId, 
                           (e,v) => new EntityREVGroup() { entity = e.entity, relation = e.relation, value = v})
                     .Where(x => x.value.key == keys.KeywordKey && EF.Functions.Like(x.value.value, search.Keyword));
             }
@@ -105,19 +105,12 @@ namespace contentapi.Controllers
             return await ViewResult(FinalizeHusk<Entity>(idHusk, entitySearch));
         }
 
-        protected Task<ActionResult<ContentView>> PostBase(ContentView view)
-        {
-            return ThrowToAction(
-                async() => view = await PostCleanAsync(view), 
-                async() => ConvertToView(await WriteViewAsync(view)));
-        }
-
         [HttpPost]
         [Authorize]
         public Task<ActionResult<ContentView>> PostAsync([FromBody]ContentView view)
         {
             view.id = 0;
-            return PostBase(view);
+            return ThrowToAction(() => WriteViewAsync(view));
         }
 
         [HttpPut("{id}")]
@@ -125,24 +118,24 @@ namespace contentapi.Controllers
         public Task<ActionResult<ContentView>> PutAsync([FromRoute] long id, [FromBody]ContentView view)
         {
             view.id = id;
-            return PostBase(view);
+            return ThrowToAction(() => WriteViewAsync(view));
         }
 
-        [HttpDelete("{id}")]
-        [Authorize]
-        public Task<ActionResult<ContentView>> DeleteAsync([FromRoute]long id)
-        {
-            EntityPackage result = null;
+        //[HttpDelete("{id}")]
+        //[Authorize]
+        //public Task<ActionResult<ContentView>> DeleteAsync([FromRoute]long id)
+        //{
+        //    EntityPackage result = null;
 
-            return ThrowToAction(async() => 
-            {
-                result = await DeleteEntityCheck(id);
-            }, 
-            async() =>
-            {
-                await DeleteEntity(id);
-                return ConvertToView(result);
-            });
-        }
+        //    return ThrowToAction(async() => 
+        //    {
+        //        result = await DeleteEntityCheck(id);
+        //    }, 
+        //    async() =>
+        //    {
+        //        await DeleteEntity(id);
+        //        return ConvertToView(result);
+        //    });
+        //}
     }
 }
