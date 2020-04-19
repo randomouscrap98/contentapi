@@ -14,9 +14,22 @@
 # - Set up remote system (permissions, services(?), dbmigrations, etc)
 
 # Stuff for connecting
-phost=random@oboy.smilebasicsource.com # The production server (and user to connect)
+if [ "$1" = "production" ]
+then
+   echo "WARN: PUBLISHING PRODUCTION"
+   phost=csanchez@direct.smilebasicsource.com # The production server (and user to connect)
+   pfolder="/var/www/contentapi"                        # The REMOTE location to PLACE all files
+   rdf="rl"
+else
+   phost=random@oboy.smilebasicsource.com # The production server (and user to connect)
+   pfolder="/storage/random/contentapi"                        # The REMOTE location to PLACE all files
+   rdf="a"
+fi
+
 port=240
-rsync='rsync -zz -avh -e "ssh -p $port"' 
+# rsync='rsync -zz -${rdf}vh -e "ssh -p $port"' 
+postinstallscript="postinstall.sh"
+postinstallargs=""
 
 # Stuff for dotnet
 mtype=linux-x64      # The architecture of the target machine
@@ -24,14 +37,13 @@ corev=3.1            # The version of dotnet core we're using
 
 # My places!
 lpfolder="./bin/Release/netcoreapp$corev/$mtype/publish/"   # The LOCAL location to retrieve binaries
-pfolder="/storage/random/contentapi"                        # The REMOTE location to PLACE all files
 cwd="`pwd`"
 
 echo "Publishing to $pfolder"
 
 hostrsync()
 {
-   rsync -zz -avh -e "ssh -p $port" "$1" "$phost:$2"
+   rsync -zz -${rdf}vh -e "ssh -p $port" "$1" "$phost:$2"
 }
 
 # The project itself. Delete the old folder (probably).
@@ -49,4 +61,4 @@ cp -r LanguageFiles "$lpfolder"
 hostrsync "$lpfolder" "$pfolder"
 
 # And then chmod! The main running file should be executable
-ssh $phost -p $port "cd $pfolder; chmod 700 contentapi;"
+ssh $phost -p $port "cd $pfolder; chmod 750 contentapi; test -f $postinstallscript && ./$postinstallscript $postinstallargs"

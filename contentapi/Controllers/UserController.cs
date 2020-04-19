@@ -102,6 +102,14 @@ namespace contentapi.Controllers
             }); 
         }
 
+        protected string GetToken(long id, TimeSpan? expireOverride = null)
+        {
+            return tokenService.GetToken(new Dictionary<string, string>()
+            {
+                { keys.UserIdentifier, id.ToString() }
+            }, expireOverride);
+        }
+
         [HttpPost("authenticate")]
         public async Task<ActionResult<string>> Authenticate([FromBody]UserAuthenticate user)
         {
@@ -138,10 +146,7 @@ namespace contentapi.Controllers
             if(user.ExpireSeconds > 0)
                 expireOverride = TimeSpan.FromSeconds(user.ExpireSeconds);
 
-            return tokenService.GetToken(new Dictionary<string, string>()
-            {
-                { keys.UserIdentifier, ConvertToView(foundUser).id.ToString() }
-            }, expireOverride);
+            return GetToken(foundUser.Entity.id, expireOverride);
         }
 
 
@@ -208,7 +213,7 @@ namespace contentapi.Controllers
         }
 
         [HttpPost("register/confirm")]
-        public async Task<ActionResult> ConfirmEmail([FromBody]ConfirmEmailPost post)
+        public async Task<ActionResult<string>> ConfirmEmail([FromBody]ConfirmEmailPost post)
         {
             if(string.IsNullOrEmpty(post.confirmationKey))
                 return BadRequest("Must provide a confirmation key in the body");
@@ -218,10 +223,10 @@ namespace contentapi.Controllers
             if(confirmValue == null)
                 return BadRequest("No user found with confirmation key");
 
+            var uid = confirmValue.entityId;
             await provider.DeleteAsync(confirmValue);
 
-            return Ok("Email Confirmed");
+            return GetToken(uid);
         }
-        
     }
 }
