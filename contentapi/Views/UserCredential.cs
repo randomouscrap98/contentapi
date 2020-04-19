@@ -16,4 +16,9 @@ namespace contentapi.Views
         [EmailAddress]
         public string email {get; set;}
     }
+
+    public class UserAuthenticate : UserCredential
+    {
+        public int ExpireSeconds {get;set;}
+    }
 }

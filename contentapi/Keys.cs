@@ -8,9 +8,9 @@ namespace contentapi
         public string UserIdentifier => "uid";
 
 
-        //Symbolic value stuff (these are prepended to actual values)
-        public string ActiveValue => "+";
-        public string InactiveValue => "-";
+        ////Symbolic value stuff (these are prepended to actual values)
+        //public string ActiveValue => "+";
+        //public string InactiveValue => "-";
 
 
         //Symbolic key stuff (these are all prepended to something else)
@@ -21,11 +21,10 @@ namespace contentapi
 
         //General Relation keys (just relations, no appending)
 
-        //Creator meaning is twofold: entityid1 is the creator of THIS content (as it should be), 
-        //and the value is the creator of the STANDIN (the original creator)
+        //Creator meaning is twofold: entityid1 is the creator of this content and the value is the editor
         public string CreatorRelation => "rc"; 
         public string ParentRelation => "rp";
-        public string StandInRelation => ">";
+        public string RevisionRelation => "rr";
 
 
         //General Value keys
@@ -45,7 +44,7 @@ namespace contentapi
         public string CategoryType => "tc";
         public string ContentType => "tp"; //p for page/post
         public string CommentType => "ta"; //a for addendum or annotation
-        public string StandInType => "ts";
+        //public string StandInType => "ts";
 
 
         //User stuff  (keys for entity values)

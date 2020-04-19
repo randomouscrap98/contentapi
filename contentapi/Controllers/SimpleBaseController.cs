@@ -109,25 +109,25 @@ namespace contentapi.Controllers
             };
         }
 
-        //Parameters are like reading: is x y
-        protected bool TypeIs(string given, string expected)
-        {
-            if(given == null)
-                return false;
+        ////Parameters are like reading: is x y
+        //protected bool TypeIs(string given, string expected)
+        //{
+        //    if(given == null)
+        //        return false;
 
-            return given.StartsWith(expected);
-        }
+        //    return given.StartsWith(expected);
+        //}
 
-        //Parameters are like reading: set x to y
-        protected string TypeSet(string existing, string type)
-        {
-            return type + (existing ?? "");
-        }
+        ////Parameters are like reading: set x to y
+        //protected string TypeSet(string existing, string type)
+        //{
+        //    return type + (existing ?? "");
+        //}
 
-        protected string TypeSub(string given, string mainType)
-        {
-            return given.Substring(mainType.Length);
-        }
+        //protected string TypeSub(string given, string mainType)
+        //{
+        //    return given.Substring(mainType.Length);
+        //}
 
         /// <summary>
         /// Apply various limits to a search
@@ -148,18 +148,30 @@ namespace contentapi.Controllers
         protected class EntityREGroup : EntityRGroup { public Entity entity; }
         protected class EntityREVGroup : EntityREGroup { public EntityValue value; }
 
-        protected IQueryable<E> PermissionWhere<E>(IQueryable<E> query, long user) where E : EntityRGroup
+        protected IQueryable<E> PermissionWhere<E>(IQueryable<E> query, long user, string action) where E : EntityRGroup
         {
-            return query.Where(x => (x.relation.type == keys.CreatorRelation && x.relation.value == user.ToString()) ||
-                (x.relation.type == keys.ReadAction && (x.relation.entityId1 == 0 || x.relation.entityId1 == user)));
+            return query.Where(x => (x.relation.type == keys.CreatorRelation && x.relation.entityId1 == user) ||
+                (x.relation.type == action && (x.relation.entityId1 == 0 || x.relation.entityId1 == user)));
         }
+
+        protected bool CanUser(long user, string action, EntityPackage package)
+        {
+            //Inefficient in compute but easier for me, the programmer, to use a single source of truth.
+            return PermissionWhere(package.Relations.Select(x => new EntityRGroup() { relation = x }).AsQueryable(), user, action).Any();
+        }
+
+        protected bool CanCurrentUser(string key, EntityPackage package)
+        {
+            return CanUser(GetRequesterUidNoFail(), key, package);
+        }
+
 
         protected IQueryable<EntityREGroup> BasicPermissionQuery(long user, EntitySearch search)
         {
             var query = services.provider.ApplyEntitySearch(services.provider.GetQueryable<Entity>(), search, false)
                 .Join(services.provider.GetQueryable<EntityRelation>(), e => e.id, r => r.entityId2, (e,r) => new EntityREGroup() { entity = e, relation = r});
             
-            query = PermissionWhere(query, user);
+            query = PermissionWhere(query, user, keys.ReadAction);
 
             return query;
         }
@@ -186,61 +198,6 @@ namespace contentapi.Controllers
                 join = join.OrderBy(x => x.id);
 
             return join;
-        }
-
-        /// <summary>
-        /// Convert stand-in ids (from the users) to real ids (that I use for searching actual entities)
-        /// </summary>
-        /// <param name="ids"></param>
-        /// <returns></returns>
-        protected async Task<List<long>> ConvertStandInIdsAsync(List<long> ids)
-        {
-            //This bites me every time. I need to fix the entity search system.
-            if(ids.Count == 0)
-                return new List<long>();
-
-            var relations = services.provider.GetQueryable<EntityRelation>();
-            relations = services.provider.ApplyEntityRelationSearch(relations, 
-                new EntityRelationSearch()
-                {
-                    EntityIds1 = ids,
-                    TypeLike = keys.StandInRelation
-                });
-
-            return await services.provider.GetListAsync(relations.Where(x => EF.Functions.Like(x.value, $"{keys.ActiveValue}%")).Select(x => x.entityId2));
-        }
-
-        protected Task<List<long>> ConvertStandInIdsAsync(params long[] ids)
-        {
-            return ConvertStandInIdsAsync(ids.ToList());
-        }
-            
-        /// <summary>
-        /// Find an entity by its STAND IN id (not the regular ID, use the service for that)
-        /// </summary>
-        /// <param name="standinId"></param>
-        /// <returns></returns>
-        protected async Task<EntityPackage> FindByIdAsync(long standinId)
-        {
-            var realIds = await ConvertStandInIdsAsync(standinId);
-
-            if(realIds.Count() == 0)
-                return null;
-            else if(realIds.Count() > 1)
-                throw new InvalidOperationException("Multiple entities for given standin, are there trailing history elements?");
-            
-            return await services.provider.FindByIdAsync(realIds.First());
-        }
-
-        protected bool CanUser(long user, string key, EntityPackage package)
-        {
-            return (package.GetRelation(keys.CreatorRelation).value == user.ToString()) ||
-                (package.Relations.Any(x => x.type == key && (x.entityId1 == user || x.entityId1 == 0)));
-        }
-
-        protected bool CanCurrentUser(string key, EntityPackage package)
-        {
-            return CanUser(GetRequesterUidNoFail(), key, package);
         }
 
         protected async Task<ActionResult<T>> ThrowToAction<T>(Func<Task> checkAction, Func<Task<T>> resultAction)

@@ -3,7 +3,7 @@ using System.ComponentModel.DataAnnotations;
 
 namespace contentapi.Views
 {
-    public class ContentView : PermissionView
+    public class ContentView : BasePermissionView
     {
         [Required]
         [StringLength(128, MinimumLength=1)]

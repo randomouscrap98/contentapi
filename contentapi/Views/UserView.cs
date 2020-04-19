@@ -4,7 +4,7 @@ using System;
 
 namespace contentapi.Views
 {
-    public class UserViewBasic : ViewBase
+    public class UserViewBasic : BaseView
     {
         public string username { get; set; }
     }

@@ -14,7 +14,7 @@ using Randomous.EntitySystem.Extensions;
 
 namespace contentapi.Controllers
 {
-    public abstract class EntityBaseController<V> : SimpleBaseController where V : ViewBase
+    public abstract class EntityBaseController<V> : SimpleBaseController where V : BaseView
     {
         public EntityBaseController(ControllerServices services, ILogger<EntityBaseController<V>> logger)
             :base(services, logger) { }
@@ -42,13 +42,10 @@ namespace contentapi.Controllers
 
             //We are able to pull both the edit and create because all the info is in the package. we can't
             //go the other way (see above) because the view doesn't necessarily have the data we need.
-            view.editDate = (DateTime)package.GetRelation(keys.StandInRelation).createDateProper();
+            var creatorRelation = package.GetRelation(keys.CreatorRelation);
             view.createDate = (DateTime)package.Entity.createDateProper();
-
-            if(!package.HasRelation(keys.StandInRelation))
-                throw new InvalidOperationException("Package has no stand-in relation, it is not part of the history system!");
-
-            view.id = package.GetRelation(keys.StandInRelation).entityId1;
+            view.editDate = (DateTime)
+            view.id = package.Entity.id;
 
             return view;
         }

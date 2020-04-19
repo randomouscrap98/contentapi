@@ -15,7 +15,7 @@ namespace contentapi.Controllers
         public AuthorizationException(string message) : base(message) { }
     }
 
-    public abstract class PermissionBaseController<V> : EntityBaseController<V> where V : PermissionView
+    public abstract class PermissionBaseController<V> : EntityBaseController<V> where V : BasePermissionView
     {
         protected Dictionary<string, string> permMapping;
 
