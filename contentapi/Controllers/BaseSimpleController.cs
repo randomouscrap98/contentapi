@@ -40,14 +40,15 @@ namespace contentapi.Controllers
     /// </remarks>
     [Route("api/[controller]")]
     [ApiController]
-    public abstract class SimpleBaseController : ControllerBase
+    public abstract class BaseSimpleController : ControllerBase
     {
         protected ControllerServices services;
-        protected ILogger<SimpleBaseController> logger;
+        protected ILogger<BaseSimpleController> logger;
         
         protected Keys keys => services.keys;
+        protected IEntityProvider provider => services.provider;
 
-        public SimpleBaseController(ControllerServices services, ILogger<SimpleBaseController> logger)
+        public BaseSimpleController(ControllerServices services, ILogger<BaseSimpleController> logger)
         {
             this.services = services;
             this.logger = logger;
@@ -109,26 +110,6 @@ namespace contentapi.Controllers
             };
         }
 
-        ////Parameters are like reading: is x y
-        //protected bool TypeIs(string given, string expected)
-        //{
-        //    if(given == null)
-        //        return false;
-
-        //    return given.StartsWith(expected);
-        //}
-
-        ////Parameters are like reading: set x to y
-        //protected string TypeSet(string existing, string type)
-        //{
-        //    return type + (existing ?? "");
-        //}
-
-        //protected string TypeSub(string given, string mainType)
-        //{
-        //    return given.Substring(mainType.Length);
-        //}
-
         /// <summary>
         /// Apply various limits to a search
         /// </summary>
@@ -168,8 +149,8 @@ namespace contentapi.Controllers
 
         protected IQueryable<EntityREGroup> BasicPermissionQuery(long user, EntitySearch search)
         {
-            var query = services.provider.ApplyEntitySearch(services.provider.GetQueryable<Entity>(), search, false)
-                .Join(services.provider.GetQueryable<EntityRelation>(), e => e.id, r => r.entityId2, (e,r) => new EntityREGroup() { entity = e, relation = r});
+            var query = provider.ApplyEntitySearch(provider.GetQueryable<Entity>(), search, false)
+                .Join(provider.GetQueryable<EntityRelation>(), e => e.id, r => r.entityId2, (e,r) => new EntityREGroup() { entity = e, relation = r});
             
             query = PermissionWhere(query, user, keys.ReadAction);
 
@@ -184,9 +165,9 @@ namespace contentapi.Controllers
         /// <returns></returns>
         protected IQueryable<E> FinalizeHusk<E>(IQueryable<EntityBase> foundEntities, EntitySearchBase search) where E : EntityBase
         {
-            var ids = services.provider.ApplyFinal(foundEntities, search).Select(x => x.id);
+            var ids = provider.ApplyFinal(foundEntities, search).Select(x => x.id);
             var join =
-                from e in services.provider.GetQueryable<E>()
+                from e in provider.GetQueryable<E>()
                 where ids.Contains(e.id)
                 select e;
 

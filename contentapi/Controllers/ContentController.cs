@@ -31,7 +31,7 @@ namespace contentapi.Controllers
         }
     }
 
-    public class ContentController : PermissionBaseController<ContentView>
+    public class ContentController : BasePermissionController<ContentView>
     {
         public ContentController(ILogger<ContentController> logger, ControllerServices services)
             : base(services, logger) { }

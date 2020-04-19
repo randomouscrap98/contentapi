@@ -3,13 +3,11 @@ using Microsoft.AspNetCore.Mvc;
 using System.Linq;
 using System;
 using System.Threading.Tasks;
-using Microsoft.EntityFrameworkCore;
 using Microsoft.AspNetCore.Authorization;
 using System.Collections.Generic;
 using contentapi.Services;
 using Microsoft.Extensions.Logging;
 using Randomous.EntitySystem;
-using System.Security.Claims;
 using AutoMapper;
 using contentapi.Services.Extensions;
 using Randomous.EntitySystem.Extensions;
@@ -32,7 +30,7 @@ namespace contentapi.Controllers
         }
     }
 
-    public class UserController : EntityBaseController<UserView>
+    public class UserController : BaseEntityController<UserView>
     {
         protected IHashService hashService;
         protected ITokenService tokenService;
@@ -57,14 +55,13 @@ namespace contentapi.Controllers
             { 
                 username = user.Entity.name, 
                 email = user.GetValue(keys.EmailKey).value, 
-                super = services.systemConfig.SuperUsers.Contains(user.GetRelation(keys.StandInRelation).entityId1)
+                super = services.systemConfig.SuperUsers.Contains(user.Entity.id)
             };
         }
 
         protected override EntityPackage CreateBasePackage(UserView view)
         {
             var user = (UserViewFull)view;
-            var salt = hashService.GetSalt();
 
             var newUser = NewEntity(user.username)
                 .Add(NewValue(keys.EmailKey, user.email))
@@ -77,8 +74,8 @@ namespace contentapi.Controllers
 
         protected async Task<List<EntityPackage>> GetAll(UserSearch search)
         {
-            var entitySearch = (EntitySearch)(await ModifySearchAsync(services.mapper.Map<EntitySearch>(search)));
-            return await services.provider.GetEntityPackagesAsync(entitySearch);//.ToList();
+            var entitySearch = ModifySearch(services.mapper.Map<EntitySearch>(search));
+            return await provider.GetEntityPackagesAsync(entitySearch);
         }
 
         [HttpGet]
@@ -91,24 +88,18 @@ namespace contentapi.Controllers
         [Authorize]
         public Task<ActionResult<UserView>> Me()
         {
-            long id = 0;
-            EntityPackage user = null;
-            
             //The first is check, the second is return
             return ThrowToAction<UserView>(async () => 
             {
-                id = GetRequesterUid();
+                var id = GetRequesterUid();
+                var user = await provider.FindByIdAsync(id);
 
-                user = await FindByIdAsync(id);
-
-                //A VERY SPECIFIC glitch you really only get in production
+                //A VERY SPECIFIC glitch you really only get in development 
                 if(user == null)
                     throw new UnauthorizedAccessException($"No user with uid {id}");
-            }, 
-            () => 
-            {
-                return Task.FromResult(ConvertToView(user));
-            });
+
+                return ConvertToView(user);
+            }); 
         }
 
         [HttpPost("authenticate")]
@@ -118,14 +109,14 @@ namespace contentapi.Controllers
 
             if(user.username != null)
             {
-                foundUser = await services.provider.FindByNameAsync(user.username);
+                foundUser = await provider.FindByNameAsync(user.username);
             }
             else if (user.email != null)
             {
-                var foundEmail = await services.provider.FindValueAsync(keys.EmailKey, user.email);
+                var foundEmail = await provider.FindValueAsync(keys.EmailKey, user.email);
 
                 if(foundEmail != null)
-                    foundUser = await services.provider.FindByIdAsync(foundEmail.entityId);
+                    foundUser = await provider.FindByIdAsync(foundEmail.entityId);
             }
 
             //Should this be the same as bad password? eeeehhhh
@@ -174,7 +165,7 @@ namespace contentapi.Controllers
             if(user.email == null)
                 return BadRequest("Must provide an email!");
 
-            if(await services.provider.FindByNameBaseAsync(user.username) != null || await services.provider.FindValueAsync(keys.EmailKey, user.email) != null)
+            if(await provider.FindByNameBaseAsync(user.username) != null || await provider.FindValueAsync(keys.EmailKey, user.email) != null)
                 return BadRequest("This user already seems to exist!");
             
             var salt = hashService.GetSalt();
@@ -184,9 +175,7 @@ namespace contentapi.Controllers
             fullUser.password = Convert.ToBase64String(hashService.GetHash(fullUser.password, salt));
             fullUser.registrationKey = Guid.NewGuid().ToString();
 
-            await PostCleanAsync(fullUser);
-
-            return ConvertToView(await WriteViewAsync(fullUser));
+            return await ThrowToAction(() => WriteViewAsync(fullUser));
         }
 
         public class RegistrationEmailPost
@@ -197,13 +186,13 @@ namespace contentapi.Controllers
         [HttpPost("register/sendemail")]
         public async Task<ActionResult> SendRegistrationEmail([FromBody]RegistrationEmailPost post)
         {
-            var emailValue = await services.provider.FindValueAsync(keys.EmailKey, post.email);
+            var emailValue = await provider.FindValueAsync(keys.EmailKey, post.email);
 
             if(emailValue == null)
                 return BadRequest("No user with that email");
 
             //Now look up the registration code (that's all we need from user)
-            var registrationCode = await services.provider.FindValueAsync(keys.RegistrationCodeKey, null, emailValue.entityId);
+            var registrationCode = await provider.FindValueAsync(keys.RegistrationCodeKey, null, emailValue.entityId);
 
             if(registrationCode == null)
                 return BadRequest("Nothing to do for user");
@@ -224,12 +213,12 @@ namespace contentapi.Controllers
             if(string.IsNullOrEmpty(post.confirmationKey))
                 return BadRequest("Must provide a confirmation key in the body");
 
-            var confirmValue = await services.provider.FindValueAsync(keys.RegistrationCodeKey, post.confirmationKey);
+            var confirmValue = await provider.FindValueAsync(keys.RegistrationCodeKey, post.confirmationKey);
 
             if(confirmValue == null)
                 return BadRequest("No user found with confirmation key");
 
-            await services.provider.DeleteAsync(confirmValue);
+            await provider.DeleteAsync(confirmValue);
 
             return Ok("Email Confirmed");
         }

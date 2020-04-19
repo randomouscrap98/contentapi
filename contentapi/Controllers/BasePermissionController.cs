@@ -11,11 +11,11 @@ using Randomous.EntitySystem.Extensions;
 
 namespace contentapi.Controllers
 {
-    public abstract class PermissionBaseController<V> : EntityBaseController<V> where V : BasePermissionView
+    public abstract class BasePermissionController<V> : BaseEntityController<V> where V : BasePermissionView
     {
         protected Dictionary<string, string> permMapping;
 
-        public PermissionBaseController(ControllerServices services, ILogger<EntityBaseController<V>> logger)
+        public BasePermissionController(ControllerServices services, ILogger<BaseEntityController<V>> logger)
             :base(services, logger) 
         { 
             permMapping = new Dictionary<string, string>()
@@ -111,8 +111,8 @@ namespace contentapi.Controllers
             userIds = userIds.Distinct().ToList();
             userIds.Remove(0); //Don't include the default
 
-            var found = await services.provider.ApplyEntitySearch(
-                services.provider.GetQueryable<Entity>(), 
+            var found = await provider.ApplyEntitySearch(
+                provider.GetQueryable<Entity>(), 
                 new EntitySearch() { TypeLike = keys.UserType, Ids = userIds }).CountAsync();
 
             //Note: there is NO type checking. Is this safe? Do you want people to be able to set permissions for 
@@ -136,7 +136,7 @@ namespace contentapi.Controllers
 
             if(view.parentId > 0)
             {
-                var parent = await services.provider.FindByIdAsync(view.parentId);
+                var parent = await provider.FindByIdAsync(view.parentId);
 
                 if(parent == null)
                     throw new BadRequestException($"No parent with id {view.id}");

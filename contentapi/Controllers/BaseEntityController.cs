@@ -14,9 +14,9 @@ using Randomous.EntitySystem.Extensions;
 
 namespace contentapi.Controllers
 {
-    public abstract class EntityBaseController<V> : SimpleBaseController where V : BaseEntityView
+    public abstract class BaseEntityController<V> : BaseSimpleController where V : BaseEntityView
     {
-        public EntityBaseController(ControllerServices services, ILogger<EntityBaseController<V>> logger)
+        public BaseEntityController(ControllerServices services, ILogger<BaseEntityController<V>> logger)
             :base(services, logger) { }
 
         protected abstract string EntityType {get;}
@@ -78,7 +78,7 @@ namespace contentapi.Controllers
             var newEntity = new Entity(entity);
             newEntity.id = 0;
             newEntity.type = keys.HistoryKey + (newEntity.type ?? "");
-            await services.provider.WriteAsync(newEntity);
+            await provider.WriteAsync(newEntity);
             return newEntity;
         }
 
@@ -134,7 +134,7 @@ namespace contentapi.Controllers
             return Task.FromResult(view);
         }
 
-        protected async Task<EntityPackage> WriteViewAsync(V view)
+        protected async Task<EntityPackage> WriteViewAsyncBase(V view)
         {
             logger.LogTrace("WriteViewAsync called");
 
@@ -144,7 +144,7 @@ namespace contentapi.Controllers
 
             if(view.id != 0)
             {
-                existing = await services.provider.FindByIdAsync(view.id);
+                existing = await provider.FindByIdAsync(view.id);
                 view = await CleanViewUpdateAsync(view, existing);
             }
 
@@ -172,21 +172,26 @@ namespace contentapi.Controllers
                     all.AddRange(package.Relations);
                     all.Add(package.Entity); //This is an update we hope
 
-                    await services.provider.WriteAsync(all.ToArray());
+                    await provider.WriteAsync(all.ToArray());
                 }
                 catch
                 {
                     //Oops, failed. Get rid of that stupid history we made
-                    await services.provider.DeleteAsync(history);
+                    await provider.DeleteAsync(history);
                     throw;
                 }
             }
             else
             {
-                await services.provider.WriteAsync(package);
+                await provider.WriteAsync(package);
             }
 
             return package;
+        }
+
+        protected async Task<V> WriteViewAsync(V view)
+        {
+            return ConvertToView(await WriteViewAsyncBase(view));
         }
 
         ///// <summary>
@@ -219,7 +224,7 @@ namespace contentapi.Controllers
         /// </summary>
         /// <param name="search"></param>
         /// <returns></returns>
-        protected EntitySearch ModifySearchAsync(EntitySearch search)
+        protected EntitySearch ModifySearch(EntitySearch search)
         {
             //The easy modifications
             search = LimitSearch(search);
@@ -235,7 +240,7 @@ namespace contentapi.Controllers
 
         protected async virtual Task<List<V>> ViewResult(IQueryable<Entity> query)
         {
-            var packages = await services.provider.LinkAsync(query);
+            var packages = await provider.LinkAsync(query);
             return packages.Select(x => ConvertToView(x)).ToList();
         }
     }

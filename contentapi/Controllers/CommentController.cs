@@ -33,9 +33,9 @@ namespace contentapi.Controllers
                 .ReverseMap();
         }
     }
-    public class CommentController : SimpleBaseController
+    public class CommentController : BaseSimpleController
     {
-        public CommentController(ControllerServices services, ILogger<SimpleBaseController> logger) : base(services, logger)
+        public CommentController(ControllerServices services, ILogger<BaseSimpleController> logger) : base(services, logger)
         {
         }
 

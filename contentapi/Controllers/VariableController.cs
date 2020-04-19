@@ -11,9 +11,9 @@ namespace contentapi.Controllers
 {
     //Every dang thing here needs you to be logged in (for now)
     [Authorize]
-    public class VariableController : SimpleBaseController
+    public class VariableController : BaseSimpleController
     {
-        public VariableController(ControllerServices services, ILogger<SimpleBaseController> logger) : base(services, logger)
+        public VariableController(ControllerServices services, ILogger<BaseSimpleController> logger) : base(services, logger)
         {
         }
 
@@ -35,7 +35,7 @@ namespace contentapi.Controllers
 
         protected async Task<EntityValue> GetVariable(string key)
         {
-            return await services.provider.FindValueAsync(TypeSet(key, keys.VariableKey), null, GetRequesterUid());
+            return await services.provider.FindValueAsync(keys.VariableKey + key, null, GetRequesterUid());
         }
 
         [HttpGet("{key}")]
@@ -54,7 +54,7 @@ namespace contentapi.Controllers
 
             if(existing == null)
             {
-                existing = NewValue(TypeSet(key, keys.VariableKey), data);
+                existing = NewValue(keys.VariableKey + key, data);
                 existing.entityId = GetRequesterUid();
             }
             else

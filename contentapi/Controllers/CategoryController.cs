@@ -25,7 +25,7 @@ namespace contentapi.Controllers
         }
     }
 
-    public class CategoryController : PermissionBaseController<CategoryView>
+    public class CategoryController : BasePermissionController<CategoryView>
     {
         public CategoryController(ILogger<CategoryController> logger, ControllerServices services)
             : base(services, logger) { }
