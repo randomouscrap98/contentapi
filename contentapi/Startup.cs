@@ -4,6 +4,7 @@ using System.Linq;
 using System.Text;
 using System.Threading.Tasks;
 using AutoMapper;
+using contentapi.Configs;
 using contentapi.Controllers;
 using contentapi.Services;
 using contentapi.Services.Implementations;
@@ -45,7 +46,9 @@ namespace contentapi
         // This method gets called by the runtime. Use this method to add services to the container.
         public void ConfigureServices(IServiceCollection services)
         {
-            var dataSection = Configuration.GetSection("Data");
+            var dbConfig = new DatabaseConfig();
+            Configuration.Bind(nameof(DatabaseConfig), dbConfig);
+            //var dataSection = Configuration.GetSection("Data");
             var tokenSection = Configuration.GetSection(nameof(TokenServiceConfig));
 
             services.Configure<EmailConfig>(Configuration.GetSection(nameof(EmailConfig)))
@@ -69,8 +72,21 @@ namespace contentapi
 
             var provider = new DefaultServiceProvider();
             provider.AddDefaultServices(services, options => 
-                options.UseSqlite(dataSection.GetValue<string>("ContentConnectionString"))
-                        .EnableSensitiveDataLogging(true)
+                {
+                    if(dbConfig.DbType == "sqlite")
+                    {
+                        options.UseSqlite(dbConfig.ConnectionString);
+                    }
+                    else if(dbConfig.DbType == "mysql")
+                    {
+                        options.UseMySql(dbConfig.ConnectionString);
+                    }
+
+                    if(dbConfig.SensitiveLogging)
+                    {
+                        options.EnableSensitiveDataLogging(true);
+                    }
+                }
             );
 
             //The above is broken for signalling. Do this instead
@@ -134,6 +150,8 @@ namespace contentapi
         {
             if(Configuration.GetValue<bool>("ShowExceptions"))
                 app.UseDeveloperExceptionPage();
+            else
+                app.UseExceptionHandler("/error");
             
             //if (env.IsDevelopment())
             //{

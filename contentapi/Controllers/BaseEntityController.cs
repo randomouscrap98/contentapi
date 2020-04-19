@@ -97,6 +97,15 @@ namespace contentapi.Controllers
                 r.entityId2 = parent.id;
         }
 
+        /// <summary>
+        /// Assuming a valid base entity, relink all items in the package by id
+        /// </summary>
+        /// <param name="package"></param>
+        protected void Relink(EntityPackage package)
+        {
+            Relink(package.Values, package.Relations, package.Entity);
+        }
+
         protected void FlattenPackage(EntityPackage package, List<EntityBase> collection)
         {
             collection.AddRange(package.Values);
@@ -165,15 +174,18 @@ namespace contentapi.Controllers
             //Now that the view they gave is all clean, do the full conversion! It should be safe!
             var package = ConvertFromView(view);
 
+            //Some are written, some are deleted on failure. All are eventually written.
             var writes = new List<EntityBase>();
+            var failDeletes = new List<Entity>();
 
-            //If this is an UPDATE, do some STUFF
-            if(view.id != 0)
+            try
             {
-                var history = await CopyToHistory(existing.Entity);
-
-                try
+                //If this is an UPDATE, do some STUFF
+                if (view.id != 0)
                 {
+                    var history = await CopyToHistory(existing.Entity);
+                    failDeletes.Add(history);
+
                     //Bring all the existing over to this historic entity
                     Relink(existing.Values, existing.Relations, history);
 
@@ -184,21 +196,31 @@ namespace contentapi.Controllers
                     historyLink.entityId2 = history.id;
                     historyLink.createDate = DateTime.Now;
 
-                    //now... rewrite all the old values and create the new values all at once.
+                    writes.Add(historyLink);
                     writes.AddRange(existing.Values);
                     writes.AddRange(existing.Relations);
-                    writes.Add(historyLink);
+                    FlattenPackage(package, writes);
                 }
-                catch
+                else
                 {
-                    //Oops, failed. Get rid of that stupid history we made
-                    await provider.DeleteAsync(history);
-                    throw;
-                }
-            }
+                    await provider.WriteAsync(package.Entity);
+                    failDeletes.Add(package.Entity);
 
-            FlattenPackage(package, writes);
-            await provider.WriteAsync(writes.ToArray());
+                    Relink(package);
+
+                    writes.AddRange(package.Values);
+                    writes.AddRange(package.Relations);
+                }
+
+                //Now try to write everything we added to the "transaction" (sometimes you just NEED an id and I can't let
+                //efcore do it because I'm not using foreign keys)
+                await provider.WriteAsync(writes.ToArray());
+            }
+            catch
+            {
+                await provider.DeleteAsync(failDeletes.ToArray());
+                throw;
+            }
 
             return package;
         }
