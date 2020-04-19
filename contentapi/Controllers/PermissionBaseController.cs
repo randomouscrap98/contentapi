@@ -2,7 +2,9 @@ using System;
 using System.Collections.Generic;
 using System.Linq;
 using System.Threading.Tasks;
+using contentapi.Services.Extensions;
 using contentapi.Views;
+using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.Logging;
 using Randomous.EntitySystem;
 using Randomous.EntitySystem.Extensions;
@@ -68,10 +70,6 @@ namespace contentapi.Controllers
         {
             var package = base.ConvertFromView(view);
 
-            //The creator relation's parent is the editor, ie the one that is creating THIS entity package.
-            //The creator relations's value is the original creator, which we keep around for posterity
-            package.Add(NewRelation(view.editUserId, keys.CreatorRelation, view.userId.ToString()));
-
             //There doesn't HAVE to be a parent
             if(view.parentId > 0)
                 package.Add(NewRelation(view.parentId, keys.ParentRelation));
@@ -86,12 +84,6 @@ namespace contentapi.Controllers
         protected override V ConvertToView(EntityPackage package)
         {
             var view = base.ConvertToView(package);
-
-            //The creator of this REVISION is the editor, not the creator. the creator is the one
-            //associated with the standin.
-            var creator = package.GetRelation(keys.CreatorRelation);
-            view.editUserId = creator.entityId1;
-            view.userId = long.Parse(creator.value);
 
             if(package.HasRelation(keys.ParentRelation))
                 view.parentId = package.GetRelation(keys.ParentRelation).entityId1;
@@ -111,19 +103,22 @@ namespace contentapi.Controllers
                 long uid = 0;
 
                 if(!long.TryParse(perm.Key, out uid))
-                    throw new InvalidOperationException($"Cannot parse permission uid {perm.Key}");
+                    throw new BadRequestException($"Cannot parse permission uid {perm.Key}");
                 
                 userIds.Add(uid);
             }
 
             userIds = userIds.Distinct().ToList();
             userIds.Remove(0); //Don't include the default
-            var realIds = await ConvertStandInIdsAsync(userIds);
+
+            var found = await services.provider.ApplyEntitySearch(
+                services.provider.GetQueryable<Entity>(), 
+                new EntitySearch() { TypeLike = keys.UserType, Ids = userIds }).CountAsync();
 
             //Note: there is NO type checking. Is this safe? Do you want people to be able to set permissions for 
             //things that aren't users? What about the 0 id?
-            if(realIds.Count != userIds.Count)
-                throw new InvalidOperationException("One or more permission users not found!");
+            if(found != userIds.Count)
+                throw new BadRequestException("One or more permission users not found!");
         }
 
         protected void CheckPermissionValues(V view)
@@ -131,62 +126,28 @@ namespace contentapi.Controllers
             foreach(var perm in view.permissions)
             {
                 if(perm.Value.ToLower().Any(x => !permMapping.Keys.Contains(x.ToString())))
-                    throw new InvalidOperationException($"Invalid characters in permission: {perm.Value}");
+                    throw new BadRequestException($"Invalid characters in permission: {perm.Value}");
             }
         }
 
-        /// <summary>
-        /// Do this on post update
-        /// </summary>
-        /// <param name="view"></param>
-        /// <param name="standin"></param>
-        /// <param name="existing"></param>
-        /// <returns></returns>
-        protected override V PostCleanUpdateAsync(V view, EntityPackage standin, EntityPackage existing)
+        protected override async Task<V> CleanViewGeneralAsync(V view)
         {
-            view = base.PostCleanUpdateAsync(view, standin, existing);
+            view = await base.CleanViewGeneralAsync(view);
 
-            view.userId = standin.GetRelation(keys.CreatorRelation).entityId1; //get it from the "horse's mouth" so to speak
-
-            if (!CanCurrentUser(keys.UpdateAction, existing))
-                throw new AuthorizationException("User cannot update this entity");
-
-            return view;
-        }
-
-        /// <summary>
-        /// Do this on post clean
-        /// </summary>
-        /// <param name="view"></param>
-        /// <returns></returns>
-        protected override V PostCleanCreateAsync(V view)
-        {
-            view = base.PostCleanCreateAsync(view);
-            //A new view? creator will always be us too
-            view.userId = GetRequesterUid();
-            return view;
-        }
-
-        protected override async Task<V> PostCleanAsync(V view)
-        {
-            view = await base.PostCleanAsync(view);
-
-            //Editor is ALWAYS us, we're doing it
-            view.editUserId = GetRequesterUid();
-
-            //Oh also make sure the parent exists.
             if(view.parentId > 0)
             {
-                var parent = await FindByIdAsync(view.parentId); //wait is this the standin? uhh yes always.
+                var parent = await services.provider.FindByIdAsync(view.parentId);
 
                 if(parent == null)
-                    throw new InvalidOperationException($"No parent with id {view.id}");
+                    throw new BadRequestException($"No parent with id {view.id}");
 
-                if(!TypeIs(parent.Entity.type, ParentType))
-                    throw new InvalidOperationException("Wrong parent type!");
+                if(!String.IsNullOrEmpty(ParentType) && !parent.Entity.type.StartsWith(ParentType))
+                    throw new BadRequestException("Wrong parent type!");
 
-                if(!CanCurrentUser(keys.CreateAction, parent))
-                    throw new AuthorizationException($"User cannot create entities in parent {view.parentId}");
+                //Only for CREATING. This is a silly weird thing since this is the general cleanup...
+                //Almost NOTHING requires cleanup specifically for create.
+                if(view.id == 0 && !CanCurrentUser(keys.CreateAction, parent))
+                    throw new BadRequestException($"User cannot create entities in parent {view.parentId}");
             }
             else
             {
@@ -200,15 +161,33 @@ namespace contentapi.Controllers
             return view;
         }
 
-        protected async override Task<EntityPackage> DeleteEntityCheck(long standinId)
+        /// <summary>
+        /// Do this on post update
+        /// </summary>
+        /// <param name="view"></param>
+        /// <param name="standin"></param>
+        /// <param name="existing"></param>
+        /// <returns></returns>
+        protected override async Task<V> CleanViewUpdateAsync(V view, EntityPackage existing)
         {
-            var result = await base.DeleteEntityCheck(standinId);
+            view = await base.CleanViewUpdateAsync(view, existing);
 
-            if(!CanCurrentUser(keys.DeleteAction, result))
-                throw new InvalidOperationException("No permission to delete");
+            if (!CanCurrentUser(keys.UpdateAction, existing))
+                throw new AuthorizationException("User cannot update this entity");
 
-            return result;
+            return view;
         }
+
+
+        //protected async override Task<EntityPackage> DeleteEntityCheck(long standinId)
+        //{
+        //    var result = await base.DeleteEntityCheck(standinId);
+
+        //    if(!CanCurrentUser(keys.DeleteAction, result))
+        //        throw new InvalidOperationException("No permission to delete");
+
+        //    return result;
+        //}
 
         protected IQueryable<EntityBase> ConvertToHusk(IQueryable<EntityREGroup> groups)
         {
@@ -217,25 +196,5 @@ namespace contentapi.Controllers
                 group x by x.entity.id into g
                 select new EntityBase() { id = g.Key };
         }
-
-        //protected async override Task<List<V>> ViewResult(IEnumerable<EntityPackage> packages)
-        //{
-        //    var packagesStandin = packages.Select(x => new { package = x, standinId = x.GetRelation(keys.StandInRelation).entityId1 });
-
-        //    var search = new EntityRelationSearch() { EntityIds2 = packagesStandin.Select(x => x.standinId).ToList() }; //packages.Select(x => x.GetRelation(keys.StandInRelation).entityId1).ToList() };
-        //    var creators = await services.provider.GetEntityRelationsAsync(search);
-
-        //    var linked = from p in packagesStandin
-        //                 join c in creators on p.standinId equals c.entityId2 into g
-        //                 select new { package = p.package, creator = g.First() };
-
-        //    return linked.Select(x => 
-        //    {
-        //        var view = ConvertToView(x.package);
-        //        view.userId = x.creator.entityId1;
-        //        return view;
-        //    }).ToList();
-        //}
-
     }
 }

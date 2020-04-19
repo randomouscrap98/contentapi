@@ -102,7 +102,7 @@ namespace contentapi.Controllers
         /// </summary>
         /// <param name="view"></param>
         /// <returns></returns>
-        protected virtual V CleanViewGeneral(V view)
+        protected virtual Task<V> CleanViewGeneralAsync(V view)
         {
             //These are safe, always true
             view.editUserId = GetRequesterUidNoFail(); //Editor is ALWAYS US
@@ -112,7 +112,7 @@ namespace contentapi.Controllers
             view.createDate = view.editDate;
             view .createUserId = view.editUserId;
 
-            return view;
+            return Task.FromResult(view);
         }
 
         /// <summary>
@@ -121,7 +121,7 @@ namespace contentapi.Controllers
         /// <param name="view"></param>
         /// <param name="existing"></param>
         /// <returns></returns>
-        protected virtual V CleanViewUpdate(V view, EntityPackage existing)
+        protected virtual Task<V> CleanViewUpdateAsync(V view, EntityPackage existing)
         {
             //FORCE these to be what they were before.
             view.createDate = (DateTime)existing.Entity.createDateProper();
@@ -129,23 +129,31 @@ namespace contentapi.Controllers
 
             //Don't allow posting over some other entity! THIS IS SUUUUPER IMPORTANT!!!
             if(!existing.Entity.type.StartsWith(EntityType))
-                throw new InvalidOperationException($"No entity of proper type with id {view.id}");
+                throw new BadRequestException($"No entity of proper type with id {view.id}");
             
-            return view;
+            return Task.FromResult(view);
         }
 
         protected async Task<EntityPackage> WriteViewAsync(V view)
         {
             logger.LogTrace("WriteViewAsync called");
 
-            //view = await CleanViewGeneral(view);
+            EntityPackage existing = null; 
 
-            var package = ConvertFromView(view); //Assume this does EVERYTHING
+            view = await CleanViewGeneralAsync(view);
+
+            if(view.id != 0)
+            {
+                existing = await services.provider.FindByIdAsync(view.id);
+                view = await CleanViewUpdateAsync(view, existing);
+            }
+
+            //Now that the view they gave is all clean, do the full conversion! It should be safe!
+            var package = ConvertFromView(view);
 
             //If this is an UPDATE, do some STUFF
             if(view.id != 0)
             {
-                var existing = await services.provider.FindByIdAsync(view.id);
                 var history = await CopyToHistory(existing.Entity);
 
                 try
