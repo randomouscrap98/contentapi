@@ -42,8 +42,8 @@ namespace contentapi.Controllers
 
             //We are able to pull both the edit and create because all the info is in the package. we can't
             //go the other way (see above) because the view doesn't necessarily have the data we need.
-            view.editDate = (DateTimeOffset)package.GetRelation(keys.StandInRelation).createDate;
-            view.createDate = (DateTimeOffset)package.Entity.createDate;
+            view.editDate = (DateTime)package.GetRelation(keys.StandInRelation).createDateProper();
+            view.createDate = (DateTime)package.Entity.createDateProper();
 
             if(!package.HasRelation(keys.StandInRelation))
                 throw new InvalidOperationException("Package has no stand-in relation, it is not part of the history system!");
@@ -256,7 +256,7 @@ namespace contentapi.Controllers
 
         protected virtual V PostCleanUpdateAsync(V view, EntityPackage standin, EntityPackage existing)
         {
-            view.createDate = (DateTimeOffset)standin.Entity.createDate;
+            view.createDate = (DateTime)standin.Entity.createDateProper();
             view.editDate = DateTime.UtcNow; //On update, edit is NOW (updating now etc idk)
 
             //Don't allow posting over some other entity! THIS IS SUUUUPER IMPORTANT!!!
