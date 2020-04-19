@@ -200,23 +200,21 @@ namespace contentapi.Controllers
             return join;
         }
 
-        protected async Task<ActionResult<T>> ThrowToAction<T>(Func<Task> checkAction, Func<Task<T>> resultAction)
+        protected async Task<ActionResult<T>> ThrowToAction<T>(Func<Task<T>> action)
         {
             try
             {
                 //Go find the parent. If it's not content, BAD BAD BAD
-                await checkAction();
+                return await action();
             }
             catch(AuthorizationException ex)
             {
                 return Unauthorized(ex.Message);
             }
-            catch(Exception ex)
+            catch(BadRequestException ex)
             {
                 return BadRequest(ex.Message);
             }
-
-            return await resultAction();
         }
     }
 }

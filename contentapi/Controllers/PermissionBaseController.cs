@@ -9,12 +9,6 @@ using Randomous.EntitySystem.Extensions;
 
 namespace contentapi.Controllers
 {
-    public class AuthorizationException : Exception
-    {
-        public AuthorizationException() : base() {}
-        public AuthorizationException(string message) : base(message) { }
-    }
-
     public abstract class PermissionBaseController<V> : EntityBaseController<V> where V : BasePermissionView
     {
         protected Dictionary<string, string> permMapping;

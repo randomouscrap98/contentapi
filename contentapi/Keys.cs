@@ -17,6 +17,7 @@ namespace contentapi
         public string AssociatedValueKey => "@";
         public string VariableKey => "v:";
         public string HistoryKey => "_";
+        public string ActivityKey => ".";
 
 
         //General Relation keys (just relations, no appending)
@@ -24,7 +25,7 @@ namespace contentapi
         //Creator meaning is twofold: entityid1 is the creator of this content and the value is the editor
         public string CreatorRelation => "rc"; 
         public string ParentRelation => "rp";
-        public string RevisionRelation => "rr";
+        public string HistoryRelation => "rh";
 
 
         //General Value keys
