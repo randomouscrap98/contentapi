@@ -111,6 +111,10 @@ namespace contentapi.Controllers
             userIds = userIds.Distinct().ToList();
             userIds.Remove(0); //Don't include the default
 
+            //There are no more permissions.
+            if(userIds.Count == 0)
+                return;
+
             var found = await provider.ApplyEntitySearch(
                 provider.GetQueryable<Entity>(), 
                 new EntitySearch() { TypeLike = keys.UserType, Ids = userIds }).CountAsync();

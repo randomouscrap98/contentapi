@@ -97,6 +97,20 @@ namespace contentapi.Controllers
                 r.entityId2 = parent.id;
         }
 
+        protected void FlattenPackage(EntityPackage package, List<EntityBase> collection)
+        {
+            collection.AddRange(package.Values);
+            collection.AddRange(package.Relations);
+            collection.Add(package.Entity);
+        }
+
+        protected List<EntityBase> FlattenPackage(EntityPackage package)
+        {
+            var result = new List<EntityBase>();
+            FlattenPackage(package, result);
+            return result;
+        }
+
         /// <summary>
         /// Clean the view for general purpose, assume some defaults (run before udpate)
         /// </summary>
@@ -151,6 +165,8 @@ namespace contentapi.Controllers
             //Now that the view they gave is all clean, do the full conversion! It should be safe!
             var package = ConvertFromView(view);
 
+            var writes = new List<EntityBase>();
+
             //If this is an UPDATE, do some STUFF
             if(view.id != 0)
             {
@@ -164,15 +180,14 @@ namespace contentapi.Controllers
                     //WE have to link the new stuff to US because we want to write everything all at once 
                     Relink(package.Values, package.Relations, existing.Entity);
 
-                    //now... rewrite all the old values and create the new values all at once.
-                    var all = new List<EntityBase>();
-                    all.AddRange(existing.Values);
-                    all.AddRange(existing.Relations);
-                    all.AddRange(package.Values);
-                    all.AddRange(package.Relations);
-                    all.Add(package.Entity); //This is an update we hope
+                    var historyLink = NewRelation(existing.Entity.id, keys.HistoryRelation);
+                    historyLink.entityId2 = history.id;
+                    historyLink.createDate = DateTime.Now;
 
-                    await provider.WriteAsync(all.ToArray());
+                    //now... rewrite all the old values and create the new values all at once.
+                    writes.AddRange(existing.Values);
+                    writes.AddRange(existing.Relations);
+                    writes.Add(historyLink);
                 }
                 catch
                 {
@@ -181,10 +196,9 @@ namespace contentapi.Controllers
                     throw;
                 }
             }
-            else
-            {
-                await provider.WriteAsync(package);
-            }
+
+            FlattenPackage(package, writes);
+            await provider.WriteAsync(writes.ToArray());
 
             return package;
         }
