@@ -23,6 +23,22 @@ namespace contentapi.Controllers
     {
         public long UserId {get;set;}
         public long ContentListenId {get;set;}
+
+        public override bool Equals(object obj)
+        {
+            if(obj != null && obj is ListenerId)
+            {
+                var listener = (ListenerId)obj;
+                return listener.UserId == UserId && listener.ContentListenId == ContentListenId;
+            }
+
+            return false;
+        }
+
+        public override int GetHashCode()
+        {
+            return UserId.GetHashCode();
+        }
     }
 
     public class CommentControllerProfile : Profile
@@ -48,8 +64,14 @@ namespace contentapi.Controllers
 
     public class CommentController : BaseSimpleController
     {
-        public CommentController(ControllerServices services, ILogger<BaseSimpleController> logger) : base(services, logger)
+        protected TimeSpan listenTime = TimeSpan.FromSeconds(300);
+       // protected TimeSpan decayTime = TimeSpan.FromSeconds(5);
+       // protected ISignaler<List<ListenerId>> signaler;
+       // private static SignalDecayData<ListenerId> decayData = new SignalDecayData<ListenerId>();
+
+        public CommentController(ControllerServices services, ILogger<BaseSimpleController> logger/*, ISignaler<ListenerId> signaler*/) : base(services, logger)
         {
+            //this.signaler = signaler;
         }
 
         protected CommentView ConvertToViewSimple(EntityRelation relation)
@@ -166,7 +188,7 @@ namespace contentapi.Controllers
             //Have to go find existing.
             var existing = await provider.FindRelationByIdAsync(id);
 
-            if (existing == null || !existing.type.StartsWith(keys.CommentHack))
+            if (existing == null || !existing.type.StartsWith(keys.CommentHack) || existing.entityId2 == 0)
                 throw new BadRequestException($"Couldn't find comment with id {id}");
 
             return existing;
@@ -211,14 +233,42 @@ namespace contentapi.Controllers
         }
 
         [HttpGet("listeners/{parentId}")]
-        public ActionResult<List<ListenerId>> GetListeners([FromRoute]long parentId)
+        public ActionResult<List<ListenerId>> GetListenersAsync([FromRoute]long parentId)//, [FromQuery]List<long> lastListeners)
         {
-            return provider.Listeners.Select(x => (ListenerId)x.ListenerId).Where(x => x.ContentListenId == parentId).ToList();
+            return GetListeners(parentId);
+        }
+
+        //[HttpGet("listeners/{parentId}")]
+        //public async Task<ActionResult<List<ListenerId>>> GetListenersAsync([FromRoute]long parentId, [FromQuery]List<long> lastListeners)
+        //{
+        //    lastListeners = lastListeners ?? new List<long>();
+
+        //    var listenSet = lastListeners.ToHashSet();
+
+        //    var check = new Func<IQueryable<ListenerId>, IQueryable<ListenerId>>((q) =>
+        //        q.Where(x => x.ContentListenId == parentId && listenSet.SequenceEqual(x.))
+        //    );
+
+        //    var originalList = check(decayData.GetList().AsQueryable()).ToList();
+
+        //    if(originalList)
+
+        //    return await signaler.ListenAsync(GetRequesterUidNoFail(), (q) => 
+        //}
+
+        public List<ListenerId> GetListeners(long parentId = -1)
+        {
+            var realListeners = provider.Listeners.Select(x => (ListenerId)x.ListenerId);
+            
+            if(parentId > 0)
+                realListeners = realListeners.Where(x => x.ContentListenId == parentId);
+                
+            return realListeners.ToList();
         }
 
         [HttpGet("listen/{parentId}")]
         [Authorize]
-        public Task<ActionResult<List<CommentView>>> ListenAsync([FromRoute]long parentId, [FromQuery]long lastId, [FromQuery]long firstId)//[FromQuery]CommentSearch search)
+        public Task<ActionResult<List<CommentView>>> ListenAsync([FromRoute]long parentId, [FromQuery]long lastId, [FromQuery]long firstId, [FromQuery]DateTime lastEdit)//[FromQuery]CommentSearch search)
         {
             return ThrowToAction(async () => 
             {
@@ -227,22 +277,25 @@ namespace contentapi.Controllers
 
                 try
                 {
-                    var start = DateTime.Now;
+                    //We know the list changes before and after listening. Signal both times, it'll be ok.
+                    //signaler.SignalDecayingItems(GetListeners(), decayTime, decayData);
+
                     var comments = await services.provider.ListenAsync<EntityRelation>(listenId, 
-                        (q) => q.Where(x => x.entityId1 == parentId &&
-                            (EF.Functions.Like(x.type, $"{keys.CommentHack}%") && x.id > lastId) ||
-                            (EF.Functions.Like(x.type, $"{keys.CommentHackModified}%") && x.id >= firstId)), //||
-                            //A new entity! it has the parent we're looking for!
-                            //An old entity! the parent is in the type! (that's weird...)
-                            //((x.type == $"{keys.CommentDeleteHack}{parentId}" || x.type == $"{keys.CommentHistoryHack}{parentId}") &&
-                             //x.createDate > start && x.id >= firstId)),
-                        TimeSpan.FromSeconds(300));
+                        (q) => q.Where(x => 
+                            //The new messages!
+                            (x.entityId1 == parentId && (EF.Functions.Like(x.type, $"{keys.CommentHack}%") && x.id > lastId)) ||
+                            //Edits to old ones!
+                            ((x.type == $"{keys.CommentDeleteHack}{parentId}") || (x.type == $"{keys.CommentHistoryHack}{parentId}"))
+                              && x.createDate > lastEdit && -x.entityId1 >= firstId), 
+                        listenTime);
+
+                    //signaler.SignalDecayingItems(GetListeners(), decayTime, decayData);
 
                     var goodComments = comments.Where(x => x.type.StartsWith(keys.CommentHack)).ToList(); //new List<EntityRelation>();
                     var badComments = comments.Except(goodComments);
 
                     if(badComments.Any())
-                        goodComments.AddRange(await provider.GetEntityRelationsAsync(new EntityRelationSearch() { Ids = badComments.Select(x => x.entityId1).ToList() }));
+                        goodComments.AddRange(await provider.GetEntityRelationsAsync(new EntityRelationSearch() { Ids = badComments.Select(x => -x.entityId1).ToList() }));
 
                     return (await LinkAsync(goodComments)).Select(x => ConvertToView(x)).ToList();
                 }
@@ -293,20 +346,9 @@ namespace contentapi.Controllers
 
                 //Write a copy of the current comment as historic
                 var copy = MakeHistoryCopy(existing, keys.CommentHistoryHack);
-                await provider.WriteAsync(copy);
-                //Keep the write as close to the trycatch as possible
+                //relation.type = keys.CommentHackModified;
 
-                try
-                {
-                    //Now (hopefully) update the original.
-                    relation.type = keys.CommentHackModified;
-                    await services.provider.WriteAsync(relation);
-                }
-                catch
-                {
-                    await provider.DeleteAsync(copy);
-                    throw;
-                }
+                await provider.WriteAsync(copy, relation);
 
                 var package = new EntityRelationPackage() { Main = relation };
                 package.Related.Add(copy);
@@ -325,22 +367,10 @@ namespace contentapi.Controllers
                 var parent = await ModifyCheckAsync(existing, uid);
 
                 var copy = MakeHistoryCopy(existing, keys.CommentDeleteHack);
-                await provider.WriteAsync(copy);
-                //Keep the write as close to the trycatch as possible
-
-                try
-                {
-                    //Now (hopefully) update the original.
-                    existing.value = "";
-                    existing.entityId2 = 0;
-                    existing.type = keys.CommentHackModified;
-                    await provider.WriteAsync(existing);
-                }
-                catch
-                {
-                    await provider.DeleteAsync(copy);
-                    throw;
-                }
+                existing.value = "";
+                existing.entityId2 = 0;
+                //existing.type = keys.CommentHackModified;
+                await provider.WriteAsync(copy, existing);
 
                 var relationPackage = (await LinkAsync(new [] {existing})).OnlySingle();
                 return ConvertToView(relationPackage);

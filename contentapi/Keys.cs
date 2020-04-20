@@ -50,10 +50,10 @@ namespace contentapi
 
         //Awful hacks
         public string CommentHack => "Zcc";
-        public string CommentHackModified => "Zcc*";
+        //public string CommentHackModified => "Zcc*";
         public string CommentHistoryHack =>"Zcu";
         public string CommentDeleteHack =>"Zcd";
-        public string CommentHackRelationSearch => "Zc[ud]%";
+        //public string CommentHackRelationSearch => "Zc[ud]%";
 
 
         public void EnsureAllUnique()

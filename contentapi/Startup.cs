@@ -91,6 +91,7 @@ namespace contentapi
 
             //The above is broken for signalling. Do this instead
             services.AddSingleton<ISignaler<EntityBase>, SignalSystem<EntityBase>>();
+            //services.AddSingleton<ISignaler<List<ListenerId>>, SignalSystem<List<ListenerId>>>();
 
             services.AddCors();
             services.AddControllers();
