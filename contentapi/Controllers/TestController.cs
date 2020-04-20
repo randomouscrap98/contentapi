@@ -10,6 +10,14 @@ using Randomous.EntitySystem;
 
 namespace contentapi.Controllers
 {
+    public class TestControllerProfile : Profile
+    {
+        public TestControllerProfile()
+        {
+            CreateMap<TestController.SystemData, SystemConfig>().ReverseMap();
+        }
+    }
+
     [Route("api/[controller]")]
     [ApiController]
     public class TestController : BaseSimpleController
@@ -42,16 +50,14 @@ namespace contentapi.Controllers
         public class SystemData
         {
             public List<long> SuperUsers {get;set;}
+            public TimeSpan ListenTimeout {get;set;}
+            public TimeSpan ListenGracePeriod {get;set;}
         }
 
         [HttpGet("system")]
         public ActionResult<SystemData> GetSystem()
         {
-            //var config = services.systemConfig;
-            return new SystemData()
-            {
-                SuperUsers = services.systemConfig.SuperUsers
-            };
+            return services.mapper.Map<SystemData>(services.systemConfig); 
         }
 
         [HttpGet("exception")]

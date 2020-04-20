@@ -48,7 +48,7 @@ namespace contentapi
         {
             var dbConfig = new DatabaseConfig();
             Configuration.Bind(nameof(DatabaseConfig), dbConfig);
-            //var dataSection = Configuration.GetSection("Data");
+
             var tokenSection = Configuration.GetSection(nameof(TokenServiceConfig));
 
             services.Configure<EmailConfig>(Configuration.GetSection(nameof(EmailConfig)))
@@ -56,7 +56,6 @@ namespace contentapi
                     .Configure<SystemConfig>(Configuration.GetSection(nameof(SystemConfig)))
                     .Configure<TokenServiceConfig>(tokenSection);
 
-            //var tokenConfig = AddSingletonConfig<TokenServiceConfig>(Configuration, services, "Token");
             services.AddSingleton(new HashConfig());    //Just use defaults
 
             var keys = new Keys();
@@ -92,10 +91,11 @@ namespace contentapi
 
             //The above is broken for signalling. Do this instead
             services.AddSingleton<ISignaler<EntityBase>, SignalSystem<EntityBase>>();
-            //services.AddSingleton<ISignaler<List<ListenerId>>, SignalSystem<List<ListenerId>>>();
+            services.AddSingleton<IDecayer<CommentListener>, Decayer<CommentListener>>();
 
             services.AddCors();
-            services.AddControllers();
+            services.AddControllers()
+                    .AddJsonOptions(options=> options.JsonSerializerOptions.Converters.Add(new TimeSpanToStringConverter()));
             services.AddAutoMapper(typeof(Startup));
 
             //This is all that JWT junk. I hope it still works like this... I just copied this from my core 2.0 project

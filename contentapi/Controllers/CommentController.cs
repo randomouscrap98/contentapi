@@ -21,16 +21,16 @@ namespace contentapi.Controllers
         public List<long> ParentIds {get;set;} = new List<long>();
     }
 
-    public class ListenerId
+    public class CommentListener
     {
         public long UserId {get;set;}
         public long ContentListenId {get;set;}
 
         public override bool Equals(object obj)
         {
-            if(obj != null && obj is ListenerId)
+            if(obj != null && obj is CommentListener)
             {
-                var listener = (ListenerId)obj;
+                var listener = (CommentListener)obj;
                 return listener.UserId == UserId && listener.ContentListenId == ContentListenId;
             }
 
@@ -67,12 +67,9 @@ namespace contentapi.Controllers
     public class CommentController : BaseSimpleController
     {
         //These need to be configurable soon! BEFORE RELEASE
-        protected TimeSpan listenTime = TimeSpan.FromSeconds(300);
-        protected TimeSpan decayTime = TimeSpan.FromSeconds(5);
+        protected IDecayer<CommentListener> listenDecayer;
 
-        protected IDecayer<ListenerId> listenDecayer;
-
-        public CommentController(ControllerServices services, ILogger<BaseSimpleController> logger, IDecayer<ListenerId> listenDecayer) : base(services, logger)
+        public CommentController(ControllerServices services, ILogger<BaseSimpleController> logger, IDecayer<CommentListener> listenDecayer) : base(services, logger)
         {
             this.listenDecayer = listenDecayer;
         }
@@ -236,17 +233,17 @@ namespace contentapi.Controllers
         }
 
         [HttpGet("listen/{parentId}/listeners")]
-        public Task<ActionResult<List<ListenerId>>> GetListenersAsync([FromRoute]long parentId, [FromQuery]List<long> lastListeners, CancellationToken token)
+        public Task<ActionResult<List<CommentListener>>> GetListenersAsync([FromRoute]long parentId, [FromQuery]List<long> lastListeners, CancellationToken token)
         {
             return ThrowToAction(async() =>
             {
                 DateTime start = DateTime.Now;
                 var listenSet = lastListeners.ToHashSet();
 
-                while (DateTime.Now - start < listenTime)
+                while (DateTime.Now - start < services.systemConfig.ListenTimeout)
                 {
                     listenDecayer.UpdateList(GetListeners(parentId));
-                    var result = listenDecayer.DecayList(decayTime);
+                    var result = listenDecayer.DecayList(services.systemConfig.ListenGracePeriod);
 
                     if (!result.Select(x => x.UserId).ToHashSet().SetEquals(listenSet))
                         return result;
@@ -259,9 +256,9 @@ namespace contentapi.Controllers
             });
         }
 
-        protected List<ListenerId> GetListeners(long parentId = -1)
+        protected List<CommentListener> GetListeners(long parentId = -1)
         {
-            var realListeners = provider.Listeners.Select(x => (ListenerId)x.ListenerId);
+            var realListeners = provider.Listeners.Select(x => (CommentListener)x.ListenerId);
             
             if(parentId > 0)
                 realListeners = realListeners.Where(x => x.ContentListenId == parentId);
@@ -276,7 +273,7 @@ namespace contentapi.Controllers
             return ThrowToAction(async () => 
             {
                 var parent = await FullParentCheckAsync(parentId, keys.ReadAction);
-                var listenId = new ListenerId() { UserId = GetRequesterUidNoFail(), ContentListenId = parentId };
+                var listenId = new CommentListener() { UserId = GetRequesterUidNoFail(), ContentListenId = parentId };
 
                 int entrances = 0;
 
@@ -293,7 +290,7 @@ namespace contentapi.Controllers
                         
                         return result;
                     }, 
-                    listenTime, token);
+                    services.systemConfig.ListenTimeout, token);
 
                 var goodComments = comments.Where(x => x.type.StartsWith(keys.CommentHack)).ToList(); //new List<EntityRelation>();
                 var badComments = comments.Except(goodComments);
