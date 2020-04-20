@@ -49,9 +49,9 @@ namespace contentapi
 
 
         //Awful hacks
-        public string CommentHack => "Zc";
-        public string CommentHistoryHack =>"Zh";
-        public string CommentDeleteHack =>"Zd";
+        public string CommentHack => "Zcc";
+        public string CommentHistoryHack =>"Zcu";
+        public string CommentDeleteHack =>"Zcd";
 
 
         public void EnsureAllUnique()

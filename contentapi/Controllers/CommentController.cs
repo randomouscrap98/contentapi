@@ -19,6 +19,12 @@ namespace contentapi.Controllers
         public List<long> ParentIds {get;set;} = new List<long>();
     }
 
+    public class ListenerId
+    {
+        public long UserId {get;set;}
+        public long ContentListenId {get;set;}
+    }
+
     public class CommentControllerProfile : Profile
     {
         public CommentControllerProfile()
@@ -57,6 +63,8 @@ namespace contentapi.Controllers
             //Assume (bad assume!) that these are OK values
             view.editUserId = view.createUserId;
             view.editDate = view.createDate;
+
+            view.deleted = relation.type.StartsWith(keys.CommentDeleteHack);
 
             return view;
         }
@@ -135,13 +143,13 @@ namespace contentapi.Controllers
             return parent;
         }
 
-        protected async Task<EntityPackage> FullParentCheckAsync(long parentId)
+        protected async Task<EntityPackage> FullParentCheckAsync(long parentId, string action)
         {
             //Go find the parent. If it's not content, BAD BAD BAD
             var parent = await BasicParentCheckAsync(parentId);
 
             //Create is full-on parent permission inheritance
-            if (!CanCurrentUser(keys.CreateAction, parent))
+            if (!CanCurrentUser(action, parent))
                 throw new UnauthorizedAccessException($"Cannot perform this action in content {parent.Entity.id}");
             
             return parent;
@@ -152,7 +160,7 @@ namespace contentapi.Controllers
             //Have to go find existing.
             var existing = await provider.FindRelationByIdAsync(id);
 
-            if (existing == null || existing.type != keys.CommentHack)
+            if (existing == null || !existing.type.StartsWith(keys.CommentHack))
                 throw new BadRequestException($"Couldn't find comment with id {id}");
 
             return existing;
@@ -168,11 +176,17 @@ namespace contentapi.Controllers
             return copy;
         }
 
+        protected EntityRelationSearch ModifySearch(EntityRelationSearch search)
+        {
+            search = LimitSearch(search);
+            search.TypeLike = $"{keys.CommentHack}%";
+            return search;
+        }
+
         [HttpGet]
         public async Task<ActionResult<List<CommentView>>> GetAsync([FromQuery]CommentSearch search)
         {
-            var relationSearch = LimitSearch(services.mapper.Map<EntityRelationSearch>(search));
-            relationSearch.TypeLike = keys.CommentHack;
+            var relationSearch = ModifySearch(services.mapper.Map<EntityRelationSearch>(search));
 
             var user = GetRequesterUidNoFail();
 
@@ -188,26 +202,32 @@ namespace contentapi.Controllers
             return await ViewResult(relations);
         }
 
+        [HttpGet("listeners/{parentId}")]
+        public ActionResult<List<ListenerId>> GetListeners([FromRoute]long parentId)
+        {
+            return provider.Listeners.Select(x => (ListenerId)x.ListenerId).Where(x => x.ContentListenId == parentId).ToList();
+        }
+
         [HttpGet("listen/{parentId}")]
-        public Task<ActionResult<List<CommentView>>> ListenAsync([FromRoute]long parentId, [FromQuery]CommentSearch search)
+        [Authorize]
+        public Task<ActionResult<List<CommentView>>> ListenAsync([FromRoute]long parentId, [FromQuery]long lastId, [FromQuery]long firstId)//[FromQuery]CommentSearch search)
         {
             return ThrowToAction(async () => 
             {
-                if(!search.ParentIds.Contains(parentId))
-                    search.ParentIds.Add(parentId);
-
-                var parent = await BasicParentCheckAsync(parentId); //, keys.ReadAction);
+                var parent = await FullParentCheckAsync(parentId, keys.ReadAction);
+                var listenId = new ListenerId() { UserId = GetRequesterUidNoFail(), ContentListenId = parentId };
 
                 try
                 {
-                    var relationSearch = LimitSearch(services.mapper.Map<EntityRelationSearch>(search));
-                    relationSearch.TypeLike = keys.CommentHack;
-
-                    var comments = await services.provider.ListenAsync<EntityRelation>(lastId, 
-                        (q) => services.provider.ApplyEntityRelationSearch(q, relationSearch),
+                    var start = DateTime.UtcNow;
+                    var comments = await services.provider.ListenAsync<EntityRelation>(listenId, 
+                        (q) => q.Where(x => x.entityId1 == parentId && 
+                            (EF.Functions.Like(x.type, $"{keys.CommentHack}%") && x.id > lastId ||
+                             ((EF.Functions.Like(x.type, $"{keys.CommentDeleteHack}") || EF.Functions.Like(x.type, $"{keys.CommentHistoryHack}%")) &&
+                              x.createDate > start && x.id <= firstId))),
                         TimeSpan.FromSeconds(300));
 
-                    return comments.Select(x => ConvertToView(x)).ToList();
+                    return (await LinkAsync(comments)).Select(x => ConvertToView(x)).ToList();
                 }
                 catch (TimeoutException)
                 {
@@ -227,7 +247,7 @@ namespace contentapi.Controllers
                 view.createDate = DateTime.UtcNow;  //Ignore create date, it's always now
                 view.createUserId = GetRequesterUid();    //Always requester
 
-                var parent = await FullParentCheckAsync(view.parentId);
+                var parent = await FullParentCheckAsync(view.parentId, keys.CreateAction);
 
                 //now actually write the dang thing.
                 var relation = ConvertFromViewSimple(view);
