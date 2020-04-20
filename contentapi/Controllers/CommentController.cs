@@ -64,17 +64,24 @@ namespace contentapi.Controllers
             view.editUserId = view.createUserId;
             view.editDate = view.createDate;
 
-            view.deleted = relation.type.StartsWith(keys.CommentDeleteHack);
-
             return view;
         }
 
         protected CommentView ConvertToView(EntityRelationPackage package)
         {
             var view = ConvertToViewSimple(package.Main);
-            var lastEdit = package.Related.OrderBy(x => x.id).Last(x => x.type.StartsWith(keys.CommentHistoryHack));
-            view.editDate = (DateTime)lastEdit.createDateProper();
-            view.editUserId = -lastEdit.entityId2;
+            var orderedRelations = package.Related.OrderBy(x => x.id);
+            var lastEdit = orderedRelations.LastOrDefault(x => x.type.StartsWith(keys.CommentHistoryHack));
+            var last = orderedRelations.LastOrDefault();
+
+            if(lastEdit != null)
+            {
+                view.editDate = (DateTime)lastEdit.createDateProper();
+                view.editUserId = -lastEdit.entityId2;
+            }
+
+            view.deleted = last != null && last.type.StartsWith(keys.CommentDeleteHack);
+
             return view;
         }
 
@@ -90,15 +97,14 @@ namespace contentapi.Controllers
         {
             //This finds historical data (if there is any, it's probably none every time)
             var secondarySearch = new EntityRelationSearch();
-            secondarySearch.TypeLike = $"{keys.CommentHistoryHack}%";
-            secondarySearch.EntityIds1 = relations.Select(x => x.id).ToList();
+            secondarySearch.EntityIds1 = relations.Select(x => -x.id).ToList();
 
             var historyRelations = await services.provider.GetEntityRelationsAsync(secondarySearch);
 
             return relations.Select(x => new EntityRelationPackage()
             {
                 Main = x,
-                Related = historyRelations.Where(y => y.entityId1 == x.id).ToList()
+                Related = historyRelations.Where(y => y.entityId1 == -x.id).ToList()
             }).ToList();
         }
 
@@ -166,12 +172,14 @@ namespace contentapi.Controllers
             return existing;
         }
 
-        protected EntityRelation MakeHistoryCopy(EntityRelation relation)
+        protected EntityRelation MakeHistoryCopy(EntityRelation relation, string type)
         {
             var copy = new EntityRelation(relation);
             copy.id = 0;   //It's new though
-            copy.entityId1 = relation.id; //Point to the one we just gave
-            copy.type = keys.CommentHistoryHack;
+            copy.entityId1 = -relation.id; //Point to the one we just gave (but make it negative because it's a relation to relation link)
+            copy.entityId2 = -GetRequesterUid();
+            copy.type = type + relation.entityId1.ToString();
+            copy.createDate = DateTime.Now; //The history shows the edit date (confusingly, it's because this is the "update" record)
 
             return copy;
         }
@@ -219,15 +227,24 @@ namespace contentapi.Controllers
 
                 try
                 {
-                    var start = DateTime.UtcNow;
+                    var start = DateTime.Now;
                     var comments = await services.provider.ListenAsync<EntityRelation>(listenId, 
-                        (q) => q.Where(x => x.entityId1 == parentId && 
-                            (EF.Functions.Like(x.type, $"{keys.CommentHack}%") && x.id > lastId ||
-                             ((EF.Functions.Like(x.type, $"{keys.CommentDeleteHack}") || EF.Functions.Like(x.type, $"{keys.CommentHistoryHack}%")) &&
-                              x.createDate > start && x.id <= firstId))),
+                        (q) => q.Where(x => x.entityId1 == parentId &&
+                            (EF.Functions.Like(x.type, $"{keys.CommentHack}%") && x.id > lastId) ||
+                            (EF.Functions.Like(x.type, $"{keys.CommentHackModified}%") && x.id >= firstId)), //||
+                            //A new entity! it has the parent we're looking for!
+                            //An old entity! the parent is in the type! (that's weird...)
+                            //((x.type == $"{keys.CommentDeleteHack}{parentId}" || x.type == $"{keys.CommentHistoryHack}{parentId}") &&
+                             //x.createDate > start && x.id >= firstId)),
                         TimeSpan.FromSeconds(300));
 
-                    return (await LinkAsync(comments)).Select(x => ConvertToView(x)).ToList();
+                    var goodComments = comments.Where(x => x.type.StartsWith(keys.CommentHack)).ToList(); //new List<EntityRelation>();
+                    var badComments = comments.Except(goodComments);
+
+                    if(badComments.Any())
+                        goodComments.AddRange(await provider.GetEntityRelationsAsync(new EntityRelationSearch() { Ids = badComments.Select(x => x.entityId1).ToList() }));
+
+                    return (await LinkAsync(goodComments)).Select(x => ConvertToView(x)).ToList();
                 }
                 catch (TimeoutException)
                 {
@@ -244,7 +261,7 @@ namespace contentapi.Controllers
             return ThrowToAction<CommentView>(async () =>
             {
                 view.id = 0;
-                view.createDate = DateTime.UtcNow;  //Ignore create date, it's always now
+                view.createDate = DateTime.Now;  //Ignore create date, it's always now
                 view.createUserId = GetRequesterUid();    //Always requester
 
                 var parent = await FullParentCheckAsync(view.parentId, keys.CreateAction);
@@ -268,20 +285,21 @@ namespace contentapi.Controllers
                 var existing = await ExistingCheckAsync(id);
 
                 view.createDate = (DateTime) existing.createDateProper();
-                view.createUserId = existing.entityId1; //creator should be original too
+                view.createUserId = -existing.entityId2; //creator should be original too
 
                 var parent = await ModifyCheckAsync(existing, uid);
 
                 var relation = ConvertFromViewSimple(view);
 
                 //Write a copy of the current comment as historic
-                var copy = MakeHistoryCopy(existing);
+                var copy = MakeHistoryCopy(existing, keys.CommentHistoryHack);
                 await provider.WriteAsync(copy);
                 //Keep the write as close to the trycatch as possible
 
                 try
                 {
                     //Now (hopefully) update the original.
+                    relation.type = keys.CommentHackModified;
                     await services.provider.WriteAsync(relation);
                 }
                 catch
@@ -306,12 +324,25 @@ namespace contentapi.Controllers
                 var existing = await ExistingCheckAsync(id);
                 var parent = await ModifyCheckAsync(existing, uid);
 
-                //Go link NOW, because later it's getting modified
+                var copy = MakeHistoryCopy(existing, keys.CommentDeleteHack);
+                await provider.WriteAsync(copy);
+                //Keep the write as close to the trycatch as possible
+
+                try
+                {
+                    //Now (hopefully) update the original.
+                    existing.value = "";
+                    existing.entityId2 = 0;
+                    existing.type = keys.CommentHackModified;
+                    await provider.WriteAsync(existing);
+                }
+                catch
+                {
+                    await provider.DeleteAsync(copy);
+                    throw;
+                }
+
                 var relationPackage = (await LinkAsync(new [] {existing})).OnlySingle();
-
-                existing.type = keys.CommentDeleteHack;
-                await provider.WriteAsync(existing);
-
                 return ConvertToView(relationPackage);
             }); 
         }
