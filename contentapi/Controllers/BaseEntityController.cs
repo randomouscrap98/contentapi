@@ -77,47 +77,14 @@ namespace contentapi.Controllers
         {
             var newEntity = new Entity(entity);
             newEntity.id = 0;
-            newEntity.type = keys.HistoryKey + (newEntity.type ?? "");
+            MakeHistoric(newEntity);
             await provider.WriteAsync(newEntity);
             return newEntity;
         }
 
-        /// <summary>
-        /// Link all given values and relations to the given parent (do not write it!)
-        /// </summary>
-        /// <param name="values"></param>
-        /// <param name="relations"></param>
-        /// <param name="parent"></param>
-        /// <returns></returns>
-        protected void Relink(IEnumerable<EntityValue> values, IEnumerable<EntityRelation> relations, Entity parent)
+        protected void MakeHistoric(Entity entity)
         {
-            foreach(var v in values)
-                v.entityId = parent.id;
-            foreach(var r in relations)
-                r.entityId2 = parent.id;
-        }
-
-        /// <summary>
-        /// Assuming a valid base entity, relink all items in the package by id
-        /// </summary>
-        /// <param name="package"></param>
-        protected void Relink(EntityPackage package)
-        {
-            Relink(package.Values, package.Relations, package.Entity);
-        }
-
-        protected void FlattenPackage(EntityPackage package, List<EntityBase> collection)
-        {
-            collection.AddRange(package.Values);
-            collection.AddRange(package.Relations);
-            collection.Add(package.Entity);
-        }
-
-        protected List<EntityBase> FlattenPackage(EntityPackage package)
-        {
-            var result = new List<EntityBase>();
-            FlattenPackage(package, result);
-            return result;
+            entity.type = keys.HistoryKey + (entity.type ?? "");
         }
 
         /// <summary>
@@ -157,7 +124,7 @@ namespace contentapi.Controllers
             return Task.FromResult(view);
         }
 
-        protected async Task<EntityPackage> WriteViewAsyncBase(V view)
+        protected async Task<EntityPackage> WriteViewBaseAsync(V view)
         {
             logger.LogTrace("WriteViewAsync called");
 
@@ -227,33 +194,37 @@ namespace contentapi.Controllers
 
         protected async Task<V> WriteViewAsync(V view)
         {
-            return ConvertToView(await WriteViewAsyncBase(view));
+            return ConvertToView(await WriteViewBaseAsync(view));
         }
 
-        ///// <summary>
-        ///// Allow "fake" deletion of ANY historic entity (of any type)
-        ///// </summary>
-        ///// <param name="standinId"></param>
-        ///// <returns></returns>
-        //protected Task DeleteEntity(long standinId)
-        //{
-        //    return MarkLatestInactive(standinId, keys.DeleteAction);
-        //}
+        /// <summary>
+        /// Allow "fake" deletion of ANY historic entity (of any type)
+        /// </summary>
+        /// <param name="entityId"></param>
+        /// <returns></returns>
+        protected async Task<V> DeleteByIdAsync(long entityId)
+        {
+            var package = await DeleteCheckAsync(entityId);
+            var view = ConvertToView(package);
+            MakeHistoric(package.Entity);
+            await provider.WriteAsync(package.Entity);     //Notice it is a WRITe and not a delete.
+            return view;
+        }
 
-        ///// <summary>
-        ///// Check the entity for deletion. Throw exception if can't
-        ///// </summary>
-        ///// <param name="standinId"></param>
-        ///// <returns></returns>
-        //protected async virtual Task<EntityPackage> DeleteEntityCheck(long standinId)
-        //{
-        //    var last = await FindByIdAsync(standinId);
+        /// <summary>
+        /// Check the entity for deletion. Throw exception if can't
+        /// </summary>
+        /// <param name="entityId"></param>
+        /// <returns></returns>
+        protected async virtual Task<EntityPackage> DeleteCheckAsync(long entityId)
+        {
+            var last = await provider.FindByIdAsync(entityId);
 
-        //    if(last == null || !TypeIs(last.Entity.type, EntityType))
-        //        throw new InvalidOperationException("No entity with that ID and type!");
-        //    
-        //    return last;
-        //}
+            if(last == null || !last.Entity.type.StartsWith(EntityType))
+                throw new InvalidOperationException("No entity with that ID and type!");
+            
+            return last;
+        }
 
         /// <summary>
         /// Modify a search converted from users so it works with real entities

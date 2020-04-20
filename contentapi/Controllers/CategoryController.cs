@@ -25,7 +25,7 @@ namespace contentapi.Controllers
         }
     }
 
-    public class CategoryController : BasePermissionController<CategoryView>
+    public class CategoryController : BasePermissionActionController<CategoryView>
     {
         public CategoryController(ILogger<CategoryController> logger, ControllerServices services)
             : base(services, logger) { }
@@ -68,37 +68,11 @@ namespace contentapi.Controllers
             return base.CleanViewGeneralAsync(view);
         }
 
-        [HttpPost]
-        [Authorize]
-        public Task<ActionResult<CategoryView>> PostAsync([FromBody]CategoryView view)
+        protected override async Task<EntityPackage> DeleteCheckAsync(long id)
         {
-            view.id = 0;
-            return ThrowToAction(() => WriteViewAsync(view));
+            var package = await base.DeleteCheckAsync(id);
+            FailUnlessRequestSuper(); //Also only super users can delete
+            return package;
         }
-
-        [HttpPut("{id}")]
-        [Authorize]
-        public Task<ActionResult<CategoryView>> PutAsync([FromRoute] long id, [FromBody]CategoryView view)
-        {
-            view.id = id;
-            return ThrowToAction(() => WriteViewAsync(view));
-        }
-
-        //[HttpDelete("{id}")]
-        //[Authorize]
-        //public Task<ActionResult<CategoryView>> DeleteAsync([FromRoute]long id)
-        //{
-        //    EntityPackage result = null;
-
-        //    return ThrowToAction<CategoryView>(async () => 
-        //    {
-        //        result = await DeleteEntityCheck(id);
-        //    },
-        //    async() =>
-        //    {
-        //        await DeleteEntity(id);
-        //        return ConvertToView(result);
-        //    });
-        //}
     }
 }

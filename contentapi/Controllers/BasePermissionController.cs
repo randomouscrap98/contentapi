@@ -183,15 +183,15 @@ namespace contentapi.Controllers
         }
 
 
-        //protected async override Task<EntityPackage> DeleteEntityCheck(long standinId)
-        //{
-        //    var result = await base.DeleteEntityCheck(standinId);
+        protected async override Task<EntityPackage> DeleteCheckAsync(long standinId)
+        {
+            var result = await base.DeleteCheckAsync(standinId);
 
-        //    if(!CanCurrentUser(keys.DeleteAction, result))
-        //        throw new InvalidOperationException("No permission to delete");
+            if(!CanCurrentUser(keys.DeleteAction, result))
+                throw new InvalidOperationException("No permission to delete");
 
-        //    return result;
-        //}
+            return result;
+        }
 
         protected IQueryable<EntityBase> ConvertToHusk(IQueryable<EntityREGroup> groups)
         {

@@ -8,11 +8,6 @@ namespace contentapi
         public string UserIdentifier => "uid";
 
 
-        ////Symbolic value stuff (these are prepended to actual values)
-        //public string ActiveValue => "+";
-        //public string InactiveValue => "-";
-
-
         //Symbolic key stuff (these are all prepended to something else)
         public string AssociatedValueKey => "@";
         public string VariableKey => "v:";
@@ -21,7 +16,6 @@ namespace contentapi
 
 
         //General Relation keys (just relations, no appending)
-
         //Creator meaning is twofold: entityid1 is the creator of this content and the value is the editor
         public string CreatorRelation => "rc"; 
         public string ParentRelation => "rp";
@@ -44,8 +38,7 @@ namespace contentapi
         public string UserType => "tu";
         public string CategoryType => "tc";
         public string ContentType => "tp"; //p for page/post
-        public string CommentType => "ta"; //a for addendum or annotation
-        //public string StandInType => "ts";
+        //public string CommentType => "ta"; //a for addendum or annotation
 
 
         //User stuff  (keys for entity values)
@@ -57,6 +50,8 @@ namespace contentapi
 
         //Awful hacks
         public string CommentHack => "Zc";
+        public string CommentHistoryHack =>"Zh";
+        public string CommentDeleteHack =>"Zd";
 
 
         public void EnsureAllUnique()

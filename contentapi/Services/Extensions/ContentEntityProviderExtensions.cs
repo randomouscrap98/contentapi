@@ -69,6 +69,13 @@ namespace contentapi.Services.Extensions
             return provider.FindByIdAsyncGeneric(id, provider.GetEntityPackagesAsync);
         }
 
+        public static async Task<EntityRelation> FindRelationByIdAsync(this IEntityProvider provider, long id)
+        {
+            var search = new EntityRelationSearch();
+            search.Ids.Add(id);
+            return (await provider.GetEntityRelationsAsync(search)).OnlySingle();
+        }
+
         /// <summary>
         /// Find some entity by id 
         /// </summary>

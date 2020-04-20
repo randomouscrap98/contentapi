@@ -31,13 +31,13 @@ namespace contentapi.Controllers
         }
     }
 
-    public class ContentController : BasePermissionController<ContentView>
+    public class ContentController : BasePermissionActionController<ContentView>
     {
         public ContentController(ILogger<ContentController> logger, ControllerServices services)
             : base(services, logger) { }
 
         protected override string EntityType => keys.ContentType;
-        protected override string ParentType => keys.CategoryType;
+        protected override string ParentType => null; //keys.CategoryType;
         
         protected override EntityPackage CreateBasePackage(ContentView view)
         {
@@ -104,38 +104,5 @@ namespace contentapi.Controllers
 
             return await ViewResult(FinalizeHusk<Entity>(idHusk, entitySearch));
         }
-
-        [HttpPost]
-        [Authorize]
-        public Task<ActionResult<ContentView>> PostAsync([FromBody]ContentView view)
-        {
-            view.id = 0;
-            return ThrowToAction(() => WriteViewAsync(view));
-        }
-
-        [HttpPut("{id}")]
-        [Authorize]
-        public Task<ActionResult<ContentView>> PutAsync([FromRoute] long id, [FromBody]ContentView view)
-        {
-            view.id = id;
-            return ThrowToAction(() => WriteViewAsync(view));
-        }
-
-        //[HttpDelete("{id}")]
-        //[Authorize]
-        //public Task<ActionResult<ContentView>> DeleteAsync([FromRoute]long id)
-        //{
-        //    EntityPackage result = null;
-
-        //    return ThrowToAction(async() => 
-        //    {
-        //        result = await DeleteEntityCheck(id);
-        //    }, 
-        //    async() =>
-        //    {
-        //        await DeleteEntity(id);
-        //        return ConvertToView(result);
-        //    });
-        //}
     }
 }

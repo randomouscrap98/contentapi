@@ -197,5 +197,44 @@ namespace contentapi.Controllers
                 return BadRequest(ex.Message);
             }
         }
+
+        /// <summary>
+        /// Link all given values and relations to the given parent (do not write it!)
+        /// </summary>
+        /// <param name="values"></param>
+        /// <param name="relations"></param>
+        /// <param name="parent"></param>
+        /// <returns></returns>
+        protected void Relink(IEnumerable<EntityValue> values, IEnumerable<EntityRelation> relations, Entity parent)
+        {
+            foreach(var v in values)
+                v.entityId = parent.id;
+            foreach(var r in relations)
+                r.entityId2 = parent.id;
+        }
+
+        /// <summary>
+        /// Assuming a valid base entity, relink all items in the package by id
+        /// </summary>
+        /// <param name="package"></param>
+        protected void Relink(EntityPackage package)
+        {
+            Relink(package.Values, package.Relations, package.Entity);
+        }
+
+        protected void FlattenPackage(EntityPackage package, List<EntityBase> collection)
+        {
+            collection.AddRange(package.Values);
+            collection.AddRange(package.Relations);
+            collection.Add(package.Entity);
+        }
+
+        protected List<EntityBase> FlattenPackage(EntityPackage package)
+        {
+            var result = new List<EntityBase>();
+            FlattenPackage(package, result);
+            return result;
+        }
+
     }
 }
