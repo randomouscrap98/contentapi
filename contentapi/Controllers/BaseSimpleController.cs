@@ -181,6 +181,14 @@ namespace contentapi.Controllers
             return join;
         }
 
+        protected IQueryable<EntityREGroup> WhereParents(IQueryable<EntityREGroup> query, List<long> parentIds)
+        {
+            return query
+                .Join(provider.GetQueryable<EntityRelation>(), e => e.entity.id, r => r.entityId2, 
+                        (e,r) => new EntityREGroup() { entity = e.entity, relation = r})
+                .Where(x => x.relation.type == keys.ParentRelation && parentIds.Contains(x.relation.entityId1));
+        }
+
         protected async Task<ActionResult<T>> ThrowToAction<T>(Func<Task<T>> action)
         {
             try
@@ -195,6 +203,14 @@ namespace contentapi.Controllers
             catch(BadRequestException ex)
             {
                 return BadRequest(ex.Message);
+            }
+            catch(TimeoutException)
+            {
+                return StatusCode(408);
+            }
+            catch(TaskCanceledException)
+            {
+                return NoContent();
             }
         }
 

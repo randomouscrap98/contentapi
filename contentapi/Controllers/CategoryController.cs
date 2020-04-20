@@ -15,6 +15,7 @@ namespace contentapi.Controllers
     public class CategorySearch : EntitySearchBase
     {
         public string Name {get;set;}
+        public List<long> ParentIds {get;set;}
     }
 
     public class CategoryControllerProfile : Profile
@@ -56,6 +57,10 @@ namespace contentapi.Controllers
             var user = GetRequesterUidNoFail();
 
             var perms = BasicPermissionQuery(user, entitySearch);
+
+            if(search.ParentIds.Count > 0)
+                perms = WhereParents(perms, search.ParentIds);
+
             var idHusk = ConvertToHusk(perms);
 
             return await ViewResult(FinalizeHusk<Entity>(idHusk, entitySearch));

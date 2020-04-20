@@ -1,8 +1,10 @@
 using System;
 using System.Collections.Generic;
 using System.Linq;
+using System.Threading;
 using System.Threading.Tasks;
 using AutoMapper;
+using contentapi.Services;
 using contentapi.Services.Extensions;
 using contentapi.Views;
 using Microsoft.AspNetCore.Authorization;
@@ -64,14 +66,15 @@ namespace contentapi.Controllers
 
     public class CommentController : BaseSimpleController
     {
+        //These need to be configurable soon! BEFORE RELEASE
         protected TimeSpan listenTime = TimeSpan.FromSeconds(300);
         protected TimeSpan decayTime = TimeSpan.FromSeconds(5);
-       // protected ISignaler<List<ListenerId>> signaler;
-        private static SignalDecayData<ListenerId> decayData = new SignalDecayData<ListenerId>();
 
-        public CommentController(ControllerServices services, ILogger<BaseSimpleController> logger/*, ISignaler<ListenerId> signaler*/) : base(services, logger)
+        protected IDecayer<ListenerId> listenDecayer;
+
+        public CommentController(ControllerServices services, ILogger<BaseSimpleController> logger, IDecayer<ListenerId> listenDecayer) : base(services, logger)
         {
-            //this.signaler = signaler;
+            this.listenDecayer = listenDecayer;
         }
 
         protected CommentView ConvertToViewSimple(EntityRelation relation)
@@ -233,43 +236,28 @@ namespace contentapi.Controllers
         }
 
         [HttpGet("listen/{parentId}/listeners")]
-        public async Task<ActionResult<List<ListenerId>>> GetListenersAsync([FromRoute]long parentId, [FromQuery]List<long> lastListeners)
+        public Task<ActionResult<List<ListenerId>>> GetListenersAsync([FromRoute]long parentId, [FromQuery]List<long> lastListeners, CancellationToken token)
         {
-            DateTime start = DateTime.Now;
-            var listenSet = lastListeners.ToHashSet();
-
-            while(DateTime.Now - start < listenTime)
+            return ThrowToAction(async() =>
             {
-                decayData.UpdateList(GetListeners(parentId));
-                var result = decayData.ListDecay(decayTime);
+                DateTime start = DateTime.Now;
+                var listenSet = lastListeners.ToHashSet();
 
-                if(!result.Select(x => x.UserId).ToHashSet().SetEquals(listenSet))
-                    return result;
+                while (DateTime.Now - start < listenTime)
+                {
+                    listenDecayer.UpdateList(GetListeners(parentId));
+                    var result = listenDecayer.DecayList(decayTime);
 
-                await Task.Delay(TimeSpan.FromSeconds(2));
-            }
+                    if (!result.Select(x => x.UserId).ToHashSet().SetEquals(listenSet))
+                        return result;
 
-            return NoContent();
-            //return GetListeners(parentId);
+                    await Task.Delay(TimeSpan.FromSeconds(2), token);
+                    token.ThrowIfCancellationRequested();
+                }
+
+                throw new TimeoutException("Ran out of time waiting for listeners");
+            });
         }
-
-        //[HttpGet("listeners/{parentId}")]
-        //public async Task<ActionResult<List<ListenerId>>> GetListenersAsync([FromRoute]long parentId, [FromQuery]List<long> lastListeners)
-        //{
-        //    lastListeners = lastListeners ?? new List<long>();
-
-        //    var listenSet = lastListeners.ToHashSet();
-
-        //    var check = new Func<IQueryable<ListenerId>, IQueryable<ListenerId>>((q) =>
-        //        q.Where(x => x.ContentListenId == parentId && listenSet.SequenceEqual(x.))
-        //    );
-
-        //    var originalList = check(decayData.GetList().AsQueryable()).ToList();
-
-        //    if(originalList)
-
-        //    return await signaler.ListenAsync(GetRequesterUidNoFail(), (q) => 
-        //}
 
         protected List<ListenerId> GetListeners(long parentId = -1)
         {
@@ -283,51 +271,37 @@ namespace contentapi.Controllers
 
         [HttpGet("listen/{parentId}")]
         [Authorize]
-        public Task<ActionResult<List<CommentView>>> ListenAsync([FromRoute]long parentId, [FromQuery]long lastId, [FromQuery]long firstId)//, [FromQuery]DateTime lastEdit)//[FromQuery]CommentSearch search)
+        public Task<ActionResult<List<CommentView>>> ListenAsync([FromRoute]long parentId, [FromQuery]long lastId, [FromQuery]long firstId, CancellationToken token)
         {
             return ThrowToAction(async () => 
             {
                 var parent = await FullParentCheckAsync(parentId, keys.ReadAction);
                 var listenId = new ListenerId() { UserId = GetRequesterUidNoFail(), ContentListenId = parentId };
-                //if(lastEdit == default(DateTime))
-                //    lastEdit = DateTime.Now;
 
-                try
-                {
-                    //We know the list changes before and after listening. Signal both times, it'll be ok.
-                    //signaler.SignalDecayingItems(GetListeners(), decayTime, decayData);
+                int entrances = 0;
 
-                    int entrances = 0;
+                var comments = await services.provider.ListenAsync<EntityRelation>(listenId, 
+                    (q) => 
+                    {
+                        entrances++;
+                        var result = q.Where(x => 
+                            //The new messages!
+                            (x.entityId1 == parentId && (EF.Functions.Like(x.type, $"{keys.CommentHack}%") && x.id > lastId)) ||
+                            //Edits to old ones (but only after the first pass!
+                            ((x.type == $"{keys.CommentDeleteHack}{parentId}") || (x.type == $"{keys.CommentHistoryHack}{parentId}")) &&
+                                (entrances > 1) && -x.entityId1 >= firstId);
+                        
+                        return result;
+                    }, 
+                    listenTime, token);
 
-                    var comments = await services.provider.ListenAsync<EntityRelation>(listenId, 
-                        (q) => 
-                        {
-                            entrances++;
-                            var result = q.Where(x => 
-                                //The new messages!
-                                (x.entityId1 == parentId && (EF.Functions.Like(x.type, $"{keys.CommentHack}%") && x.id > lastId)) ||
-                                //Edits to old ones (but only after the first pass!
-                                ((x.type == $"{keys.CommentDeleteHack}{parentId}") || (x.type == $"{keys.CommentHistoryHack}{parentId}")) &&
-                                    (entrances > 1) && -x.entityId1 >= firstId);
-                            
-                            return result;
-                        }, 
-                        listenTime);
+                var goodComments = comments.Where(x => x.type.StartsWith(keys.CommentHack)).ToList(); //new List<EntityRelation>();
+                var badComments = comments.Except(goodComments);
 
-                    //signaler.SignalDecayingItems(GetListeners(), decayTime, decayData);
+                if(badComments.Any())
+                    goodComments.AddRange(await provider.GetEntityRelationsAsync(new EntityRelationSearch() { Ids = badComments.Select(x => -x.entityId1).ToList() }));
 
-                    var goodComments = comments.Where(x => x.type.StartsWith(keys.CommentHack)).ToList(); //new List<EntityRelation>();
-                    var badComments = comments.Except(goodComments);
-
-                    if(badComments.Any())
-                        goodComments.AddRange(await provider.GetEntityRelationsAsync(new EntityRelationSearch() { Ids = badComments.Select(x => -x.entityId1).ToList() }));
-
-                    return (await LinkAsync(goodComments)).Select(x => ConvertToView(x)).ToList();
-                }
-                catch (TimeoutException)
-                {
-                    return new List<CommentView>();
-                }
+                return (await LinkAsync(goodComments)).Select(x => ConvertToView(x)).ToList();
             });
         }
 

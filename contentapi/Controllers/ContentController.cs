@@ -18,7 +18,7 @@ namespace contentapi.Controllers
         public string Title {get;set;}
         public string Keyword {get;set;}
         public string Type {get;set;}
-        public List<long> CategoryIds {get;set;} = new List<long>();
+        public List<long> ParentIds {get;set;} = new List<long>();
     }
 
     public class ContentControllerProfile : Profile
@@ -84,13 +84,8 @@ namespace contentapi.Controllers
             //Right now, entities are matched with very specific read relations and MAYBE some creator ones.
             //Be VERY CAREFUL, I get the feeling the entity count can get blown out of proportion with this massive join.
 
-            if(search.CategoryIds.Count > 0)
-            {
-                initial = initial
-                    .Join(provider.GetQueryable<EntityRelation>(), e => e.entity.id, r => r.entityId2, 
-                          (e,r) => new EntityREGroup() { entity = e.entity, relation = r})
-                    .Where(x => x.relation.type == keys.ParentRelation && search.CategoryIds.Contains(x.relation.entityId1));
-            }
+            if(search.ParentIds.Count > 0)
+                initial = WhereParents(initial, search.ParentIds);
 
             if(!string.IsNullOrWhiteSpace(search.Keyword))
             {
