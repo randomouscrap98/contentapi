@@ -38,6 +38,7 @@ namespace contentapi
         public string UserType => "tu";
         public string CategoryType => "tc";
         public string ContentType => "tp"; //p for page/post
+        public string FileType => "tf";
         //public string CommentType => "ta"; //a for addendum or annotation
 
 

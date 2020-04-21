@@ -54,6 +54,7 @@ namespace contentapi
             services.Configure<EmailConfig>(Configuration.GetSection(nameof(EmailConfig)))
                     .Configure<LanguageConfig>(Configuration.GetSection(nameof(LanguageConfig)))
                     .Configure<SystemConfig>(Configuration.GetSection(nameof(SystemConfig)))
+                    .Configure<FileControllerConfig>(Configuration.GetSection(nameof(FileControllerConfig)))
                     .Configure<TokenServiceConfig>(tokenSection);
 
             services.AddSingleton(new HashConfig());    //Just use defaults
