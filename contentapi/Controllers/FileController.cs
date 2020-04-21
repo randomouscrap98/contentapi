@@ -9,7 +9,10 @@ using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Http;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.Extensions.Logging;
+using Microsoft.Extensions.Options;
 using Randomous.EntitySystem;
+using SixLabors.ImageSharp;
+using SixLabors.ImageSharp.Formats;
 
 namespace contentapi.Controllers
 {
@@ -18,7 +21,7 @@ namespace contentapi.Controllers
     public class FileSearch : EntitySearchBase
     {
         public string Name {get;set;}
-        public List<long> ParentIds {get;set;}
+        public List<long> ParentIds {get;set;} = new List<long>();
     }
 
     public class FileControllerProfile : Profile
@@ -39,9 +42,9 @@ namespace contentapi.Controllers
     {
         protected FileControllerConfig config;
 
-        public FileController(ControllerServices services, ILogger<FileController> logger, FileControllerConfig config) : base(services, logger)
+        public FileController(ControllerServices services, ILogger<FileController> logger, IOptionsMonitor<FileControllerConfig> config) : base(services, logger)
         {
-            this.config = config;
+            this.config = config.CurrentValue;
         }
 
         protected override string ParentType => keys.UserType;
@@ -76,20 +79,31 @@ namespace contentapi.Controllers
                 if(file.Length == 0)
                     throw new BadRequestException("No data uploaded!");
                 
-                if(file.Length > )
+                if(file.Length > config.MaxSize)
+                    throw new BadRequestException("File too large!");
                 
                 var newView = new FileView();
                 newView.permissions["0"] = "R";
 
-                //We HAVE to write now to reserve an ID.
+                IImageFormat format = null;
+
+                //This will throw an exception if it's not an image (most likely)
+                using(var image = Image.Load(file.OpenReadStream(), out format))
+                {
+                    newView.fileType = format.DefaultMimeType;
+                }
+
+                //We HAVE to write now to reserve an ID (and we found the mime type)
                 newView = await WriteViewAsync(newView);
+                var finalLocation = GetPath(newView.id);
 
                 try
                 {
-                    var finalLocation = GetPath(newView.id);
-
-                    newView.fileType = "?"; //Get this working hopefully
-
+                    //Now just copy to the filesystem?
+                    using (var stream = System.IO.File.Create(finalLocation))
+                    {
+                        await file.CopyToAsync(stream);
+                    }
                 }
                 catch
                 {
@@ -98,10 +112,9 @@ namespace contentapi.Controllers
                     throw;
                 }
 
-                //Write the new values from the view (that we updated after true uploading)
-                return await WriteViewAsync(newView);
+                //The view is already done.
+                return newView;
             });
-
         }
 
         protected override async Task<FileView> CleanViewUpdateAsync(FileView view, EntityPackage existing)
@@ -124,7 +137,7 @@ namespace contentapi.Controllers
 
         //protected 
 
-        [HttpGet("file/{id}")]
+        [HttpGet("raw/{id}")]
         public async Task<IActionResult> GetFileAsync([FromRoute]long id, [FromQuery]int size = 0)
         {
             //Need to read file and potentially resize it.
@@ -150,7 +163,19 @@ namespace contentapi.Controllers
                 return NotFound(); //This needs to be the norm. Fix it!
             
             //Ok NOW we can go get it. We may need to perform a resize beforehand if we can't find the file.
+            var finalLocation = GetPath(fileData.Entity.id, size);
+            Stream stream = null;
 
+            if(System.IO.File.Exists(finalLocation))
+            {
+                stream = System.IO.File.OpenRead(finalLocation);
+            }
+            else
+            {
+                return BadRequest("Couldn't find file (yet)");
+            }
+
+            return File(stream, fileData.Entity.content);
                 //return Forbid("You don't have access to this file");
 
             //var search = new FileSearch();
