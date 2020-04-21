@@ -52,7 +52,8 @@ hostrsync()
 # A dotnet publish SHOULD do everything required to make the product. It just
 # doesn't include our personal extras (it probably could though)
 rm -rf "$lpfolder"
-dotnet publish -r $mtype -c Release -p:PublishSingleFile=true
+# WARN: DON'T PUBLISH SINGLE! IT FILLS THE TEMP DIRECTORY!!
+dotnet publish -r $mtype -c Release # -p:PublishSingleFile=true
 
 # You need these, and they're likely to be the same all the time on every system
 cp -r LanguageFiles "$lpfolder"
