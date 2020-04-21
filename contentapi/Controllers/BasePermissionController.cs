@@ -28,6 +28,7 @@ namespace contentapi.Controllers
         }
 
         protected abstract string ParentType {get;}
+        protected virtual bool AllowOrphanPosts => false;
 
         protected List<EntityRelation> ConvertPermsToRelations(Dictionary<string, string> perms)
         {
@@ -153,7 +154,7 @@ namespace contentapi.Controllers
                 if(view.id == 0 && !CanCurrentUser(keys.CreateAction, parent))
                     throw new BadRequestException($"User cannot create entities in parent {view.parentId}");
             }
-            else
+            else if (!AllowOrphanPosts)
             {
                 //Only super users can create parentless entities... for now. This is a safety feature and may (never) be removed
                 FailUnlessRequestSuper();

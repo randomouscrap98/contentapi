@@ -24,13 +24,14 @@ namespace contentapi.Controllers
         public UserControllerProfile()
         {
             CreateMap<UserSearch, EntitySearch>().ForMember(x => x.NameLike, o => o.MapFrom(s => s.Username));
-            CreateMap<UserView, UserViewBasic>().ReverseMap();
+            CreateMap<UserViewBasic, UserView>().ReverseMap();
+            CreateMap<UserViewBasic, UserViewFull>().ReverseMap();
             CreateMap<UserView, UserViewFull>().ReverseMap();
             CreateMap<UserCredential, UserViewFull>().ReverseMap();
         }
     }
 
-    public class UserController : BaseEntityController<UserView>
+    public class UserController : BaseEntityController<UserViewFull>
     {
         protected IHashService hashService;
         protected ITokenService tokenService;
@@ -49,39 +50,48 @@ namespace contentapi.Controllers
 
         protected override string EntityType => keys.UserType;
 
-        protected override UserView CreateBaseView(EntityPackage user)
+        protected override UserViewFull CreateBaseView(EntityPackage user)
         {
-            return new UserView() 
+            var result = new UserViewFull() 
             { 
                 username = user.Entity.name, 
                 email = user.GetValue(keys.EmailKey).value, 
                 super = services.systemConfig.SuperUsers.Contains(user.Entity.id),
-                avatar = long.Parse(user.GetValue(keys.AvatarKey).value ?? "0")
+                password = user.GetValue(keys.PasswordHashKey).value,
+                salt = user.GetValue(keys.PasswordSaltKey).value
             };
+
+            if(user.HasValue(keys.AvatarKey))
+                result.avatar = long.Parse(user.GetValue(keys.AvatarKey).value);
+            if(user.HasValue(keys.RegistrationCodeKey))
+                result.registrationKey = user.GetValue(keys.RegistrationCodeKey).value;
+
+            return result;
         }
 
-        protected override EntityPackage CreateBasePackage(UserView view)
+        protected override EntityPackage CreateBasePackage(UserViewFull user)
         {
-            var user = (UserViewFull)view;
-
             var newUser = NewEntity(user.username)
                 .Add(NewValue(keys.AvatarKey, user.avatar.ToString()))
                 .Add(NewValue(keys.EmailKey, user.email))
                 .Add(NewValue(keys.PasswordSaltKey, user.salt))
-                .Add(NewValue(keys.PasswordHashKey, user.password))
-                .Add(NewValue(keys.RegistrationCodeKey, user.registrationKey));
+                .Add(NewValue(keys.PasswordHashKey, user.password));
+            //Can't do anything about super
+            
+            if(!string.IsNullOrWhiteSpace(user.registrationKey))
+                newUser.Add(NewValue(keys.RegistrationCodeKey, user.registrationKey));
 
             return newUser;
         }
 
-        protected override async Task<UserView> CleanViewGeneralAsync(UserView view)
+        protected override async Task<UserViewFull> CleanViewGeneralAsync(UserViewFull view)
         {
             view = await base.CleanViewGeneralAsync(view);
 
             //Go look up the avatar. Make sure it's A FILE DAMGIT
             var file = await provider.FindByIdBaseAsync(view.avatar);
 
-            if(file != null && (!file.type.StartsWith(keys.AvatarKey) || file.content.ToLower().StartsWith("image")))
+            if(file != null && (!file.type.StartsWith(keys.FileType) || !file.content.ToLower().StartsWith("image")))
                 throw new BadRequestException("Avatar isn't an image type content!");
 
             return view;
@@ -91,6 +101,11 @@ namespace contentapi.Controllers
         {
             var entitySearch = ModifySearch(services.mapper.Map<EntitySearch>(search));
             return await provider.GetEntityPackagesAsync(entitySearch);
+        }
+        
+        protected UserView GetView(EntityPackage package)
+        {
+            return services.mapper.Map<UserView>(ConvertToView(package));
         }
 
         [HttpGet]
@@ -113,7 +128,28 @@ namespace contentapi.Controllers
                 if(user == null)
                     throw new UnauthorizedAccessException($"No user with uid {id}");
 
-                return ConvertToView(user);
+                return GetView(user);
+            }); 
+        }
+
+        [HttpPut("basic")]
+        [Authorize]
+        public Task<ActionResult<UserView>> PutBasicAsync([FromBody]UserViewBasic data)
+        {
+            return ThrowToAction<UserView>(async () => 
+            {
+                var id = GetRequesterUid();
+                var user = await provider.FindByIdAsync(id);
+
+                var userView = ConvertToView(user);
+
+                if(data.avatar >= 0)
+                    userView.avatar = data.avatar;
+
+                if(!string.IsNullOrWhiteSpace(data.username))
+                    throw new BadRequestException("No username changes yet! Maybe soon!");
+
+                return GetView(await WriteViewBaseAsync(userView));
             }); 
         }
 
@@ -195,7 +231,7 @@ namespace contentapi.Controllers
             fullUser.password = Convert.ToBase64String(hashService.GetHash(fullUser.password, salt));
             fullUser.registrationKey = Guid.NewGuid().ToString();
 
-            return await ThrowToAction(() => WriteViewAsync(fullUser));
+            return await ThrowToAction(async() => GetView(await WriteViewBaseAsync(fullUser)));
         }
 
         public class RegistrationEmailPost
