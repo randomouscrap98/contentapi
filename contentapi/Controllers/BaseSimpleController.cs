@@ -208,8 +208,9 @@ namespace contentapi.Controllers
             {
                 return StatusCode(408);
             }
-            catch(TaskCanceledException)
+            catch(OperationCanceledException)
             {
+                logger.LogWarning("Pageload(?) got cancelled");
                 return NoContent();
             }
         }
