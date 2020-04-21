@@ -13,6 +13,7 @@ using Microsoft.Extensions.Options;
 using Randomous.EntitySystem;
 using SixLabors.ImageSharp;
 using SixLabors.ImageSharp.Formats;
+using SixLabors.ImageSharp.Processing;
 
 namespace contentapi.Controllers
 {
@@ -135,8 +136,6 @@ namespace contentapi.Controllers
             return ThrowToAction(() => WriteViewAsync(view));
         }
 
-        //protected 
-
         [HttpGet("raw/{id}")]
         public async Task<IActionResult> GetFileAsync([FromRoute]long id, [FromQuery]int size = 0)
         {
@@ -145,9 +144,9 @@ namespace contentapi.Controllers
             {
                 if (size < 10)
                     return BadRequest("Too small!");
-                else if (size < 100)
+                else if (size <= 100)
                     size = 10 * size / 10;
-                else if (size < 1000)
+                else if (size <= 1000)
                     size = 100 * size / 100;
                 else
                     return BadRequest("Too large!");
@@ -164,23 +163,33 @@ namespace contentapi.Controllers
             
             //Ok NOW we can go get it. We may need to perform a resize beforehand if we can't find the file.
             var finalLocation = GetPath(fileData.Entity.id, size);
-            Stream stream = null;
 
-            if(System.IO.File.Exists(finalLocation))
+            if(!System.IO.File.Exists(finalLocation))
             {
-                stream = System.IO.File.OpenRead(finalLocation);
-            }
-            else
-            {
-                return BadRequest("Couldn't find file (yet)");
+                var baseImage = GetPath(fileData.Entity.id);
+                IImageFormat format;
+
+                await Task.Run(() =>
+                {
+                    using (var image = Image.Load(baseImage, out format))
+                    {
+                        var width = 0;
+                        var height = 0;
+                        if (image.Width > image.Height)
+                            width = size;
+                        else
+                            height = size;
+                        image.Mutate(x => x.Resize(width, height));
+
+                        using (var stream = System.IO.File.OpenWrite(finalLocation))
+                        {
+                            image.Save(stream, format);
+                        }
+                    }
+                });
             }
 
-            return File(stream, fileData.Entity.content);
-                //return Forbid("You don't have access to this file");
-
-            //var search = new FileSearch();
-            //search 
-            //var view = (await GetViewsAsync(new FileSearch()));
+            return File(System.IO.File.OpenRead(finalLocation), fileData.Entity.content);
         }
 
         protected async Task<List<FileView>> GetViewsAsync(FileSearch search)

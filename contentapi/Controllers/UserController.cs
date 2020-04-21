@@ -55,7 +55,8 @@ namespace contentapi.Controllers
             { 
                 username = user.Entity.name, 
                 email = user.GetValue(keys.EmailKey).value, 
-                super = services.systemConfig.SuperUsers.Contains(user.Entity.id)
+                super = services.systemConfig.SuperUsers.Contains(user.Entity.id),
+                avatar = long.Parse(user.GetValue(keys.AvatarKey).value ?? "0")
             };
         }
 
@@ -64,12 +65,26 @@ namespace contentapi.Controllers
             var user = (UserViewFull)view;
 
             var newUser = NewEntity(user.username)
+                .Add(NewValue(keys.AvatarKey, user.avatar.ToString()))
                 .Add(NewValue(keys.EmailKey, user.email))
                 .Add(NewValue(keys.PasswordSaltKey, user.salt))
                 .Add(NewValue(keys.PasswordHashKey, user.password))
                 .Add(NewValue(keys.RegistrationCodeKey, user.registrationKey));
 
             return newUser;
+        }
+
+        protected override async Task<UserView> CleanViewGeneralAsync(UserView view)
+        {
+            view = await base.CleanViewGeneralAsync(view);
+
+            //Go look up the avatar. Make sure it's A FILE DAMGIT
+            var file = await provider.FindByIdBaseAsync(view.avatar);
+
+            if(file != null && (!file.type.StartsWith(keys.AvatarKey) || file.content.ToLower().StartsWith("image")))
+                throw new BadRequestException("Avatar isn't an image type content!");
+
+            return view;
         }
 
         protected async Task<List<EntityPackage>> GetAll(UserSearch search)

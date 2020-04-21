@@ -7,12 +7,15 @@ namespace contentapi.Views
     public class UserViewBasic : BaseView
     {
         public string username { get; set; }
+        public long avatar {get;set;}
     }
 
     //This is the user as we give them out
     public class UserView : BaseEntityView 
     {
         public string username { get; set; }
+        public long avatar {get;set;}
+
         public string email { get; set; } //This field SHOULDN'T be set unless the user is ourselves.
         public bool super { get;set; }
     }

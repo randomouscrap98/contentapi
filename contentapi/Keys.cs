@@ -47,6 +47,7 @@ namespace contentapi
         public string PasswordHashKey => "sph";
         public string PasswordSaltKey => "sps";
         public string RegistrationCodeKey => "srk";
+        public string AvatarKey => "sa";
 
 
         //Awful hacks
