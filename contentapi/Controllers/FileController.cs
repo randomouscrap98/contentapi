@@ -56,7 +56,7 @@ namespace contentapi.Controllers
 
             if(modify != null)
             {
-                var extraFolder = "";
+                var extraFolder = "_";
 
                 if(modify.size > 0)
                     extraFolder += $"{modify.size}";
