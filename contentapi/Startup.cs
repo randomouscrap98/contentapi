@@ -87,9 +87,8 @@ namespace contentapi
                 }
             );
 
-            //The above is broken for signalling. Do this instead
+            //WE need a singleton signaler: we'll all be using the same thing across different providers
             services.AddSingleton<ISignaler<EntityBase>, SignalSystem<EntityBase>>();
-            services.AddSingleton<IDecayer<CommentListener>, Decayer<CommentListener>>();
 
             services.AddCors();
             services.AddControllers()

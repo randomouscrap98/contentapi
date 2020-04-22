@@ -73,12 +73,17 @@ namespace contentapi.Controllers
 
     public class CommentController : BaseSimpleController
     {
-        //These need to be configurable soon! BEFORE RELEASE
-        protected IDecayer<CommentListener> listenDecayer;
+        public static IDecayer<CommentListener> listenDecayer = null;
+        public static readonly object listenDecayLock = new object();
 
-        public CommentController(ControllerServices services, ILogger<BaseSimpleController> logger, IDecayer<CommentListener> listenDecayer) : base(services, logger)
+        public CommentController(ControllerServices services, ILogger<BaseSimpleController> logger, IDecayer<CommentListener> decayer) : base(services, logger)
         {
-            this.listenDecayer = listenDecayer;
+            lock(listenDecayLock)
+            {
+                //Use a SINGLE decayer
+                if(listenDecayer == null)
+                    listenDecayer = decayer;
+            }
         }
 
         protected CommentView ConvertToViewSimple(EntityRelation relation)
@@ -140,19 +145,6 @@ namespace contentapi.Controllers
         protected async Task<List<CommentView>> ViewResult(IEnumerable<EntityRelation> relations)
         {
             return (await LinkAsync(relations)).Select(x => ConvertToView(x)).ToList();
-        }
-
-        protected IQueryable<EntityRRGroup> BasicPermissionQuery(IQueryable<EntityRelation> query, long user, string action)
-        {
-            var result = query.Join(services.provider.GetQueryable<EntityRelation>(), r => r.entityId1, r2 => r2.entityId2,
-                      (r,r2) => new EntityRRGroup() { relation = r2, relation2 = r });
-
-                //NOTE: the relations are SWAPPED because the intial group we applied the search to is the COMMENTS,
-                //but permission where expects the FIRST relation to be permissions
-            
-            //This means you can only read comments if you can read the content. Meaning you may be unable to read your own comment.... oh well.
-            result = PermissionWhere(result, user, action);
-            return result;
         }
 
         protected async Task<EntityPackage> BasicParentCheckAsync(long parentId)
@@ -228,14 +220,10 @@ namespace contentapi.Controllers
 
             var relationSearch = ModifySearch(services.mapper.Map<EntityRelationSearch>(search));
 
+            //Entity1 is the content, content owns comments. The hack is entity2, which is not a child but a user.
+            var query = BasicReadQuery(user, relationSearch, x => x.entityId1);
 
-            var query = BasicPermissionQuery(services.provider.ApplyEntityRelationSearch(services.provider.GetQueryable<EntityRelation>(), relationSearch, false), user, keys.ReadAction);
-
-            var idHusk =
-                from x in query 
-                group x by x.relation2.id into g
-                select new EntityBase() { id = g.Key };
-
+            var idHusk = ConvertToHusk(query, x => x.relation.id);
             var relations = await services.provider.GetListAsync(FinalizeHusk<EntityRelation>(idHusk, relationSearch));
 
             return await ViewResult(relations);
@@ -270,7 +258,7 @@ namespace contentapi.Controllers
 
         protected List<CommentListener> GetListeners(long parentId = -1)
         {
-            var realListeners = provider.Listeners.Select(x => (CommentListener)x.ListenerId);
+            var realListeners = provider.Listeners.Where(x => x.ListenerId is CommentListener).Select(x => (CommentListener)x.ListenerId);
             
             if(parentId > 0)
                 realListeners = realListeners.Where(x => x.ContentListenId == parentId);

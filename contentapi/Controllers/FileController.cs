@@ -229,7 +229,7 @@ namespace contentapi.Controllers
 
             var user = GetRequesterUidNoFail();
 
-            var perms = BasicPermissionQuery(user, entitySearch);
+            var perms = BasicReadQuery(user, entitySearch);
 
             if(search.ParentIds.Count > 0)
                 perms = WhereParents(perms, search.ParentIds);

@@ -194,12 +194,5 @@ namespace contentapi.Controllers
             return result;
         }
 
-        protected IQueryable<EntityBase> ConvertToHusk(IQueryable<EntityREGroup> groups)
-        {
-            return 
-                from x in groups
-                group x by x.entity.id into g
-                select new EntityBase() { id = g.Key };
-        }
     }
 }

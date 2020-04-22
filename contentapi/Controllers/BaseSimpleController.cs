@@ -1,6 +1,7 @@
 using System;
 using System.Collections.Generic;
 using System.Linq;
+using System.Linq.Expressions;
 using System.Security.Claims;
 using System.Threading.Tasks;
 using AutoMapper;
@@ -124,32 +125,45 @@ namespace contentapi.Controllers
             return search;
         }
 
-        protected class EntityRGroup { public EntityRelation relation; }
-        protected class EntityRRGroup : EntityRGroup { public EntityRelation relation2; }
-        protected class EntityREGroup : EntityRGroup { public Entity entity; }
-        protected class EntityREVGroup : EntityREGroup { public EntityValue value; }
+        protected class EntityGroup
+        { 
+            public Entity entity;
+            public EntityRelation relation;
+            public EntityValue value;
+            public EntityRelation permission; 
+        }
 
-        protected IQueryable<E> PermissionWhere<E>(IQueryable<E> query, long user, string action) where E : EntityRGroup
+        public class PermissionExtras
         {
+            public bool allowNegativeOwnerRelation = false;
+        }
+
+        protected IQueryable<E> PermissionWhere<E>(IQueryable<E> query, long user, string action, PermissionExtras extras = null) where E : EntityGroup
+        {
+            extras = extras ?? new PermissionExtras();
+
             bool superUser = services.systemConfig.SuperUsers.Contains(user);
 
             //Immediately apply a limiter so we're not joining on every dang relation ever (including comments etc).
             //The amount of creators and actions of a single type is SO MUCH LOWER. I'm not sure how optimized these
             //queries can get but better safe than sorry
-            query = query.Where(x => x.relation.type == keys.CreatorRelation || x.relation.type == action);
+            query = query.Where(x => x.permission.type == keys.CreatorRelation || x.permission.type == action);
             
             //Nothing else to do, the user can do it if it's update or delete.
             if(superUser && (action == keys.UpdateAction || action == keys.DeleteAction))
                 return query;
 
-            return query.Where(x => (user > 0 && x.relation.type == keys.CreatorRelation && x.relation.entityId1 == user) ||
-                (x.relation.type == action && (x.relation.entityId1 == 0 || x.relation.entityId1 == user)));
+            return query.Where(x => 
+                (extras.allowNegativeOwnerRelation && x.relation.entityId1 < 0) ||
+                (user > 0 && x.permission.type == keys.CreatorRelation && x.permission.entityId1 == user) ||
+                (x.permission.type == action && (x.permission.entityId1 == 0 || x.permission.entityId1 == user)));
         }
 
+        //These are here because they directly use PermissionWhere
         protected bool CanUser(long user, string action, EntityPackage package)
         {
             //Inefficient in compute but easier for me, the programmer, to use a single source of truth.
-            return PermissionWhere(package.Relations.Select(x => new EntityRGroup() { relation = x }).AsQueryable(), user, action).Any();
+            return PermissionWhere(package.Relations.Select(x => new EntityGroup() { permission = x }).AsQueryable(), user, action).Any();
         }
 
         protected bool CanCurrentUser(string key, EntityPackage package)
@@ -157,15 +171,31 @@ namespace contentapi.Controllers
             return CanUser(GetRequesterUidNoFail(), key, package);
         }
 
-
-        protected IQueryable<EntityREGroup> BasicPermissionQuery(long user, EntitySearch search)
+        protected IQueryable<EntityGroup> BasicReadQuery(long user, EntitySearch search, Expression<Func<Entity, long>> selector, PermissionExtras extras = null)
         {
             var query = provider.ApplyEntitySearch(provider.GetQueryable<Entity>(), search, false)
-                .Join(provider.GetQueryable<EntityRelation>(), e => e.id, r => r.entityId2, (e,r) => new EntityREGroup() { entity = e, relation = r});
-            
-            query = PermissionWhere(query, user, keys.ReadAction);
+                .Join(provider.GetQueryable<EntityRelation>(), selector, r => r.entityId2, 
+                (e,r) => new EntityGroup() { entity = e, permission = r});
+
+            query = PermissionWhere(query, user, keys.ReadAction, extras);
 
             return query;
+        }
+
+        protected IQueryable<EntityGroup> BasicReadQuery(long user, EntityRelationSearch search, Expression<Func<EntityRelation, long>> selector, PermissionExtras extras = null)
+        {
+            var query = provider.ApplyEntityRelationSearch(provider.GetQueryable<EntityRelation>(), search, false)
+                .Join(provider.GetQueryable<EntityRelation>(), selector, r2 => r2.entityId2, 
+                (r, r2) => new EntityGroup() { relation = r, permission = r2});
+
+            query = PermissionWhere(query, user, keys.ReadAction, extras);
+
+            return query;
+        }
+
+        protected IQueryable<EntityBase> ConvertToHusk(IQueryable<EntityGroup> groups, Expression<Func<EntityGroup, long>> groupId)
+        {
+            return groups.GroupBy(groupId).Select(x => new EntityBase() { id = x.Key });
         }
 
         /// <summary>
@@ -185,11 +215,11 @@ namespace contentapi.Controllers
             return join;
         }
 
-        protected IQueryable<EntityREGroup> WhereParents(IQueryable<EntityREGroup> query, List<long> parentIds)
+        protected IQueryable<EntityGroup> WhereParents(IQueryable<EntityGroup> query, List<long> parentIds)
         {
             return query
                 .Join(provider.GetQueryable<EntityRelation>(), e => e.entity.id, r => r.entityId2, 
-                        (e,r) => new EntityREGroup() { entity = e.entity, relation = r})
+                        (e,r) => new EntityGroup() { entity = e.entity, relation = r, permission = e.permission })
                 .Where(x => x.relation.type == keys.ParentRelation && parentIds.Contains(x.relation.entityId1));
         }
 

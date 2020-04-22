@@ -16,11 +16,7 @@ namespace contentapi.Controllers
         public List<long> ContentIds {get;set;} = new List<long>();
 
         public string Type {get;set;}
-    }
-
-    public class ActivityResult
-    {
-        public List<ActivityView> activity {get;set;}
+        public bool IncludeAnonymous {get;set;}
     }
 
     public class ActivityControllerProfile : Profile
@@ -44,23 +40,27 @@ namespace contentapi.Controllers
         {
         }
 
-        protected IQueryable<EntityRRGroup> BasicPermissionQuery(IQueryable<EntityRelation> query, long user, string action)
-        {
-            var result = query.Join(services.provider.GetQueryable<EntityRelation>(), r => -r.entityId2, r2 => r2.entityId2,
-                      (r,r2) => new EntityRRGroup() { relation = r2, relation2 = r });
+        //protected IQueryable<EntityRRGroup> BasicPermissionQuery(IQueryable<EntityRelation> query, long user, string action, bool includeAnonymous)
+        //{
+        //    var result = query.Join(services.provider.GetQueryable<EntityRelation>(), r => -r.entityId2, r2 => r2.entityId2,
+        //              (r,r2) => new EntityRRGroup() { relation = r2, relation2 = r });
 
-                //NOTE: the relations are SWAPPED because the intial group we applied the search to is the COMMENTS,
-                //but permission where expects the FIRST relation to be permissions
-            
-            //relation2 is OUR releations (the activity)
-            result = result.Where(x => x.relation2.entityId1 <= 0 || (user > 0 && x.relation.type == keys.CreatorRelation && x.relation.entityId1 == user) ||
-                (x.relation.type == action && (x.relation.entityId1 == 0 || x.relation.entityId1 == user)));
+        //        //NOTE: the relations are SWAPPED because the intial group we applied the search to is the COMMENTS,
+        //        //but permission where expects the FIRST relation to be permissions
+        //    
+        //    //result = PermissionWhere(result, user, action, (x) => x.relation2.entityId1 <= 0);
 
-            return result;
-        }
+        //    result = PermissionWhere(result, user, action, new PermissionExtras() { allowNegativeOwnerRelation = includeAnonymous });
+        //    //relation2 is OUR relations (the activity)
+        //    //result = result.Where(x => (includeAnonymous && x.relation2.entityId1 <= 0) || (user > 0 && x.relation.type == keys.CreatorRelation && x.relation.entityId1 == user) ||
+        //    //    (x.relation.type == action && (x.relation.entityId1 == 0 || x.relation.entityId1 == user)));
+
+        //    return result;
+        //}
 
         protected EntityRelationSearch ModifySearch(EntityRelationSearch search)
         {
+            //It is safe to just call any endpoint, because the count is limited to 1000.
             search = LimitSearch(search);
             search.TypeLike = $"{keys.ActivityKey}";
             return search;
@@ -68,7 +68,7 @@ namespace contentapi.Controllers
 
         protected ActivityView ConvertToView(EntityRelation relation)
         {
-            var view = new ActivityView(); //services.mapper.Map<ActivityView>(relation);
+            var view = new ActivityView();
 
             view.id = relation.id;
             view.date = (DateTime)relation.createDateProper();
@@ -82,7 +82,7 @@ namespace contentapi.Controllers
         }
 
         [HttpGet]
-        public async Task<ActionResult<ActivityResult>> GetActivityAsync([FromQuery]ActivitySearch search)
+        public async Task<ActionResult<ActivityResultView>> GetActivityAsync([FromQuery]ActivitySearch search)
         {
             var relationSearch = ModifySearch(services.mapper.Map<EntityRelationSearch>(search));
 
@@ -93,19 +93,14 @@ namespace contentapi.Controllers
 
             var user = GetRequesterUidNoFail();
 
-            var baseRelations = services.provider.ApplyEntityRelationSearch(services.provider.GetQueryable<EntityRelation>(), relationSearch, false);
-            baseRelations = baseRelations.Where(x => x.type != $"{keys.ActivityKey}{keys.FileType}");
+            var query = BasicReadQuery(user, relationSearch, x => -x.entityId2, new PermissionExtras() { allowNegativeOwnerRelation = search.IncludeAnonymous} )
+                            .Where(x => x.relation.type != $"{keys.ActivityKey}{keys.FileType}");
 
-            var query = BasicPermissionQuery(baseRelations, user, keys.ReadAction);
-
-            var idHusk =
-                from x in query 
-                group x by x.relation2.id into g
-                select new EntityBase() { id = g.Key };
+            var idHusk = ConvertToHusk(query, x => x.relation.id);
 
             var relations = await services.provider.GetListAsync(FinalizeHusk<EntityRelation>(idHusk, relationSearch));
 
-            return new ActivityResult()
+            return new ActivityResultView()
             {
                 activity = relations.Select(x => ConvertToView(x)).ToList()
             };

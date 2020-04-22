@@ -78,7 +78,7 @@ namespace contentapi.Controllers
 
             var entitySearch = ModifySearch(services.mapper.Map<EntitySearch>(search));
 
-            var initial = BasicPermissionQuery(user, entitySearch);
+            var initial = BasicReadQuery(user, entitySearch);
 
             //Right now, entities are matched with very specific read relations and MAYBE some creator ones.
             //Be VERY CAREFUL, I get the feeling the entity count can get blown out of proportion with this massive join.
@@ -90,7 +90,7 @@ namespace contentapi.Controllers
             {
                 initial = initial
                     .Join(provider.GetQueryable<EntityValue>(), e => e.entity.id, v => v.entityId, 
-                          (e,v) => new EntityREVGroup() { entity = e.entity, relation = e.relation, value = v})
+                          (e,v) => new EntityGroup() { entity = e.entity, relation = e.relation, value = v})
                     .Where(x => x.value.key == keys.KeywordKey && EF.Functions.Like(x.value.value, search.Keyword));
             }
 

@@ -309,5 +309,14 @@ namespace contentapi.Controllers
             return FindByNameAsyncGeneric(name, provider.GetEntitiesAsync);
         }
 
+        protected IQueryable<EntityGroup> BasicReadQuery(long user, EntitySearch search)
+        {
+            return BasicReadQuery(user, search, x => x.id);
+        }
+
+        protected IQueryable<EntityBase> ConvertToHusk(IQueryable<EntityGroup> groups)
+        {
+            return ConvertToHusk(groups, x => x.entity.id);
+        }
     }
 }

@@ -45,7 +45,7 @@ namespace contentapi.Controllers
 
             var entitySearch = ModifySearch(services.mapper.Map<EntitySearch>(search));
 
-            var perms = BasicPermissionQuery(user, entitySearch);
+            var perms = BasicReadQuery(user, entitySearch);
 
             if(search.ParentIds.Count > 0)
                 perms = WhereParents(perms, search.ParentIds);
