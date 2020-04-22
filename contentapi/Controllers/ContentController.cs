@@ -13,13 +13,19 @@ using Randomous.EntitySystem.Extensions;
 
 namespace contentapi.Controllers
 {
+    public class ContentSearch : BaseContentSearch
+    {
+        public string Keyword {get;set;}
+        public string Type {get;set;}
+    }
+
     public class ContentControllerProfile : Profile
     {
         public ContentControllerProfile()
         {
             CreateMap<ContentSearch, EntitySearch>()
-                .ForMember(x => x.NameLike, o => o.MapFrom(s => s.Name))
                 .ForMember(x => x.TypeLike, o => o.MapFrom(s => s.Type));
+                //Can't do keyword, it's special search
         }
     }
 
@@ -67,9 +73,10 @@ namespace contentapi.Controllers
         [HttpGet]
         public async Task<ActionResult<List<ContentView>>> GetAsync([FromQuery]ContentSearch search)
         {
-            var entitySearch = ModifySearch(services.mapper.Map<EntitySearch>(search));
-
             var user = GetRequesterUidNoFail();
+            logger.LogDebug($"Content GetAsync called by {user}");
+
+            var entitySearch = ModifySearch(services.mapper.Map<EntitySearch>(search));
 
             var initial = BasicPermissionQuery(user, entitySearch);
 

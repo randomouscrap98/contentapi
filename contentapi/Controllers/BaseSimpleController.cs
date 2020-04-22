@@ -131,7 +131,7 @@ namespace contentapi.Controllers
 
         protected IQueryable<E> PermissionWhere<E>(IQueryable<E> query, long user, string action) where E : EntityRGroup
         {
-            return query.Where(x => (x.relation.type == keys.CreatorRelation && x.relation.entityId1 == user) ||
+            return query.Where(x => (user > 0 && x.relation.type == keys.CreatorRelation && x.relation.entityId1 == user) ||
                 (x.relation.type == action && (x.relation.entityId1 == 0 || x.relation.entityId1 == user)));
         }
 

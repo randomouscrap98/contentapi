@@ -100,7 +100,7 @@ namespace contentapi.Controllers
 
             //These are assumptions, might get overruled
             view.createDate = view.editDate;
-            view .createUserId = view.editUserId;
+            view.createUserId = view.editUserId;
 
             return Task.FromResult(view);
         }

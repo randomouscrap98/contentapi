@@ -10,6 +10,19 @@ using Randomous.EntitySystem;
 
 namespace contentapi.Controllers
 {
+    public class ActivitySearch : EntitySearchBase
+    {
+        public List<long> UserIds {get;set;} = new List<long>();
+        public List<long> ContentIds {get;set;} = new List<long>();
+
+        public string Type {get;set;}
+    }
+
+    public class ActivityResult
+    {
+        public List<ActivityView> activity {get;set;}
+    }
+
     public class ActivityControllerProfile : Profile
     {
         public ActivityControllerProfile() 
@@ -41,7 +54,7 @@ namespace contentapi.Controllers
             
             //This means you can only read comments if you can read the content. Meaning you may be unable to read your own comment.... oh well.
             //result = PermissionWhere(result, user, action);
-            result = result.Where(x => x.relation2.entityId1 <= 0 || (x.relation.type == keys.CreatorRelation && x.relation.entityId1 == user) ||
+            result = result.Where(x => x.relation2.entityId1 <= 0 || (user > 0 && x.relation.type == keys.CreatorRelation && x.relation.entityId1 == user) ||
                 (x.relation.type == action && (x.relation.entityId1 == 0 || x.relation.entityId1 == user)));
 
             return result;
@@ -62,7 +75,7 @@ namespace contentapi.Controllers
             view.date = (DateTime)relation.createDateProper();
             view.userId = relation.entityId1;
             view.contentId = -relation.entityId2;
-            view.contentType = relation.type.Substring(keys.ActivityKey.Length);
+            view.contentType = relation.type.Substring(keys.ActivityKey.Length + keys.ContentType.Length);
             view.action = relation.value.Substring(1, 1); //Assume it's 1 character
             view.extra = relation.value.Substring(keys.CreateAction.Length);
 
@@ -70,7 +83,7 @@ namespace contentapi.Controllers
         }
 
         [HttpGet]
-        public async Task<ActionResult<List<ActivityView>>> GetActivityAsync([FromQuery]ActivitySearch search)
+        public async Task<ActionResult<ActivityResult>> GetActivityAsync([FromQuery]ActivitySearch search)
         {
             var relationSearch = ModifySearch(services.mapper.Map<EntityRelationSearch>(search));
 
@@ -81,7 +94,10 @@ namespace contentapi.Controllers
 
             var user = GetRequesterUidNoFail();
 
-            var query = BasicPermissionQuery(services.provider.ApplyEntityRelationSearch(services.provider.GetQueryable<EntityRelation>(), relationSearch, false), user, keys.ReadAction);
+            var baseRelations = services.provider.ApplyEntityRelationSearch(services.provider.GetQueryable<EntityRelation>(), relationSearch, false);
+            baseRelations = baseRelations.Where(x => x.type != $"{keys.ActivityKey}{keys.FileType}");
+
+            var query = BasicPermissionQuery(baseRelations, user, keys.ReadAction);
 
             var idHusk =
                 from x in query 
@@ -90,7 +106,10 @@ namespace contentapi.Controllers
 
             var relations = await services.provider.GetListAsync(FinalizeHusk<EntityRelation>(idHusk, relationSearch));
 
-            return relations.Select(x => ConvertToView(x)).ToList();
+            return new ActivityResult()
+            {
+                activity = relations.Select(x => ConvertToView(x)).ToList()
+            };
         }
     }
 }

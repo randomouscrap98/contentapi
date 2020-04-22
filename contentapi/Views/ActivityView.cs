@@ -4,8 +4,8 @@ namespace contentapi.Views
 {
     public class ActivityView
     {
-        public long id;
-        public DateTime date;
+        public long id {get;set;}
+        public DateTime date {get;set;}
 
         public long userId {get;set;}
         public long contentId {get;set;}

@@ -12,13 +12,7 @@ using Randomous.EntitySystem.Extensions;
 
 namespace contentapi.Controllers
 {
-    public class CategoryControllerProfile : Profile
-    {
-        public CategoryControllerProfile()
-        {
-            CreateMap<CategorySearch, EntitySearch>().ForMember(x => x.NameLike, o => o.MapFrom(s => s.Name));
-        }
-    }
+    public class CategorySearch : BaseContentSearch { }
 
     public class CategoryController : BasePermissionActionController<CategoryView>
     {
@@ -46,9 +40,10 @@ namespace contentapi.Controllers
         [HttpGet]
         public async Task<ActionResult<List<CategoryView>>> GetAsync([FromQuery]CategorySearch search)
         {
-            var entitySearch = ModifySearch(services.mapper.Map<EntitySearch>(search));
-
             var user = GetRequesterUidNoFail();
+            logger.LogDebug($"Category GetAsync called by {user}");
+
+            var entitySearch = ModifySearch(services.mapper.Map<EntitySearch>(search));
 
             var perms = BasicPermissionQuery(user, entitySearch);
 

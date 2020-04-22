@@ -41,6 +41,7 @@ namespace contentapi.Controllers
         [HttpGet("{key}")]
         public async Task<ActionResult<string>> GetSingleAsync([FromRoute]string key)
         {
+            logger.LogDebug($"{GetRequesterUidNoFail()} varget {key}");
             var result = await GetVariable(key);
             if(result == null)
                 return NotFound();

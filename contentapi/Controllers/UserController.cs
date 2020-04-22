@@ -14,11 +14,17 @@ using Randomous.EntitySystem.Extensions;
 
 namespace contentapi.Controllers
 {
+    public class UserSearch : EntitySearchBase
+    {
+        public string Username {get;set;}
+    }
+
     public class UserControllerProfile : Profile
     {
         public UserControllerProfile()
         {
             CreateMap<UserSearch, EntitySearch>().ForMember(x => x.NameLike, o => o.MapFrom(s => s.Username));
+
             CreateMap<UserViewBasic, UserView>().ReverseMap();
             CreateMap<UserViewBasic, UserViewFull>().ReverseMap();
             CreateMap<UserView, UserViewFull>().ReverseMap();
@@ -103,9 +109,22 @@ namespace contentapi.Controllers
             return services.mapper.Map<UserView>(ConvertToView(package));
         }
 
-        [HttpGet]
-        public async Task<ActionResult<List<UserViewBasic>>> Get([FromQuery]UserSearch search)
+        protected async Task<EntityPackage> GetCurrentUser()
         {
+            var id = GetRequesterUid();
+            var user = await provider.FindByIdAsync(id);
+
+            //A VERY SPECIFIC glitch you really only get in development 
+            if (user == null)
+                throw new UnauthorizedAccessException($"No user with uid {id}");
+            
+            return user;
+        }
+
+        [HttpGet]
+        public async Task<ActionResult<List<UserViewBasic>>> GetAsync([FromQuery]UserSearch search)
+        {
+            logger.LogDebug($"User GetAsync called by {GetRequesterUidNoFail()}");
             return (await GetAll(search)).Select(x => services.mapper.Map<UserViewBasic>(ConvertToView(x))).ToList();
         }
 
@@ -116,14 +135,7 @@ namespace contentapi.Controllers
             //The first is check, the second is return
             return ThrowToAction<UserView>(async () => 
             {
-                var id = GetRequesterUid();
-                var user = await provider.FindByIdAsync(id);
-
-                //A VERY SPECIFIC glitch you really only get in development 
-                if(user == null)
-                    throw new UnauthorizedAccessException($"No user with uid {id}");
-
-                return GetView(user);
+                return GetView(await GetCurrentUser());
             }); 
         }
 
@@ -133,11 +145,10 @@ namespace contentapi.Controllers
         {
             return ThrowToAction<UserView>(async () => 
             {
-                var id = GetRequesterUid();
-                var user = await provider.FindByIdAsync(id);
-
+                var user = await GetCurrentUser();
                 var userView = ConvertToView(user);
 
+                //Only set avatar if they gave us something
                 if(data.avatar >= 0)
                     userView.avatar = data.avatar;
 

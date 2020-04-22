@@ -19,16 +19,7 @@ using SixLabors.Primitives;
 
 namespace contentapi.Controllers
 {
-    //TODO: Many of these permission searches are the same (parentids). 
-    //Fix up some of this to be generic?
-
-    public class FileControllerProfile : Profile
-    {
-        public FileControllerProfile()
-        {
-            CreateMap<FileSearch, EntitySearch>().ForMember(x => x.NameLike, o => o.MapFrom(s => s.Name));
-        }
-    }
+    public class FileSearch : BaseContentSearch { }
 
     public class FileControllerConfig
     {
@@ -81,7 +72,7 @@ namespace contentapi.Controllers
         //Convert path to appropriate etag
         protected string GetETag(string path)
         {
-            return path.Replace(config.Location, "").Replace("\\", "").Replace("/", "");
+            return path.Replace(config.Location, "").Replace("\\", "Z").Replace("/", "Z");
         }
 
         protected string GetAndMakePath(long id, GetFileModify modify = null)

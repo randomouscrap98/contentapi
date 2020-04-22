@@ -15,6 +15,10 @@ using Randomous.EntitySystem;
 
 namespace contentapi.Controllers
 {
+    public class CommentSearch : BaseParentSearch
+    {
+        public List<long> UserIds {get;set;}
+    }
 
     public class CommentListener
     {
@@ -36,20 +40,28 @@ namespace contentapi.Controllers
         {
             return UserId.GetHashCode();
         }
+
+        public override string ToString()
+        {
+            return $"u{UserId}-c{ContentListenId}";
+        }
+
     }
 
     public class CommentControllerProfile : Profile
     {
         public CommentControllerProfile()
         {
-            CreateMap<CommentSearch, EntityRelationSearch>()
-                .ForMember(x => x.EntityIds1, o => o.MapFrom(s => s.ParentIds))
-                .ForMember(x => x.EntityIds2, o => o.MapFrom(s => s.UserIds.Select(x => -x).ToList()));
             CreateMap<CommentView, EntityRelation>()
                 .ForMember(x => x.entityId1, o => o.MapFrom(s => s.parentId))
                 .ForMember(x => x.entityId2, o => o.MapFrom(s => s.createUserId))
                 .ForMember(x => x.value, o => o.MapFrom(s => s.content))
                 .ReverseMap();
+
+            CreateMap<CommentSearch, EntityRelationSearch>()
+                .ForMember(x => x.EntityIds1, o => o.MapFrom(s => s.ParentIds))
+                .ForMember(x => x.EntityIds2, o => o.MapFrom(s => s.UserIds.Select(x => -x).ToList()));
+                //We actually CAN map parent ids directly
         }
     }
 
@@ -211,9 +223,11 @@ namespace contentapi.Controllers
         [HttpGet]
         public async Task<ActionResult<List<CommentView>>> GetAsync([FromQuery]CommentSearch search)
         {
+            var user = GetRequesterUidNoFail();
+            logger.LogDebug($"Comment GetAsync called by {user}");
+
             var relationSearch = ModifySearch(services.mapper.Map<EntityRelationSearch>(search));
 
-            var user = GetRequesterUidNoFail();
 
             var query = BasicPermissionQuery(services.provider.ApplyEntityRelationSearch(services.provider.GetQueryable<EntityRelation>(), relationSearch, false), user, keys.ReadAction);
 
