@@ -94,9 +94,7 @@ namespace contentapi.Controllers
                     .Where(x => x.value.key == keys.KeywordKey && EF.Functions.Like(x.value.value, search.Keyword));
             }
 
-            var idHusk = ConvertToHusk(initial);
-
-            return await ViewResult(FinalizeHusk<Entity>(idHusk, entitySearch));
+            return await ViewResult(FinalizeQuery(initial, entitySearch));
         }
     }
 }

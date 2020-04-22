@@ -40,24 +40,6 @@ namespace contentapi.Controllers
         {
         }
 
-        //protected IQueryable<EntityRRGroup> BasicPermissionQuery(IQueryable<EntityRelation> query, long user, string action, bool includeAnonymous)
-        //{
-        //    var result = query.Join(services.provider.GetQueryable<EntityRelation>(), r => -r.entityId2, r2 => r2.entityId2,
-        //              (r,r2) => new EntityRRGroup() { relation = r2, relation2 = r });
-
-        //        //NOTE: the relations are SWAPPED because the intial group we applied the search to is the COMMENTS,
-        //        //but permission where expects the FIRST relation to be permissions
-        //    
-        //    //result = PermissionWhere(result, user, action, (x) => x.relation2.entityId1 <= 0);
-
-        //    result = PermissionWhere(result, user, action, new PermissionExtras() { allowNegativeOwnerRelation = includeAnonymous });
-        //    //relation2 is OUR relations (the activity)
-        //    //result = result.Where(x => (includeAnonymous && x.relation2.entityId1 <= 0) || (user > 0 && x.relation.type == keys.CreatorRelation && x.relation.entityId1 == user) ||
-        //    //    (x.relation.type == action && (x.relation.entityId1 == 0 || x.relation.entityId1 == user)));
-
-        //    return result;
-        //}
-
         protected EntityRelationSearch ModifySearch(EntityRelationSearch search)
         {
             //It is safe to just call any endpoint, because the count is limited to 1000.
@@ -96,9 +78,7 @@ namespace contentapi.Controllers
             var query = BasicReadQuery(user, relationSearch, x => -x.entityId2, new PermissionExtras() { allowNegativeOwnerRelation = search.IncludeAnonymous} )
                             .Where(x => x.relation.type != $"{keys.ActivityKey}{keys.FileType}");
 
-            var idHusk = ConvertToHusk(query, x => x.relation.id);
-
-            var relations = await services.provider.GetListAsync(FinalizeHusk<EntityRelation>(idHusk, relationSearch));
+            var relations = await services.provider.GetListAsync(FinalizeQuery<EntityRelation>(query, x=> x.relation.id, relationSearch));
 
             return new ActivityResultView()
             {

@@ -193,10 +193,10 @@ namespace contentapi.Controllers
             return query;
         }
 
-        protected IQueryable<EntityBase> ConvertToHusk(IQueryable<EntityGroup> groups, Expression<Func<EntityGroup, long>> groupId)
-        {
-            return groups.GroupBy(groupId).Select(x => new EntityBase() { id = x.Key });
-        }
+        //protected IQueryable<EntityBase> ConvertToHusk(IQueryable<EntityGroup> groups, Expression<Func<EntityGroup, long>> groupId)
+        //{
+        //    return groups.GroupBy(groupId).Select(x => new EntityBase() { id = x.Key });
+        //}
 
         /// <summary>
         /// Given a completed IQueryable, apply the final touches to get a real list of entities
@@ -204,9 +204,15 @@ namespace contentapi.Controllers
         /// <param name="foundEntities"></param>
         /// <param name="search"></param>
         /// <returns></returns>
-        protected IQueryable<E> FinalizeHusk<E>(IQueryable<EntityBase> foundEntities, EntitySearchBase search) where E : EntityBase
+        protected IQueryable<E> FinalizeQuery<E>(IQueryable<EntityGroup> groups, Expression<Func<EntityGroup, long>> groupId, EntitySearchBase search) where E : EntityBase
         {
-            var ids = provider.ApplyFinal(foundEntities, search).Select(x => x.id);
+            //Group givens by grouping id and select only the grouped ID (all databases can do this)
+            var husks = groups.GroupBy(groupId).Select(x => new EntityBase() { id = x.Key });
+
+            //Apply the final search parameters on the RESULT (that would be ordering/limiting/etc)
+            var ids = provider.ApplyFinal(husks, search).Select(x => x.id);
+
+            //Join the ids with the actual table you want to get the final product (since grouping doesn't persist... ugh)
             var join =
                 from e in provider.GetQueryable<E>()
                 join i in ids on e.id equals i

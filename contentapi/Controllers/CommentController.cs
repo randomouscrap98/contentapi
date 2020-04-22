@@ -223,8 +223,7 @@ namespace contentapi.Controllers
             //Entity1 is the content, content owns comments. The hack is entity2, which is not a child but a user.
             var query = BasicReadQuery(user, relationSearch, x => x.entityId1);
 
-            var idHusk = ConvertToHusk(query, x => x.relation.id);
-            var relations = await services.provider.GetListAsync(FinalizeHusk<EntityRelation>(idHusk, relationSearch));
+            var relations = await services.provider.GetListAsync(FinalizeQuery<EntityRelation>(query, x=> x.relation.id, relationSearch));
 
             return await ViewResult(relations);
         }

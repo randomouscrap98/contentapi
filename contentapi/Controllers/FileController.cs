@@ -234,9 +234,7 @@ namespace contentapi.Controllers
             if(search.ParentIds.Count > 0)
                 perms = WhereParents(perms, search.ParentIds);
 
-            var idHusk = ConvertToHusk(perms);
-
-            return await ViewResult(FinalizeHusk<Entity>(idHusk, entitySearch));
+            return await ViewResult(FinalizeQuery(perms, entitySearch));
         }
 
         [HttpGet]

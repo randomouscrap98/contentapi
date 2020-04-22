@@ -314,9 +314,14 @@ namespace contentapi.Controllers
             return BasicReadQuery(user, search, x => x.id);
         }
 
-        protected IQueryable<EntityBase> ConvertToHusk(IQueryable<EntityGroup> groups)
+        protected IQueryable<Entity> FinalizeQuery(IQueryable<EntityGroup> groups, EntitySearch search)
         {
-            return ConvertToHusk(groups, x => x.entity.id);
+            return FinalizeQuery<Entity>(groups, x => x.entity.id, search);
         }
+
+        //protected IQueryable<EntityBase> ConvertToHusk(IQueryable<EntityGroup> groups)
+        //{
+        //    return ConvertToHusk(groups, x => x.entity.id);
+        //}
     }
 }
