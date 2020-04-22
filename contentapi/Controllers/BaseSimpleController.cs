@@ -193,11 +193,6 @@ namespace contentapi.Controllers
             return query;
         }
 
-        //protected IQueryable<EntityBase> ConvertToHusk(IQueryable<EntityGroup> groups, Expression<Func<EntityGroup, long>> groupId)
-        //{
-        //    return groups.GroupBy(groupId).Select(x => new EntityBase() { id = x.Key });
-        //}
-
         /// <summary>
         /// Given a completed IQueryable, apply the final touches to get a real list of entities
         /// </summary>

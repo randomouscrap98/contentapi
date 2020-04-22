@@ -318,10 +318,5 @@ namespace contentapi.Controllers
         {
             return FinalizeQuery<Entity>(groups, x => x.entity.id, search);
         }
-
-        //protected IQueryable<EntityBase> ConvertToHusk(IQueryable<EntityGroup> groups)
-        //{
-        //    return ConvertToHusk(groups, x => x.entity.id);
-        //}
     }
 }

@@ -35,7 +35,7 @@ namespace contentapi.Controllers
             : base(services, logger) { }
 
         protected override string EntityType => keys.ContentType;
-        protected override string ParentType => null; //keys.CategoryType;
+        protected override string ParentType => null;
         
         protected override EntityPackage CreateBasePackage(ContentView view)
         {

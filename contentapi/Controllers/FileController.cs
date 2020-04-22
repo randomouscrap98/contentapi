@@ -178,7 +178,7 @@ namespace contentapi.Controllers
             if(!CanCurrentUser(keys.ReadAction, fileData))
                 return NotFound(); //This needs to be the norm. Fix it!
             
-            var finalPath = GetAndMakePath(fileData.Entity.id, modify); //new Func<string>(() => GetPath(fileData.Entity.id, modify));
+            var finalPath = GetAndMakePath(fileData.Entity.id, modify); 
             
             //Ok NOW we can go get it. We may need to perform a resize beforehand if we can't find the file.
             if(!System.IO.File.Exists(finalPath))
