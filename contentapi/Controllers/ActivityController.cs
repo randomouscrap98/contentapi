@@ -10,14 +10,6 @@ using Randomous.EntitySystem;
 
 namespace contentapi.Controllers
 {
-    public class ActivitySearch : EntitySearchBase
-    {
-        public List<long> UserIds {get;set;} = new List<long>();
-        public List<long> ContentIds {get;set;} = new List<long>();
-
-        public string Type {get;set;}
-    }
-
     public class ActivityControllerProfile : Profile
     {
         public ActivityControllerProfile() 

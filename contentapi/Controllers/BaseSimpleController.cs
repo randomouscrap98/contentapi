@@ -171,13 +171,6 @@ namespace contentapi.Controllers
                 join i in ids on e.id equals i
                 select e;
 
-            ////This is REPEAT CODE! FIGURE OUT HOW TO FIX THIS! This is required because order is not preserved
-            ////after the "join" (the fake join using in-memory data oof)
-            //if(search.Reverse)
-            //    join = join.OrderByDescending(x => x.id);
-            //else
-            //    join = join.OrderBy(x => x.id);
-
             return join;
         }
 

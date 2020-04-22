@@ -7,7 +7,7 @@ namespace contentapi.Views
     {
         [Required]
         [StringLength(128, MinimumLength=1)]
-        public string title {get;set;}
+        public string name {get;set;}
 
         [Required]
         [StringLength(65536, MinimumLength = 2)]

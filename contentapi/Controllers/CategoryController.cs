@@ -12,12 +12,6 @@ using Randomous.EntitySystem.Extensions;
 
 namespace contentapi.Controllers
 {
-    public class CategorySearch : EntitySearchBase
-    {
-        public string Name {get;set;}
-        public List<long> ParentIds {get;set;} = new List<long>();
-    }
-
     public class CategoryControllerProfile : Profile
     {
         public CategoryControllerProfile()

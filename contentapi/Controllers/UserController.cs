@@ -14,11 +14,6 @@ using Randomous.EntitySystem.Extensions;
 
 namespace contentapi.Controllers
 {
-    public class UserSearch : EntitySearchBase
-    {
-        public string Username {get;set;}
-    }
-
     public class UserControllerProfile : Profile
     {
         public UserControllerProfile()

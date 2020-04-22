@@ -15,11 +15,6 @@ using Randomous.EntitySystem;
 
 namespace contentapi.Controllers
 {
-    public class CommentSearch : EntitySearchBase
-    {
-        public List<long> UserIds {get;set;}
-        public List<long> ParentIds {get;set;} = new List<long>();
-    }
 
     public class CommentListener
     {

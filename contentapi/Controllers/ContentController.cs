@@ -13,20 +13,12 @@ using Randomous.EntitySystem.Extensions;
 
 namespace contentapi.Controllers
 {
-    public class ContentSearch : EntitySearchBase
-    {
-        public string Title {get;set;}
-        public string Keyword {get;set;}
-        public string Type {get;set;}
-        public List<long> ParentIds {get;set;} = new List<long>();
-    }
-
     public class ContentControllerProfile : Profile
     {
         public ContentControllerProfile()
         {
             CreateMap<ContentSearch, EntitySearch>()
-                .ForMember(x => x.NameLike, o => o.MapFrom(s => s.Title))
+                .ForMember(x => x.NameLike, o => o.MapFrom(s => s.Name))
                 .ForMember(x => x.TypeLike, o => o.MapFrom(s => s.Type));
         }
     }
@@ -41,7 +33,7 @@ namespace contentapi.Controllers
         
         protected override EntityPackage CreateBasePackage(ContentView view)
         {
-            var package = NewEntity(view.title, view.content);
+            var package = NewEntity(view.name, view.content);
 
             //Need to add LOTS OF CRAP
             foreach(var keyword in view.keywords)
@@ -59,7 +51,7 @@ namespace contentapi.Controllers
         protected override ContentView CreateBaseView(EntityPackage package)
         {
             var view = new ContentView();
-            view.title = package.Entity.name;
+            view.name = package.Entity.name;
             view.content = package.Entity.content;
             view.type = package.Entity.type.Substring(EntityType.Length);
 

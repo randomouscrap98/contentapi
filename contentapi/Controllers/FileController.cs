@@ -21,11 +21,6 @@ namespace contentapi.Controllers
 {
     //TODO: Many of these permission searches are the same (parentids). 
     //Fix up some of this to be generic?
-    public class FileSearch : EntitySearchBase
-    {
-        public string Name {get;set;}
-        public List<long> ParentIds {get;set;} = new List<long>();
-    }
 
     public class FileControllerProfile : Profile
     {
@@ -39,12 +34,6 @@ namespace contentapi.Controllers
     {
         public string Location {get;set;}
         public int MaxSize {get;set;}
-    }
-
-    public class GetFileModify
-    {
-        public int size {get;set;}
-        public bool square {get;set;}
     }
 
     public class FileController : BasePermissionController<FileView>
@@ -87,6 +76,12 @@ namespace contentapi.Controllers
             }
 
             return Path.Join(config.Location, name);
+        }
+
+        //Convert path to appropriate etag
+        protected string GetETag(string path)
+        {
+            return path.Replace(config.Location, "").Replace("\\", "").Replace("/", "");
         }
 
         protected string GetAndMakePath(long id, GetFileModify modify = null)
@@ -161,15 +156,14 @@ namespace contentapi.Controllers
             return ThrowToAction(() => WriteViewAsync(view));
         }
 
-        //protected int FixSize(int size)
-        //{
-        //    if (size <= 100)
-        //        size = 10 * size / 10;
-        //    else if (size <= 1000)
-        //        size = 100 * size / 100;
-        //}
+        public class GetFileModify
+        {
+            public int size {get;set;}
+            public bool square {get;set;}
+        }
 
         [HttpGet("raw/{id}")]
+        [ResponseCache(Duration=13824000)] //six months
         public async Task<IActionResult> GetFileAsync([FromRoute]long id, [FromQuery]GetFileModify modify)
         {
             if(modify.size > 0)
@@ -234,6 +228,7 @@ namespace contentapi.Controllers
                 });
             }
 
+            Response.Headers.Add("ETag", GetETag(finalPath));
             return File(System.IO.File.OpenRead(finalPath), fileData.Entity.content);
         }
 

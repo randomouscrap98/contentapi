@@ -68,6 +68,11 @@ namespace contentapi.Controllers
             return package;
         }
 
+        protected void MakeHistoric(Entity entity)
+        {
+            entity.type = keys.HistoryKey + (entity.type ?? "");
+        }
+
         /// <summary>
         /// Put a copy of the given entity (after modifications) into history
         /// </summary>
@@ -80,11 +85,6 @@ namespace contentapi.Controllers
             MakeHistoric(newEntity);
             await provider.WriteAsync(newEntity);
             return newEntity;
-        }
-
-        protected void MakeHistoric(Entity entity)
-        {
-            entity.type = keys.HistoryKey + (entity.type ?? "");
         }
 
         /// <summary>
@@ -201,6 +201,13 @@ namespace contentapi.Controllers
             return ConvertToView(await WriteViewBaseAsync(view));
         }
 
+        /// <summary>
+        /// Produce an activity for the given entity and action. Can include ONE piece of extra data.
+        /// </summary>
+        /// <param name="entity"></param>
+        /// <param name="action"></param>
+        /// <param name="extra"></param>
+        /// <returns></returns>
         protected EntityRelation MakeActivity(Entity entity, string action, string extra = null)
         {
             var activity = new EntityRelation();
@@ -263,7 +270,11 @@ namespace contentapi.Controllers
             return search;
         }
 
-
+        /// <summary>
+        /// A shortcut for producing a list of views from a list of base entities
+        /// </summary>
+        /// <param name="query"></param>
+        /// <returns></returns>
         protected async virtual Task<List<V>> ViewResult(IQueryable<Entity> query)
         {
             var packages = await provider.LinkAsync(query);
