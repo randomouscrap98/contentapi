@@ -83,10 +83,7 @@ namespace contentapi
                         options.UseMySql(dbConfig.ConnectionString);
                     }
 
-                    if(dbConfig.SensitiveLogging)
-                    {
-                        options.EnableSensitiveDataLogging(true);
-                    }
+                    options.EnableSensitiveDataLogging(dbConfig.SensitiveLogging);
                 }
             );
 
@@ -156,10 +153,6 @@ namespace contentapi
             else
                 app.UseExceptionHandler("/error");
             
-            //if (env.IsDevelopment())
-            //{
-            //    app.UseDeveloperExceptionPage();
-            //}
 
             //Wide open for now, this might need to be changed later.
             app.UseCors(x => x.AllowAnyOrigin().AllowAnyMethod().AllowAnyHeader());

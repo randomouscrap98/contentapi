@@ -237,16 +237,19 @@ namespace contentapi.Controllers
         {
             return ThrowToAction(async() =>
             {
+                //Need to see if user has perms to read this.
+                var parent = await FullParentCheckAsync(parentId, keys.ReadAction);
+
                 DateTime start = DateTime.Now;
                 var listenSet = lastListeners.ToHashSet();
 
                 while (DateTime.Now - start < services.systemConfig.ListenTimeout)
                 {
-                    listenDecayer.UpdateList(GetListeners(parentId));
-                    var result = listenDecayer.DecayList(services.systemConfig.ListenGracePeriod);
+                    listenDecayer.UpdateList(GetListeners());
+                    var result = listenDecayer.DecayList(services.systemConfig.ListenGracePeriod).Where(x => x.ContentListenId == parentId);
 
                     if (!result.Select(x => x.UserId).ToHashSet().SetEquals(listenSet))
-                        return result;
+                        return result.ToList();
 
                     await Task.Delay(TimeSpan.FromSeconds(2), token);
                     token.ThrowIfCancellationRequested();

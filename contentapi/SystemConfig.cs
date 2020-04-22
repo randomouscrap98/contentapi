@@ -7,8 +7,7 @@ namespace contentapi
     {
         public List<long> SuperUsers {get;set;} = new List<long>();
         public bool SuperRootCategories {get;set;}
-        public TimeSpan ListenTimeout {get;set;} //= TimeSpan.FromSeconds(300);
-        public TimeSpan ListenGracePeriod {get;set;} //= TimeSpan.FromSeconds(5);
-
+        public TimeSpan ListenTimeout {get;set;}
+        public TimeSpan ListenGracePeriod {get;set;}
     }
 }

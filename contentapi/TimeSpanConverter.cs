@@ -6,6 +6,9 @@ using System.Text.Json.Serialization;
 namespace contentapi
 {
     //Taken directly from https://stackoverflow.com/a/58284103/1066474
+    /// <summary>
+    /// Makes timespans display properly in views, configured in startup
+    /// </summary>
     public class TimeSpanToStringConverter : JsonConverter<TimeSpan>
     {
         public override TimeSpan Read(ref Utf8JsonReader reader, Type typeToConvert, JsonSerializerOptions options)

@@ -168,7 +168,7 @@ namespace contentapi.Controllers
 
             if(user.username != null)
             {
-                foundUser = await provider.FindByNameAsync(user.username);
+                foundUser = await FindByNameAsync(user.username);
             }
             else if (user.email != null)
             {
@@ -221,7 +221,7 @@ namespace contentapi.Controllers
             if(user.email == null)
                 return BadRequest("Must provide an email!");
 
-            if(await provider.FindByNameBaseAsync(user.username) != null || await provider.FindValueAsync(keys.EmailKey, user.email) != null)
+            if(await FindByNameBaseAsync(user.username) != null || await provider.FindValueAsync(keys.EmailKey, user.email) != null)
                 return BadRequest("This user already seems to exist!");
             
             var salt = hashService.GetSalt();

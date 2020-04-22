@@ -17,6 +17,7 @@ namespace contentapi.Controllers
         [Authorize]
         public Task<ActionResult<V>> PostAsync([FromBody]V view)
         {
+            logger.LogInformation($"PostAsync called, {typeof(V)}");
             view.id = 0;
             return ThrowToAction(() => WriteViewAsync(view));
         }
@@ -25,6 +26,7 @@ namespace contentapi.Controllers
         [Authorize]
         public Task<ActionResult<V>> PutAsync([FromRoute] long id, [FromBody]V view)
         {
+            logger.LogInformation($"PutAsync called, {typeof(V)}({view.id})");
             view.id = id;
             return ThrowToAction(() => WriteViewAsync(view));
         }
@@ -33,6 +35,7 @@ namespace contentapi.Controllers
         [Authorize]
         public Task<ActionResult<V>> DeleteAsync([FromRoute]long id)
         {
+            logger.LogInformation($"DeleteAsync called, {typeof(V)}({id})");
             return ThrowToAction(() => DeleteByIdAsync(id));
         }
     }

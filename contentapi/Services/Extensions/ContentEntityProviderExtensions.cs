@@ -24,33 +24,6 @@ namespace contentapi.Services.Extensions
             return (await entityProvider.GetEntityValuesAsync(valueSearch)).OnlySingle();
         }
 
-        public static async Task<T> FindByNameAsyncGeneric<T>(this IEntityProvider provider, string name, Func<EntitySearch, Task<List<T>>> searcher)
-        {
-            return (await searcher(new EntitySearch() {NameLike = name})).OnlySingle();
-        }
-
-        /// <summary>
-        /// Find some entity by name
-        /// </summary>
-        /// <param name="name"></param>
-        /// <typeparam name="E"></typeparam>
-        /// <returns></returns>
-        public static Task<EntityPackage> FindByNameAsync(this IEntityProvider provider, string name)
-        {
-            return provider.FindByNameAsyncGeneric(name, provider.GetEntityPackagesAsync);
-        }
-
-        /// <summary>
-        /// Find some entity by name
-        /// </summary>
-        /// <param name="name"></param>
-        /// <typeparam name="E"></typeparam>
-        /// <returns></returns>
-        public static Task<Entity> FindByNameBaseAsync(this IEntityProvider provider, string name)
-        {
-            return provider.FindByNameAsyncGeneric(name, provider.GetEntitiesAsync);
-        }
-
         public static async Task<T> FindByIdAsyncGeneric<T>(this IEntityProvider provider, long id, Func<EntitySearch, Task<List<T>>> searcher)
         {
             var search = new EntitySearch();

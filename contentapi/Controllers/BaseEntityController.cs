@@ -167,6 +167,8 @@ namespace contentapi.Controllers
                     writes.AddRange(existing.Values);
                     writes.AddRange(existing.Relations);
                     FlattenPackage(package, writes);
+
+                    writes.Add(MakeActivity(package.Entity, keys.UpdateAction, history.id.ToString()));
                 }
                 else
                 {
@@ -177,6 +179,8 @@ namespace contentapi.Controllers
 
                     writes.AddRange(package.Values);
                     writes.AddRange(package.Relations);
+
+                    writes.Add(MakeActivity(package.Entity, keys.CreateAction));
                 }
 
                 //Now try to write everything we added to the "transaction" (sometimes you just NEED an id and I can't let
@@ -197,6 +201,21 @@ namespace contentapi.Controllers
             return ConvertToView(await WriteViewBaseAsync(view));
         }
 
+        protected EntityRelation MakeActivity(Entity entity, string action, string extra = null)
+        {
+            var activity = new EntityRelation();
+            activity.entityId1 = GetRequesterUidNoFail();
+            activity.entityId2 = -entity.id; //It has to be NEGATIVE because we don't want them linked to content
+            activity.createDate = DateTime.Now;
+            activity.type = keys.ActivityKey + entity.type;
+            activity.value = action;
+
+            if(!string.IsNullOrWhiteSpace(extra))
+                activity.value += extra;
+
+            return activity;
+        }
+
         /// <summary>
         /// Allow "fake" deletion of ANY historic entity (of any type)
         /// </summary>
@@ -207,7 +226,7 @@ namespace contentapi.Controllers
             var package = await DeleteCheckAsync(entityId);
             var view = ConvertToView(package);
             MakeHistoric(package.Entity);
-            await provider.WriteAsync(package.Entity);     //Notice it is a WRITe and not a delete.
+            await provider.WriteAsync<EntityBase>(package.Entity, MakeActivity(package.Entity, keys.DeleteAction, package.Entity.name));     //Notice it is a WRITe and not a delete.
             return view;
         }
 
@@ -250,5 +269,33 @@ namespace contentapi.Controllers
             var packages = await provider.LinkAsync(query);
             return packages.Select(x => ConvertToView(x)).ToList();
         }
+
+        protected async Task<T> FindByNameAsyncGeneric<T>(string name, Func<EntitySearch, Task<List<T>>> searcher)
+        {
+            return (await searcher(new EntitySearch() {NameLike = name, TypeLike = $"{EntityType}%"})).OnlySingle();
+        }
+
+        /// <summary>
+        /// Find some entity by name
+        /// </summary>
+        /// <param name="name"></param>
+        /// <typeparam name="E"></typeparam>
+        /// <returns></returns>
+        protected Task<EntityPackage> FindByNameAsync(string name)
+        {
+            return FindByNameAsyncGeneric(name, provider.GetEntityPackagesAsync);
+        }
+
+        /// <summary>
+        /// Find some entity by name
+        /// </summary>
+        /// <param name="name"></param>
+        /// <typeparam name="E"></typeparam>
+        /// <returns></returns>
+        protected Task<Entity> FindByNameBaseAsync(string name)
+        {
+            return FindByNameAsyncGeneric(name, provider.GetEntitiesAsync);
+        }
+
     }
 }

@@ -39,7 +39,6 @@ namespace contentapi
         public string CategoryType => "tc";
         public string ContentType => "tp"; //p for page/post
         public string FileType => "tf";
-        //public string CommentType => "ta"; //a for addendum or annotation
 
 
         //User stuff  (keys for entity values)
@@ -52,10 +51,8 @@ namespace contentapi
 
         //Awful hacks
         public string CommentHack => "Zcc";
-        //public string CommentHackModified => "Zcc*";
         public string CommentHistoryHack =>"Zcu";
         public string CommentDeleteHack =>"Zcd";
-        //public string CommentHackRelationSearch => "Zc[ud]%";
 
 
         public void EnsureAllUnique()
