@@ -162,9 +162,9 @@ namespace contentapi.Controllers
                 if (modify.size < 10)
                     return BadRequest("Too small!");
                 else if (modify.size <= 100)
-                    modify.size = 10 * modify.size / 10;
+                    modify.size = 10 * (modify.size / 10);
                 else if (modify.size <= 1000)
-                    modify.size = 100 * modify.size / 100;
+                    modify.size = 100 * (modify.size / 100);
                 else
                     return BadRequest("Too large!");
             }

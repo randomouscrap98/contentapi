@@ -131,6 +131,17 @@ namespace contentapi.Controllers
 
         protected IQueryable<E> PermissionWhere<E>(IQueryable<E> query, long user, string action) where E : EntityRGroup
         {
+            bool superUser = services.systemConfig.SuperUsers.Contains(user);
+
+            //Immediately apply a limiter so we're not joining on every dang relation ever (including comments etc).
+            //The amount of creators and actions of a single type is SO MUCH LOWER. I'm not sure how optimized these
+            //queries can get but better safe than sorry
+            query = query.Where(x => x.relation.type == keys.CreatorRelation || x.relation.type == action);
+            
+            //Nothing else to do, the user can do it if it's update or delete.
+            if(superUser && (action == keys.UpdateAction || action == keys.DeleteAction))
+                return query;
+
             return query.Where(x => (user > 0 && x.relation.type == keys.CreatorRelation && x.relation.entityId1 == user) ||
                 (x.relation.type == action && (x.relation.entityId1 == 0 || x.relation.entityId1 == user)));
         }

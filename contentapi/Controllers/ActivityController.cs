@@ -52,8 +52,7 @@ namespace contentapi.Controllers
                 //NOTE: the relations are SWAPPED because the intial group we applied the search to is the COMMENTS,
                 //but permission where expects the FIRST relation to be permissions
             
-            //This means you can only read comments if you can read the content. Meaning you may be unable to read your own comment.... oh well.
-            //result = PermissionWhere(result, user, action);
+            //relation2 is OUR releations (the activity)
             result = result.Where(x => x.relation2.entityId1 <= 0 || (user > 0 && x.relation.type == keys.CreatorRelation && x.relation.entityId1 == user) ||
                 (x.relation.type == action && (x.relation.entityId1 == 0 || x.relation.entityId1 == user)));
 

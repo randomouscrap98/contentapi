@@ -124,7 +124,7 @@ namespace contentapi.Controllers
             return Task.FromResult(view);
         }
 
-        protected async Task<EntityPackage> WriteViewBaseAsync(V view)
+        protected async Task<EntityPackage> WriteViewBaseAsync(V view, Action<EntityPackage> modifyBeforeCreate = null)
         {
             logger.LogTrace("WriteViewAsync called");
 
@@ -168,7 +168,7 @@ namespace contentapi.Controllers
                     writes.AddRange(existing.Relations);
                     FlattenPackage(package, writes);
 
-                    writes.Add(MakeActivity(package.Entity, keys.UpdateAction, history.id.ToString()));
+                    writes.Add(MakeActivity(package, keys.UpdateAction, history.id.ToString()));
                 }
                 else
                 {
@@ -176,11 +176,12 @@ namespace contentapi.Controllers
                     failDeletes.Add(package.Entity);
 
                     Relink(package);
+                    modifyBeforeCreate?.Invoke(package);
 
                     writes.AddRange(package.Values);
                     writes.AddRange(package.Relations);
 
-                    writes.Add(MakeActivity(package.Entity, keys.CreateAction));
+                    writes.Add(MakeActivity(package, keys.CreateAction));
                 }
 
                 //Now try to write everything we added to the "transaction" (sometimes you just NEED an id and I can't let
@@ -208,13 +209,13 @@ namespace contentapi.Controllers
         /// <param name="action"></param>
         /// <param name="extra"></param>
         /// <returns></returns>
-        protected EntityRelation MakeActivity(Entity entity, string action, string extra = null)
+        protected EntityRelation MakeActivity(EntityPackage package, string action, string extra = null, long userOverride = -1)
         {
             var activity = new EntityRelation();
-            activity.entityId1 = GetRequesterUidNoFail();
-            activity.entityId2 = -entity.id; //It has to be NEGATIVE because we don't want them linked to content
+            activity.entityId1 = userOverride >= 0 ? userOverride : GetRequesterUidNoFail(); //package.GetRelation(keys.CreatorRelation).entityId1; //GetRequesterUidNoFail();
+            activity.entityId2 = -package.Entity.id; //It has to be NEGATIVE because we don't want them linked to content
             activity.createDate = DateTime.Now;
-            activity.type = keys.ActivityKey + entity.type;
+            activity.type = keys.ActivityKey + package.Entity.type;
             activity.value = action;
 
             if(!string.IsNullOrWhiteSpace(extra))
@@ -233,7 +234,7 @@ namespace contentapi.Controllers
             var package = await DeleteCheckAsync(entityId);
             var view = ConvertToView(package);
             MakeHistoric(package.Entity);
-            await provider.WriteAsync<EntityBase>(package.Entity, MakeActivity(package.Entity, keys.DeleteAction, package.Entity.name));     //Notice it is a WRITe and not a delete.
+            await provider.WriteAsync<EntityBase>(package.Entity, MakeActivity(package, keys.DeleteAction, package.Entity.name));     //Notice it is a WRITe and not a delete.
             return view;
         }
 

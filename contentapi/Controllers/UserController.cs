@@ -237,7 +237,13 @@ namespace contentapi.Controllers
             fullUser.password = Convert.ToBase64String(hashService.GetHash(fullUser.password, salt));
             fullUser.registrationKey = Guid.NewGuid().ToString();
 
-            return await ThrowToAction(async() => GetView(await WriteViewBaseAsync(fullUser)));
+            return await ThrowToAction(async() => GetView(await WriteViewBaseAsync(fullUser, (p) => 
+            {
+                //Before creating the user, we need to set the owner as themselves, not as anonymous.
+                var creatorRelation = p.GetRelation(keys.CreatorRelation);
+                creatorRelation.entityId1 = creatorRelation.entityId2;
+                creatorRelation.value = creatorRelation.entityId2.ToString(); //Warn: this is VERY implementation specific! Kinda sucks to have two pieces of code floating around!
+            })));
         }
 
         public class RegistrationEmailPost
