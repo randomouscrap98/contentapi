@@ -8,22 +8,6 @@ namespace contentapi.Services.Extensions
 {
     public static class ContentEntityProviderExtensions
     {
-        /// <summary>
-        /// Find a value by key/value/id (added constraints)
-        /// </summary>
-        /// <param name="key"></param>
-        /// <param name="value"></param>
-        /// <returns></returns>
-        public static async Task<EntityValue> FindValueAsync(this IEntityProvider entityProvider, string key, string value = null, long id = -1)
-        {
-            var valueSearch = new EntityValueSearch() { KeyLike = key };
-            if(value != null)
-                valueSearch.ValueLike = value;
-            if(id > 0)
-                valueSearch.EntityIds.Add(id);
-            return (await entityProvider.GetEntityValuesAsync(valueSearch)).OnlySingle();
-        }
-
         public static async Task<T> FindByIdAsyncGeneric<T>(this IEntityProvider provider, long id, Func<EntitySearch, Task<List<T>>> searcher)
         {
             var search = new EntitySearch();

@@ -4,6 +4,7 @@ using System.Threading.Tasks;
 using contentapi.Services.Extensions;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
+using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.Logging;
 using Randomous.EntitySystem;
 
@@ -25,7 +26,7 @@ namespace contentapi.Controllers
                 KeyLike = keys.VariableKey + "%",
             };
 
-            search.EntityIds.Add(GetRequesterUid());
+            search.EntityIds.Add(-GetRequesterUid());
 
             var baseValues = services.provider.GetQueryable<EntityValue>();
             var searchValues = services.provider.ApplyEntityValueSearch(baseValues, search);
@@ -35,7 +36,19 @@ namespace contentapi.Controllers
 
         protected async Task<EntityValue> GetVariable(string key)
         {
-            return await services.provider.FindValueAsync(keys.VariableKey + key, null, GetRequesterUid());
+            var uid = GetRequesterUid();
+
+            var query = 
+                from v in provider.GetQueryable<EntityValue>()
+                where EF.Functions.Like(v.key, keys.VariableKey + key) && v.entityId == -uid
+                join e in provider.GetQueryable<Entity>() on -v.entityId equals e.id
+                where EF.Functions.Like(e.type, $"{keys.UserType}%")
+                select v;
+                //The JOIN is REQUIRED because we had some issues in the past of values getting
+                //duplicated across history keys. Now this code is stuck here forever until the database
+                //gets cleaned up.
+
+            return (await provider.GetListAsync(query)).OnlySingle();
         }
 
         [HttpGet("{key}")]
@@ -56,7 +69,7 @@ namespace contentapi.Controllers
             if(existing == null)
             {
                 existing = NewValue(keys.VariableKey + key, data);
-                existing.entityId = GetRequesterUid();
+                existing.entityId = -GetRequesterUid();
             }
             else
             {

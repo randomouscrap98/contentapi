@@ -298,6 +298,7 @@ namespace contentapi.Controllers
             return FindByNameAsyncGeneric(name, provider.GetEntityPackagesAsync);
         }
 
+
         /// <summary>
         /// Find some entity by name
         /// </summary>
@@ -307,6 +308,11 @@ namespace contentapi.Controllers
         protected Task<Entity> FindByNameBaseAsync(string name)
         {
             return FindByNameAsyncGeneric(name, provider.GetEntitiesAsync);
+        }
+
+        protected Task<EntityValue> FindValueAsync(string key, string value = null, long id = -1)
+        {
+            return FindValueAsync(EntityType, key, value, id);
         }
 
         protected IQueryable<EntityGroup> BasicReadQuery(long user, EntitySearch search)

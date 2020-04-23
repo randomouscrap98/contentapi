@@ -294,5 +294,30 @@ namespace contentapi.Controllers
             return result;
         }
 
+        /// <summary>
+        /// Find a value by key/value/id (added constraints)
+        /// </summary>
+        /// <param name="key"></param>
+        /// <param name="value"></param>
+        /// <returns></returns>
+        protected async Task<EntityValue> FindValueAsync(string type, string key, string value = null, long id = -1) //long.MinValue)
+        {
+            var valueSearch = new EntityValueSearch() { KeyLike = key };
+            if(value != null)
+                valueSearch.ValueLike = value;
+            if(id > 0)
+                valueSearch.EntityIds.Add(id);
+            
+            var thing = 
+                from v in provider.ApplyEntityValueSearch(provider.GetQueryable<EntityValue>(), valueSearch)
+                //where EF.Functions.Like(v.key, key) && (value == null || EF.Functions.Like(v.value, value)) && (id == long.MinValue || v.entityId == id)
+                join e in provider.GetQueryable<Entity>() on v.entityId equals e.id
+                where EF.Functions.Like(e.type, $"{type}%")
+                select v;
+
+            return (await provider.GetListAsync(thing)).OnlySingle();
+            //).OnlySingle();
+        }
+
     }
 }

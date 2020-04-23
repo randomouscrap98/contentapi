@@ -178,7 +178,7 @@ namespace contentapi.Controllers
             }
             else if (user.email != null)
             {
-                var foundEmail = await provider.FindValueAsync(keys.EmailKey, user.email);
+                var foundEmail = await FindValueAsync(keys.EmailKey, user.email);
 
                 if(foundEmail != null)
                     foundUser = await provider.FindByIdAsync(foundEmail.entityId);
@@ -227,7 +227,7 @@ namespace contentapi.Controllers
             if(user.email == null)
                 return BadRequest("Must provide an email!");
 
-            if(await FindByNameBaseAsync(user.username) != null || await provider.FindValueAsync(keys.EmailKey, user.email) != null)
+            if(await FindByNameBaseAsync(user.username) != null || await FindValueAsync(keys.EmailKey, user.email) != null)
                 return BadRequest("This user already seems to exist!");
             
             var salt = hashService.GetSalt();
@@ -254,13 +254,13 @@ namespace contentapi.Controllers
         [HttpPost("register/sendemail")]
         public async Task<ActionResult> SendRegistrationEmail([FromBody]RegistrationEmailPost post)
         {
-            var emailValue = await provider.FindValueAsync(keys.EmailKey, post.email);
+            var emailValue = await FindValueAsync(keys.EmailKey, post.email);
 
             if(emailValue == null)
                 return BadRequest("No user with that email");
 
             //Now look up the registration code (that's all we need from user)
-            var registrationCode = await provider.FindValueAsync(keys.RegistrationCodeKey, null, emailValue.entityId);
+            var registrationCode = await FindValueAsync(keys.RegistrationCodeKey, null, emailValue.entityId);
 
             if(registrationCode == null)
                 return BadRequest("Nothing to do for user");
@@ -281,7 +281,7 @@ namespace contentapi.Controllers
             if(string.IsNullOrEmpty(post.confirmationKey))
                 return BadRequest("Must provide a confirmation key in the body");
 
-            var confirmValue = await provider.FindValueAsync(keys.RegistrationCodeKey, post.confirmationKey);
+            var confirmValue = await FindValueAsync(keys.RegistrationCodeKey, post.confirmationKey);
 
             if(confirmValue == null)
                 return BadRequest("No user found with confirmation key");
