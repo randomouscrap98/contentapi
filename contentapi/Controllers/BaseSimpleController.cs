@@ -150,7 +150,7 @@ namespace contentapi.Controllers
             query = query.Where(x => x.permission.type == keys.CreatorRelation || x.permission.type == action);
             
             //Nothing else to do, the user can do it if it's update or delete.
-            if(superUser && (action == keys.UpdateAction || action == keys.DeleteAction))
+            if(superUser && (action == keys.UpdateAction || action == keys.DeleteAction || action == keys.ReadAction))
                 return query;
 
             return query.Where(x => 
@@ -215,6 +215,12 @@ namespace contentapi.Controllers
 
             return join;
         }
+
+        //protected IQueryable<E> FinalizeQuery<E>(IQueryable<EntityGroup> groups, Expression<Func<EntityGroup, E>> groupId, EntitySearchBase search) where E : EntityBase
+        //{
+        //    //Group givens by grouping id and select only the grouped ID (all databases can do this)
+        //    return provider.ApplyFinal(groups.GroupBy(groupId).Select(x => x.Key), search);
+        //}
 
         protected IQueryable<EntityGroup> WhereParents(IQueryable<EntityGroup> query, List<long> parentIds)
         {

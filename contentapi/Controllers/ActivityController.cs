@@ -17,6 +17,7 @@ namespace contentapi.Controllers
 
         public string Type {get;set;}
         public bool IncludeAnonymous {get;set;}
+        public TimeSpan recentCommentTime {get;set;}
     }
 
     public class ActivityControllerProfile : Profile
@@ -79,11 +80,36 @@ namespace contentapi.Controllers
                             .Where(x => x.relation.type != $"{keys.ActivityKey}{keys.FileType}");
 
             var relations = await services.provider.GetListAsync(FinalizeQuery<EntityRelation>(query, x=> x.relation.id, relationSearch));
+            var result = new ActivityResultView() { activity = relations.Select(x => ConvertToView(x)).ToList(), };
 
-            return new ActivityResultView()
+            //No matter the search, get comments for up to the recent thing.
+            if(search.recentCommentTime.Ticks > 0)
             {
-                activity = relations.Select(x => ConvertToView(x)).ToList()
-            };
+                var commentSearch = new EntityRelationSearch()
+                {
+                    TypeLike = $"{keys.CommentHack}%",
+                    CreateStart = DateTime.Now.Subtract(search.recentCommentTime),
+                    Reverse = true
+                };
+
+                var commentQuery = BasicReadQuery(user, commentSearch, x => x.entityId1); //entityid1 is the parent content, they need perms
+                var finalComments = await provider.GetListAsync(
+                    FinalizeQuery<EntityRelation>(commentQuery, x => x.relation.id, commentSearch) //ALWAYS GIVE ID GOSH
+                    .Select(x => new { contentId = x.entityId1, userId = -x.entityId2, date = x.createDate})); //We only want SOME fields, don't pull them all! TOO MUCH
+
+                foreach(var group in finalComments.ToLookup(x => x.contentId))
+                {
+                    result.comments.Add(new CommentActivityView()
+                    {
+                        count = group.Count(),
+                        parentId = group.Key,
+                        userIds = group.Select(x => x.userId).Distinct().ToList(),
+                        lastDate = group.Max(x => (DateTime)x.date),
+                    });
+                }
+            }
+
+            return result;
         }
     }
 }

@@ -5,12 +5,12 @@ namespace contentapi.Views
 {
     public class ActivityResultView
     {
-        public List<ActivityView> activity {get;set;}
-        public List<CommentActivity> comments {get;set;}
+        public List<ActivityView> activity {get;set;} = new List<ActivityView>();
+        public List<CommentActivityView> comments {get;set;} = new List<CommentActivityView>();
         //public List<UserViewBasic>  userData {get;set;}
     }
 
-    public class CommentActivity
+    public class CommentActivityView
     {
         public long parentId {get;set;}
         public int count {get;set;}

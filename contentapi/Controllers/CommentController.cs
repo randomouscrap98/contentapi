@@ -163,8 +163,8 @@ namespace contentapi.Controllers
             //Go find the parent. If it's not content, BAD BAD BAD
             var parent = await BasicParentCheckAsync(existing.entityId1);
 
-            //Only the owner can edit (until wee get permission overrides set up)
-            if(existing.entityId2 != -uid)
+            //Only the owner (and super users) can edit (until wee get permission overrides set up)
+            if(existing.entityId2 != -uid && !services.systemConfig.SuperUsers.Contains(uid))
                 throw new UnauthorizedAccessException($"Cannot update comment {uid}");
 
             return parent;
