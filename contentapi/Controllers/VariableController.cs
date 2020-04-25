@@ -1,3 +1,4 @@
+using System.Collections.Concurrent;
 using System.Collections.Generic;
 using System.Linq;
 using System.Threading.Tasks;
@@ -14,6 +15,8 @@ namespace contentapi.Controllers
     [Authorize]
     public class VariableController : BaseSimpleController
     {
+        protected ConcurrentDictionary<long, object> userlocks = new ConcurrentDictionary<long, object>();
+
         public VariableController(ControllerServices services, ILogger<BaseSimpleController> logger) : base(services, logger)
         {
         }
@@ -62,33 +65,43 @@ namespace contentapi.Controllers
         }
 
         [HttpPost("{key}")]
-        public async Task<ActionResult<string>> PostAsync([FromRoute]string key, [FromBody]string data)
+        public ActionResult<string> Post([FromRoute]string key, [FromBody]string data)
         {
-            var existing = await GetVariable(key);
+            //Because we have a single combined interface that MIGHt need to create or update, need to lock
+            var uid = GetRequesterUid();
 
-            if(existing == null)
+            lock(userlocks.GetOrAdd(uid, l => new object()))
             {
-                existing = NewValue(keys.VariableKey + key, data);
-                existing.entityId = -GetRequesterUid();
+                var existing = GetVariable(key).Result;
+
+                if (existing == null)
+                {
+                    existing = NewValue(keys.VariableKey + key, data);
+                    existing.entityId = -uid;
+                }
+                else
+                {
+                    existing.value = data;
+                }
+
+                services.provider.WriteAsync(existing).Wait();
+
+                return existing.value;
             }
-            else
-            {
-                existing.value = data;
-            }
-            
-            await services.provider.WriteAsync(existing);
-            
-            return existing.value;
         }
 
         [HttpDelete("{key}")]
-        public async Task<ActionResult<string>> DeleteAsync([FromRoute] string key)
+        public ActionResult<string> Delete([FromRoute] string key)
         {
-            var result = await GetVariable(key);
-            if(result == null)
-                return NotFound();
-            await services.provider.DeleteAsync(result);
-            return result.value;
+            var uid = GetRequesterUid();
+            lock(userlocks.GetOrAdd(uid, l => new object()))
+            {
+                var result = GetVariable(key).Result;
+                if (result == null)
+                    return NotFound();
+                services.provider.DeleteAsync(result).Wait();
+                return result.value;
+            }
         }
     }
 }
