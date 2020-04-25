@@ -73,6 +73,19 @@ namespace contentapi.Controllers
             entity.type = keys.HistoryKey + (entity.type ?? "");
         }
 
+        //protected IQueryable<EntityGroup> GetBaseHistoric(long id)
+        //{
+        //    var search = new EntitySearch() 
+        //    { 
+        //        TypeLike = keys.HistoryKey + (EntityType) + "%"
+        //    };
+
+        //    //BasicReadQuery(GetRequesterUidNoFail(), search)
+
+        //    from e in provider.GetQueryable<Entity>()
+        //        .Where()
+        //}
+
         /// <summary>
         /// Put a copy of the given entity (after modifications) into history
         /// </summary>

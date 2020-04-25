@@ -11,12 +11,21 @@ using Randomous.EntitySystem;
 using AutoMapper;
 using contentapi.Services.Extensions;
 using Randomous.EntitySystem.Extensions;
+using System.Text;
+using Microsoft.EntityFrameworkCore;
+using Microsoft.Extensions.Options;
 
 namespace contentapi.Controllers
 {
     public class UserSearch : EntitySearchBase
     {
         public string Username {get;set;}
+    }
+
+    public class UserControllerConfig
+    {
+        public int NameChangesPerTime {get;set;} //= 3;
+        public TimeSpan NameChangeRange {get;set;}
     }
 
     public class UserControllerProfile : Profile
@@ -39,14 +48,18 @@ namespace contentapi.Controllers
         protected ILanguageService languageService;
         protected IEmailService emailService;
 
+        protected UserControllerConfig config;
+
         public UserController(ILogger<UserController> logger, ControllerServices services, IHashService hashService,
-            ITokenService tokenService, ILanguageService languageService, IEmailService emailService)
+            ITokenService tokenService, ILanguageService languageService, IEmailService emailService,
+            IOptionsMonitor<UserControllerConfig> config)
             :base(services, logger)
         { 
             this.hashService = hashService;
             this.tokenService = tokenService;
             this.languageService = languageService;
             this.emailService = emailService;
+            this.config = config.CurrentValue;
         }
 
         protected override string EntityType => keys.UserType;
@@ -139,9 +152,14 @@ namespace contentapi.Controllers
             }); 
         }
 
+        public class UserBasicPost
+        {
+            public long avatar {get;set;}
+        }
+
         [HttpPut("basic")]
         [Authorize]
-        public Task<ActionResult<UserView>> PutBasicAsync([FromBody]UserViewBasic data)
+        public Task<ActionResult<UserView>> PutBasicAsync([FromBody]UserBasicPost data)
         {
             return ThrowToAction<UserView>(async () => 
             {
@@ -152,8 +170,8 @@ namespace contentapi.Controllers
                 if(data.avatar >= 0)
                     userView.avatar = data.avatar;
 
-                if(!string.IsNullOrWhiteSpace(data.username))
-                    throw new BadRequestException("No username changes yet! Maybe soon!");
+                //if(!string.IsNullOrWhiteSpace(data.username))
+                //    throw new BadRequestException("No username changes yet! Maybe soon!");
 
                 return GetView(await WriteViewBaseAsync(userView));
             }); 
@@ -191,9 +209,9 @@ namespace contentapi.Controllers
             if(foundUser.HasValue(keys.RegistrationCodeKey)) //There's a registration code pending
                 return BadRequest("You must confirm your email first");
 
-            var hash = hashService.GetHash(user.password, Convert.FromBase64String(foundUser.GetValue(keys.PasswordSaltKey).value));
+            var userView = ConvertToView(foundUser);
 
-            if(!hash.SequenceEqual(Convert.FromBase64String(foundUser.GetValue(keys.PasswordHashKey).value)))
+            if(!Verify(userView, user.password))
                 return BadRequest("Password incorrect!");
 
             TimeSpan? expireOverride = null;
@@ -218,7 +236,7 @@ namespace contentapi.Controllers
         //You 'Create' a new user by posting ONLY 'credentials'. This is different than most other types of things...
         //passwords and emails and such shouldn't be included in every view unlike regular models where every field is there.
         [HttpPost("register")]
-        public async Task<ActionResult<UserView>> PostCredentials([FromBody]UserCredential user)
+        public async Task<ActionResult<UserView>> Register([FromBody]UserCredential user)
         {
             //One day, fix these so they're the "standard" bad object request from model validation!!
             //Perhaps do custom validation!
@@ -226,15 +244,15 @@ namespace contentapi.Controllers
                 return BadRequest("Must provide a username!");
             if(user.email == null)
                 return BadRequest("Must provide an email!");
+            if(string.IsNullOrWhiteSpace(user.password))
+                return BadRequest("Must provide a password!");
 
             if(await FindByNameBaseAsync(user.username) != null || await FindValueAsync(keys.EmailKey, user.email) != null)
                 return BadRequest("This user already seems to exist!");
             
-            var salt = hashService.GetSalt();
             var fullUser = services.mapper.Map<UserViewFull>(user);
 
-            fullUser.salt = Convert.ToBase64String(salt);
-            fullUser.password = Convert.ToBase64String(hashService.GetHash(fullUser.password, salt));
+            SetPassword(fullUser, fullUser.password);
             fullUser.registrationKey = Guid.NewGuid().ToString();
 
             return await ThrowToAction(async() => GetView(await WriteViewBaseAsync(fullUser, (p) => 
@@ -290,6 +308,73 @@ namespace contentapi.Controllers
             await provider.DeleteAsync(confirmValue);
 
             return GetToken(uid);
+        }
+
+        protected bool Verify(UserViewFull user, string password)
+        {
+            //Get hash for given password using old hash to authenticate
+            var hash = hashService.GetHash(password, Convert.FromBase64String(user.salt));
+            return hash.SequenceEqual(Convert.FromBase64String(user.password));
+        }
+
+        protected void SetPassword(UserViewFull user, string newPassword)
+        {
+            var salt = hashService.GetSalt();
+            user.salt = Convert.ToBase64String(salt);
+            user.password = Convert.ToBase64String(hashService.GetHash(newPassword, salt));
+        }
+
+        [HttpPost("sensitive")]
+        [Authorize]
+        public async Task<ActionResult> SensitiveAsync([FromBody]SensitiveUserChange change)
+        {
+            var user = await GetCurrentUser();
+            var fullUser = ConvertToView(user);
+            var output = new List<string>();
+
+            if(!Verify(fullUser, change.oldPassword))
+                return BadRequest("Old password incorrect!");
+
+            if(!string.IsNullOrWhiteSpace(change.password))
+            {
+                SetPassword(fullUser, change.password);
+                output.Add("Changed password");
+            }
+
+            if(!string.IsNullOrWhiteSpace(change.email))
+            {
+                fullUser.email = change.email;
+                output.Add("Changed email");
+            }
+
+            if(!string.IsNullOrWhiteSpace(change.username))
+            {
+                if(change.username == fullUser.username)
+                    return BadRequest("That's your current username!");
+
+                var beginning = DateTime.Now - config.NameChangeRange;
+
+                //Need historic users 
+                var historicQuery = 
+                    from r in Q<EntityRelation>()
+                    join e in Q<Entity>() on r.entityId2 equals e.id
+                    where r.entityId1 == user.Entity.id && EF.Functions.Like(r.type, keys.HistoryRelation) &&
+                        r.createDate > beginning
+                    select e;
+
+                var historic = await provider.GetListAsync(historicQuery);
+                var usernames = historic.Select(x => x.name).Append(fullUser.username).Append(change.username).Distinct();
+
+                if(usernames.Count() > config.NameChangesPerTime)
+                    return BadRequest($"Too many username changes in the given time: allowed {config.NameChangesPerTime} per {config.NameChangeRange}");
+                
+                fullUser.username = change.username;
+                output.Add("Changed username");
+            }
+
+            await WriteViewAsync(fullUser);
+
+            return Ok(string.Join(", ", output));
         }
     }
 }

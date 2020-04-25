@@ -63,6 +63,7 @@ namespace contentapi.Controllers
         protected override async Task<EntityPackage> DeleteCheckAsync(long id)
         {
             var package = await base.DeleteCheckAsync(id);
+            //var content = provider.GetQueryable<Entity>().Where(x => x.type)
             FailUnlessRequestSuper(); //Also only super users can delete
             return package;
         }

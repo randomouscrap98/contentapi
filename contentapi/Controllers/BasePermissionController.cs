@@ -180,6 +180,10 @@ namespace contentapi.Controllers
             if (!CanCurrentUser(keys.UpdateAction, existing))
                 throw new AuthorizationException("User cannot update this entity");
 
+            //Restore the permissions from the package, don't bother throwing an error.
+            if(existing.GetRelation(keys.CreatorRelation).entityId1 != GetRequesterUid())
+                view.permissions = ConvertRelationsToPerms(existing.Relations);
+
             return view;
         }
 

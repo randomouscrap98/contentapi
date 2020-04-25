@@ -99,13 +99,18 @@ namespace contentapi.Controllers
 
                 foreach(var group in finalComments.ToLookup(x => x.contentId))
                 {
-                    result.comments.Add(new CommentActivityView()
+                    var commentActivity = new CommentActivityView()
                     {
                         count = group.Count(),
                         parentId = group.Key,
                         userIds = group.Select(x => x.userId).Distinct().ToList(),
                         lastDate = group.Max(x => (DateTime)x.date),
-                    });
+                    };
+
+                    //Apply current timezone to the datetime. This MAY be dangerous
+                    commentActivity.lastDate = new DateTime(commentActivity.lastDate.Ticks, DateTime.Now.Kind);
+
+                    result.comments.Add(commentActivity);
                 }
             }
 

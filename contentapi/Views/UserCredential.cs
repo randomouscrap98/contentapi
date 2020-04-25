@@ -9,7 +9,6 @@ namespace contentapi.Views
         [MaxLength(20, ErrorMessage="Username too long! Max: 20")]
         public string username {get;set;}
 
-        [Required]
         [MinLength(8, ErrorMessage="Password too short!")]
         public string password {get;set;}
 
@@ -20,5 +19,10 @@ namespace contentapi.Views
     public class UserAuthenticate : UserCredential
     {
         public int ExpireSeconds {get;set;}
+    }
+
+    public class SensitiveUserChange : UserCredential
+    {
+        public string oldPassword {get;set;}
     }
 }

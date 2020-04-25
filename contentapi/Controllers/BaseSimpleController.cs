@@ -247,7 +247,9 @@ namespace contentapi.Controllers
             }
             catch(TimeoutException)
             {
-                return StatusCode(408);
+                Response.Headers.Add("SBS-Warning", "Non-critical timeout");
+                return null;
+                //return StatusCode(408);
             }
             catch(OperationCanceledException)
             {
@@ -319,5 +321,9 @@ namespace contentapi.Controllers
             //).OnlySingle();
         }
 
+        protected IQueryable<E> Q<E>() where E : EntityBase
+        {
+            return provider.GetQueryable<E>();
+        }
     }
 }

@@ -55,6 +55,7 @@ namespace contentapi
                     .Configure<LanguageConfig>(Configuration.GetSection(nameof(LanguageConfig)))
                     .Configure<SystemConfig>(Configuration.GetSection(nameof(SystemConfig)))
                     .Configure<FileControllerConfig>(Configuration.GetSection(nameof(FileControllerConfig)))
+                    .Configure<UserControllerConfig>(Configuration.GetSection(nameof(UserControllerConfig)))
                     .Configure<TokenServiceConfig>(tokenSection);
 
             services.AddSingleton(new HashConfig());    //Just use defaults
