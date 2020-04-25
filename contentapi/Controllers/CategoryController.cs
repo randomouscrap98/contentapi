@@ -24,7 +24,12 @@ namespace contentapi.Controllers
         
         protected override EntityPackage CreateBasePackage(CategoryView view)
         {
-            return NewEntity(view.name, view.description);
+            var package = NewEntity(view.name, view.description);
+
+            foreach(var v in view.values)
+                package.Add(NewValue(keys.AssociatedValueKey + v.Key, v.Value));
+
+            return package;
         }
 
         protected override CategoryView CreateBaseView(EntityPackage package)
@@ -32,6 +37,10 @@ namespace contentapi.Controllers
             var view = new CategoryView();
             view.name = package.Entity.name;
             view.description = package.Entity.content;
+
+            foreach(var v in package.Values.Where(x => x.key.StartsWith(keys.AssociatedValueKey)))
+                view.values.Add(v.key.Substring(keys.AssociatedValueKey.Length), v.value);
+
             return view;
         }
 

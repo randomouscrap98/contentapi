@@ -11,5 +11,7 @@ namespace contentapi.Views
 
         [StringLength(2048)]
         public string description {get;set;}
+
+        public Dictionary<string, string> values {get;set;} = new Dictionary<string, string>();
     }
 }
