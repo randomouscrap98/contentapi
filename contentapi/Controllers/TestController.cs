@@ -71,50 +71,5 @@ namespace contentapi.Controllers
         {
             throw new InvalidOperationException("This is the exception message");
         }
-
-        //[HttpGet("wsecho")]
-        public async Task GetWebsocket(CancellationToken token)
-        {
-            var context = ControllerContext.HttpContext;
-            var isSocketRequest = context.WebSockets.IsWebSocketRequest;
-            //var feature = context.GetFeature<IHttpWebSocketFeature>();
-
-            if (isSocketRequest)
-            {
-                WebSocket webSocket = await context.WebSockets.AcceptWebSocketAsync();
-                await Echo(context, webSocket, token);
-            }
-            else
-            {
-                context.Response.StatusCode = 400;
-            }
-        }
-
-        protected async Task Echo(HttpContext context, WebSocket socket, CancellationToken token)
-        {
-            logger.LogTrace("Websocket Echo started");
-
-            try
-            {
-                using(var memStream = new MemoryStream())
-                {
-                    WebSocketReceiveResult result = await socket.ReceiveAsync(memStream, token);
-
-                    while (!result.CloseStatus.HasValue)
-                    {
-                        logger.LogDebug($"Echoing {result.Count} bytes");
-                        await socket.SendAsync(memStream.ToArray(), result.MessageType, result.EndOfMessage, token);
-                        memStream.SetLength(0);
-                        result = await socket.ReceiveAsync(memStream, token);
-                    }
-
-                    await socket.CloseAsync(result, CancellationToken.None);
-                }
-            }
-            catch(WebSocketException ex)
-            {
-                logger.LogError($"Websocket exception: {ex.Message}");
-            }
-        }
     }
 }

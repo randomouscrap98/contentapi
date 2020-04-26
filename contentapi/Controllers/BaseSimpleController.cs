@@ -150,7 +150,7 @@ namespace contentapi.Controllers
             query = query.Where(x => x.permission.type == keys.CreatorRelation || x.permission.type == action);
             
             //Nothing else to do, the user can do it if it's update or delete.
-            if(superUser && (action == keys.UpdateAction || action == keys.DeleteAction || action == keys.ReadAction))
+            if(superUser && (action == keys.UpdateAction || action == keys.DeleteAction || action == keys.CreateAction))
                 return query;
 
             return query.Where(x => 

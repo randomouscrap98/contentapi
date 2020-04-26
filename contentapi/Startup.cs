@@ -9,6 +9,7 @@ using System.Threading.Tasks;
 using AutoMapper;
 using contentapi.Configs;
 using contentapi.Controllers;
+using contentapi.Middleware;
 using contentapi.Services;
 using contentapi.Services.Extensions;
 using contentapi.Services.Implementations;
@@ -65,6 +66,16 @@ namespace contentapi
                     .Configure<TokenServiceConfig>(tokenSection);
 
             services.AddSingleton(new HashConfig());    //Just use defaults
+
+            //A special case for websockets: we determine what the websockets will handle right here and now
+            services.AddSingleton<WebSocketMiddlewareConfig>((p) =>
+            {
+                //var websocketConfig = (WebSocketMiddlewareConfig)ActivatorUtilities.GetServiceOrCreateInstance(p, typeof(WebSo));
+                var websocketConfig = new WebSocketMiddlewareConfig();
+                var echoer = (WebSocketEcho)ActivatorUtilities.GetServiceOrCreateInstance(p, typeof(WebSocketEcho));
+                websocketConfig.RouteHandlers.Add("testecho", echoer.Echo);
+                return websocketConfig;
+            });
 
             var keys = new Keys();
             keys.EnsureAllUnique();
@@ -181,27 +192,7 @@ namespace contentapi
 
             app.UseWebSockets();
 
-            //app.Use(async (context, next) =>
-            //{
-            //    if (context.Request.Path == "/api/test/wsecho")//.StartsWithSegments("/ws"))
-            //    {
-            //        var isSocketRequest = context.WebSockets.IsWebSocketRequest;
-
-            //        if (context.WebSockets.IsWebSocketRequest)
-            //        {
-            //            WebSocket webSocket = await context.WebSockets.AcceptWebSocketAsync();
-            //            await Echo(context, webSocket, CancellationToken.None);
-            //        }
-            //        else
-            //        {
-            //            context.Response.StatusCode = 400;
-            //        }
-            //    }
-            //    else
-            //    {
-            //        await next();
-            //    }
-            //});
+            app.UseMiddleware<WebSocketMiddleware>();
 
             //Swagger is the API documentation
             app.UseSwagger();
@@ -211,31 +202,5 @@ namespace contentapi
             });
         }
 
-        //protected async Task Echo(HttpContext context, WebSocket socket, CancellationToken token)
-        //{
-        //    //logger.LogTrace("Websocket Echo started");
-
-        //    try
-        //    {
-        //        using(var memStream = new MemoryStream())
-        //        {
-        //            WebSocketReceiveResult result = await socket.ReceiveAsync(memStream, token);
-
-        //            while (!result.CloseStatus.HasValue)
-        //            {
-        //                //logger.LogDebug($"Echoing {result.Count} bytes");
-        //                await socket.SendAsync(memStream.ToArray(), result.MessageType, result.EndOfMessage, token);
-        //                memStream.SetLength(0);
-        //                result = await socket.ReceiveAsync(memStream, token);
-        //            }
-
-        //            await socket.CloseAsync(result, CancellationToken.None);
-        //        }
-        //    }
-        //    catch(WebSocketException ex)
-        //    {
-        //        //logger.LogError($"Websocket exception: {ex.Message}");
-        //    }
-        //}
     }
 }
