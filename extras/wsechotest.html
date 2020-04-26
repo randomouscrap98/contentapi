@@ -7,15 +7,20 @@
 
 window.addEventListener("load", function()
 {
+   var status = document.getElementById("status");
+   var messages = document.getElementById("messages");
+   var send = document.getElementById("send");
+   var messageInput = document.getElementById("message");
+
    var url = 'ws://' + host + endpoint;
 
-   status.innerHTML = "Connecting to " + url;
+   status.textContent = "Connecting to " + url;
 
    var socket = new WebSocket(url);
 
    // Connection opened
    socket.addEventListener('open', function (event) {
-      status.innerHTML = "Connection established! " + url;
+      status.textContent = "Connection established! " + url;
    });
 
    // Listen for messages
@@ -27,8 +32,8 @@ window.addEventListener("load", function()
 
    send.addEventListener("click", function()
    {
-      socket.send(send.value);
-      send.value = "";
+      socket.send(messageInput.value);
+      messageInput.value = "";
    });
 });
 

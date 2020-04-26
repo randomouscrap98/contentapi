@@ -343,6 +343,9 @@ namespace contentapi.Controllers
 
             if(!string.IsNullOrWhiteSpace(change.email))
             {
+                if(await FindValueAsync(keys.EmailKey, change.email) != null)
+                    return BadRequest("This email is already taken!");
+
                 fullUser.email = change.email;
                 output.Add("Changed email");
             }
@@ -351,6 +354,10 @@ namespace contentapi.Controllers
             {
                 if(change.username == fullUser.username)
                     return BadRequest("That's your current username!");
+
+                //If two users come in at the same time and do this without locking, the world will crumble.
+                if(await FindByNameBaseAsync(change.username) != null)
+                    return BadRequest("Username already taken!");
 
                 var beginning = DateTime.Now - config.NameChangeRange;
 

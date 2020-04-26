@@ -1,5 +1,6 @@
 using System;
 using System.Collections.Generic;
+using System.IO;
 using System.Net.WebSockets;
 using System.Threading;
 using System.Threading.Tasks;
@@ -8,6 +9,7 @@ using contentapi.Services.Extensions;
 using contentapi.Views;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Http;
+using Microsoft.AspNetCore.Http.Features;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.Extensions.Logging;
 using Randomous.EntitySystem;
@@ -70,11 +72,12 @@ namespace contentapi.Controllers
             throw new InvalidOperationException("This is the exception message");
         }
 
-        [HttpGet("wsecho")]
+        //[HttpGet("wsecho")]
         public async Task GetWebsocket(CancellationToken token)
         {
             var context = ControllerContext.HttpContext;
             var isSocketRequest = context.WebSockets.IsWebSocketRequest;
+            //var feature = context.GetFeature<IHttpWebSocketFeature>();
 
             if (isSocketRequest)
             {
@@ -90,19 +93,23 @@ namespace contentapi.Controllers
         protected async Task Echo(HttpContext context, WebSocket socket, CancellationToken token)
         {
             logger.LogTrace("Websocket Echo started");
+
             try
             {
-                var buffer = new byte[4096];
-                WebSocketReceiveResult result = await socket.ReceiveAsync(new ArraySegment<byte>(buffer), token);
-
-                while (!result.CloseStatus.HasValue)
+                using(var memStream = new MemoryStream())
                 {
-                    logger.LogDebug($"Echoing {result.Count} bytes");
-                    await socket.SendAsync(new ArraySegment<byte>(buffer, 0, result.Count), result.MessageType, result.EndOfMessage, token);
-                    result = await socket.ReceiveAsync(new ArraySegment<byte>(buffer), token);
+                    WebSocketReceiveResult result = await socket.ReceiveAsync(memStream, token);
+
+                    while (!result.CloseStatus.HasValue)
+                    {
+                        logger.LogDebug($"Echoing {result.Count} bytes");
+                        await socket.SendAsync(memStream.ToArray(), result.MessageType, result.EndOfMessage, token);
+                        memStream.SetLength(0);
+                        result = await socket.ReceiveAsync(memStream, token);
+                    }
+
+                    await socket.CloseAsync(result, CancellationToken.None);
                 }
-                
-                await socket.CloseAsync(result.CloseStatus.Value, result.CloseStatusDescription, CancellationToken.None);
             }
             catch(WebSocketException ex)
             {

@@ -1,17 +1,21 @@
 using System;
 using System.Collections.Generic;
+using System.IO;
 using System.Linq;
 using System.Net.WebSockets;
 using System.Text;
+using System.Threading;
 using System.Threading.Tasks;
 using AutoMapper;
 using contentapi.Configs;
 using contentapi.Controllers;
 using contentapi.Services;
+using contentapi.Services.Extensions;
 using contentapi.Services.Implementations;
 using Microsoft.AspNetCore.Authentication.JwtBearer;
 using Microsoft.AspNetCore.Builder;
 using Microsoft.AspNetCore.Hosting;
+using Microsoft.AspNetCore.Http;
 using Microsoft.AspNetCore.HttpsPolicy;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.EntityFrameworkCore;
@@ -177,6 +181,28 @@ namespace contentapi
 
             app.UseWebSockets();
 
+            //app.Use(async (context, next) =>
+            //{
+            //    if (context.Request.Path == "/api/test/wsecho")//.StartsWithSegments("/ws"))
+            //    {
+            //        var isSocketRequest = context.WebSockets.IsWebSocketRequest;
+
+            //        if (context.WebSockets.IsWebSocketRequest)
+            //        {
+            //            WebSocket webSocket = await context.WebSockets.AcceptWebSocketAsync();
+            //            await Echo(context, webSocket, CancellationToken.None);
+            //        }
+            //        else
+            //        {
+            //            context.Response.StatusCode = 400;
+            //        }
+            //    }
+            //    else
+            //    {
+            //        await next();
+            //    }
+            //});
+
             //Swagger is the API documentation
             app.UseSwagger();
             app.UseSwaggerUI(c =>
@@ -184,5 +210,32 @@ namespace contentapi
                 c.SwaggerEndpoint("/swagger/v1/swagger.json", "New SBS API");
             });
         }
+
+        //protected async Task Echo(HttpContext context, WebSocket socket, CancellationToken token)
+        //{
+        //    //logger.LogTrace("Websocket Echo started");
+
+        //    try
+        //    {
+        //        using(var memStream = new MemoryStream())
+        //        {
+        //            WebSocketReceiveResult result = await socket.ReceiveAsync(memStream, token);
+
+        //            while (!result.CloseStatus.HasValue)
+        //            {
+        //                //logger.LogDebug($"Echoing {result.Count} bytes");
+        //                await socket.SendAsync(memStream.ToArray(), result.MessageType, result.EndOfMessage, token);
+        //                memStream.SetLength(0);
+        //                result = await socket.ReceiveAsync(memStream, token);
+        //            }
+
+        //            await socket.CloseAsync(result, CancellationToken.None);
+        //        }
+        //    }
+        //    catch(WebSocketException ex)
+        //    {
+        //        //logger.LogError($"Websocket exception: {ex.Message}");
+        //    }
+        //}
     }
 }
