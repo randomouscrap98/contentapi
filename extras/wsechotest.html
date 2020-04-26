@@ -1,0 +1,48 @@
+<html>
+   <head>
+<script>
+   var host = "localhost:5000";
+   var secureHost = "localhost:5001";
+   var endpoint = "/api/test/wsecho";
+
+window.addEventListener("load", function()
+{
+   var url 'ws://' + host + endpoint;
+
+   status.innerHTML = "Connecting to " + url;
+
+   var socket = new WebSocket(url);
+
+   // Connection opened
+   socket.addEventListener('open', function (event) {
+      status.innerHTML = "Connection established! " + url;
+   });
+
+   // Listen for messages
+   socket.addEventListener('message', function (event) {
+      var message = document.createElement("div");
+      message.textContent = event.data;
+      messages.appendChild(message);
+   });
+
+   send.addEventListener("click", function()
+   {
+      socket.send(send.value);
+      send.value = "";
+   });
+};
+
+
+</script>
+   </head>
+   <body>
+      <h1>WSEcho test</h1>
+      <p id="status"></p>
+      <div>
+         <textarea id="message"></textarea>
+         <button id="send">send</button>
+         <div id="messages">
+         </div>
+      </div>
+   </body>
+</html>
