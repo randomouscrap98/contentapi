@@ -57,6 +57,7 @@ namespace contentapi
                     .Configure<SystemConfig>(Configuration.GetSection(nameof(SystemConfig)))
                     .Configure<FileControllerConfig>(Configuration.GetSection(nameof(FileControllerConfig)))
                     .Configure<UserControllerConfig>(Configuration.GetSection(nameof(UserControllerConfig)))
+                    .Configure<TempTokenServiceConfig>(Configuration.GetSection(nameof(TempTokenServiceConfig)))
                     .Configure<TokenServiceConfig>(tokenSection);
 
             services.AddSingleton(new HashConfig());    //Just use defaults
@@ -91,6 +92,9 @@ namespace contentapi
 
             //WE need a singleton signaler: we'll all be using the same thing across different providers
             services.AddSingleton<ISignaler<EntityBase>, SignalSystem<EntityBase>>();
+
+            //Also a singleton for the token system which we'll use for websockets
+            services.AddSingleton<ITempTokenService<long>, TempTokenService<long>>();
 
             services.AddCors();
             services.AddControllers()
@@ -158,7 +162,7 @@ namespace contentapi
             //Wide open for now, this might need to be changed later.
             app.UseCors(x => x.AllowAnyOrigin().AllowAnyMethod().AllowAnyHeader());
 
-            app.UseHttpsRedirection();
+            //app.UseHttpsRedirection();
 
             app.UseRouting();
 
@@ -172,27 +176,6 @@ namespace contentapi
             });
 
             app.UseWebSockets();
-
-            //app.Use(async (context, next) =>
-            //{
-            //    if (context.Request.Path == "/ws")
-            //    {
-            //        if (context.WebSockets.IsWebSocketRequest)
-            //        {
-            //            WebSocket webSocket = await context.WebSockets.AcceptWebSocketAsync();
-            //            await Echo(context, webSocket);
-            //        }
-            //        else
-            //        {
-            //            context.Response.StatusCode = 400;
-            //        }
-            //    }
-            //    else
-            //    {
-            //        await next();
-            //    }
-
-            //});
 
             //Swagger is the API documentation
             app.UseSwagger();

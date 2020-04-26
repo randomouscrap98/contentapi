@@ -71,7 +71,6 @@ namespace contentapi.Controllers
         }
 
         [HttpGet("wsecho")]
-        [Authorize]
         public async Task GetWebsocket(CancellationToken token)
         {
             var context = ControllerContext.HttpContext;

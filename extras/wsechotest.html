@@ -7,7 +7,7 @@
 
 window.addEventListener("load", function()
 {
-   var url 'ws://' + host + endpoint;
+   var url = 'ws://' + host + endpoint;
 
    status.innerHTML = "Connecting to " + url;
 
@@ -30,7 +30,7 @@ window.addEventListener("load", function()
       socket.send(send.value);
       send.value = "";
    });
-};
+});
 
 
 </script>
