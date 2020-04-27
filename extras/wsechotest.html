@@ -1,8 +1,10 @@
 <html>
    <head>
 <script>
-   var host = "localhost:5000";
-   var secureHost = "localhost:5001";
+   //var host = "localhost:5000";
+   //var secureHost = "localhost:5001";
+   var host = "oboy.smilebasicsource.com";
+   var secureHost = host;
    var endpoint = "/api/ws/testecho";
 
 window.addEventListener("load", function()
@@ -12,7 +14,8 @@ window.addEventListener("load", function()
    var send = document.getElementById("send");
    var messageInput = document.getElementById("message");
 
-   var url = 'ws://' + host + endpoint;
+   //var url = 'ws://' + host + endpoint;
+   var url = 'wss://' + secureHost + endpoint;
 
    status.textContent = "Connecting to " + url;
 
