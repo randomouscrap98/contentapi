@@ -10,7 +10,6 @@ using contentapi.Services.Extensions;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.Logging;
-using Microsoft.Extensions.Options;
 using Randomous.EntitySystem;
 using Randomous.EntitySystem.Extensions;
 
@@ -25,13 +24,13 @@ namespace contentapi.Controllers
         public IPermissionService permissions;
         public IActivityService activity;
 
-        public ControllerServices(IEntityProvider provider, IMapper mapper, Keys keys, IOptionsMonitor<SystemConfig> systemConfig, 
+        public ControllerServices(IEntityProvider provider, IMapper mapper, Keys keys, SystemConfig systemConfig, 
             IPermissionService permissions, IActivityService activityService)
         {
             this.provider = provider;
             this.mapper = mapper;
             this.keys = keys;
-            this.systemConfig = systemConfig.CurrentValue;
+            this.systemConfig = systemConfig;
             this.permissions = permissions;
             this.activity = activityService;
         }

@@ -1,7 +1,6 @@
 using System.Linq;
 using System.Security.Cryptography;
 using Microsoft.AspNetCore.Cryptography.KeyDerivation;
-using Microsoft.Extensions.Options;
 
 namespace contentapi.Services.Implementations
 {
@@ -16,9 +15,9 @@ namespace contentapi.Services.Implementations
     {
         public HashConfig Config;
 
-        public HashService(IOptionsMonitor<HashConfig> config)
+        public HashService(HashConfig config)
         {
-            this.Config = config.CurrentValue;
+            this.Config = config;
         }
 
         public byte[] GetSalt()

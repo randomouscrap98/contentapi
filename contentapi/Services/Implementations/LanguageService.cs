@@ -3,7 +3,6 @@ using System.Collections.Generic;
 using System.IO;
 using System.Text;
 using Microsoft.Extensions.Logging;
-using Microsoft.Extensions.Options;
 
 namespace contentapi.Services.Implementations
 {
@@ -19,9 +18,9 @@ namespace contentapi.Services.Implementations
         public LanguageConfig Config;
         protected ILogger<LanguageService> logger;
 
-        public LanguageService(ILogger<LanguageService> logger, IOptionsMonitor<LanguageConfig> config)
+        public LanguageService(ILogger<LanguageService> logger, LanguageConfig config)
         {
-            this.Config = config.CurrentValue;
+            this.Config = config;
             this.logger = logger;
         }
 

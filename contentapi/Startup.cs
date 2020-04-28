@@ -57,10 +57,11 @@ namespace contentapi
         {
             public HackOptions(IServiceCollection services, IConfiguration config)
             {
-                var section = config.GetSection(nameof(T));
+                var section = config.GetSection(typeof(T).Name);
 
                 services.Configure<T>(section);
-                services.AddTransient<T>(p => p.GetService<IOptionsMonitor<T>>().CurrentValue);
+                services.AddTransient<T>(p => 
+                    p.GetService<IOptionsMonitor<T>>().CurrentValue);
             }
         };
 

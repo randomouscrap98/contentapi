@@ -2,7 +2,6 @@ using System.Net;
 using System.Net.Mail;
 using System.Threading.Tasks;
 using Microsoft.Extensions.Logging;
-using Microsoft.Extensions.Options;
 
 namespace contentapi.Services.Implementations
 {
@@ -21,10 +20,10 @@ namespace contentapi.Services.Implementations
         protected ILogger<EmailService> logger;
         public EmailConfig Config = null;
 
-        public EmailService(ILogger<EmailService> logger, IOptionsMonitor<EmailConfig> config)
+        public EmailService(ILogger<EmailService> logger, EmailConfig config)
         {
             this.logger = logger;
-            this.Config = config.CurrentValue;
+            this.Config = config;
         }
 
         public async Task SendEmailAsync(EmailMessage message)

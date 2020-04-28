@@ -2,7 +2,6 @@ using System;
 using System.Collections.Generic;
 using System.Linq;
 using Microsoft.Extensions.Logging;
-using Microsoft.Extensions.Options;
 
 namespace contentapi.Services.Implementations
 {
@@ -25,10 +24,10 @@ namespace contentapi.Services.Implementations
         protected Dictionary<T, TokenData> tokens = new Dictionary<T, TokenData>();
         protected readonly object tokenLock = new object();
 
-        public TempTokenService(ILogger<TempTokenService<T>> logger, IOptionsMonitor<TempTokenServiceConfig> config)
+        public TempTokenService(ILogger<TempTokenService<T>> logger, TempTokenServiceConfig config)
         {
             this.logger = logger;
-            this.config = config.CurrentValue;
+            this.config = config;
         }
 
         public TimeSpan TokenLifetime => config.TokenLifetime;
