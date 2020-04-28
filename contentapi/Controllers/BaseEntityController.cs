@@ -167,10 +167,10 @@ namespace contentapi.Controllers
                     failDeletes.Add(history);
 
                     //Bring all the existing over to this historic entity
-                    Relink(existing.Values, existing.Relations, history);
+                    history.Relink(existing.Values, existing.Relations);
 
                     //WE have to link the new stuff to US because we want to write everything all at once 
-                    Relink(package.Values, package.Relations, existing.Entity);
+                    existing.Entity.Relink(package.Values, package.Relations);
 
                     var historyLink = NewRelation(existing.Entity.id, keys.HistoryRelation);
                     historyLink.entityId2 = history.id;
@@ -179,7 +179,7 @@ namespace contentapi.Controllers
                     writes.Add(historyLink);
                     writes.AddRange(existing.Values);
                     writes.AddRange(existing.Relations);
-                    FlattenPackage(package, writes);
+                    package.FlattenPackage(writes);
 
                     writes.Add(MakeActivity(package, keys.UpdateAction, history.id.ToString()));
                 }
@@ -188,7 +188,7 @@ namespace contentapi.Controllers
                     await provider.WriteAsync(package.Entity);
                     failDeletes.Add(package.Entity);
 
-                    Relink(package);
+                    package.Relink();
                     modifyBeforeCreate?.Invoke(package);
 
                     writes.AddRange(package.Values);

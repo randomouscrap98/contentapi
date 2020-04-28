@@ -3,6 +3,7 @@ using System.Collections.Generic;
 using System.Linq;
 using System.Threading.Tasks;
 using AutoMapper;
+using contentapi.Services;
 using contentapi.Views;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.Extensions.Logging;

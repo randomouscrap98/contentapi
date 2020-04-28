@@ -85,6 +85,7 @@ namespace contentapi
             services.AddTransient<ILanguageService, LanguageService>();
             services.AddTransient<ITokenService, TokenService>();
             services.AddTransient<IHashService, HashService>();
+            services.AddTransient<IPermissionService, PermissionService>();
             services.AddTransient(typeof(IDecayer<>), typeof(Decayer<>));
 
             services.AddTransient<ControllerServices>();
