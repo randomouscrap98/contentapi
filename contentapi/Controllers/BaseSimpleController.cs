@@ -23,14 +23,17 @@ namespace contentapi.Controllers
         public Keys keys;
         public SystemConfig systemConfig;
         public IPermissionService permissions;
+        public IActivityService activity;
 
-        public ControllerServices(IEntityProvider provider, IMapper mapper, Keys keys, IOptionsMonitor<SystemConfig> systemConfig, IPermissionService permissions)
+        public ControllerServices(IEntityProvider provider, IMapper mapper, Keys keys, IOptionsMonitor<SystemConfig> systemConfig, 
+            IPermissionService permissions, IActivityService activityService)
         {
             this.provider = provider;
             this.mapper = mapper;
             this.keys = keys;
             this.systemConfig = systemConfig.CurrentValue;
             this.permissions = permissions;
+            this.activity = activityService;
         }
     }
 

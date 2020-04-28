@@ -50,21 +50,6 @@ namespace contentapi.Controllers
             return search;
         }
 
-        protected ActivityView ConvertToView(EntityRelation relation)
-        {
-            var view = new ActivityView();
-
-            view.id = relation.id;
-            view.date = (DateTime)relation.createDateProper();
-            view.userId = relation.entityId1;
-            view.contentId = -relation.entityId2;
-            view.contentType = relation.type.Substring(keys.ActivityKey.Length + keys.ContentType.Length);
-            view.action = relation.value.Substring(1, 1); //Assume it's 1 character
-            view.extra = relation.value.Substring(keys.CreateAction.Length);
-
-            return view;
-        }
-
         [HttpGet]
         public async Task<ActionResult<ActivityResultView>> GetActivityAsync([FromQuery]ActivitySearch search)
         {
@@ -81,7 +66,7 @@ namespace contentapi.Controllers
                             .Where(x => x.relation.type != $"{keys.ActivityKey}{keys.FileType}");
 
             var relations = await services.provider.GetListAsync(FinalizeQuery<EntityRelation>(query, x=> x.relation.id, relationSearch));
-            var result = new ActivityResultView() { activity = relations.Select(x => ConvertToView(x)).ToList(), };
+            var result = new ActivityResultView() { activity = relations.Select(x => services.activity.ConvertToView(x)).ToList(), };
 
             //No matter the search, get comments for up to the recent thing.
             if(search.recentCommentTime.Ticks > 0)

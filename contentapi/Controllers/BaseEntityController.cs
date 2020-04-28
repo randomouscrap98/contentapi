@@ -73,19 +73,6 @@ namespace contentapi.Controllers
             entity.type = keys.HistoryKey + (entity.type ?? "");
         }
 
-        //protected IQueryable<EntityGroup> GetBaseHistoric(long id)
-        //{
-        //    var search = new EntitySearch() 
-        //    { 
-        //        TypeLike = keys.HistoryKey + (EntityType) + "%"
-        //    };
-
-        //    //BasicReadQuery(GetRequesterUidNoFail(), search)
-
-        //    from e in provider.GetQueryable<Entity>()
-        //        .Where()
-        //}
-
         /// <summary>
         /// Put a copy of the given entity (after modifications) into history
         /// </summary>
@@ -181,7 +168,7 @@ namespace contentapi.Controllers
                     writes.AddRange(existing.Relations);
                     package.FlattenPackage(writes);
 
-                    writes.Add(MakeActivity(package, keys.UpdateAction, history.id.ToString()));
+                    writes.Add(services.activity.MakeActivity(package, GetRequesterUidNoFail(), keys.UpdateAction, history.id.ToString()));
                 }
                 else
                 {
@@ -194,7 +181,7 @@ namespace contentapi.Controllers
                     writes.AddRange(package.Values);
                     writes.AddRange(package.Relations);
 
-                    writes.Add(MakeActivity(package, keys.CreateAction));
+                    writes.Add(services.activity.MakeActivity(package, GetRequesterUidNoFail(), keys.CreateAction));
                 }
 
                 //Now try to write everything we added to the "transaction" (sometimes you just NEED an id and I can't let
@@ -216,28 +203,6 @@ namespace contentapi.Controllers
         }
 
         /// <summary>
-        /// Produce an activity for the given entity and action. Can include ONE piece of extra data.
-        /// </summary>
-        /// <param name="entity"></param>
-        /// <param name="action"></param>
-        /// <param name="extra"></param>
-        /// <returns></returns>
-        protected EntityRelation MakeActivity(EntityPackage package, string action, string extra = null, long userOverride = -1)
-        {
-            var activity = new EntityRelation();
-            activity.entityId1 = userOverride >= 0 ? userOverride : GetRequesterUidNoFail(); //package.GetRelation(keys.CreatorRelation).entityId1; //GetRequesterUidNoFail();
-            activity.entityId2 = -package.Entity.id; //It has to be NEGATIVE because we don't want them linked to content
-            activity.createDate = DateTime.Now;
-            activity.type = keys.ActivityKey + package.Entity.type;
-            activity.value = action;
-
-            if(!string.IsNullOrWhiteSpace(extra))
-                activity.value += extra;
-
-            return activity;
-        }
-
-        /// <summary>
         /// Allow "fake" deletion of ANY historic entity (of any type)
         /// </summary>
         /// <param name="entityId"></param>
@@ -247,7 +212,7 @@ namespace contentapi.Controllers
             var package = await DeleteCheckAsync(entityId);
             var view = ConvertToView(package);
             MakeHistoric(package.Entity);
-            await provider.WriteAsync<EntityBase>(package.Entity, MakeActivity(package, keys.DeleteAction, package.Entity.name));     //Notice it is a WRITe and not a delete.
+            await provider.WriteAsync<EntityBase>(package.Entity, services.activity.MakeActivity(package, GetRequesterUidNoFail(), keys.DeleteAction, package.Entity.name));     //Notice it is a WRITe and not a delete.
             return view;
         }
 

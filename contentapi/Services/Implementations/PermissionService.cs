@@ -13,10 +13,11 @@ namespace contentapi.Services.Implementations
 
         public List<long> SuperUsers => new List<long>(config.SuperUsers);
 
-        public PermissionService(ILogger<PermissionService> logger, Keys keys)
+        public PermissionService(ILogger<PermissionService> logger, SystemConfig config, Keys keys)
         {
             this.keys = keys;
             this.logger = logger;
+            this.config = config;
         }
 
         public IQueryable<E> PermissionWhere<E>(IQueryable<E> query, long user, string action, PermissionExtras extras = null) where E : EntityGroup

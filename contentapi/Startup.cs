@@ -49,6 +49,21 @@ namespace contentapi
             return config;
         }
 
+        /// <summary>
+        /// A class specifically to allow an essentially generic function
+        /// </summary>
+        /// <typeparam name="T"></typeparam>
+        private class HackOptions<T> where T : class
+        {
+            public HackOptions(IServiceCollection services, IConfiguration config)
+            {
+                var section = config.GetSection(nameof(T));
+
+                services.Configure<T>(section);
+                services.AddTransient<T>(p => p.GetService<IOptionsMonitor<T>>().CurrentValue);
+            }
+        };
+
         // This method gets called by the runtime. Use this method to add services to the container.
         public void ConfigureServices(IServiceCollection services)
         {
@@ -57,35 +72,37 @@ namespace contentapi
 
             var tokenSection = Configuration.GetSection(nameof(TokenServiceConfig));
 
-            services.Configure<EmailConfig>(Configuration.GetSection(nameof(EmailConfig)))
-                    .Configure<LanguageConfig>(Configuration.GetSection(nameof(LanguageConfig)))
-                    .Configure<SystemConfig>(Configuration.GetSection(nameof(SystemConfig)))
-                    .Configure<FileControllerConfig>(Configuration.GetSection(nameof(FileControllerConfig)))
-                    .Configure<UserControllerConfig>(Configuration.GetSection(nameof(UserControllerConfig)))
-                    .Configure<TempTokenServiceConfig>(Configuration.GetSection(nameof(TempTokenServiceConfig)))
-                    .Configure<TokenServiceConfig>(tokenSection);
+            new HackOptions<EmailConfig>(services, Configuration);
+            new HackOptions<LanguageConfig>(services, Configuration);
+            new HackOptions<SystemConfig>(services, Configuration);
+            new HackOptions<FileControllerConfig>(services, Configuration);
+            new HackOptions<UserControllerConfig>(services, Configuration);
+            new HackOptions<TempTokenServiceConfig>(services, Configuration);
+            new HackOptions<TokenServiceConfig>(services, Configuration);
 
-            services.AddSingleton(new HashConfig());    //Just use defaults
+            services.AddSingleton<HashConfig>();    //Just use defaults
+            services.AddSingleton(p =>
+            {
+                var keys = new Keys();
+                keys.EnsureAllUnique();
+                return keys;
+            });
 
             //A special case for websockets: we determine what the websockets will handle right here and now
             services.AddSingleton<WebSocketMiddlewareConfig>((p) =>
             {
-                //var websocketConfig = (WebSocketMiddlewareConfig)ActivatorUtilities.GetServiceOrCreateInstance(p, typeof(WebSo));
                 var websocketConfig = new WebSocketMiddlewareConfig();
                 var echoer = (WebSocketEcho)ActivatorUtilities.GetServiceOrCreateInstance(p, typeof(WebSocketEcho));
                 websocketConfig.RouteHandlers.Add("testecho", echoer.Echo);
                 return websocketConfig;
             });
 
-            var keys = new Keys();
-            keys.EnsureAllUnique();
-            services.AddSingleton(keys);
-
             services.AddTransient<IEmailService, EmailService>();
             services.AddTransient<ILanguageService, LanguageService>();
             services.AddTransient<ITokenService, TokenService>();
             services.AddTransient<IHashService, HashService>();
             services.AddTransient<IPermissionService, PermissionService>();
+            services.AddTransient<IActivityService, ActivityService>();
             services.AddTransient(typeof(IDecayer<>), typeof(Decayer<>));
 
             services.AddTransient<ControllerServices>();
