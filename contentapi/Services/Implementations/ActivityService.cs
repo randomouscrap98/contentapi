@@ -23,13 +23,13 @@ namespace contentapi.Services.Implementations
         /// <param name="action"></param>
         /// <param name="extra"></param>
         /// <returns></returns>
-        public EntityRelation MakeActivity(EntityPackage package, long user, string action, string extra = null)
+        public EntityRelation MakeActivity(Entity entity, long user, string action, string extra = null)
         {
             var activity = new EntityRelation();
             activity.entityId1 = user;
-            activity.entityId2 = -package.Entity.id; //It has to be NEGATIVE because we don't want them linked to content
+            activity.entityId2 = -entity.id; //It has to be NEGATIVE because we don't want them linked to content
             activity.createDate = DateTime.Now;
-            activity.type = keys.ActivityKey + package.Entity.type;
+            activity.type = keys.ActivityKey + entity.type;
             activity.value = action;
 
             if(!string.IsNullOrWhiteSpace(extra))

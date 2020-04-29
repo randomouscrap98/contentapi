@@ -5,7 +5,7 @@ namespace contentapi.Services
 {
     public interface IActivityService
     {
-        EntityRelation MakeActivity(EntityPackage package, long user, string action, string extra = null);
+        EntityRelation MakeActivity(Entity entity, long user, string action, string extra = null);
 
         //TODO: Stop using views, use models or something else.
         ActivityView ConvertToView(EntityRelation relation);

@@ -45,6 +45,7 @@ namespace contentapi.test
                 services, 
                 options => options.UseSqlite(connection).EnableSensitiveDataLogging(true),
                 d => d.Database.EnsureCreated());
+            services.AddSingleton<Keys>();
 
             return services;
         }

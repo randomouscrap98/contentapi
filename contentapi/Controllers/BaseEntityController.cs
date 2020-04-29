@@ -168,7 +168,7 @@ namespace contentapi.Controllers
                     writes.AddRange(existing.Relations);
                     package.FlattenPackage(writes);
 
-                    writes.Add(services.activity.MakeActivity(package, GetRequesterUidNoFail(), keys.UpdateAction, history.id.ToString()));
+                    writes.Add(services.activity.MakeActivity(package.Entity, GetRequesterUidNoFail(), keys.UpdateAction, history.id.ToString()));
                 }
                 else
                 {
@@ -181,7 +181,7 @@ namespace contentapi.Controllers
                     writes.AddRange(package.Values);
                     writes.AddRange(package.Relations);
 
-                    writes.Add(services.activity.MakeActivity(package, GetRequesterUidNoFail(), keys.CreateAction));
+                    writes.Add(services.activity.MakeActivity(package.Entity, GetRequesterUidNoFail(), keys.CreateAction));
                 }
 
                 //Now try to write everything we added to the "transaction" (sometimes you just NEED an id and I can't let
@@ -212,7 +212,7 @@ namespace contentapi.Controllers
             var package = await DeleteCheckAsync(entityId);
             var view = ConvertToView(package);
             MakeHistoric(package.Entity);
-            await provider.WriteAsync<EntityBase>(package.Entity, services.activity.MakeActivity(package, GetRequesterUidNoFail(), keys.DeleteAction, package.Entity.name));     //Notice it is a WRITe and not a delete.
+            await provider.WriteAsync<EntityBase>(package.Entity, services.activity.MakeActivity(package.Entity, GetRequesterUidNoFail(), keys.DeleteAction, package.Entity.name));     //Notice it is a WRITe and not a delete.
             return view;
         }
 
