@@ -13,11 +13,12 @@ namespace contentapi.test
             this.keys = CreateService<Keys>();
         }
 
-        protected Entity NewEntity()
+        protected Entity NewEntity(long id = 5, string type = "type")
         {
             return new Entity()
             {
-                id = 5
+                id = id,
+                type = type
             };
         }
 
@@ -25,10 +26,20 @@ namespace contentapi.test
         public void SimpleMakeActivity()
         {
             //Just make sure it doesn't throw a fit
-            var relation = service.MakeActivity(NewEntity(), 8, keys.CreateAction);
+            var relation = service.MakeActivity(NewEntity(5), 8, keys.CreateAction);
             Assert.NotNull(relation);
             Assert.True(relation.entityId1 != 0); //The relation should map two things together DEFINITELY
             Assert.True(relation.entityId2 != 0);
+        }
+
+        [Fact]
+        public void SimplePassthrough()
+        {
+            var relation = service.MakeActivity(NewEntity(99, "blegh"), 8, keys.UpdateAction);
+            var view = service.ConvertToView(relation);
+            Assert.Equal(99, view.contentId);
+            Assert.Equal(8, view.userId);
+            Assert.Equal("blegh", view.contentType);
         }
     }
 }

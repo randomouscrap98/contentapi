@@ -46,7 +46,7 @@ namespace contentapi.Services.Implementations
             view.date = (DateTime)relation.createDateProper();
             view.userId = relation.entityId1;
             view.contentId = -relation.entityId2;
-            view.contentType = relation.type.Substring(keys.ActivityKey.Length + keys.ContentType.Length);
+            view.contentType = relation.type.Substring(keys.ActivityKey.Length); // + keys.ContentType.Length);
             view.action = relation.value.Substring(1, 1); //Assume it's 1 character
             view.extra = relation.value.Substring(keys.CreateAction.Length);
 

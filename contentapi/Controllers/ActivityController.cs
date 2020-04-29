@@ -66,7 +66,13 @@ namespace contentapi.Controllers
                             .Where(x => x.relation.type != $"{keys.ActivityKey}{keys.FileType}");
 
             var relations = await services.provider.GetListAsync(FinalizeQuery<EntityRelation>(query, x=> x.relation.id, relationSearch));
-            var result = new ActivityResultView() { activity = relations.Select(x => services.activity.ConvertToView(x)).ToList(), };
+            var result = new ActivityResultView() { activity = relations.Select(x => 
+            {
+                var view = services.activity.ConvertToView(x);
+                //Strip the typing too. This is probably unsafe, I don't know what to do about it for now
+                view.contentType = view.contentType.Substring(keys.ContentType.Length);
+                return view;
+            }).ToList(), };
 
             //No matter the search, get comments for up to the recent thing.
             if(search.recentCommentTime.Ticks > 0)
