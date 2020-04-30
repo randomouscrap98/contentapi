@@ -23,9 +23,10 @@ namespace contentapi.Controllers
         public SystemConfig systemConfig;
         public IPermissionService permissions;
         public IActivityService activity;
+        public IHistoryService history;
 
         public ControllerServices(IEntityProvider provider, IMapper mapper, Keys keys, SystemConfig systemConfig, 
-            IPermissionService permissions, IActivityService activityService)
+            IPermissionService permissions, IActivityService activityService, IHistoryService history)
         {
             this.provider = provider;
             this.mapper = mapper;
@@ -33,6 +34,7 @@ namespace contentapi.Controllers
             this.systemConfig = systemConfig;
             this.permissions = permissions;
             this.activity = activityService;
+            this.history = history;
         }
     }
 

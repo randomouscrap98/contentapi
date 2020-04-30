@@ -104,6 +104,7 @@ namespace contentapi
             services.AddTransient<IHashService, HashService>();
             services.AddTransient<IPermissionService, PermissionService>();
             services.AddTransient<IActivityService, ActivityService>();
+            services.AddTransient<IHistoryService, HistoryService>();
             services.AddTransient(typeof(IDecayer<>), typeof(Decayer<>));
 
             services.AddTransient<ControllerServices>();
@@ -117,7 +118,7 @@ namespace contentapi
                     }
                     else if(dbConfig.DbType == "mysql")
                     {
-                        options.UseMySql(dbConfig.ConnectionString);
+                        options.UseMySql(dbConfig.ConnectionString, options => options.EnableRetryOnFailure());
                     }
 
                     options.EnableSensitiveDataLogging(dbConfig.SensitiveLogging);

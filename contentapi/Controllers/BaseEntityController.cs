@@ -68,24 +68,7 @@ namespace contentapi.Controllers
             return package;
         }
 
-        protected void MakeHistoric(Entity entity)
-        {
-            entity.type = keys.HistoryKey + (entity.type ?? "");
-        }
 
-        /// <summary>
-        /// Put a copy of the given entity (after modifications) into history
-        /// </summary>
-        /// <param name="entity"></param>
-        /// <returns></returns>
-        protected async Task<Entity> CopyToHistory(Entity entity)
-        {
-            var newEntity = new Entity(entity);
-            newEntity.id = 0;
-            MakeHistoric(newEntity);
-            await provider.WriteAsync(newEntity);
-            return newEntity;
-        }
 
         /// <summary>
         /// Clean the view for general purpose, assume some defaults (run before udpate)
@@ -141,57 +124,14 @@ namespace contentapi.Controllers
             //Now that the view they gave is all clean, do the full conversion! It should be safe!
             var package = ConvertFromView(view);
 
-            //Some are written, some are deleted on failure. All are eventually written.
-            var writes = new List<EntityBase>();
-            var failDeletes = new List<Entity>();
-
-            try
+            //If this is an UPDATE, do some STUFF
+            if (view.id != 0)
             {
-                //If this is an UPDATE, do some STUFF
-                if (view.id != 0)
-                {
-                    var history = await CopyToHistory(existing.Entity);
-                    failDeletes.Add(history);
-
-                    //Bring all the existing over to this historic entity
-                    history.Relink(existing.Values, existing.Relations);
-
-                    //WE have to link the new stuff to US because we want to write everything all at once 
-                    existing.Entity.Relink(package.Values, package.Relations);
-
-                    var historyLink = NewRelation(existing.Entity.id, keys.HistoryRelation);
-                    historyLink.entityId2 = history.id;
-                    historyLink.createDate = DateTime.Now;
-
-                    writes.Add(historyLink);
-                    writes.AddRange(existing.Values);
-                    writes.AddRange(existing.Relations);
-                    package.FlattenPackage(writes);
-
-                    writes.Add(services.activity.MakeActivity(package.Entity, GetRequesterUidNoFail(), keys.UpdateAction, history.id.ToString()));
-                }
-                else
-                {
-                    await provider.WriteAsync(package.Entity);
-                    failDeletes.Add(package.Entity);
-
-                    package.Relink();
-                    modifyBeforeCreate?.Invoke(package);
-
-                    writes.AddRange(package.Values);
-                    writes.AddRange(package.Relations);
-
-                    writes.Add(services.activity.MakeActivity(package.Entity, GetRequesterUidNoFail(), keys.CreateAction));
-                }
-
-                //Now try to write everything we added to the "transaction" (sometimes you just NEED an id and I can't let
-                //efcore do it because I'm not using foreign keys)
-                await provider.WriteAsync(writes.ToArray());
+                await services.history.UpdateWithHistoryAsync(package, GetRequesterUidNoFail(), existing);
             }
-            catch
+            else
             {
-                await provider.DeleteAsync(failDeletes.ToArray());
-                throw;
+                await services.history.InsertWithHistoryAsync(package, GetRequesterUidNoFail(), modifyBeforeCreate);
             }
 
             return package;
@@ -211,8 +151,7 @@ namespace contentapi.Controllers
         {
             var package = await DeleteCheckAsync(entityId);
             var view = ConvertToView(package);
-            MakeHistoric(package.Entity);
-            await provider.WriteAsync<EntityBase>(package.Entity, services.activity.MakeActivity(package.Entity, GetRequesterUidNoFail(), keys.DeleteAction, package.Entity.name));     //Notice it is a WRITe and not a delete.
+            await services.history.DeleteWithHistoryAsync(package, GetRequesterUidNoFail());
             return view;
         }
 
