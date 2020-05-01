@@ -95,6 +95,10 @@ namespace contentapi.Services.Implementations
                 //Add the historic link back to the history copy from the 
                 originalData.Relations.Add(NewHistoryLink(updateData.Entity, history));
 
+                //A special thing: the values and relations need to be NEW for the update data
+                updateData.Relations.ForEach(x => x.id = 0);
+                updateData.Values.ForEach(x => x.id = 0);
+
                 //We're writing the entirety of the "update" data.
                 var writes = updateData.FlattenPackage();
 

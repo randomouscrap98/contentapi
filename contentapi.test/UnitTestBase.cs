@@ -91,7 +91,7 @@ namespace contentapi.test
             };
         }
 
-        protected Entity NewEntity(long id = 5, string type = "type")
+        protected Entity NewEntity(long id = 0, string type = "type")
         {
             return new Entity()
             {
