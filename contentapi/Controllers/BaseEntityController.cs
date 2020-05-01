@@ -1,13 +1,10 @@
 using System;
 using System.Collections.Generic;
 using System.Linq;
-using System.Security.Claims;
 using System.Threading.Tasks;
 using AutoMapper;
 using contentapi.Services.Extensions;
 using contentapi.Views;
-using Microsoft.AspNetCore.Mvc;
-using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.Logging;
 using Randomous.EntitySystem;
 using Randomous.EntitySystem.Extensions;

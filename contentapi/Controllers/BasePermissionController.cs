@@ -13,59 +13,14 @@ namespace contentapi.Controllers
 {
     public abstract class BasePermissionController<V> : BaseEntityController<V> where V : BasePermissionView
     {
-        protected Dictionary<string, string> permMapping;
 
         public BasePermissionController(ControllerServices services, ILogger<BaseEntityController<V>> logger)
             :base(services, logger) 
         { 
-            permMapping = new Dictionary<string, string>()
-            {
-                {"c", keys.CreateAction},
-                {"r", keys.ReadAction},
-                {"u", keys.UpdateAction},
-                {"d", keys.DeleteAction}
-            };
         }
 
         protected abstract string ParentType {get;}
         protected virtual bool AllowOrphanPosts => false;
-
-        protected List<EntityRelation> ConvertPermsToRelations(Dictionary<string, string> perms)
-        {
-            var result = new List<EntityRelation>();
-            foreach(var perm in perms)
-            {
-                foreach(var p in perm.Value.ToLower().Distinct().Select(x => x.ToString()))
-                {
-                    if(!permMapping.ContainsKey(p))
-                        throw new InvalidOperationException("Bad character in permission");
-                    
-                    long userId = 0;
-
-                    if(!long.TryParse(perm.Key, out userId))
-                        throw new InvalidOperationException("Id not an integer!");
-
-                    result.Add(NewRelation(userId, permMapping[p]));
-                }
-            }
-            return result;
-        }
-
-        protected Dictionary<string, string> ConvertRelationsToPerms(IEnumerable<EntityRelation> relations)
-        {
-            var result = new Dictionary<string, string>();
-            foreach(var relation in relations)
-            {
-                var perm = permMapping.Where(x => x.Value == relation.type);
-                if(perm.Count() != 1)
-                    continue;
-                var userKey = relation.entityId1.ToString();
-                if(!result.ContainsKey(userKey))
-                    result.Add(userKey, "");
-                result[userKey] += (perm.First().Key);
-            }
-            return result;
-        }
 
         protected override EntityPackage ConvertFromView(V view)
         {
@@ -76,7 +31,11 @@ namespace contentapi.Controllers
                 package.Add(NewRelation(view.parentId, keys.ParentRelation));
             
             //Now set up all the permission relations
-            ConvertPermsToRelations(view.permissions).ForEach(x => package.Add(x));
+            services.permissions.ConvertPermsToRelations(view.permissions).ForEach(x => 
+            {
+                x.createDate = null; //Don't store create date!
+                package.Add(x);
+            });
 
             //Done!
             return package;
@@ -89,7 +48,7 @@ namespace contentapi.Controllers
             if(package.HasRelation(keys.ParentRelation))
                 view.parentId = package.GetRelation(keys.ParentRelation).entityId1;
 
-            view.permissions = ConvertRelationsToPerms(package.Relations);
+            view.permissions = services.permissions.ConvertRelationsToPerms(package.Relations);
 
             return view;
         }
@@ -126,15 +85,6 @@ namespace contentapi.Controllers
                 throw new BadRequestException("One or more permission users not found!");
         }
 
-        protected void CheckPermissionValues(V view)
-        {
-            foreach(var perm in view.permissions)
-            {
-                if(perm.Value.ToLower().Any(x => !permMapping.Keys.Contains(x.ToString())))
-                    throw new BadRequestException($"Invalid characters in permission: {perm.Value}");
-            }
-        }
-
         protected override async Task<V> CleanViewGeneralAsync(V view)
         {
             view = await base.CleanViewGeneralAsync(view);
@@ -161,7 +111,7 @@ namespace contentapi.Controllers
             }
 
             await CheckPermissionUsersAsync(view);
-            CheckPermissionValues(view);
+            services.permissions.CheckPermissionValues(view.permissions);
 
             return view;
         }
@@ -182,7 +132,7 @@ namespace contentapi.Controllers
 
             //Restore the permissions from the package, don't bother throwing an error.
             if(!services.systemConfig.SuperUsers.Contains(GetRequesterUidNoFail()) && existing.GetRelation(keys.CreatorRelation).entityId1 != GetRequesterUid())
-                view.permissions = ConvertRelationsToPerms(existing.Relations);
+                view.permissions = services.permissions.ConvertRelationsToPerms(existing.Relations);
 
             return view;
         }
