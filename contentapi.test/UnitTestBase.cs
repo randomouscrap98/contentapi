@@ -17,12 +17,14 @@ namespace contentapi.test
         public List<SqliteConnection> connections = new List<SqliteConnection>();
         public string SqliteConnectionString = "Data Source=:memory:;";
 
+        protected contentapi.Services.Implementations.DefaultServiceProvider contentApiProvider;
         protected DefaultServiceProvider serviceProvider;
         protected Keys keys;
 
         public UnitTestBase()
         {
             serviceProvider = new DefaultServiceProvider();
+            contentApiProvider = new contentapi.Services.Implementations.DefaultServiceProvider();
             this.keys = CreateService<Keys>();
         }
 
@@ -49,6 +51,9 @@ namespace contentapi.test
                 options => options.UseSqlite(connection).EnableSensitiveDataLogging(true),
                 d => d.Database.EnsureCreated());
             services.AddSingleton<Keys>();
+            contentApiProvider.AddDefaultServices(services);
+
+            //you'll NEED to add the default configurations at some point too!!!
 
             return services;
         }

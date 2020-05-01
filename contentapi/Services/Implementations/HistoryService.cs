@@ -1,7 +1,9 @@
 using System;
 using System.Collections.Generic;
+using System.Linq;
 using System.Threading.Tasks;
 using contentapi.Services.Extensions;
+using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.Logging;
 using Randomous.EntitySystem;
 
@@ -58,6 +60,14 @@ namespace contentapi.Services.Implementations
             };
         }
 
+        public Task<List<long>> GetRevisionIdsAsync(long packageId)
+        {
+            return provider.GetListAsync(
+                from r in provider.GetQueryable<EntityRelation>()
+                where r.entityId1 == packageId && r.type == keys.HistoryRelation
+                select r.entityId2);
+        }
+
         /// <summary>
         /// Update the given existing entity with the new entity, preserving the history for the original.
         /// </summary>
@@ -106,6 +116,9 @@ namespace contentapi.Services.Implementations
 
         public async Task InsertWithHistoryAsync(EntityPackage newData, long user, Action<EntityPackage> modifyBeforeCreate = null)
         {
+            if(newData.Entity.id > 0)
+                throw new InvalidOperationException("'New' package has non-zero id!");
+
             var mainEntity = newData.Entity;
             await provider.WriteAsync(mainEntity);
 

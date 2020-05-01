@@ -132,7 +132,6 @@ namespace contentapi.Controllers
             return search;
         }
 
-
         protected bool CanCurrentUser(string key, EntityPackage package)
         {
             return services.permissions.CanUser(GetRequesterUidNoFail(), key, package);
