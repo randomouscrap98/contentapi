@@ -6,22 +6,6 @@ namespace contentapi.test
 {
     public class ActivityServiceTests : ServiceTestBase<ActivityService>
     {
-        Keys keys;
-
-        public ActivityServiceTests()
-        {
-            this.keys = CreateService<Keys>();
-        }
-
-        protected Entity NewEntity(long id = 5, string type = "type")
-        {
-            return new Entity()
-            {
-                id = id,
-                type = type
-            };
-        }
-
         [Fact]
         public void SimpleMakeActivity()
         {

@@ -6,6 +6,7 @@ using Microsoft.Data.Sqlite;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Logging;
+using Randomous.EntitySystem;
 using Randomous.EntitySystem.Implementations;
 using Xunit;
 
@@ -17,10 +18,12 @@ namespace contentapi.test
         public string SqliteConnectionString = "Data Source=:memory:;";
 
         protected DefaultServiceProvider serviceProvider;
+        protected Keys keys;
 
         public UnitTestBase()
         {
             serviceProvider = new DefaultServiceProvider();
+            this.keys = CreateService<Keys>();
         }
 
         public void Dispose()
@@ -74,5 +77,23 @@ namespace contentapi.test
             Assert.Equal(expected.Count(), result.Count());
             Assert.Equal(expected.ToHashSet(), result.ToHashSet());
         }
+
+        protected EntityPackage NewPackage()
+        {
+            return new EntityPackage()
+            {
+                Entity = NewEntity()
+            };
+        }
+
+        protected Entity NewEntity(long id = 5, string type = "type")
+        {
+            return new Entity()
+            {
+                id = id,
+                type = type
+            };
+        }
+
     }
 }
