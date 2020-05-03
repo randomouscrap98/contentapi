@@ -165,5 +165,23 @@ namespace contentapi.Services.Implementations
                 historicPart, 
                 activityService.MakeActivity(historicPart, user, keys.DeleteAction, package.Entity.name));     
         }
+
+        public EntityPackage ConvertHistoryToUpdate(EntityPackage history)
+        {
+            var result = new EntityPackage(history);
+
+            //Pull out (literally) the history relation
+            var historyLink = result.Relations.Where(x => x.type == keys.HistoryRelation).OnlySingle();
+            result.Relations.RemoveAll(x => x.type == keys.HistoryRelation);
+
+            //Update the id from history, relink to us (I don't know if relinking matters...)
+            result.Entity.id = historyLink.entityId1;
+            result.Relink();
+
+            //Finally, mark the type as would normally be
+            result.Entity.type = result.Entity.type.Substring(keys.HistoryKey.Length);
+
+            return result;
+        }
     }
 }

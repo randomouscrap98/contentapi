@@ -78,11 +78,53 @@ namespace contentapi.test
             });
         }
 
-        protected void SetLikeNew(EntityPackage package)
+        protected EntityPackage SetLikeNew(EntityPackage package)
         {
             package.Entity.id = 0;
             package.Values.ForEach(x => x.id = 0);
             package.Relations.ForEach(x => x.id = 0);
+            return package;
+        }
+
+        /// <summary>
+        /// Stupid datetime bull...
+        /// </summary>
+        /// <param name="one"></param>
+        protected void FixEntity(EntityBase fix)//, EntityBase two)
+        {
+            fix.createDate = fix.createDateProper(); //Set create date to proper so everything is aligned
+        }
+
+        protected void FixPackage(EntityPackage package)
+        {
+            FixEntity(package.Entity);
+            package.Values.ForEach(x => FixEntity(x));
+            package.Relations.ForEach(x => FixEntity(x));
+        }
+
+        protected void AssertFixedEqual(EntityPackage one, EntityPackage two)
+        {
+            FixPackage(one);
+            FixPackage(two);
+            Assert.Equal(one, two);
+        }
+
+        protected void AssertHistoryEqual(EntityPackage origin, EntityPackage history)
+        {
+            var originCopy = SetLikeNew(new EntityPackage(origin));
+            var historyCopy = SetLikeNew(new EntityPackage(history));
+
+            var compare = service.ConvertHistoryToUpdate(historyCopy);
+
+            AssertFixedEqual(originCopy, compare);
+
+            //Assert.Equal(originCopy.Entity, historyCopy.Entity);
+
+            //foreach(var value in originCopy.Values)
+            //    Assert.Contains(value, historyCopy.Values);
+
+            //foreach(var relation in originCopy.Relations)
+            //    Assert.Contains(relation, historyCopy.Relations);
         }
 
         [Fact]
@@ -107,17 +149,16 @@ namespace contentapi.test
             Assert.Single(revisions);
             Assert.NotEqual(package.Entity.id, revisions.First());
 
-            //Ensure the CURRENT package we pulled out is EXACTLY the same.
+            //Ensure the CURRENT package we pulled out is EXACTLY the same (minus date kind)
             var currentPackage = provider.FindByIdAsync(package.Entity.id).Result;
-            Assert.Equal(package, currentPackage);;
+            AssertFixedEqual(package, currentPackage);
 
             //Ensure the package from history is EXACTLY the same as the one before sans ids (set all to 0)
             var revisionPackage = provider.FindByIdAsync(revisions.First()).Result;
+            var likeUpdate = service.ConvertHistoryToUpdate(revisionPackage);
+            AssertFixedEqual(firstInsertedPackage, likeUpdate);
 
-            ////Ensure everything but ids are same
-            //SetLikeNew(originaPackageCopy);
-            //SetLikeNew(revisionPackage);
-            //Assert.Equal(originaPackageCopy, revisionPackage);
+            //AssertHistoryEqual(firstInsertedPackage, revisionPackage);
         }
     }
 }
