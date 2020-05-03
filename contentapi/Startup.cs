@@ -70,7 +70,8 @@ namespace contentapi
             services.AddSingleton<ITempTokenService<long>, TempTokenService<long>>();
 
             //And now, the service config that goes into EVERY controller.
-            services.AddTransient<ControllerServices>();
+            //services.AddTransient<ControllerServices>();
+            services.AddTransient<ViewServices>();
 
             services.AddSingleton<HashConfig>();    //Just use defaults
             services.AddSingleton(p =>

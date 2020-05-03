@@ -20,6 +20,7 @@ namespace contentapi
         public string CreatorRelation => "rc"; 
         public string ParentRelation => "rp";
         public string HistoryRelation => "rh";
+        public string SuperRelation => "rs";
 
 
         //General Value keys

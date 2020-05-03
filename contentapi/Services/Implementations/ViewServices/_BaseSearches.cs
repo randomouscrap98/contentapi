@@ -3,7 +3,7 @@ using System.Linq;
 using AutoMapper;
 using Randomous.EntitySystem;
 
-namespace contentapi.Controllers
+namespace contentapi.Services.Implementations
 {
     public class BaseParentSearch : EntitySearchBase 
     {

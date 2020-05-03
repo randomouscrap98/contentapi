@@ -14,10 +14,16 @@ namespace contentapi.Services
     //    public EntityRelation permission; 
     //}
 
+    public class ViewRequester
+    {
+        public long userId;
+    }
+
     public interface IViewService<V,S> where S : EntitySearchBase where V : BaseView
     {
-        Task<IList<V>> SearchAsync(S search);
-        Task<V> WriteAsync(V view);
+        Task<IList<V>> SearchAsync(S search, ViewRequester requester);
+        Task<V> WriteAsync(V view, ViewRequester requester); //This can be either update or insert
+        Task<V> DeleteAsync(long id, ViewRequester requester);
         
         //IQueryable<EntityGroup> GetBaseQueryable(S search);
     }

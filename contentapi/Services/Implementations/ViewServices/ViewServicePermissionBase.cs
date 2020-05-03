@@ -9,14 +9,12 @@ using Microsoft.Extensions.Logging;
 using Randomous.EntitySystem;
 using Randomous.EntitySystem.Extensions;
 
-namespace contentapi.Controllers
+namespace contentapi.Services.Implementations
 {
-    public abstract class BasePermissionController<V> : BaseEntityController<V> where V : BasePermissionView
+    public abstract class ViewServicePermissionbase<V,S> : ViewServiceEntityBase<V,S> where V : BasePermissionView where S : EntitySearchBase
     {
-
-        public BasePermissionController(ControllerServices services, ILogger<BaseEntityController<V>> logger)
-            :base(services, logger) 
-        { 
+        public ViewServicePermissionbase(ViewServices services, ILogger<ViewServiceBase<V, S>> logger) : base(services, logger)
+        {
         }
 
         protected abstract string ParentType {get;}
@@ -85,9 +83,9 @@ namespace contentapi.Controllers
                 throw new BadRequestException("One or more permission users not found!");
         }
 
-        protected override async Task<V> CleanViewGeneralAsync(V view)
+        protected override async Task<V> CleanViewGeneralAsync(V view, long userId)
         {
-            view = await base.CleanViewGeneralAsync(view);
+            view = await base.CleanViewGeneralAsync(view, userId);
 
             if(view.parentId > 0)
             {
@@ -101,13 +99,13 @@ namespace contentapi.Controllers
 
                 //Only for CREATING. This is a silly weird thing since this is the general cleanup...
                 //Almost NOTHING requires cleanup specifically for create.
-                if(view.id == 0 && !CanCurrentUser(keys.CreateAction, parent))
+                if(view.id == 0 && !services.permissions.CanUser(userId, keys.CreateAction, parent))
                     throw new BadRequestException($"User cannot create entities in parent {view.parentId}");
             }
             else if (!AllowOrphanPosts)
             {
                 //Only super users can create parentless entities... for now. This is a safety feature and may (never) be removed
-                FailUnlessRequestSuper();
+                FailUnlessSuper(userId);
             }
 
             await CheckPermissionUsersAsync(view);
@@ -123,30 +121,35 @@ namespace contentapi.Controllers
         /// <param name="standin"></param>
         /// <param name="existing"></param>
         /// <returns></returns>
-        protected override async Task<V> CleanViewUpdateAsync(V view, EntityPackage existing)
+        protected override async Task<V> CleanViewUpdateAsync(V view, EntityPackage existing, long userId)
         {
-            view = await base.CleanViewUpdateAsync(view, existing);
+            view = await base.CleanViewUpdateAsync(view, existing, userId);
 
-            if (!CanCurrentUser(keys.UpdateAction, existing))
+            if (!services.permissions.CanUser(userId, keys.UpdateAction, existing))
                 throw new AuthorizationException("User cannot update this entity");
 
             //Restore the permissions from the package, don't bother throwing an error.
-            if(!services.systemConfig.SuperUsers.Contains(GetRequesterUidNoFail()) && existing.GetRelation(keys.CreatorRelation).entityId1 != GetRequesterUid())
+            if(!services.permissions.IsSuper(userId) && existing.GetRelation(keys.CreatorRelation).entityId1 != userId)
                 view.permissions = services.permissions.ConvertRelationsToPerms(existing.Relations);
 
             return view;
         }
 
 
-        protected async override Task<EntityPackage> DeleteCheckAsync(long standinId)
+        protected async override Task<EntityPackage> DeleteCheckAsync(long standinId, long userId)
         {
-            var result = await base.DeleteCheckAsync(standinId);
+            var result = await base.DeleteCheckAsync(standinId, userId);
 
-            if(!CanCurrentUser(keys.DeleteAction, result))
+            if(!services.permissions.CanUser(userId, keys.DeleteAction, result))
                 throw new InvalidOperationException("No permission to delete");
 
             return result;
         }
+
+        //protected async Task<bool> IsLocalSuper(long uid, long contentId)
+        //{
+        //    var categories = await provider.GetEntityPackagesAsync(new EntitySearch() { TypeLike = keys.CategoryType });
+        //}
 
     }
 }

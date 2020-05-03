@@ -9,12 +9,13 @@ using Microsoft.Extensions.Logging;
 using Randomous.EntitySystem;
 using Randomous.EntitySystem.Extensions;
 
-namespace contentapi.Controllers
+namespace contentapi.Services.Implementations
 {
-    public abstract class BaseEntityController<V> : BaseSimpleController where V : BaseEntityView
+    public abstract class ViewServiceEntityBase<V,S> : ViewServiceBase<V,S> where V : BaseEntityView where S : EntitySearchBase
     {
-        public BaseEntityController(ControllerServices services, ILogger<BaseEntityController<V>> logger)
-            :base(services, logger) { }
+        public ViewServiceEntityBase(ViewServices services, ILogger<ViewServiceBase<V, S>> logger) : base(services, logger)
+        {
+        }
 
         protected abstract string EntityType {get;}
 
@@ -65,18 +66,16 @@ namespace contentapi.Controllers
             return package;
         }
 
-
-
         /// <summary>
         /// Clean the view for general purpose, assume some defaults (run before udpate)
         /// </summary>
         /// <param name="view"></param>
         /// <returns></returns>
-        protected virtual Task<V> CleanViewGeneralAsync(V view)
+        protected virtual Task<V> CleanViewGeneralAsync(V view, long userId)
         {
             //These are safe, always true
-            view.editUserId = GetRequesterUidNoFail(); //Editor is ALWAYS US
-            view.editDate = DateTime.Now;    //Edit date is ALWAYS NOW
+            view.editUserId = userId;       //Editor is ALWAYS US
+            view.editDate = DateTime.Now;   //Edit date is ALWAYS NOW
 
             //These are assumptions, might get overruled
             view.createDate = view.editDate;
@@ -91,7 +90,7 @@ namespace contentapi.Controllers
         /// <param name="view"></param>
         /// <param name="existing"></param>
         /// <returns></returns>
-        protected virtual Task<V> CleanViewUpdateAsync(V view, EntityPackage existing)
+        protected virtual Task<V> CleanViewUpdateAsync(V view, EntityPackage existing, long userId)
         {
             //FORCE these to be what they were before.
             view.createDate = (DateTime)existing.Entity.createDateProper();
@@ -104,18 +103,18 @@ namespace contentapi.Controllers
             return Task.FromResult(view);
         }
 
-        protected async Task<EntityPackage> WriteViewBaseAsync(V view, Action<EntityPackage> modifyBeforeCreate = null)
+        protected async Task<EntityPackage> WriteViewBaseAsync(V view, long userId, Action<EntityPackage> modifyBeforeCreate = null)
         {
             logger.LogTrace("WriteViewAsync called");
 
             EntityPackage existing = null; 
 
-            view = await CleanViewGeneralAsync(view);
+            view = await CleanViewGeneralAsync(view, userId);
 
             if(view.id != 0)
             {
                 existing = await provider.FindByIdAsync(view.id);
-                view = await CleanViewUpdateAsync(view, existing);
+                view = await CleanViewUpdateAsync(view, existing, userId);
             }
 
             //Now that the view they gave is all clean, do the full conversion! It should be safe!
@@ -123,20 +122,16 @@ namespace contentapi.Controllers
 
             //If this is an UPDATE, do some STUFF
             if (view.id != 0)
-            {
-                await services.history.UpdateWithHistoryAsync(package, GetRequesterUidNoFail(), existing);
-            }
+                await services.history.UpdateWithHistoryAsync(package, userId, existing);
             else
-            {
-                await services.history.InsertWithHistoryAsync(package, GetRequesterUidNoFail(), modifyBeforeCreate);
-            }
+                await services.history.InsertWithHistoryAsync(package, userId, modifyBeforeCreate);
 
             return package;
         }
 
-        protected async Task<V> WriteViewAsync(V view)
+        public override async Task<V> WriteAsync(V view, ViewRequester requester)
         {
-            return ConvertToView(await WriteViewBaseAsync(view));
+            return ConvertToView(await WriteViewBaseAsync(view, requester.userId));
         }
 
         /// <summary>
@@ -144,11 +139,11 @@ namespace contentapi.Controllers
         /// </summary>
         /// <param name="entityId"></param>
         /// <returns></returns>
-        protected async Task<V> DeleteByIdAsync(long entityId)
+        public override async Task<V> DeleteAsync(long entityId, ViewRequester requester)
         {
-            var package = await DeleteCheckAsync(entityId);
+            var package = await DeleteCheckAsync(entityId, requester.userId);
             var view = ConvertToView(package);
-            await services.history.DeleteWithHistoryAsync(package, GetRequesterUidNoFail());
+            await services.history.DeleteWithHistoryAsync(package, requester.userId);
             return view;
         }
 
@@ -157,7 +152,7 @@ namespace contentapi.Controllers
         /// </summary>
         /// <param name="entityId"></param>
         /// <returns></returns>
-        protected async virtual Task<EntityPackage> DeleteCheckAsync(long entityId)
+        protected async virtual Task<EntityPackage> DeleteCheckAsync(long entityId, long userId)
         {
             var last = await provider.FindByIdAsync(entityId);
 
@@ -211,7 +206,6 @@ namespace contentapi.Controllers
         {
             return FindByNameAsyncGeneric(name, provider.GetEntityPackagesAsync);
         }
-
 
         /// <summary>
         /// Find some entity by name
