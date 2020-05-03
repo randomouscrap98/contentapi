@@ -33,12 +33,8 @@ namespace contentapi.Services.Implementations
 
     //The very most basic view service functions. Eventually, fix this to be services; don't have
     //time right now.
-    public abstract class ViewServiceBase<V, S> : IViewService<V, S> where S : EntitySearchBase where V : BaseView
+    public abstract class ViewServiceBase<V, S> : IViewService<V, S> where S : EntitySearchBase, new() where V : BaseView
     {
-        public abstract Task<V> DeleteAsync(long id, ViewRequester requester);
-        public abstract Task<V> WriteAsync(V view, ViewRequester requester);
-        public abstract Task<IList<V>> SearchAsync(S search, ViewRequester requester);
-
         protected ViewServices services;
         protected ILogger logger;
         
@@ -49,6 +45,18 @@ namespace contentapi.Services.Implementations
         {
             this.services = services;
             this.logger = logger;
+        }
+
+        public abstract Task<V> DeleteAsync(long id, ViewRequester requester);
+        public abstract Task<V> WriteAsync(V view, ViewRequester requester);
+        public abstract Task<IList<V>> SearchAsync(S search, ViewRequester requester);
+        public abstract Task<IList<V>> GetRevisions(long id, ViewRequester requester);
+
+        public async Task<V> FindByIdAsync(long id, ViewRequester requester)
+        {
+            var search = new S();
+            search.Ids.Add(id);
+            return (await SearchAsync(search, requester)).OnlySingle();
         }
 
         protected EntityPackage NewEntity(string name, string content = null)

@@ -9,8 +9,8 @@ namespace contentapi.Controllers
     {
         protected ITempTokenService<long> tokenService;
 
-        public StreamController(ControllerServices services, ILogger<BaseSimpleController> logger,
-            ITempTokenService<long> tokenService) : base(services, logger)
+        public StreamController(Keys keys, ILogger<BaseSimpleController> logger,
+            ITempTokenService<long> tokenService) : base(keys, logger)
         {
             this.tokenService = tokenService;
         }

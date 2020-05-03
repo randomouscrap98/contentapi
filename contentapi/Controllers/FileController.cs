@@ -5,6 +5,7 @@ using System.Threading.Tasks;
 using AutoMapper;
 using contentapi.Services;
 using contentapi.Services.Extensions;
+using contentapi.Services.Implementations;
 using contentapi.Views;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Http;
@@ -19,35 +20,23 @@ using SixLabors.Primitives;
 
 namespace contentapi.Controllers
 {
-    public class FileSearch : BaseContentSearch { }
-
     public class FileControllerConfig
     {
         public string Location {get;set;}
         public int MaxSize {get;set;}
     }
 
-    public class FileController : BasePermissionController<FileView>
+    public class FileController : BaseSimpleController //BasePermissionController<FileView>
     {
         protected FileControllerConfig config;
+        protected FileViewService service;
 
-        public FileController(ControllerServices services, ILogger<FileController> logger, IOptionsMonitor<FileControllerConfig> config) : base(services, logger)
+        public FileController(Keys keys, ILogger<BaseSimpleController> logger, FileControllerConfig config,
+            FileViewService service) 
+            : base(keys, logger)
         {
-            this.config = config.CurrentValue;
-        }
-
-        protected override string ParentType => keys.UserType;
-        protected override string EntityType => keys.FileType;
-        protected override bool AllowOrphanPosts => true;
-
-        protected override EntityPackage CreateBasePackage(FileView view)
-        {
-            return NewEntity(view.name, view.fileType);
-        }
-
-        protected override FileView CreateBaseView(EntityPackage package)
-        {
-            return new FileView() { name = package.Entity.name, fileType = package.Entity.content };
+            this.config = config;
+            this.service = service;
         }
 
         protected string GetPath(long id, GetFileModify modify = null)//int size = 0)
@@ -94,6 +83,8 @@ namespace contentapi.Controllers
                 if(file.Length > config.MaxSize)
                     throw new BadRequestException("File too large!");
                 
+                var requester = GetRequesterNoFail();
+                
                 var newView = new FileView();
                 newView.permissions["0"] = "R";
 
@@ -106,7 +97,7 @@ namespace contentapi.Controllers
                 }
 
                 //We HAVE to write now to reserve an ID (and we found the mime type)
-                newView = await WriteViewAsync(newView);
+                newView = await service.WriteAsync(newView, requester);
                 var finalLocation = GetAndMakePath(newView.id);
 
                 try
@@ -120,7 +111,7 @@ namespace contentapi.Controllers
                 catch
                 {
                     //Delete that file we added oops
-                    await DeleteByIdAsync(newView.id);
+                    await service.DeleteAsync(newView.id, requester);
                     throw;
                 }
 
@@ -129,22 +120,12 @@ namespace contentapi.Controllers
             });
         }
 
-        protected override async Task<FileView> CleanViewUpdateAsync(FileView view, EntityPackage existing)
-        {
-            var result = await base.CleanViewGeneralAsync(view);
-
-            //Always restore the filetype, you can't change uploaded files anyway.
-            result.fileType = existing.Entity.content;
-
-            return result;
-        }
-
         [HttpPut("{id}")]
         [Authorize]
         public Task<ActionResult<FileView>> PutAsync([FromRoute] long id, [FromBody]FileView view)
         {
             view.id = id;
-            return ThrowToAction(() => WriteViewAsync(view));
+            return ThrowToAction(() => service.WriteAsync(view, GetRequesterNoFail()));
         }
 
         public class GetFileModify
@@ -169,21 +150,20 @@ namespace contentapi.Controllers
                     return BadRequest("Too large!");
             }
 
-            //Go get that ONE file.
-            var fileData = await provider.FindByIdAsync(id);
+            var requester = GetRequesterNoFail();
+
+            //Go get that ONE file. This should return null if we can't read it... let's hope!
+            var fileData = await service.FindByIdAsync(id, requester);
 
             if(fileData == null)
                 return NotFound();
             
-            if(!CanCurrentUser(keys.ReadAction, fileData))
-                return NotFound(); //This needs to be the norm. Fix it!
-            
-            var finalPath = GetAndMakePath(fileData.Entity.id, modify); 
+            var finalPath = GetAndMakePath(fileData.id, modify); 
             
             //Ok NOW we can go get it. We may need to perform a resize beforehand if we can't find the file.
             if(!System.IO.File.Exists(finalPath))
             {
-                var baseImage = GetPath(fileData.Entity.id);
+                var baseImage = GetPath(fileData.id);
                 IImageFormat format;
 
                 await Task.Run(() =>
@@ -220,27 +200,13 @@ namespace contentapi.Controllers
             }
 
             Response.Headers.Add("ETag", GetETag(finalPath));
-            return File(System.IO.File.OpenRead(finalPath), fileData.Entity.content);
-        }
-
-        protected async Task<List<FileView>> GetViewsAsync(FileSearch search)
-        {
-            var entitySearch = ModifySearch(services.mapper.Map<EntitySearch>(search));
-
-            var user = GetRequesterUidNoFail();
-
-            var perms = BasicReadQuery(user, entitySearch);
-
-            if(search.ParentIds.Count > 0)
-                perms = WhereParents(perms, search.ParentIds);
-
-            return await ViewResult(FinalizeQuery(perms, entitySearch));
+            return File(System.IO.File.OpenRead(finalPath), fileData.fileType);
         }
 
         [HttpGet]
-        public async Task<ActionResult<List<FileView>>> GetAsync([FromQuery]FileSearch search)
+        public Task<ActionResult<IList<FileView>>> GetAsync([FromQuery]FileSearch search)
         {
-            return await GetViewsAsync(search);
+            return ThrowToAction(() => service.SearchAsync(search, GetRequesterNoFail()));
         }
     }
 }

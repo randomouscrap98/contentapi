@@ -28,8 +28,13 @@ namespace contentapi.Controllers
     [ApiController]
     public class TestController : BaseSimpleController
     {
-        public TestController(ILogger<TestController> logger, ControllerServices services)
-            :base(services, logger) { }
+        protected IEntityProvider provider;
+
+        public TestController(Keys keys, ILogger<BaseSimpleController> logger, IEntityProvider provider) 
+            : base(keys, logger) 
+        { 
+            this.provider = provider;
+        }
 
         public class TestData
         {
@@ -41,9 +46,9 @@ namespace contentapi.Controllers
         [HttpGet]
         public async Task<ActionResult<TestData>> TestGet()
         {
-            var entities = await services.provider.GetEntitiesAsync(new EntitySearch()); //This should get all?
-            var values = await services.provider.GetEntityValuesAsync(new EntityValueSearch()); //This should get all?
-            var relations = await services.provider.GetEntityRelationsAsync(new EntityRelationSearch()); //This should get all?
+            var entities = await provider.GetEntitiesAsync(new EntitySearch()); //This should get all?
+            var values = await provider.GetEntityValuesAsync(new EntityValueSearch()); //This should get all?
+            var relations = await provider.GetEntityRelationsAsync(new EntityRelationSearch()); //This should get all?
 
             return new TestData()
             {
@@ -60,11 +65,11 @@ namespace contentapi.Controllers
             public TimeSpan ListenGracePeriod {get;set;}
         }
 
-        [HttpGet("system")]
-        public ActionResult<SystemData> GetSystem()
-        {
-            return services.mapper.Map<SystemData>(services.systemConfig); 
-        }
+        //[HttpGet("system")]
+        //public ActionResult<SystemData> GetSystem()
+        //{
+        //    return mapper.Map<SystemData>(services.systemConfig); 
+        //}
 
         [HttpGet("exception")]
         public ActionResult GetException()

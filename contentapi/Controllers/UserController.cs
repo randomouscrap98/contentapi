@@ -14,141 +14,69 @@ using Randomous.EntitySystem.Extensions;
 using System.Text;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.Options;
+using contentapi.Services.Implementations;
 
 namespace contentapi.Controllers
 {
-    public class UserSearch : EntitySearchBase
-    {
-        public string Username {get;set;}
-    }
-
     public class UserControllerConfig
     {
         public int NameChangesPerTime {get;set;} //= 3;
         public TimeSpan NameChangeRange {get;set;}
     }
 
-    public class UserControllerProfile : Profile
-    {
-        public UserControllerProfile()
-        {
-            CreateMap<UserSearch, EntitySearch>().ForMember(x => x.NameLike, o => o.MapFrom(s => s.Username));
-
-            CreateMap<UserViewBasic, UserView>().ReverseMap();
-            CreateMap<UserViewBasic, UserViewFull>().ReverseMap();
-            CreateMap<UserView, UserViewFull>().ReverseMap();
-            CreateMap<UserCredential, UserViewFull>().ReverseMap();
-        }
-    }
-
-    public class UserController : BaseEntityController<UserViewFull>
+    public class UserController : BaseSimpleController
     {
         protected IHashService hashService;
         protected ITokenService tokenService;
         protected ILanguageService languageService;
         protected IEmailService emailService;
+        protected IMapper mapper;
+        protected UserViewService service;
 
         protected UserControllerConfig config;
 
-        public UserController(ILogger<UserController> logger, ControllerServices services, IHashService hashService,
+        public UserController(ILogger<UserController> logger, Keys keys, IHashService hashService,
             ITokenService tokenService, ILanguageService languageService, IEmailService emailService,
-            IOptionsMonitor<UserControllerConfig> config)
-            :base(services, logger)
+            UserControllerConfig config, UserViewService service, IMapper mapper)
+            :base(keys, logger)
         { 
             this.hashService = hashService;
             this.tokenService = tokenService;
             this.languageService = languageService;
             this.emailService = emailService;
-            this.config = config.CurrentValue;
+            this.config = config;
+            this.service = service;
+            this.mapper = mapper;
         }
 
-        protected override string EntityType => keys.UserType;
-
-        protected override UserViewFull CreateBaseView(EntityPackage user)
+        protected async Task<UserViewFull> GetCurrentUser()
         {
-            var result = new UserViewFull() 
-            { 
-                username = user.Entity.name, 
-                email = user.GetValue(keys.EmailKey).value, 
-                super = services.systemConfig.SuperUsers.Contains(user.Entity.id),
-                password = user.GetValue(keys.PasswordHashKey).value,
-                salt = user.GetValue(keys.PasswordSaltKey).value
-            };
-
-            if(user.HasValue(keys.AvatarKey))
-                result.avatar = long.Parse(user.GetValue(keys.AvatarKey).value);
-            if(user.HasValue(keys.RegistrationCodeKey))
-                result.registrationKey = user.GetValue(keys.RegistrationCodeKey).value;
-
-            return result;
-        }
-
-        protected override EntityPackage CreateBasePackage(UserViewFull user)
-        {
-            var newUser = NewEntity(user.username)
-                .Add(NewValue(keys.AvatarKey, user.avatar.ToString()))
-                .Add(NewValue(keys.EmailKey, user.email))
-                .Add(NewValue(keys.PasswordSaltKey, user.salt))
-                .Add(NewValue(keys.PasswordHashKey, user.password));
-            //Can't do anything about super
-            
-            if(!string.IsNullOrWhiteSpace(user.registrationKey))
-                newUser.Add(NewValue(keys.RegistrationCodeKey, user.registrationKey));
-
-            return newUser;
-        }
-
-        protected override async Task<UserViewFull> CleanViewGeneralAsync(UserViewFull view)
-        {
-            view = await base.CleanViewGeneralAsync(view);
-
-            //Go look up the avatar. Make sure it's A FILE DAMGIT
-            var file = await provider.FindByIdBaseAsync(view.avatar);
-
-            if(file != null && (!file.type.StartsWith(keys.FileType) || !file.content.ToLower().StartsWith("image")))
-                throw new BadRequestException("Avatar isn't an image type content!");
-
-            return view;
-        }
-
-        protected async Task<List<EntityPackage>> GetAll(UserSearch search)
-        {
-            var entitySearch = ModifySearch(services.mapper.Map<EntitySearch>(search));
-            return await provider.GetEntityPackagesAsync(entitySearch);
-        }
-        
-        protected UserView GetView(EntityPackage package)
-        {
-            return services.mapper.Map<UserView>(ConvertToView(package));
-        }
-
-        protected async Task<EntityPackage> GetCurrentUser()
-        {
-            var id = GetRequesterUid();
-            var user = await provider.FindByIdAsync(id);
+            var requester = GetRequesterNoFail();
+            var user = await service.FindByIdAsync(requester.userId, requester);
 
             //A VERY SPECIFIC glitch you really only get in development 
             if (user == null)
-                throw new UnauthorizedAccessException($"No user with uid {id}");
+                throw new UnauthorizedAccessException($"No user with uid {requester.userId}");
             
             return user;
         }
 
         [HttpGet]
-        public async Task<ActionResult<List<UserViewBasic>>> GetAsync([FromQuery]UserSearch search)
+        public Task<ActionResult<IList<UserViewBasic>>> GetAsync(UserSearch search)
         {
-            logger.LogDebug($"User GetAsync called by {GetRequesterUidNoFail()}");
-            return (await GetAll(search)).Select(x => services.mapper.Map<UserViewBasic>(ConvertToView(x))).ToList();
+            return ThrowToAction<IList<UserViewBasic>>(async () =>
+            {
+                return (await service.SearchAsync(search, GetRequesterNoFail())).Select(x => mapper.Map<UserViewBasic>(x)).ToList();
+            });
         }
 
         [HttpGet("me")]
         [Authorize]
         public Task<ActionResult<UserView>> Me()
         {
-            //The first is check, the second is return
             return ThrowToAction<UserView>(async () => 
             {
-                return GetView(await GetCurrentUser());
+                return mapper.Map<UserView>(await GetCurrentUser());
             }); 
         }
 
@@ -163,17 +91,13 @@ namespace contentapi.Controllers
         {
             return ThrowToAction<UserView>(async () => 
             {
-                var user = await GetCurrentUser();
-                var userView = ConvertToView(user);
+                var userView = await GetCurrentUser();
 
                 //Only set avatar if they gave us something
                 if(data.avatar >= 0)
                     userView.avatar = data.avatar;
 
-                //if(!string.IsNullOrWhiteSpace(data.username))
-                //    throw new BadRequestException("No username changes yet! Maybe soon!");
-
-                return GetView(await WriteViewBaseAsync(userView));
+                return mapper.Map<UserView>(await service.WriteAsync(userView, GetRequesterNoFail()));
             }); 
         }
 
@@ -188,28 +112,20 @@ namespace contentapi.Controllers
         [HttpPost("authenticate")]
         public async Task<ActionResult<string>> Authenticate([FromBody]UserAuthenticate user)
         {
-            EntityPackage foundUser = null;
+            UserViewFull userView = null;
+            var requester = GetRequesterNoFail();
 
             if(user.username != null)
-            {
-                foundUser = await FindByNameAsync(user.username);
-            }
+                userView = await service.FindByUsernameAsync(user.username, requester);
             else if (user.email != null)
-            {
-                var foundEmail = await FindValueAsync(keys.EmailKey, user.email);
-
-                if(foundEmail != null)
-                    foundUser = await provider.FindByIdAsync(foundEmail.entityId);
-            }
+                userView = await service.FindByEmailAsync(user.email, requester);
 
             //Should this be the same as bad password? eeeehhhh
-            if(foundUser == null)
+            if(userView == null)
                 return BadRequest("Must provide a valid username or email!");
             
-            if(foundUser.HasValue(keys.RegistrationCodeKey)) //There's a registration code pending
+            if(!string.IsNullOrWhiteSpace(userView.registrationKey)) //There's a registration code pending
                 return BadRequest("You must confirm your email first");
-
-            var userView = ConvertToView(foundUser);
 
             if(!Verify(userView, user.password))
                 return BadRequest("Password incorrect!");
@@ -221,7 +137,7 @@ namespace contentapi.Controllers
             if(user.ExpireSeconds > 0)
                 expireOverride = TimeSpan.FromSeconds(user.ExpireSeconds);
 
-            return GetToken(foundUser.Entity.id, expireOverride);
+            return GetToken(userView.id, expireOverride);
         }
 
 
@@ -246,22 +162,18 @@ namespace contentapi.Controllers
                 return BadRequest("Must provide an email!");
             if(string.IsNullOrWhiteSpace(user.password))
                 return BadRequest("Must provide a password!");
+            
+            var requester = GetRequesterNoFail();
 
-            if(await FindByNameBaseAsync(user.username) != null || await FindValueAsync(keys.EmailKey, user.email) != null)
+            if(await service.FindByUsernameAsync(user.username, requester) != null || await service.FindByEmailAsync(user.email, requester) != null)
                 return BadRequest("This user already seems to exist!");
             
-            var fullUser = services.mapper.Map<UserViewFull>(user);
+            var fullUser = mapper.Map<UserViewFull>(user);
 
             SetPassword(fullUser, fullUser.password);
             fullUser.registrationKey = Guid.NewGuid().ToString();
 
-            return await ThrowToAction(async() => GetView(await WriteViewBaseAsync(fullUser, (p) => 
-            {
-                //Before creating the user, we need to set the owner as themselves, not as anonymous.
-                var creatorRelation = p.GetRelation(keys.CreatorRelation);
-                creatorRelation.entityId1 = creatorRelation.entityId2;
-                creatorRelation.value = creatorRelation.entityId2.ToString(); //Warn: this is VERY implementation specific! Kinda sucks to have two pieces of code floating around!
-            })));
+            return await ThrowToAction(async() => mapper.Map<UserView>(await service.WriteAsync(fullUser, requester)));
         }
 
         public class RegistrationEmailPost
@@ -272,18 +184,19 @@ namespace contentapi.Controllers
         [HttpPost("register/sendemail")]
         public async Task<ActionResult> SendRegistrationEmail([FromBody]RegistrationEmailPost post)
         {
-            var emailValue = await FindValueAsync(keys.EmailKey, post.email);
+            var requester = GetRequesterNoFail();
+            var foundUser = await service.FindByEmailAsync(post.email, requester);
 
-            if(emailValue == null)
+            if(foundUser == null)
                 return BadRequest("No user with that email");
 
             //Now look up the registration code (that's all we need from user)
-            var registrationCode = await FindValueAsync(keys.RegistrationCodeKey, null, emailValue.entityId);
+            var registrationCode = foundUser.registrationKey;
 
-            if(registrationCode == null)
+            if(string.IsNullOrWhiteSpace(registrationCode))
                 return BadRequest("Nothing to do for user");
 
-            await SendConfirmationEmailAsync(post.email, registrationCode.value);
+            await SendConfirmationEmailAsync(post.email, foundUser.registrationKey); //registrationCode.value);
 
             return Ok("Email sent");
         }
@@ -299,15 +212,19 @@ namespace contentapi.Controllers
             if(string.IsNullOrEmpty(post.confirmationKey))
                 return BadRequest("Must provide a confirmation key in the body");
 
-            var confirmValue = await FindValueAsync(keys.RegistrationCodeKey, post.confirmationKey);
+            var requester = GetRequesterNoFail();
 
-            if(confirmValue == null)
+            var unconfirmedUser = await service.FindByRegistration(post.confirmationKey, requester);
+
+            if(unconfirmedUser == null)
                 return BadRequest("No user found with confirmation key");
 
-            var uid = confirmValue.entityId;
-            await provider.DeleteAsync(confirmValue);
+            unconfirmedUser.registrationKey = null;
 
-            return GetToken(uid);
+            //Clear out the registration. This is probably not good? These are implementation details, shouldn't be here
+            var confirmedUser = await service.WriteAsync(unconfirmedUser, requester);
+
+            return GetToken(confirmedUser.id);
         }
 
         protected bool Verify(UserViewFull user, string password)
@@ -328,9 +245,10 @@ namespace contentapi.Controllers
         [Authorize]
         public async Task<ActionResult> SensitiveAsync([FromBody]SensitiveUserChange change)
         {
-            var user = await GetCurrentUser();
-            var fullUser = ConvertToView(user);
+            var fullUser = await GetCurrentUser();
             var output = new List<string>();
+
+            var requester = GetRequesterNoFail();
 
             if(!Verify(fullUser, change.oldPassword))
                 return BadRequest("Old password incorrect!");
@@ -343,7 +261,7 @@ namespace contentapi.Controllers
 
             if(!string.IsNullOrWhiteSpace(change.email))
             {
-                if(await FindValueAsync(keys.EmailKey, change.email) != null)
+                if(await service.FindByEmailAsync(change.email, requester) != null)
                     return BadRequest("This email is already taken!");
 
                 fullUser.email = change.email;
@@ -356,21 +274,14 @@ namespace contentapi.Controllers
                     return BadRequest("That's your current username!");
 
                 //If two users come in at the same time and do this without locking, the world will crumble.
-                if(await FindByNameBaseAsync(change.username) != null)
+                if(await service.FindByUsernameAsync(change.username, requester) != null)
                     return BadRequest("Username already taken!");
 
                 var beginning = DateTime.Now - config.NameChangeRange;
 
                 //Need historic users 
-                var historicQuery = 
-                    from r in Q<EntityRelation>()
-                    join e in Q<Entity>() on r.entityId2 equals e.id
-                    where r.entityId1 == user.Entity.id && EF.Functions.Like(r.type, keys.HistoryRelation) &&
-                        r.createDate > beginning
-                    select e;
-
-                var historic = await provider.GetListAsync(historicQuery);
-                var usernames = historic.Select(x => x.name).Append(fullUser.username).Append(change.username).Distinct();
+                var historicUsers = await service.GetRevisions(fullUser.id, requester);
+                var usernames = historicUsers.Select(x => x.username).Append(fullUser.username).Append(change.username).Distinct();
 
                 if(usernames.Count() > config.NameChangesPerTime)
                     return BadRequest($"Too many username changes in the given time: allowed {config.NameChangesPerTime} per {config.NameChangeRange}");
@@ -379,7 +290,7 @@ namespace contentapi.Controllers
                 output.Add("Changed username");
             }
 
-            await WriteViewAsync(fullUser);
+            await service.WriteAsync(fullUser, requester);
 
             return Ok(string.Join(", ", output));
         }

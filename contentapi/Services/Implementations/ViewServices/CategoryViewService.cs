@@ -17,10 +17,10 @@ namespace contentapi.Services.Implementations
         public CategoryViewService(ViewServices services, ILogger<ViewServiceBase<CategoryView, CategorySearch>> logger) 
             : base(services, logger) { }
 
-        protected override string EntityType => keys.CategoryType;
-        protected override string ParentType => keys.CategoryType;
+        public override string EntityType => keys.CategoryType;
+        public override string ParentType => keys.CategoryType;
 
-        protected override EntityPackage CreateBasePackage(CategoryView view)
+        public override EntityPackage CreateBasePackage(CategoryView view)
         {
             var package = NewEntity(view.name, view.description);
 
@@ -33,7 +33,7 @@ namespace contentapi.Services.Implementations
             return package;
         }
 
-        protected override CategoryView CreateBaseView(EntityPackage package)
+        public override CategoryView CreateBaseView(EntityPackage package)
         {
             var view = new CategoryView();
             view.name = package.Entity.name;
@@ -48,14 +48,14 @@ namespace contentapi.Services.Implementations
             return view;
         }
 
-        protected override Task<CategoryView> CleanViewGeneralAsync(CategoryView view, long userId)
+        public override Task<CategoryView> CleanViewGeneralAsync(CategoryView view, long userId)
         {
             //Always fail unless super, nobody can write categories etc.
             FailUnlessSuper(userId);
             return base.CleanViewGeneralAsync(view, userId);
         }
 
-        protected override async Task<EntityPackage> DeleteCheckAsync(long id, long userId)
+        public override async Task<EntityPackage> DeleteCheckAsync(long id, long userId)
         {
             var package = await base.DeleteCheckAsync(id, userId);
             FailUnlessSuper(userId); //Also only super users can delete
@@ -64,7 +64,7 @@ namespace contentapi.Services.Implementations
 
         public override async Task<IList<CategoryView>> SearchAsync(CategorySearch search, ViewRequester requester)
         {
-            logger.LogDebug($"Category GetAsync called by {requester}");
+            logger.LogTrace($"Category SearchAsync called by {requester}");
 
             var entitySearch = ModifySearch(services.mapper.Map<EntitySearch>(search));
 

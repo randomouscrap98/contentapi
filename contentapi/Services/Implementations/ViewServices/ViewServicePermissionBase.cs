@@ -11,16 +11,15 @@ using Randomous.EntitySystem.Extensions;
 
 namespace contentapi.Services.Implementations
 {
-    public abstract class ViewServicePermissionbase<V,S> : ViewServiceEntityBase<V,S> where V : BasePermissionView where S : EntitySearchBase
+    public abstract class ViewServicePermissionbase<V,S> : ViewServiceEntityBase<V,S> where V : BasePermissionView where S : EntitySearchBase, new()
     {
-        public ViewServicePermissionbase(ViewServices services, ILogger<ViewServiceBase<V, S>> logger) : base(services, logger)
-        {
-        }
+        public ViewServicePermissionbase(ViewServices services, ILogger<ViewServiceBase<V, S>> logger) 
+            : base(services, logger) { }
 
-        protected abstract string ParentType {get;}
-        protected virtual bool AllowOrphanPosts => false;
+        public abstract string ParentType {get;}
+        public virtual bool AllowOrphanPosts => false;
 
-        protected override EntityPackage ConvertFromView(V view)
+        public override EntityPackage ConvertFromView(V view)
         {
             var package = base.ConvertFromView(view);
 
@@ -39,7 +38,7 @@ namespace contentapi.Services.Implementations
             return package;
         }
 
-        protected override V ConvertToView(EntityPackage package)
+        public override V ConvertToView(EntityPackage package)
         {
             var view = base.ConvertToView(package);
 
@@ -51,7 +50,7 @@ namespace contentapi.Services.Implementations
             return view;
         }
 
-        protected async Task CheckPermissionUsersAsync(V view)
+        public async Task CheckPermissionUsersAsync(V view)
         {
             //And now make sure every single user exists
             var userIds = new List<long>();
@@ -83,7 +82,7 @@ namespace contentapi.Services.Implementations
                 throw new BadRequestException("One or more permission users not found!");
         }
 
-        protected override async Task<V> CleanViewGeneralAsync(V view, long userId)
+        public override async Task<V> CleanViewGeneralAsync(V view, long userId)
         {
             view = await base.CleanViewGeneralAsync(view, userId);
 
@@ -121,7 +120,7 @@ namespace contentapi.Services.Implementations
         /// <param name="standin"></param>
         /// <param name="existing"></param>
         /// <returns></returns>
-        protected override async Task<V> CleanViewUpdateAsync(V view, EntityPackage existing, long userId)
+        public override async Task<V> CleanViewUpdateAsync(V view, EntityPackage existing, long userId)
         {
             view = await base.CleanViewUpdateAsync(view, existing, userId);
 
@@ -135,8 +134,7 @@ namespace contentapi.Services.Implementations
             return view;
         }
 
-
-        protected async override Task<EntityPackage> DeleteCheckAsync(long standinId, long userId)
+        public async override Task<EntityPackage> DeleteCheckAsync(long standinId, long userId)
         {
             var result = await base.DeleteCheckAsync(standinId, userId);
 
@@ -145,11 +143,5 @@ namespace contentapi.Services.Implementations
 
             return result;
         }
-
-        //protected async Task<bool> IsLocalSuper(long uid, long contentId)
-        //{
-        //    var categories = await provider.GetEntityPackagesAsync(new EntitySearch() { TypeLike = keys.CategoryType });
-        //}
-
     }
 }

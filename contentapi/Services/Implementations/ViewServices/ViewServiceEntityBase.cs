@@ -11,13 +11,12 @@ using Randomous.EntitySystem.Extensions;
 
 namespace contentapi.Services.Implementations
 {
-    public abstract class ViewServiceEntityBase<V,S> : ViewServiceBase<V,S> where V : BaseEntityView where S : EntitySearchBase
+    public abstract class ViewServiceEntityBase<V,S> : ViewServiceBase<V,S> where V : BaseEntityView where S : EntitySearchBase, new()
     {
-        public ViewServiceEntityBase(ViewServices services, ILogger<ViewServiceBase<V, S>> logger) : base(services, logger)
-        {
-        }
+        public ViewServiceEntityBase(ViewServices services, ILogger<ViewServiceBase<V, S>> logger) 
+            : base(services, logger) { }
 
-        protected abstract string EntityType {get;}
+        public abstract string EntityType {get;}
 
         /// <summary>
         /// Create a view with ONLY the unique fields for your controller filled in. You could fill in the
@@ -25,16 +24,16 @@ namespace contentapi.Services.Implementations
         /// </summary>
         /// <param name="package"></param>
         /// <returns></returns>
-        protected abstract V CreateBaseView(EntityPackage package);
+        public abstract V CreateBaseView(EntityPackage package);
 
         /// <summary>
         /// Create a package with ONLY the unique fields for your controller filled in. 
         /// </summary>
         /// <param name="view"></param>
         /// <returns></returns>
-        protected abstract EntityPackage CreateBasePackage(V view);
+        public abstract EntityPackage CreateBasePackage(V view);
 
-        protected virtual V ConvertToView(EntityPackage package)
+        public virtual V ConvertToView(EntityPackage package)
         {
             var view = CreateBaseView(package);
 
@@ -51,7 +50,7 @@ namespace contentapi.Services.Implementations
         }
 
         //TRUST the view. Assume it is written correctly, that createdate is set properly, etc.
-        protected virtual EntityPackage ConvertFromView(V view)
+        public virtual EntityPackage ConvertFromView(V view)
         {
             var package = CreateBasePackage(view);
 
@@ -71,7 +70,7 @@ namespace contentapi.Services.Implementations
         /// </summary>
         /// <param name="view"></param>
         /// <returns></returns>
-        protected virtual Task<V> CleanViewGeneralAsync(V view, long userId)
+        public virtual Task<V> CleanViewGeneralAsync(V view, long userId)
         {
             //These are safe, always true
             view.editUserId = userId;       //Editor is ALWAYS US
@@ -90,7 +89,7 @@ namespace contentapi.Services.Implementations
         /// <param name="view"></param>
         /// <param name="existing"></param>
         /// <returns></returns>
-        protected virtual Task<V> CleanViewUpdateAsync(V view, EntityPackage existing, long userId)
+        public virtual Task<V> CleanViewUpdateAsync(V view, EntityPackage existing, long userId)
         {
             //FORCE these to be what they were before.
             view.createDate = (DateTime)existing.Entity.createDateProper();
@@ -103,7 +102,7 @@ namespace contentapi.Services.Implementations
             return Task.FromResult(view);
         }
 
-        protected async Task<EntityPackage> WriteViewBaseAsync(V view, long userId, Action<EntityPackage> modifyBeforeCreate = null)
+        public virtual async Task<EntityPackage> WriteViewBaseAsync(V view, long userId, Action<EntityPackage> modifyBeforeCreate = null)
         {
             logger.LogTrace("WriteViewAsync called");
 
@@ -147,12 +146,20 @@ namespace contentapi.Services.Implementations
             return view;
         }
 
+        public override async Task<IList<V>> GetRevisions(long id, ViewRequester requester)
+        {
+            var search = new EntitySearch();
+            search.Ids = await services.history.GetRevisionIdsAsync(id);
+            var packages = await provider.GetEntityPackagesAsync(search);
+            return packages.Select(x => ConvertToView(services.history.ConvertHistoryToUpdate(x))).ToList();
+        }
+
         /// <summary>
         /// Check the entity for deletion. Throw exception if can't
         /// </summary>
         /// <param name="entityId"></param>
         /// <returns></returns>
-        protected async virtual Task<EntityPackage> DeleteCheckAsync(long entityId, long userId)
+        public async virtual Task<EntityPackage> DeleteCheckAsync(long entityId, long userId)
         {
             var last = await provider.FindByIdAsync(entityId);
 
@@ -167,7 +174,7 @@ namespace contentapi.Services.Implementations
         /// </summary>
         /// <param name="search"></param>
         /// <returns></returns>
-        protected EntitySearch ModifySearch(EntitySearch search)
+        public EntitySearch ModifySearch(EntitySearch search)
         {
             //The easy modifications
             search = LimitSearch(search);
@@ -185,13 +192,13 @@ namespace contentapi.Services.Implementations
         /// </summary>
         /// <param name="query"></param>
         /// <returns></returns>
-        protected async virtual Task<List<V>> ViewResult(IQueryable<Entity> query)
+        public async virtual Task<List<V>> ViewResult(IQueryable<Entity> query)
         {
             var packages = await provider.LinkAsync(query);
             return packages.Select(x => ConvertToView(x)).ToList();
         }
 
-        protected async Task<T> FindByNameAsyncGeneric<T>(string name, Func<EntitySearch, Task<List<T>>> searcher)
+        public async Task<T> FindByNameAsyncGeneric<T>(string name, Func<EntitySearch, Task<List<T>>> searcher)
         {
             return (await searcher(new EntitySearch() {NameLike = name, TypeLike = $"{EntityType}%"})).OnlySingle();
         }
@@ -202,7 +209,7 @@ namespace contentapi.Services.Implementations
         /// <param name="name"></param>
         /// <typeparam name="E"></typeparam>
         /// <returns></returns>
-        protected Task<EntityPackage> FindByNameAsync(string name)
+        public Task<EntityPackage> FindByNameAsync(string name)
         {
             return FindByNameAsyncGeneric(name, provider.GetEntityPackagesAsync);
         }
@@ -213,22 +220,22 @@ namespace contentapi.Services.Implementations
         /// <param name="name"></param>
         /// <typeparam name="E"></typeparam>
         /// <returns></returns>
-        protected Task<Entity> FindByNameBaseAsync(string name)
+        public Task<Entity> FindByNameBaseAsync(string name)
         {
             return FindByNameAsyncGeneric(name, provider.GetEntitiesAsync);
         }
 
-        protected Task<EntityValue> FindValueAsync(string key, string value = null, long id = -1)
+        public Task<EntityValue> FindValueAsync(string key, string value = null, long id = -1)
         {
             return FindValueAsync(EntityType, key, value, id);
         }
 
-        protected IQueryable<EntityGroup> BasicReadQuery(long user, EntitySearch search)
+        public IQueryable<EntityGroup> BasicReadQuery(long user, EntitySearch search)
         {
             return BasicReadQuery(user, search, x => x.id);
         }
 
-        protected IQueryable<Entity> FinalizeQuery(IQueryable<EntityGroup> groups, EntitySearch search)
+        public IQueryable<Entity> FinalizeQuery(IQueryable<EntityGroup> groups, EntitySearch search)
         {
             return FinalizeQuery<Entity>(groups, x => x.entity.id, search);
         }
