@@ -9,6 +9,10 @@ using Randomous.EntitySystem;
 
 namespace contentapi.Services.Implementations
 {
+    //NOTE: Many parts of using this service... require intimate knowledge of how the PARTICULAR implementation
+    //actually works. Either move away from this or accept it and test OTHER services, because this one is 
+    //VERY DIFFICULT to test. Perhaps what will be required from this will become more apparent as you
+    //build up the other services.
     public class HistoryService : IHistoryService
     {
         protected ILogger logger;

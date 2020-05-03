@@ -205,5 +205,22 @@ namespace contentapi.test
                     Assert.NotEqual(updates[i - 1], likeUpdate);
             }
         }
+
+        //[Fact]
+        //public void SimpleDelete() //Lots of tests with updating
+        //{
+        //    var package = SimplePackage();
+        //    var originaPackageCopy = new EntityPackage(package);
+
+        //    service.InsertWithHistoryAsync(package, 1).Wait();
+
+        //    var currentPackage = provider.FindByIdAsync(package.Entity.id).Result;
+        //    Assert.Equal(package.Entity.id, currentPackage.Entity.id);
+
+        //    service.DeleteWithHistoryAsync(currentPackage, 1).Wait();
+
+        //    currentPackage = provider.FindByIdAsync(package.Entity.id).Result;
+        //    Assert.Null(currentPackage);
+        //}
     }
 }
