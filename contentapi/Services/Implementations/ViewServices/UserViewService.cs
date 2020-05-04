@@ -8,9 +8,6 @@ using Randomous.EntitySystem;
 using AutoMapper;
 using contentapi.Services.Extensions;
 using Randomous.EntitySystem.Extensions;
-using System.Text;
-using Microsoft.EntityFrameworkCore;
-using Microsoft.Extensions.Options;
 
 namespace contentapi.Services.Implementations
 {

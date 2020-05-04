@@ -7,13 +7,7 @@ using Microsoft.AspNetCore.Authorization;
 using System.Collections.Generic;
 using contentapi.Services;
 using Microsoft.Extensions.Logging;
-using Randomous.EntitySystem;
 using AutoMapper;
-using contentapi.Services.Extensions;
-using Randomous.EntitySystem.Extensions;
-using System.Text;
-using Microsoft.EntityFrameworkCore;
-using Microsoft.Extensions.Options;
 using contentapi.Services.Implementations;
 
 namespace contentapi.Controllers

@@ -1,10 +1,6 @@
 using System;
 using System.Collections.Generic;
-using System.IO;
 using System.Threading.Tasks;
-using AutoMapper;
-using contentapi.Services;
-using contentapi.Services.Extensions;
 using contentapi.Views;
 using Microsoft.Extensions.Logging;
 using Randomous.EntitySystem;

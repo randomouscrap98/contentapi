@@ -1,43 +1,12 @@
 using System;
-using System.Collections.Generic;
-using System.Linq;
-using System.Linq.Expressions;
 using System.Security.Claims;
 using System.Threading.Tasks;
-using AutoMapper;
 using contentapi.Services;
-using contentapi.Services.Extensions;
 using Microsoft.AspNetCore.Mvc;
-using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.Logging;
-using Randomous.EntitySystem;
-using Randomous.EntitySystem.Extensions;
 
 namespace contentapi.Controllers
 {
-    //public class ControllerServices
-    //{
-    //    public IEntityProvider provider;
-    //    public IMapper mapper;
-    //    public Keys keys;
-    //    public SystemConfig systemConfig;
-    //    public IPermissionService permissions;
-    //    public IActivityService activity;
-    //    public IHistoryService history;
-
-    //    public ControllerServices(IEntityProvider provider, IMapper mapper, Keys keys, SystemConfig systemConfig, 
-    //        IPermissionService permissions, IActivityService activityService, IHistoryService history)
-    //    {
-    //        this.provider = provider;
-    //        this.mapper = mapper;
-    //        this.keys = keys;
-    //        this.systemConfig = systemConfig;
-    //        this.permissions = permissions;
-    //        this.activity = activityService;
-    //        this.history = history;
-    //    }
-    //}
-
     /// <summary>
     /// A bunch of methods extending the existing IProvider
     /// </summary>
