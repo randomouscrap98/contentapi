@@ -1,6 +1,7 @@
 using System;
 using System.Collections.Generic;
 using System.Linq;
+using System.Text;
 using System.Threading.Tasks;
 using contentapi.Services.Extensions;
 using contentapi.Views;
@@ -142,6 +143,37 @@ namespace contentapi.Services.Implementations
                 throw new InvalidOperationException("No permission to delete");
 
             return result;
+        }
+
+        public virtual Task<Dictionary<long, string>> ComputeMyPermsAsync(List<EntityPackage> content, long userId)
+        {
+            //This ensures they ALL have it or something.
+            var result = content.ToDictionary(x => x.Entity.id, y => new StringBuilder());
+
+            //A potential optimization: pre-include read somehow... build this into search.
+
+            foreach(var c in content)
+            {
+                foreach(var action in services.permissions.PermissionActionMap)
+                {
+                    if(services.permissions.CanUser(userId, action.Value, c))
+                        result[c.Entity.id].Append(action.Key);
+                }
+            }
+
+            return Task.FromResult(result.ToDictionary(x => x.Key, y => y.Value.ToString()));
+        }
+
+        public async Task<List<V>> ViewResult(IQueryable<Entity> query, long userId)
+        {
+            var packages = await provider.LinkAsync(query);
+            var perms = await ComputeMyPermsAsync(packages, userId);
+            return packages.Select(x => 
+            {
+                var v = ConvertToView(x);
+                v.myPerms = perms[v.id]; //This could fail if perms dictionary gets messed up
+                return v;
+            }).ToList();
         }
     }
 }

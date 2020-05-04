@@ -27,8 +27,8 @@ namespace contentapi.Services.Implementations
             foreach(var v in view.values)
                 package.Add(NewValue(keys.AssociatedValueKey + v.Key, v.Value));
             
-            foreach(var v in view.localSupers)
-                package.Add(NewRelation(v, keys.SuperRelation));
+            //foreach(var v in view.localSupers)
+            //    package.Add(NewRelation(v, keys.SuperRelation));
 
             return package;
         }
@@ -42,8 +42,8 @@ namespace contentapi.Services.Implementations
             foreach(var v in package.Values.Where(x => x.key.StartsWith(keys.AssociatedValueKey)))
                 view.values.Add(v.key.Substring(keys.AssociatedValueKey.Length), v.value);
             
-            foreach(var v in package.Relations.Where(x => x.type == keys.SuperRelation))
-                view.localSupers.Add(v.entityId1);
+            //foreach(var v in package.Relations.Where(x => x.type == keys.SuperRelation))
+            //    view.localSupers.Add(v.entityId1);
 
             return view;
         }
@@ -73,7 +73,7 @@ namespace contentapi.Services.Implementations
             if(search.ParentIds.Count > 0)
                 perms = WhereParents(perms, search.ParentIds);
 
-            return await ViewResult(FinalizeQuery(perms, entitySearch));
+            return await ViewResult(FinalizeQuery(perms, entitySearch), requester.userId);
         }
     }
 }

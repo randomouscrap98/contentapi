@@ -47,7 +47,7 @@ namespace contentapi.Services.Implementations
             if(search.ParentIds.Count > 0)
                 perms = WhereParents(perms, search.ParentIds);
 
-            return await ViewResult(FinalizeQuery(perms, entitySearch));
+            return await ViewResult(FinalizeQuery(perms, entitySearch), requester.userId);
         }
     }
 }

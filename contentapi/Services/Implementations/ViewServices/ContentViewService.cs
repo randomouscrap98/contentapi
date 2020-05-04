@@ -29,8 +29,13 @@ namespace contentapi.Services.Implementations
 
     public class ContentViewService : BasePermissionViewService<ContentView, ContentSearch>
     {
-        public ContentViewService(ViewServices services, ILogger<ContentViewService> logger) 
-            : base(services, logger) { }
+        protected CategoryViewService categoryService;
+
+        public ContentViewService(ViewServices services, ILogger<ContentViewService> logger, CategoryViewService categoryService) 
+            : base(services, logger) 
+        { 
+            this.categoryService = categoryService;
+        }
 
         public override string EntityType => keys.ContentType;
         public override string ParentType => null;
@@ -90,7 +95,7 @@ namespace contentapi.Services.Implementations
                     .Where(x => x.value.key == keys.KeywordKey && EF.Functions.Like(x.value.value, search.Keyword));
             }
 
-            return await ViewResult(FinalizeQuery(initial, entitySearch));
+            return await ViewResult(FinalizeQuery(initial, entitySearch), requester.userId);
         }
     }
 }

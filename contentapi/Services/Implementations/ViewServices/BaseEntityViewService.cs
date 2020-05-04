@@ -196,16 +196,16 @@ namespace contentapi.Services.Implementations
             return search;
         }
 
-        /// <summary>
-        /// A shortcut for producing a list of views from a list of base entities
-        /// </summary>
-        /// <param name="query"></param>
-        /// <returns></returns>
-        public async virtual Task<List<V>> ViewResult(IQueryable<Entity> query)
-        {
-            var packages = await provider.LinkAsync(query);
-            return packages.Select(x => ConvertToView(x)).ToList();
-        }
+        ///// <summary>
+        ///// A shortcut for producing a list of views from a list of base entities
+        ///// </summary>
+        ///// <param name="query"></param>
+        ///// <returns></returns>
+        //public async virtual Task<List<V>> ViewResult(IQueryable<Entity> query)
+        //{
+        //    var packages = await provider.LinkAsync(query);
+        //    return packages.Select(x => ConvertToView(x)).ToList();
+        //}
 
         public async Task<T> FindByNameAsyncGeneric<T>(string name, Func<EntitySearch, Task<List<T>>> searcher)
         {

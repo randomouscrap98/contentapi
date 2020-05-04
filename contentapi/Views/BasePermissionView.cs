@@ -18,5 +18,11 @@ namespace contentapi.Views
         /// <typeparam name="string"></typeparam>
         /// <returns></returns>
         public Dictionary<string, string> permissions {get;set;} = new Dictionary<string, string>();
+
+        /// <summary>
+        /// This is a readonly field technically. I know that makes the API confusing but... ugh don't have TIMMEEE
+        /// </summary>
+        /// <value></value>
+        public string myPerms {get;set;}
     }
 }
