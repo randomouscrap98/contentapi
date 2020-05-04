@@ -62,7 +62,7 @@ namespace contentapi.Controllers
         }
 
         [HttpGet]
-        public Task<ActionResult<IList<UserViewBasic>>> GetAsync(UserSearch search)
+        public Task<ActionResult<IList<UserViewBasic>>> GetAsync([FromQuery]UserSearch search)
         {
             return ThrowToAction<IList<UserViewBasic>>(async () =>
             {

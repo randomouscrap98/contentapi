@@ -33,6 +33,13 @@ namespace contentapi.Services.Implementations
             services.AddTransient<IHistoryService, HistoryService>();
             services.AddTransient(typeof(IDecayer<>), typeof(Decayer<>));
             services.AddTransient(typeof(ITempTokenService<>), typeof(TempTokenService<>));
+
+            services.AddTransient<ActivityViewService>();
+            services.AddTransient<CategoryViewService>();
+            services.AddTransient<CommentViewService>();
+            services.AddTransient<ContentViewService>();
+            services.AddTransient<FileViewService>();
+            services.AddTransient<UserViewService>();
         }
 
         public void AddConfiguration<T>(IServiceCollection services, IConfiguration config) where T : class
