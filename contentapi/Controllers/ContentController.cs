@@ -15,9 +15,9 @@ using Randomous.EntitySystem.Extensions;
 
 namespace contentapi.Controllers
 {
-    public class ContentController : BaseViewServiceController<ContentView, ContentSearch>
+    public class ContentController : BaseViewServiceController<ContentViewService, ContentView, ContentSearch>
     {
-        public ContentController(Keys keys, ILogger<BaseSimpleController> logger, IViewService<ContentView, ContentSearch> service) 
+        public ContentController(Keys keys, ILogger<BaseSimpleController> logger, ContentViewService service) 
             : base(keys, logger, service) { }
     }
 }

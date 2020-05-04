@@ -27,9 +27,9 @@ namespace contentapi.Services.Implementations
         }
     }
 
-    public class ContentViewService : ViewServicePermissionbase<ContentView, ContentSearch>
+    public class ContentViewService : BasePermissionViewService<ContentView, ContentSearch>
     {
-        public ContentViewService(ViewServices services, ILogger<ViewServiceBase<ContentView, ContentSearch>> logger) 
+        public ContentViewService(ViewServices services, ILogger<ContentViewService> logger) 
             : base(services, logger) { }
 
         public override string EntityType => keys.ContentType;

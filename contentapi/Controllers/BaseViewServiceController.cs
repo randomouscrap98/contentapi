@@ -9,11 +9,12 @@ using Randomous.EntitySystem;
 
 namespace contentapi.Controllers
 {
-    public class BaseViewServiceController<V,S> : BaseSimpleController where V : BaseView where S : EntitySearchBase
+    public class BaseViewServiceController<T,V,S> : BaseSimpleController 
+        where T : IViewService<V,S> where V : BaseView where S : EntitySearchBase
     {
-        protected IViewService<V,S> service;
+        protected T service;
 
-        public BaseViewServiceController(Keys keys, ILogger<BaseSimpleController> logger, IViewService<V,S> service) 
+        public BaseViewServiceController(Keys keys, ILogger<BaseSimpleController> logger, T service) 
             : base(keys, logger)
         {
             this.service = service;

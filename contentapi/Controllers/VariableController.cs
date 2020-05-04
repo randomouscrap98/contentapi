@@ -16,9 +16,11 @@ namespace contentapi.Controllers
     public class VariableController : BaseSimpleController
     {
         protected ConcurrentDictionary<long, object> userlocks = new ConcurrentDictionary<long, object>();
+        protected IEntityProvider provider;
 
-        public VariableController(ControllerServices services, ILogger<BaseSimpleController> logger) : base(services, logger)
+        public VariableController(Keys keys, ILogger<BaseSimpleController> logger, IEntityProvider provider) : base(keys, logger)
         {
+            this.provider = provider;
         }
 
         [HttpGet]
@@ -31,10 +33,10 @@ namespace contentapi.Controllers
 
             search.EntityIds.Add(-GetRequesterUid());
 
-            var baseValues = services.provider.GetQueryable<EntityValue>();
-            var searchValues = services.provider.ApplyEntityValueSearch(baseValues, search);
+            var baseValues = provider.GetQueryable<EntityValue>();
+            var searchValues = provider.ApplyEntityValueSearch(baseValues, search);
 
-            return await services.provider.GetListAsync(searchValues.Select(x => x.key.Substring(keys.VariableKey.Length)));
+            return await provider.GetListAsync(searchValues.Select(x => x.key.Substring(keys.VariableKey.Length)));
         }
 
         protected async Task<EntityValue> GetVariable(string key)
@@ -76,7 +78,7 @@ namespace contentapi.Controllers
 
                 if (existing == null)
                 {
-                    existing = NewValue(keys.VariableKey + key, data);
+                    existing = new EntityValue() { key = keys.VariableKey + key, value = data };
                     existing.entityId = -uid;
                 }
                 else
@@ -84,7 +86,7 @@ namespace contentapi.Controllers
                     existing.value = data;
                 }
 
-                services.provider.WriteAsync(existing).Wait();
+                provider.WriteAsync(existing).Wait();
 
                 return existing.value;
             }
@@ -99,7 +101,7 @@ namespace contentapi.Controllers
                 var result = GetVariable(key).Result;
                 if (result == null)
                     return NotFound();
-                services.provider.DeleteAsync(result).Wait();
+                provider.DeleteAsync(result).Wait();
                 return result.value;
             }
         }

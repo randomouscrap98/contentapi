@@ -13,9 +13,9 @@ namespace contentapi.Services.Implementations
 {
     public class FileSearch : BaseContentSearch { }
 
-    public class FileViewService : ViewServicePermissionbase<FileView, FileSearch>
+    public class FileViewService : BasePermissionViewService<FileView, FileSearch>
     {
-        public FileViewService(ViewServices services, ILogger<ViewServiceBase<FileView, FileSearch>> logger) 
+        public FileViewService(ViewServices services, ILogger<FileViewService> logger) 
             : base(services, logger) { }
 
         public override string ParentType => keys.UserType;

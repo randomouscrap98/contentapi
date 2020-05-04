@@ -11,12 +11,21 @@ using Randomous.EntitySystem.Extensions;
 
 namespace contentapi.Services.Implementations
 {
-    public abstract class ViewServiceEntityBase<V,S> : ViewServiceBase<V,S> where V : BaseEntityView where S : EntitySearchBase, new()
+    public abstract class BaseEntityViewService<V,S> : BaseViewServices, IViewService<V,S> where V : BaseEntityView where S : EntitySearchBase, new()
     {
-        public ViewServiceEntityBase(ViewServices services, ILogger<ViewServiceBase<V, S>> logger) 
+        public BaseEntityViewService(ViewServices services, ILogger<BaseEntityViewService<V,S>> logger) 
             : base(services, logger) { }
 
         public abstract string EntityType {get;}
+
+        public abstract Task<IList<V>> SearchAsync(S search, ViewRequester requester);
+        
+        public async Task<V> FindByIdAsync(long id, ViewRequester requester)
+        {
+            var search = new S();
+            search.Ids.Add(id);
+            return (await SearchAsync(search, requester)).OnlySingle();
+        }
 
         /// <summary>
         /// Create a view with ONLY the unique fields for your controller filled in. You could fill in the
@@ -128,7 +137,7 @@ namespace contentapi.Services.Implementations
             return package;
         }
 
-        public override async Task<V> WriteAsync(V view, ViewRequester requester)
+        public virtual async Task<V> WriteAsync(V view, ViewRequester requester)
         {
             return ConvertToView(await WriteViewBaseAsync(view, requester.userId));
         }
@@ -138,7 +147,7 @@ namespace contentapi.Services.Implementations
         /// </summary>
         /// <param name="entityId"></param>
         /// <returns></returns>
-        public override async Task<V> DeleteAsync(long entityId, ViewRequester requester)
+        public async Task<V> DeleteAsync(long entityId, ViewRequester requester)
         {
             var package = await DeleteCheckAsync(entityId, requester.userId);
             var view = ConvertToView(package);
@@ -146,7 +155,7 @@ namespace contentapi.Services.Implementations
             return view;
         }
 
-        public override async Task<IList<V>> GetRevisions(long id, ViewRequester requester)
+        public async Task<IList<V>> GetRevisions(long id, ViewRequester requester)
         {
             var search = new EntitySearch();
             search.Ids = await services.history.GetRevisionIdsAsync(id);

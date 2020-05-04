@@ -24,7 +24,9 @@ namespace contentapi.Services
         }
     }
 
-    public interface IViewService<V,S> where S : EntitySearchBase where V : BaseView
+    //V and S don't have to be any particular kind of thing... there can be more exact derived interfaces
+    //if you want, but sometimes a controller isn't specifically one or another thing.
+    public interface IViewService<V,S>
     {
         Task<V> FindByIdAsync(long id, ViewRequester requester);
         Task<IList<V>> SearchAsync(S search, ViewRequester requester);

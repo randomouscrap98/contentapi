@@ -32,7 +32,7 @@ namespace contentapi.Services.Implementations
         }
     }
 
-    public class UserViewService : ViewServiceEntityBase<UserViewFull, UserSearch>
+    public class UserViewService : BaseEntityViewService<UserViewFull, UserSearch>
     {
         protected IHashService hashService;
         protected ITokenService tokenService;

@@ -33,7 +33,7 @@ namespace contentapi.Services.Implementations
 
     //The very most basic view service functions. Eventually, fix this to be services; don't have
     //time right now.
-    public abstract class ViewServiceBase<V, S> : IViewService<V, S> where S : EntitySearchBase, new() where V : BaseView
+    public class BaseViewServices
     {
         protected ViewServices services;
         protected ILogger logger;
@@ -41,22 +41,10 @@ namespace contentapi.Services.Implementations
         protected Keys keys => services.keys;
         protected IEntityProvider provider => services.provider;
 
-        public ViewServiceBase(ViewServices services, ILogger<ViewServiceBase<V,S>> logger)
+        public BaseViewServices(ViewServices services, ILogger<BaseViewServices> logger)
         {
             this.services = services;
             this.logger = logger;
-        }
-
-        public abstract Task<V> DeleteAsync(long id, ViewRequester requester);
-        public abstract Task<V> WriteAsync(V view, ViewRequester requester);
-        public abstract Task<IList<V>> SearchAsync(S search, ViewRequester requester);
-        public abstract Task<IList<V>> GetRevisions(long id, ViewRequester requester);
-
-        public async Task<V> FindByIdAsync(long id, ViewRequester requester)
-        {
-            var search = new S();
-            search.Ids.Add(id);
-            return (await SearchAsync(search, requester)).OnlySingle();
         }
 
         protected EntityPackage NewEntity(string name, string content = null)
@@ -98,7 +86,7 @@ namespace contentapi.Services.Implementations
         /// <param name="search"></param>
         /// <typeparam name="S"></typeparam>
         /// <returns></returns>
-        protected virtual E LimitSearch<E>(E search) where E : EntitySearchBase
+        public virtual E LimitSearch<E>(E search) where E : EntitySearchBase
         {
             if(search.Limit < 0 || search.Limit > 1000)
                 search.Limit = 1000;
@@ -106,7 +94,7 @@ namespace contentapi.Services.Implementations
             return search;
         }
 
-        protected IQueryable<EntityGroup> BasicReadQuery(long user, EntitySearch search, Expression<Func<Entity, long>> selector, PermissionExtras extras = null)
+        public IQueryable<EntityGroup> BasicReadQuery(long user, EntitySearch search, Expression<Func<Entity, long>> selector, PermissionExtras extras = null)
         {
             var query = provider.ApplyEntitySearch(Q<Entity>(), search, false)
                 .Join(Q<EntityRelation>(), selector, r => r.entityId2, 
@@ -117,7 +105,7 @@ namespace contentapi.Services.Implementations
             return query;
         }
 
-        protected IQueryable<EntityGroup> BasicReadQuery(long user, EntityRelationSearch search, Expression<Func<EntityRelation, long>> selector, PermissionExtras extras = null)
+        public IQueryable<EntityGroup> BasicReadQuery(long user, EntityRelationSearch search, Expression<Func<EntityRelation, long>> selector, PermissionExtras extras = null)
         {
             var query = provider.ApplyEntityRelationSearch(Q<EntityRelation>(), search, false)
                 .Join(Q<EntityRelation>(), selector, r2 => r2.entityId2, 
@@ -134,7 +122,7 @@ namespace contentapi.Services.Implementations
         /// <param name="foundEntities"></param>
         /// <param name="search"></param>
         /// <returns></returns>
-        protected IQueryable<E> FinalizeQuery<E>(IQueryable<EntityGroup> groups, Expression<Func<EntityGroup, long>> groupId, EntitySearchBase search) where E : EntityBase
+        public IQueryable<E> FinalizeQuery<E>(IQueryable<EntityGroup> groups, Expression<Func<EntityGroup, long>> groupId, EntitySearchBase search) where E : EntityBase
         {
             //Group givens by grouping id and select only the grouped ID (all databases can do this)
             var husks = groups.GroupBy(groupId).Select(x => new EntityBase() { id = x.Key });
@@ -151,7 +139,7 @@ namespace contentapi.Services.Implementations
             return join;
         }
 
-        protected IQueryable<EntityGroup> WhereParents(IQueryable<EntityGroup> query, List<long> parentIds)
+        public IQueryable<EntityGroup> WhereParents(IQueryable<EntityGroup> query, List<long> parentIds)
         {
             return query
                 .Join(Q<EntityRelation>(), e => e.entity.id, r => r.entityId2, 
@@ -165,7 +153,7 @@ namespace contentapi.Services.Implementations
         /// <param name="key"></param>
         /// <param name="value"></param>
         /// <returns></returns>
-        protected async Task<EntityValue> FindValueAsync(string type, string key, string value = null, long id = -1) //long.MinValue)
+        public async Task<EntityValue> FindValueAsync(string type, string key, string value = null, long id = -1) //long.MinValue)
         {
             var valueSearch = new EntityValueSearch() { KeyLike = key };
             if(value != null)
@@ -182,12 +170,12 @@ namespace contentapi.Services.Implementations
             return (await provider.GetListAsync(thing)).OnlySingle();
         }
 
-        protected IQueryable<E> Q<E>() where E : EntityBase
+        public IQueryable<E> Q<E>() where E : EntityBase
         {
             return provider.GetQueryable<E>();
         }
 
-        protected void FailUnlessSuper(long userId)
+        public void FailUnlessSuper(long userId)
         {
             if(!services.permissions.IsSuper(userId)) //services.systemConfig.SuperUsers.Contains(GetRequesterUidNoFail()))
                 throw new UnauthorizedAccessException("Must be super user to perform this action!");
