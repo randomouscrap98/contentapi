@@ -27,8 +27,8 @@ namespace contentapi.Services.Implementations
             foreach(var v in view.values)
                 package.Add(NewValue(keys.AssociatedValueKey + v.Key, v.Value));
             
-            //foreach(var v in view.localSupers)
-            //    package.Add(NewRelation(v, keys.SuperRelation));
+            foreach(var v in view.localSupers)
+                package.Add(NewRelation(v, keys.SuperRelation));
 
             return package;
         }
@@ -42,38 +42,38 @@ namespace contentapi.Services.Implementations
             foreach(var v in package.Values.Where(x => x.key.StartsWith(keys.AssociatedValueKey)))
                 view.values.Add(v.key.Substring(keys.AssociatedValueKey.Length), v.value);
             
-            //foreach(var v in package.Relations.Where(x => x.type == keys.SuperRelation))
-            //    view.localSupers.Add(v.entityId1);
+            foreach(var v in package.Relations.Where(x => x.type == keys.SuperRelation))
+                view.localSupers.Add(v.entityId1);
 
             return view;
         }
 
-        public override Task<CategoryView> CleanViewGeneralAsync(CategoryView view, long userId)
+        public override Task<CategoryView> CleanViewGeneralAsync(CategoryView view, Requester requester)
         {
             //Always fail unless super, nobody can write categories etc.
-            FailUnlessSuper(userId);
-            return base.CleanViewGeneralAsync(view, userId);
+            FailUnlessSuper(requester);
+            return base.CleanViewGeneralAsync(view, requester);
         }
 
-        public override async Task<EntityPackage> DeleteCheckAsync(long id, long userId)
+        public override async Task<EntityPackage> DeleteCheckAsync(long id, Requester requester)
         {
-            var package = await base.DeleteCheckAsync(id, userId);
-            FailUnlessSuper(userId); //Also only super users can delete
+            var package = await base.DeleteCheckAsync(id, requester);
+            FailUnlessSuper(requester); //Also only super users can delete
             return package;
         }
 
-        public override async Task<IList<CategoryView>> SearchAsync(CategorySearch search, ViewRequester requester)
+        public override async Task<IList<CategoryView>> SearchAsync(CategorySearch search, Requester requester)
         {
             logger.LogTrace($"Category SearchAsync called by {requester}");
 
             var entitySearch = ModifySearch(services.mapper.Map<EntitySearch>(search));
 
-            var perms = BasicReadQuery(requester.userId, entitySearch);
+            var perms = BasicReadQuery(requester, entitySearch);
 
             if(search.ParentIds.Count > 0)
                 perms = WhereParents(perms, search.ParentIds);
 
-            return await ViewResult(FinalizeQuery(perms, entitySearch), requester.userId);
+            return await ViewResult(FinalizeQuery(perms, entitySearch), requester);
         }
     }
 }

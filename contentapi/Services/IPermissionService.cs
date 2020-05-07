@@ -14,10 +14,11 @@ namespace contentapi.Services
         List<long> SuperUsers {get;}
         Dictionary<string, string> PermissionActionMap {get;}
 
-        bool IsSuper(long user);
+        bool IsSuper(Requester requester);
+        bool IsSuper(long userId);
 
-        IQueryable<E> PermissionWhere<E>(IQueryable<E> query, long user, string action, PermissionExtras extras = null) where E : EntityGroup;
-        bool CanUser(long user, string action, EntityPackage package);
+        IQueryable<E> PermissionWhere<E>(IQueryable<E> query, Requester requester, string action, PermissionExtras extras = null) where E : EntityGroup;
+        bool CanUser(Requester requester, string action, EntityPackage package);
 
         List<EntityRelation> ConvertPermsToRelations(Dictionary<string, string> perms);
         Dictionary<string, string> ConvertRelationsToPerms(IEnumerable<EntityRelation> relations);

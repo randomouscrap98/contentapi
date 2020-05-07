@@ -14,9 +14,11 @@ namespace contentapi.Services
     //    public EntityRelation permission; 
     //}
 
-    public class ViewRequester
+    public class Requester
     {
         public long userId;
+
+        public bool system = false;
 
         public override string ToString()
         {
@@ -28,12 +30,12 @@ namespace contentapi.Services
     //if you want, but sometimes a controller isn't specifically one or another thing.
     public interface IViewService<V,S>
     {
-        Task<V> FindByIdAsync(long id, ViewRequester requester);
-        Task<IList<V>> SearchAsync(S search, ViewRequester requester);
-        Task<V> WriteAsync(V view, ViewRequester requester); //This can be either update or insert
-        Task<V> DeleteAsync(long id, ViewRequester requester);
+        Task<V> FindByIdAsync(long id, Requester requester);
+        Task<IList<V>> SearchAsync(S search, Requester requester);
+        Task<V> WriteAsync(V view, Requester requester); //This can be either update or insert
+        Task<V> DeleteAsync(long id, Requester requester);
 
-        Task<IList<V>> GetRevisions(long id, ViewRequester requester);
+        Task<IList<V>> GetRevisions(long id, Requester requester);
         
         //IQueryable<EntityGroup> GetBaseQueryable(S search);
     }

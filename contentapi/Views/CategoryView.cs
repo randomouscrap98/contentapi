@@ -14,6 +14,6 @@ namespace contentapi.Views
 
         public Dictionary<string, string> values {get;set;} = new Dictionary<string, string>();
 
-        //public List<long> localSupers {get;set;} = new List<long>();
+        public List<long> localSupers {get;set;} = new List<long>();
     }
 }

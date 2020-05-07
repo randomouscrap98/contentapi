@@ -18,9 +18,9 @@ namespace contentapi.Services.Implementations
 
         public abstract string EntityType {get;}
 
-        public abstract Task<IList<V>> SearchAsync(S search, ViewRequester requester);
+        public abstract Task<IList<V>> SearchAsync(S search, Requester requester);
         
-        public async Task<V> FindByIdAsync(long id, ViewRequester requester)
+        public async Task<V> FindByIdAsync(long id, Requester requester)
         {
             var search = new S();
             search.Ids.Add(id);
@@ -79,10 +79,10 @@ namespace contentapi.Services.Implementations
         /// </summary>
         /// <param name="view"></param>
         /// <returns></returns>
-        public virtual Task<V> CleanViewGeneralAsync(V view, long userId)
+        public virtual Task<V> CleanViewGeneralAsync(V view, Requester requester)
         {
             //These are safe, always true
-            view.editUserId = userId;       //Editor is ALWAYS US
+            view.editUserId = requester.userId;       //Editor is ALWAYS US
             view.editDate = DateTime.Now;   //Edit date is ALWAYS NOW
 
             //These are assumptions, might get overruled
@@ -98,7 +98,7 @@ namespace contentapi.Services.Implementations
         /// <param name="view"></param>
         /// <param name="existing"></param>
         /// <returns></returns>
-        public virtual Task<V> CleanViewUpdateAsync(V view, EntityPackage existing, long userId)
+        public virtual Task<V> CleanViewUpdateAsync(V view, EntityPackage existing, Requester requester)
         {
             //FORCE these to be what they were before.
             view.createDate = (DateTime)existing.Entity.createDateProper();
@@ -111,18 +111,18 @@ namespace contentapi.Services.Implementations
             return Task.FromResult(view);
         }
 
-        public virtual async Task<EntityPackage> WriteViewBaseAsync(V view, long userId, Action<EntityPackage> modifyBeforeCreate = null)
+        public virtual async Task<EntityPackage> WriteViewBaseAsync(V view, Requester requester, Action<EntityPackage> modifyBeforeCreate = null)
         {
             logger.LogTrace("WriteViewAsync called");
 
             EntityPackage existing = null; 
 
-            view = await CleanViewGeneralAsync(view, userId);
+            view = await CleanViewGeneralAsync(view, requester);
 
             if(view.id != 0)
             {
                 existing = await provider.FindByIdAsync(view.id);
-                view = await CleanViewUpdateAsync(view, existing, userId);
+                view = await CleanViewUpdateAsync(view, existing, requester);
             }
 
             //Now that the view they gave is all clean, do the full conversion! It should be safe!
@@ -130,16 +130,16 @@ namespace contentapi.Services.Implementations
 
             //If this is an UPDATE, do some STUFF
             if (view.id != 0)
-                await services.history.UpdateWithHistoryAsync(package, userId, existing);
+                await services.history.UpdateWithHistoryAsync(package, requester.userId, existing);
             else
-                await services.history.InsertWithHistoryAsync(package, userId, modifyBeforeCreate);
+                await services.history.InsertWithHistoryAsync(package, requester.userId, modifyBeforeCreate);
 
             return package;
         }
 
-        public virtual async Task<V> WriteAsync(V view, ViewRequester requester)
+        public virtual async Task<V> WriteAsync(V view, Requester requester)
         {
-            return ConvertToView(await WriteViewBaseAsync(view, requester.userId));
+            return ConvertToView(await WriteViewBaseAsync(view, requester));
         }
 
         /// <summary>
@@ -147,15 +147,15 @@ namespace contentapi.Services.Implementations
         /// </summary>
         /// <param name="entityId"></param>
         /// <returns></returns>
-        public async Task<V> DeleteAsync(long entityId, ViewRequester requester)
+        public async Task<V> DeleteAsync(long entityId, Requester requester)
         {
-            var package = await DeleteCheckAsync(entityId, requester.userId);
+            var package = await DeleteCheckAsync(entityId, requester);
             var view = ConvertToView(package);
             await services.history.DeleteWithHistoryAsync(package, requester.userId);
             return view;
         }
 
-        public async Task<IList<V>> GetRevisions(long id, ViewRequester requester)
+        public async Task<IList<V>> GetRevisions(long id, Requester requester)
         {
             var search = new EntitySearch();
             search.Ids = await services.history.GetRevisionIdsAsync(id);
@@ -168,7 +168,7 @@ namespace contentapi.Services.Implementations
         /// </summary>
         /// <param name="entityId"></param>
         /// <returns></returns>
-        public async virtual Task<EntityPackage> DeleteCheckAsync(long entityId, long userId)
+        public async virtual Task<EntityPackage> DeleteCheckAsync(long entityId, Requester requester)
         {
             var last = await provider.FindByIdAsync(entityId);
 
@@ -239,9 +239,9 @@ namespace contentapi.Services.Implementations
             return FindValueAsync(EntityType, key, value, id);
         }
 
-        public IQueryable<EntityGroup> BasicReadQuery(long user, EntitySearch search)
+        public IQueryable<EntityGroup> BasicReadQuery(Requester requester, EntitySearch search)
         {
-            return BasicReadQuery(user, search, x => x.id);
+            return BasicReadQuery(requester, search, x => x.id);
         }
 
         public IQueryable<Entity> FinalizeQuery(IQueryable<EntityGroup> groups, EntitySearch search)

@@ -48,9 +48,9 @@ namespace contentapi.Services.Implementations
         }
 
         //When you split the interface into read-only and other, get rid of these
-        public Task<ActivityView> WriteAsync(ActivityView view, ViewRequester requester) { throw new NotImplementedException(); }
-        public Task<ActivityView> DeleteAsync(long id, ViewRequester requester) { throw new NotImplementedException(); }
-        public Task<IList<ActivityView>> GetRevisions(long id, ViewRequester requester) { throw new NotImplementedException(); }
+        public Task<ActivityView> WriteAsync(ActivityView view, Requester requester) { throw new NotImplementedException(); }
+        public Task<ActivityView> DeleteAsync(long id, Requester requester) { throw new NotImplementedException(); }
+        public Task<IList<ActivityView>> GetRevisions(long id, Requester requester) { throw new NotImplementedException(); }
 
         /// <summary>
         /// Produce an activity for the given entity and action. Can include ONE piece of extra data.
@@ -97,7 +97,7 @@ namespace contentapi.Services.Implementations
             return search;
         }
 
-        public async Task<ActivityResultView> SearchResultAsync(ActivitySearch search, ViewRequester requester)
+        public async Task<ActivityResultView> SearchResultAsync(ActivitySearch search, Requester requester)
         {
             return new ActivityResultView()
             {
@@ -106,7 +106,7 @@ namespace contentapi.Services.Implementations
             };
         }
 
-        public async Task<IList<ActivityView>> SearchAsync(ActivitySearch search, ViewRequester requester)
+        public async Task<IList<ActivityView>> SearchAsync(ActivitySearch search, Requester requester)
         {
             var relationSearch = ModifySearch(services.mapper.Map<EntityRelationSearch>(search));
 
@@ -115,7 +115,7 @@ namespace contentapi.Services.Implementations
 
             relationSearch.TypeLike += search.Type;
 
-            var query = BasicReadQuery(requester.userId, relationSearch, x => -x.entityId2, new PermissionExtras() { allowNegativeOwnerRelation = search.IncludeAnonymous} )
+            var query = BasicReadQuery(requester, relationSearch, x => -x.entityId2, new PermissionExtras() { allowNegativeOwnerRelation = search.IncludeAnonymous} )
                             .Where(x => x.relation.type != $"{keys.ActivityKey}{keys.FileType}");
 
             var relations = await services.provider.GetListAsync(FinalizeQuery<EntityRelation>(query, x=> x.relation.id, relationSearch));
@@ -129,7 +129,7 @@ namespace contentapi.Services.Implementations
             }).ToList();
         }
 
-        public async Task<IList<CommentActivityView>> SearchCommentsAsync(ActivitySearch search, ViewRequester requester)
+        public async Task<IList<CommentActivityView>> SearchCommentsAsync(ActivitySearch search, Requester requester)
         {
             var result = new List<CommentActivityView>();
 
@@ -143,7 +143,7 @@ namespace contentapi.Services.Implementations
                     Reverse = true
                 };
 
-                var commentQuery = BasicReadQuery(requester.userId, commentSearch, x => x.entityId1); //entityid1 is the parent content, they need perms
+                var commentQuery = BasicReadQuery(requester, commentSearch, x => x.entityId1); //entityid1 is the parent content, they need perms
                 var finalComments = await provider.GetListAsync(
                     FinalizeQuery<EntityRelation>(commentQuery, x => x.relation.id, commentSearch) //ALWAYS GIVE ID GOSH
                     .Select(x => new { contentId = x.entityId1, userId = -x.entityId2, date = x.createDate})); //We only want SOME fields, don't pull them all! TOO MUCH
@@ -168,7 +168,7 @@ namespace contentapi.Services.Implementations
             return result;
         }
 
-        public async Task<ActivityView> FindByIdAsync(long id, ViewRequester requester)
+        public async Task<ActivityView> FindByIdAsync(long id, Requester requester)
         {
             var search = new ActivitySearch();
             search.Ids.Add(id);

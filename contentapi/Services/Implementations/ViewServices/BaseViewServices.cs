@@ -94,24 +94,24 @@ namespace contentapi.Services.Implementations
             return search;
         }
 
-        public IQueryable<EntityGroup> BasicReadQuery(long user, EntitySearch search, Expression<Func<Entity, long>> selector, PermissionExtras extras = null)
+        public IQueryable<EntityGroup> BasicReadQuery(Requester requester, EntitySearch search, Expression<Func<Entity, long>> selector, PermissionExtras extras = null)
         {
             var query = provider.ApplyEntitySearch(Q<Entity>(), search, false)
                 .Join(Q<EntityRelation>(), selector, r => r.entityId2, 
                 (e,r) => new EntityGroup() { entity = e, permission = r});
 
-            query = services.permissions.PermissionWhere(query, user, keys.ReadAction, extras);
+            query = services.permissions.PermissionWhere(query, requester, keys.ReadAction, extras);
 
             return query;
         }
 
-        public IQueryable<EntityGroup> BasicReadQuery(long user, EntityRelationSearch search, Expression<Func<EntityRelation, long>> selector, PermissionExtras extras = null)
+        public IQueryable<EntityGroup> BasicReadQuery(Requester requester, EntityRelationSearch search, Expression<Func<EntityRelation, long>> selector, PermissionExtras extras = null)
         {
             var query = provider.ApplyEntityRelationSearch(Q<EntityRelation>(), search, false)
                 .Join(Q<EntityRelation>(), selector, r2 => r2.entityId2, 
                 (r, r2) => new EntityGroup() { relation = r, permission = r2});
 
-            query = services.permissions.PermissionWhere(query, user, keys.ReadAction, extras);
+            query = services.permissions.PermissionWhere(query, requester, keys.ReadAction, extras);
 
             return query;
         }
@@ -175,9 +175,9 @@ namespace contentapi.Services.Implementations
             return provider.GetQueryable<E>();
         }
 
-        public void FailUnlessSuper(long userId)
+        public void FailUnlessSuper(Requester requester)
         {
-            if(!services.permissions.IsSuper(userId)) //services.systemConfig.SuperUsers.Contains(GetRequesterUidNoFail()))
+            if(!services.permissions.IsSuper(requester)) //services.systemConfig.SuperUsers.Contains(GetRequesterUidNoFail()))
                 throw new UnauthorizedAccessException("Must be super user to perform this action!");
         }
     }

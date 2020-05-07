@@ -47,9 +47,9 @@ namespace contentapi.Controllers
             catch { return -1; }
         }
 
-        protected ViewRequester GetRequesterNoFail()
+        protected Requester GetRequesterNoFail()
         {
-            return new ViewRequester() { userId = GetRequesterUidNoFail() };
+            return new Requester() { userId = GetRequesterUidNoFail() };
         }
 
         protected async Task<ActionResult<T>> ThrowToAction<T>(Func<Task<T>> action)

@@ -28,9 +28,9 @@ namespace contentapi.Services.Implementations
             return new FileView() { name = package.Entity.name, fileType = package.Entity.content };
         }
 
-        public override async Task<FileView> CleanViewUpdateAsync(FileView view, EntityPackage existing, long userId)
+        public override async Task<FileView> CleanViewUpdateAsync(FileView view, EntityPackage existing, Requester requester)
         {
-            var result = await base.CleanViewGeneralAsync(view, userId);
+            var result = await base.CleanViewGeneralAsync(view, requester);
 
             //Always restore the filetype, you can't change uploaded files anyway.
             result.fileType = existing.Entity.content;
@@ -38,16 +38,16 @@ namespace contentapi.Services.Implementations
             return result;
         }
 
-        public override async Task<IList<FileView>> SearchAsync(FileSearch search, ViewRequester requester)
+        public override async Task<IList<FileView>> SearchAsync(FileSearch search, Requester requester)
         {
             var entitySearch = ModifySearch(services.mapper.Map<EntitySearch>(search));
 
-            var perms = BasicReadQuery(requester.userId, entitySearch);
+            var perms = BasicReadQuery(requester, entitySearch);
 
             if(search.ParentIds.Count > 0)
                 perms = WhereParents(perms, search.ParentIds);
 
-            return await ViewResult(FinalizeQuery(perms, entitySearch), requester.userId);
+            return await ViewResult(FinalizeQuery(perms, entitySearch), requester);
         }
     }
 }

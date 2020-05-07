@@ -83,9 +83,9 @@ namespace contentapi.Services.Implementations
                 throw new BadRequestException("One or more permission users not found!");
         }
 
-        public override async Task<V> CleanViewGeneralAsync(V view, long userId)
+        public override async Task<V> CleanViewGeneralAsync(V view, Requester requester)
         {
-            view = await base.CleanViewGeneralAsync(view, userId);
+            view = await base.CleanViewGeneralAsync(view, requester);
 
             if(view.parentId > 0)
             {
@@ -99,13 +99,13 @@ namespace contentapi.Services.Implementations
 
                 //Only for CREATING. This is a silly weird thing since this is the general cleanup...
                 //Almost NOTHING requires cleanup specifically for create.
-                if(view.id == 0 && !services.permissions.CanUser(userId, keys.CreateAction, parent))
+                if(view.id == 0 && !CanUser(requester, keys.CreateAction, parent))
                     throw new BadRequestException($"User cannot create entities in parent {view.parentId}");
             }
             else if (!AllowOrphanPosts)
             {
                 //Only super users can create parentless entities... for now. This is a safety feature and may (never) be removed
-                FailUnlessSuper(userId);
+                FailUnlessSuper(requester);
             }
 
             await CheckPermissionUsersAsync(view);
@@ -121,31 +121,36 @@ namespace contentapi.Services.Implementations
         /// <param name="standin"></param>
         /// <param name="existing"></param>
         /// <returns></returns>
-        public override async Task<V> CleanViewUpdateAsync(V view, EntityPackage existing, long userId)
+        public override async Task<V> CleanViewUpdateAsync(V view, EntityPackage existing, Requester requester)
         {
-            view = await base.CleanViewUpdateAsync(view, existing, userId);
+            view = await base.CleanViewUpdateAsync(view, existing, requester);
 
-            if (!services.permissions.CanUser(userId, keys.UpdateAction, existing))
+            if (!CanUser(requester, keys.UpdateAction, existing))
                 throw new AuthorizationException("User cannot update this entity");
 
             //Restore the permissions from the package, don't bother throwing an error.
-            if(!services.permissions.IsSuper(userId) && existing.GetRelation(keys.CreatorRelation).entityId1 != userId)
+            if(!services.permissions.IsSuper(requester) && existing.GetRelation(keys.CreatorRelation).entityId1 != requester.userId)
                 view.permissions = services.permissions.ConvertRelationsToPerms(existing.Relations);
 
             return view;
         }
 
-        public async override Task<EntityPackage> DeleteCheckAsync(long standinId, long userId)
+        public async override Task<EntityPackage> DeleteCheckAsync(long standinId, Requester requester)
         {
-            var result = await base.DeleteCheckAsync(standinId, userId);
+            var result = await base.DeleteCheckAsync(standinId, requester);
 
-            if(!services.permissions.CanUser(userId, keys.DeleteAction, result))
+            if(!CanUser(requester, keys.DeleteAction, result))
                 throw new InvalidOperationException("No permission to delete");
 
             return result;
         }
 
-        public virtual Task<Dictionary<long, string>> ComputeMyPermsAsync(List<EntityPackage> content, long userId)
+        public virtual bool CanUser(Requester requester, string action, EntityPackage package)
+        {
+            return services.permissions.CanUser(requester, action, package);
+        }
+
+        public virtual Task<Dictionary<long, string>> ComputeMyPermsAsync(List<EntityPackage> content, Requester requester)
         {
             //This ensures they ALL have it or something.
             var result = content.ToDictionary(x => x.Entity.id, y => new StringBuilder());
@@ -156,7 +161,7 @@ namespace contentapi.Services.Implementations
             {
                 foreach(var action in services.permissions.PermissionActionMap)
                 {
-                    if(services.permissions.CanUser(userId, action.Value, c))
+                    if(CanUser(requester, action.Value, c))
                         result[c.Entity.id].Append(action.Key);
                 }
             }
@@ -164,10 +169,10 @@ namespace contentapi.Services.Implementations
             return Task.FromResult(result.ToDictionary(x => x.Key, y => y.Value.ToString()));
         }
 
-        public async Task<List<V>> ViewResult(IQueryable<Entity> query, long userId)
+        public async Task<List<V>> ViewResult(IQueryable<Entity> query, Requester requester)
         {
             var packages = await provider.LinkAsync(query);
-            var perms = await ComputeMyPermsAsync(packages, userId);
+            var perms = await ComputeMyPermsAsync(packages, requester);
             return packages.Select(x => 
             {
                 var v = ConvertToView(x);

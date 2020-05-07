@@ -160,25 +160,26 @@ namespace contentapi.Services.Implementations
             return parent;
         }
 
-        protected async Task<EntityPackage> ModifyCheckAsync(EntityRelation existing, long uid)
+        protected async Task<EntityPackage> ModifyCheckAsync(EntityRelation existing, Requester requester)
         {
             //Go find the parent. If it's not content, BAD BAD BAD
             var parent = await BasicParentCheckAsync(existing.entityId1);
+            var uid = requester.userId;
 
             //Only the owner (and super users) can edit (until wee get permission overrides set up)
-            if(existing.entityId2 != -uid && !services.permissions.IsSuper(uid))
+            if(existing.entityId2 != -uid && !services.permissions.IsSuper(requester))
                 throw new UnauthorizedAccessException($"Cannot update comment {uid}");
 
             return parent;
         }
 
-        protected async Task<EntityPackage> FullParentCheckAsync(long parentId, string action, long userId)
+        protected async Task<EntityPackage> FullParentCheckAsync(long parentId, string action, Requester requester)
         {
             //Go find the parent. If it's not content, BAD BAD BAD
             var parent = await BasicParentCheckAsync(parentId);
 
             //Create is full-on parent permission inheritance
-            if (!services.permissions.CanUser(userId, action, parent))
+            if (!services.permissions.CanUser(requester, action, parent))
                 throw new UnauthorizedAccessException($"Cannot perform this action in content {parent.Entity.id}");
             
             return parent;
@@ -214,24 +215,24 @@ namespace contentapi.Services.Implementations
             return search;
         }
 
-        public async Task<IList<CommentView>> SearchAsync(CommentSearch search, ViewRequester requester)
+        public async Task<IList<CommentView>> SearchAsync(CommentSearch search, Requester requester)
         {
             logger.LogTrace($"Comment GetAsync called by {requester}");
 
             var relationSearch = ModifySearch(services.mapper.Map<EntityRelationSearch>(search));
 
             //Entity1 is the content, content owns comments. The hack is entity2, which is not a child but a user.
-            var query = BasicReadQuery(requester.userId, relationSearch, x => x.entityId1);
+            var query = BasicReadQuery(requester, relationSearch, x => x.entityId1);
 
             var relations = await services.provider.GetListAsync(FinalizeQuery<EntityRelation>(query, x=> x.relation.id, relationSearch));
 
             return await ViewResult(relations);
         }
 
-        public async Task<List<CommentListener>> GetListenersAsync(long parentId, List<long> lastListeners, ViewRequester requester, CancellationToken token)
+        public async Task<List<CommentListener>> GetListenersAsync(long parentId, List<long> lastListeners, Requester requester, CancellationToken token)
         {
             //Need to see if user has perms to read this.
-            var parent = await FullParentCheckAsync(parentId, keys.ReadAction, requester.userId);
+            var parent = await FullParentCheckAsync(parentId, keys.ReadAction, requester);
 
             DateTime start = DateTime.Now;
             var listenSet = lastListeners.ToHashSet();
@@ -262,9 +263,9 @@ namespace contentapi.Services.Implementations
         }
 
         //This is a direct copy from the controller, eventually fix this to be more generic / better
-        public async Task<List<CommentView>> ListenAsync(long parentId, long lastId, long firstId, ViewRequester requester, CancellationToken token)
+        public async Task<List<CommentView>> ListenAsync(long parentId, long lastId, long firstId, Requester requester, CancellationToken token)
         {
-            var parent = await FullParentCheckAsync(parentId, keys.ReadAction, requester.userId);
+            var parent = await FullParentCheckAsync(parentId, keys.ReadAction, requester);
             var listenId = new CommentListener() { UserId = requester.userId, ContentListenId = parentId };
 
             int entrances = 0;
@@ -293,7 +294,7 @@ namespace contentapi.Services.Implementations
             return (await LinkAsync(goodComments)).Select(x => ConvertToView(x)).ToList();
         }
 
-        public Task<CommentView> WriteAsync(CommentView view, ViewRequester requester)
+        public Task<CommentView> WriteAsync(CommentView view, Requester requester)
         {
             if(view.id == 0)
                 return InsertAsync(view, requester);
@@ -301,13 +302,13 @@ namespace contentapi.Services.Implementations
                 return UpdateAsync(view, requester);
         }
 
-        public async Task<CommentView> InsertAsync(CommentView view, ViewRequester requester)
+        public async Task<CommentView> InsertAsync(CommentView view, Requester requester)
         {
             view.id = 0;
             view.createDate = DateTime.Now;  //Ignore create date, it's always now
             view.createUserId = requester.userId;    //Always requester
 
-            var parent = await FullParentCheckAsync(view.parentId, keys.CreateAction, requester.userId);
+            var parent = await FullParentCheckAsync(view.parentId, keys.CreateAction, requester);
 
             //now actually write the dang thing.
             var relation = ConvertFromViewSimple(view);
@@ -315,7 +316,7 @@ namespace contentapi.Services.Implementations
             return ConvertToViewSimple(relation);
         }
 
-        public async Task<CommentView> UpdateAsync(CommentView view, ViewRequester requester)
+        public async Task<CommentView> UpdateAsync(CommentView view, Requester requester)
         {
             var uid = requester.userId;
             var existing = await ExistingCheckAsync(view.id);
@@ -323,7 +324,7 @@ namespace contentapi.Services.Implementations
             view.createDate = (DateTime)existing.createDateProper();
             view.createUserId = -existing.entityId2; //creator should be original too
 
-            var parent = await ModifyCheckAsync(existing, uid);
+            var parent = await ModifyCheckAsync(existing, requester);
 
             var relation = ConvertFromViewSimple(view);
 
@@ -337,11 +338,11 @@ namespace contentapi.Services.Implementations
 
         }
 
-        public async Task<CommentView> DeleteAsync(long id, ViewRequester requester)
+        public async Task<CommentView> DeleteAsync(long id, Requester requester)
         {
             var uid = requester.userId;
             var existing = await ExistingCheckAsync(id);
-            var parent = await ModifyCheckAsync(existing, uid);
+            var parent = await ModifyCheckAsync(existing, requester);
 
             var copy = MakeHistoryCopy(existing, keys.CommentDeleteHack, uid);
             existing.value = "";
@@ -352,7 +353,7 @@ namespace contentapi.Services.Implementations
             return ConvertToView(relationPackage);
         }
 
-        public async Task<CommentView> FindByIdAsync(long id, ViewRequester requester)
+        public async Task<CommentView> FindByIdAsync(long id, Requester requester)
         {
             var search = new CommentSearch();
             search.Ids.Add(id);
@@ -360,7 +361,7 @@ namespace contentapi.Services.Implementations
         }
 
         //Don't feel like implementing this right now.
-        public Task<IList<CommentView>> GetRevisions(long id, ViewRequester requester)
+        public Task<IList<CommentView>> GetRevisions(long id, Requester requester)
         {
             throw new NotImplementedException();
         }

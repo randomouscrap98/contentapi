@@ -33,11 +33,9 @@ namespace contentapi.Services.Implementations
             };
         }
 
-        public IQueryable<E> PermissionWhere<E>(IQueryable<E> query, long user, string action, PermissionExtras extras = null) where E : EntityGroup
+        public IQueryable<E> PermissionWhere<E>(IQueryable<E> query, Requester requester, string action, PermissionExtras extras = null) where E : EntityGroup
         {
             extras = extras ?? new PermissionExtras();
-
-            bool superUser = config.SuperUsers.Contains(user);
 
             //Immediately apply a limiter so we're not joining on every dang relation ever (including comments etc).
             //The amount of creators and actions of a single type is SO MUCH LOWER. I'm not sure how optimized these
@@ -45,8 +43,10 @@ namespace contentapi.Services.Implementations
             query = query.Where(x => x.permission.type == keys.CreatorRelation || x.permission.type == action);
             
             //Nothing else to do, the user can do it if it's update or delete.
-            if(superUser && (action == keys.UpdateAction || action == keys.DeleteAction || action == keys.CreateAction))
+            if(requester.system || IsSuper(requester) && (action == keys.UpdateAction || action == keys.DeleteAction || action == keys.CreateAction))
                 return query;
+
+            var user = requester.userId;
 
             return query.Where(x => 
                 (extras.allowNegativeOwnerRelation && x.relation.entityId1 < 0) ||
@@ -54,15 +54,20 @@ namespace contentapi.Services.Implementations
                 (x.permission.type == action && (x.permission.entityId1 == 0 || x.permission.entityId1 == user)));
         }
 
-        public bool CanUser(long user, string action, EntityPackage package)
+        public bool CanUser(Requester requester, string action, EntityPackage package)
         {
             //Inefficient in compute but easier for me, the programmer, to use a single source of truth.
-            return PermissionWhere(package.Relations.Select(x => new EntityGroup() { permission = x }).AsQueryable(), user, action).Any();
+            return PermissionWhere(package.Relations.Select(x => new EntityGroup() { permission = x }).AsQueryable(), requester, action).Any();
         }
 
-        public bool IsSuper(long user)
+        public bool IsSuper(Requester requester)
         {
-            return config.SuperUsers.Contains(user);
+            return requester.system || config.SuperUsers.Contains(requester.userId);
+        }
+
+        public bool IsSuper(long userId)
+        {
+            return IsSuper(new Requester() {userId = userId});
         }
 
         public List<EntityRelation> ConvertPermsToRelations(Dictionary<string, string> perms)

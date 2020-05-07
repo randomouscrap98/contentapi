@@ -30,6 +30,8 @@ namespace contentapi.Services.Implementations
     public class ContentViewService : BasePermissionViewService<ContentView, ContentSearch>
     {
         protected CategoryViewService categoryService;
+        
+        protected Dictionary<long, List<long>> cachedSupers = null;
 
         public ContentViewService(ViewServices services, ILogger<ContentViewService> logger, CategoryViewService categoryService) 
             : base(services, logger) 
@@ -39,7 +41,28 @@ namespace contentapi.Services.Implementations
 
         public override string EntityType => keys.ContentType;
         public override string ParentType => null;
+
+        public async Task ControllerSetupAsync()
+        {
+            var categories = await categoryService.SearchAsync(new CategorySearch(), new Requester() { system = true });
+        }
         
+        public override bool CanUser(Requester requester, string action, EntityPackage package)
+        {
+            var result = base.CanUser(requester, action, package);
+
+            if(cachedSupers == null)
+            {
+                logger.LogWarning("CanUser called without cached supers");
+            }
+            else
+            {
+                result = action != keys.ReadAction && cachedSupers[package.GetRelation(keys.ParentRelation).entityId1].Contains(requester.userId);
+            }
+
+            return result;
+        }
+
         public override EntityPackage CreateBasePackage(ContentView view)
         {
             var package = NewEntity(view.name, view.content);
@@ -73,13 +96,13 @@ namespace contentapi.Services.Implementations
             return view; //view;
         }
 
-        public override async Task<IList<ContentView>> SearchAsync(ContentSearch search, ViewRequester requester)
+        public override async Task<IList<ContentView>> SearchAsync(ContentSearch search, Requester requester)
         {
             logger.LogTrace($"Content SearchAsync called by {requester}");
 
             var entitySearch = ModifySearch(services.mapper.Map<EntitySearch>(search));
 
-            var initial = BasicReadQuery(requester.userId, entitySearch);
+            var initial = BasicReadQuery(requester, entitySearch);
 
             //Right now, entities are matched with very specific read relations and MAYBE some creator ones.
             //Be VERY CAREFUL, I get the feeling the entity count can get blown out of proportion with this massive join.
@@ -95,7 +118,7 @@ namespace contentapi.Services.Implementations
                     .Where(x => x.value.key == keys.KeywordKey && EF.Functions.Like(x.value.value, search.Keyword));
             }
 
-            return await ViewResult(FinalizeQuery(initial, entitySearch), requester.userId);
+            return await ViewResult(FinalizeQuery(initial, entitySearch), requester);
         }
     }
 }

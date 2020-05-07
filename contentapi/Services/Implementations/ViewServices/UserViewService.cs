@@ -82,9 +82,9 @@ namespace contentapi.Services.Implementations
             return newUser;
         }
 
-        public override async Task<UserViewFull> CleanViewGeneralAsync(UserViewFull view, long userId)
+        public override async Task<UserViewFull> CleanViewGeneralAsync(UserViewFull view, Requester requester)
         {
-            view = await base.CleanViewGeneralAsync(view, userId);
+            view = await base.CleanViewGeneralAsync(view, requester);
 
             //Go look up the avatar. Make sure it's A FILE DAMGIT
             var file = await provider.FindByIdBaseAsync(view.avatar);
@@ -95,16 +95,16 @@ namespace contentapi.Services.Implementations
             return view;
         }
 
-        public override async Task<IList<UserViewFull>> SearchAsync(UserSearch search, ViewRequester requester)
+        public override async Task<IList<UserViewFull>> SearchAsync(UserSearch search, Requester requester)
         {
             logger.LogDebug($"User SearchAsync called by {requester}");
             var entitySearch = ModifySearch(services.mapper.Map<EntitySearch>(search));
             return (await provider.GetEntityPackagesAsync(entitySearch)).Select(x => ConvertToView(x)).ToList();
         }
 
-        public override async Task<UserViewFull> WriteAsync(UserViewFull view, ViewRequester requester)
+        public override async Task<UserViewFull> WriteAsync(UserViewFull view, Requester requester)
         {
-            return ConvertToView(await WriteViewBaseAsync(view, requester.userId, (p) =>
+            return ConvertToView(await WriteViewBaseAsync(view, requester, (p) =>
             {
                 //Before creating the user, we need to set the owner as themselves, not as anonymous.
                 var creatorRelation = p.GetRelation(keys.CreatorRelation);
@@ -113,7 +113,7 @@ namespace contentapi.Services.Implementations
             }));
         }
 
-        public async Task<UserViewFull> FindByUsernameAsync(string username, ViewRequester requester)
+        public async Task<UserViewFull> FindByUsernameAsync(string username, Requester requester)
         {
             return (await SearchAsync(new UserSearch()
             {
@@ -121,7 +121,7 @@ namespace contentapi.Services.Implementations
             }, requester)).OnlySingle();
         }
 
-        protected async Task<UserViewFull> FindByExactValueAsync(string key, string value, ViewRequester requester)
+        protected async Task<UserViewFull> FindByExactValueAsync(string key, string value, Requester requester)
         {
             var foundValue = await FindValueAsync(key, value);
 
@@ -131,12 +131,12 @@ namespace contentapi.Services.Implementations
             return await FindByIdAsync(foundValue.entityId, requester);
         }
 
-        public Task<UserViewFull> FindByEmailAsync(string email, ViewRequester requester)
+        public Task<UserViewFull> FindByEmailAsync(string email, Requester requester)
         {
             return FindByExactValueAsync(keys.EmailKey, email, requester);
         }
 
-        public Task<UserViewFull> FindByRegistration(string registrationKey, ViewRequester requester)
+        public Task<UserViewFull> FindByRegistration(string registrationKey, Requester requester)
         {
             return FindByExactValueAsync(keys.RegistrationCodeKey, registrationKey, requester);
         }
