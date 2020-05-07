@@ -12,7 +12,7 @@ using Randomous.EntitySystem;
 
 namespace contentapi.Services.Implementations
 {
-    public class ViewServices 
+    public class ViewServicePack 
     {
         public IEntityProvider provider;
         public IMapper mapper;
@@ -20,7 +20,7 @@ namespace contentapi.Services.Implementations
         public IPermissionService permissions;
         public IHistoryService history;
 
-        public ViewServices(IEntityProvider provider, IMapper mapper, Keys keys, IPermissionService permissions, 
+        public ViewServicePack(IEntityProvider provider, IMapper mapper, Keys keys, IPermissionService permissions, 
             IHistoryService history)
         {
             this.provider = provider;
@@ -35,13 +35,13 @@ namespace contentapi.Services.Implementations
     //time right now.
     public class BaseViewServices
     {
-        protected ViewServices services;
+        protected ViewServicePack services;
         protected ILogger logger;
         
         protected Keys keys => services.keys;
         protected IEntityProvider provider => services.provider;
 
-        public BaseViewServices(ViewServices services, ILogger<BaseViewServices> logger)
+        public BaseViewServices(ViewServicePack services, ILogger<BaseViewServices> logger)
         {
             this.services = services;
             this.logger = logger;

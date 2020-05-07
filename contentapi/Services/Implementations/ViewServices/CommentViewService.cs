@@ -75,7 +75,7 @@ namespace contentapi.Services.Implementations
 
         protected SystemConfig config;
 
-        public CommentViewService(ViewServices services, ILogger<CommentViewService> logger, IDecayer<CommentListener> decayer,
+        public CommentViewService(ViewServicePack services, ILogger<CommentViewService> logger, IDecayer<CommentListener> decayer,
             SystemConfig config) : base(services, logger)
         {
             this.config = config; 

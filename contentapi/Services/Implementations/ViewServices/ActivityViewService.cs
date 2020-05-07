@@ -41,7 +41,7 @@ namespace contentapi.Services.Implementations
     {
         protected IActivityService activityService;
 
-        public ActivityViewService(ViewServices services, ILogger<ActivityViewService> logger, IActivityService activityService) 
+        public ActivityViewService(ViewServicePack services, ILogger<ActivityViewService> logger, IActivityService activityService) 
             : base(services, logger) 
         { 
             this.activityService = activityService;

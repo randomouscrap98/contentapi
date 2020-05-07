@@ -14,7 +14,7 @@ namespace contentapi.Services.Implementations
 
     public class CategoryViewService : BasePermissionViewService<CategoryView, CategorySearch>
     {
-        public CategoryViewService(ViewServices services, ILogger<CategoryViewService> logger) 
+        public CategoryViewService(ViewServicePack services, ILogger<CategoryViewService> logger) 
             : base(services, logger) { }
 
         public override string EntityType => keys.CategoryType;

@@ -14,7 +14,7 @@ namespace contentapi.Services.Implementations
 {
     public abstract class BasePermissionViewService<V,S> : BaseEntityViewService<V,S> where V : BasePermissionView where S : EntitySearchBase, new()
     {
-        public BasePermissionViewService(ViewServices services, ILogger<BasePermissionViewService<V, S>> logger) 
+        public BasePermissionViewService(ViewServicePack services, ILogger<BasePermissionViewService<V, S>> logger) 
             : base(services, logger) { }
 
         public abstract string ParentType {get;}

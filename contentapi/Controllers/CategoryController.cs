@@ -1,3 +1,4 @@
+using contentapi.Services;
 using contentapi.Services.Implementations;
 using contentapi.Views;
 using Microsoft.Extensions.Logging;

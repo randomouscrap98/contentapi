@@ -13,7 +13,7 @@ namespace contentapi.Services.Implementations
 {
     public abstract class BaseEntityViewService<V,S> : BaseViewServices, IViewService<V,S> where V : BaseEntityView where S : EntitySearchBase, new()
     {
-        public BaseEntityViewService(ViewServices services, ILogger<BaseEntityViewService<V,S>> logger) 
+        public BaseEntityViewService(ViewServicePack services, ILogger<BaseEntityViewService<V,S>> logger) 
             : base(services, logger) { }
 
         public abstract string EntityType {get;}

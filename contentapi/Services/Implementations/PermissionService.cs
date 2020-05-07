@@ -60,6 +60,11 @@ namespace contentapi.Services.Implementations
             return PermissionWhere(package.Relations.Select(x => new EntityGroup() { permission = x }).AsQueryable(), requester, action).Any();
         }
 
+        public bool CanUser(long userId, string action, EntityPackage package)
+        {
+            return CanUser(new Requester() {userId = userId}, action, package);
+        }
+
         public bool IsSuper(Requester requester)
         {
             return requester.system || config.SuperUsers.Contains(requester.userId);

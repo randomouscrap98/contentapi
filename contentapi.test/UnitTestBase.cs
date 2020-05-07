@@ -19,13 +19,13 @@ namespace contentapi.test
 
         protected contentapi.Services.Implementations.DefaultServiceProvider contentApiProvider;
         protected DefaultServiceProvider serviceProvider;
-        protected Keys keys;
+        protected contentapi.Services.Keys keys;
 
         public UnitTestBase()
         {
             serviceProvider = new DefaultServiceProvider();
             contentApiProvider = new contentapi.Services.Implementations.DefaultServiceProvider();
-            this.keys = CreateService<Keys>();
+            this.keys = CreateService<contentapi.Services.Keys>();
         }
 
         public void Dispose()
@@ -50,7 +50,7 @@ namespace contentapi.test
                 services, 
                 options => options.UseSqlite(connection).EnableSensitiveDataLogging(true),
                 d => d.Database.EnsureCreated());
-            services.AddSingleton<Keys>();
+
             contentApiProvider.AddDefaultServices(services);
 
             //you'll NEED to add the default configurations at some point too!!!

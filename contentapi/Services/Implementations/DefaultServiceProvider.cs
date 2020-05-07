@@ -1,3 +1,4 @@
+using AutoMapper;
 using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Options;
@@ -40,6 +41,19 @@ namespace contentapi.Services.Implementations
             services.AddTransient<ContentViewService>();
             services.AddTransient<FileViewService>();
             services.AddTransient<UserViewService>();
+
+            //We need automapper for our view services
+            services.AddAutoMapper(GetType());
+
+            //And now, the service config that goes into EVERY controller.
+            services.AddTransient<ViewServicePack>();
+
+            services.AddSingleton(p =>
+            {
+                var keys = new Keys();
+                keys.EnsureAllUnique();
+                return keys;
+            });
         }
 
         public void AddConfiguration<T>(IServiceCollection services, IConfiguration config) where T : class

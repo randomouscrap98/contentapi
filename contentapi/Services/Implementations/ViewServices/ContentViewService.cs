@@ -33,7 +33,7 @@ namespace contentapi.Services.Implementations
         
         protected Dictionary<long, List<long>> cachedSupers = null;
 
-        public ContentViewService(ViewServices services, ILogger<ContentViewService> logger, CategoryViewService categoryService) 
+        public ContentViewService(ViewServicePack services, ILogger<ContentViewService> logger, CategoryViewService categoryService) 
             : base(services, logger) 
         { 
             this.categoryService = categoryService;
@@ -42,9 +42,39 @@ namespace contentapi.Services.Implementations
         public override string EntityType => keys.ContentType;
         public override string ParentType => null;
 
-        public async Task ControllerSetupAsync()
+        public List<long> BuildSupersForId(long id, Dictionary<long, List<long>> existing, IList<CategoryView> categories)
+        {
+            if(id <= 0) 
+                return new List<long>();
+            else if(existing.ContainsKey(id))
+                return existing[id];
+            
+            var category = categories.FirstOrDefault(x => x.id == id);
+        
+            if(category == null)
+                throw new InvalidOperationException($"Build super for non-existent id {id}");
+            
+            var ourSupers = new List<long>(category.localSupers);
+            ourSupers.AddRange(BuildSupersForId(category.parentId, existing, categories));
+            existing.Add(id, ourSupers);
+
+            return ourSupers;
+        }
+
+        public Dictionary<long, List<long>> GetAllSupers(IList<CategoryView> categories)
+        {
+            var currentCache = new Dictionary<long, List<long>>();
+
+            foreach(var category in categories)
+                BuildSupersForId(category.id, currentCache, categories);
+            
+            return currentCache;
+        }
+
+        public async Task SetupAsync()
         {
             var categories = await categoryService.SearchAsync(new CategorySearch(), new Requester() { system = true });
+            cachedSupers = GetAllSupers(categories);
         }
         
         public override bool CanUser(Requester requester, string action, EntityPackage package)

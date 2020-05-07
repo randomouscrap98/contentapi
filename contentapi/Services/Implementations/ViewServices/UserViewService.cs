@@ -36,7 +36,7 @@ namespace contentapi.Services.Implementations
         protected ILanguageService languageService;
         protected IEmailService emailService;
 
-        public UserViewService(ILogger<UserViewService> logger, ViewServices services, IHashService hashService,
+        public UserViewService(ILogger<UserViewService> logger, ViewServicePack services, IHashService hashService,
             ITokenService tokenService, ILanguageService languageService, IEmailService emailService)
             :base(services, logger)
         { 

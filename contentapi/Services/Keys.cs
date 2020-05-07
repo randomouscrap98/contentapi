@@ -1,7 +1,7 @@
 using System;
 using System.Linq;
 
-namespace contentapi
+namespace contentapi.Services
 {
     public class Keys
     {

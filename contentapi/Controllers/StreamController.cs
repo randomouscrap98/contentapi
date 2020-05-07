@@ -1,4 +1,5 @@
 using contentapi.Services;
+using contentapi.Services.Implementations;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.Extensions.Logging;

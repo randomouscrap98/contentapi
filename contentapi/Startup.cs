@@ -68,18 +68,7 @@ namespace contentapi
 
             //Also a singleton for the token system which we'll use for websockets
             services.AddSingleton<ITempTokenService<long>, TempTokenService<long>>();
-
-            //And now, the service config that goes into EVERY controller.
-            //services.AddTransient<ControllerServices>();
-            services.AddTransient<ViewServices>();
-
             services.AddSingleton<HashConfig>();    //Just use defaults
-            services.AddSingleton(p =>
-            {
-                var keys = new Keys();
-                keys.EnsureAllUnique();
-                return keys;
-            });
 
             //A special case for websockets: we determine what the websockets will handle right here and now
             services.AddSingleton<WebSocketMiddlewareConfig>((p) =>
@@ -93,7 +82,8 @@ namespace contentapi
             services.AddCors();
             services.AddControllers()
                     .AddJsonOptions(options=> options.JsonSerializerOptions.Converters.Add(new TimeSpanToStringConverter()));
-            services.AddAutoMapper(typeof(Startup));
+
+            //Added automapper here before
 
             var tokenSection = Configuration.GetSection(nameof(TokenServiceConfig));
 
