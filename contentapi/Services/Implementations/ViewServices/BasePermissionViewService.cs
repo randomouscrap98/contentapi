@@ -92,7 +92,7 @@ namespace contentapi.Services.Implementations
                 var parent = await provider.FindByIdAsync(view.parentId);
 
                 if(parent == null)
-                    throw new BadRequestException($"No parent with id {view.id}");
+                    throw new BadRequestException($"No parent with id {view.parentId}");
 
                 if(!String.IsNullOrEmpty(ParentType) && !parent.Entity.type.StartsWith(ParentType))
                     throw new BadRequestException("Wrong parent type!");

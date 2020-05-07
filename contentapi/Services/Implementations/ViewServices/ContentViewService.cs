@@ -56,7 +56,8 @@ namespace contentapi.Services.Implementations
             
             var ourSupers = new List<long>(category.localSupers);
             ourSupers.AddRange(BuildSupersForId(category.parentId, existing, categories));
-            existing.Add(id, ourSupers);
+
+            existing.Add(id, ourSupers.Distinct().ToList());
 
             return ourSupers;
         }
@@ -82,13 +83,9 @@ namespace contentapi.Services.Implementations
             var result = base.CanUser(requester, action, package);
 
             if(cachedSupers == null)
-            {
                 logger.LogWarning("CanUser called without cached supers");
-            }
             else
-            {
-                result = action != keys.ReadAction && cachedSupers[package.GetRelation(keys.ParentRelation).entityId1].Contains(requester.userId);
-            }
+                result = result || action != keys.ReadAction && package.HasRelation(keys.ParentRelation) && cachedSupers[package.GetRelation(keys.ParentRelation).entityId1].Contains(requester.userId);
 
             return result;
         }

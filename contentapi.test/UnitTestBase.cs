@@ -18,12 +18,12 @@ namespace contentapi.test
         public string SqliteConnectionString = "Data Source=:memory:;";
 
         protected contentapi.Services.Implementations.DefaultServiceProvider contentApiProvider;
-        protected DefaultServiceProvider serviceProvider;
+        //protected DefaultServiceProvider serviceProvider;
         protected contentapi.Services.Keys keys;
 
         public UnitTestBase()
         {
-            serviceProvider = new DefaultServiceProvider();
+            //serviceProvider = new DefaultServiceProvider();
             contentApiProvider = new contentapi.Services.Implementations.DefaultServiceProvider();
             this.keys = CreateService<contentapi.Services.Keys>();
         }
@@ -45,24 +45,50 @@ namespace contentapi.test
             connections.Append(connection);
 
             var services = new ServiceCollection();
+            var dsp = new Randomous.EntitySystem.Implementations.DefaultServiceProvider();
             services.AddLogging(configure => configure.AddDebug());//configure.AddSerilog(new LoggerConfiguration().WriteTo.File($"{GetType()}.txt").CreateLogger()));
-            serviceProvider.AddDefaultServices(
+            dsp.AddDefaultServices(
                 services, 
                 options => options.UseSqlite(connection).EnableSensitiveDataLogging(true),
                 d => d.Database.EnsureCreated());
 
             contentApiProvider.AddDefaultServices(services);
+            services.AddSingleton<IEntityProvider, EntityProvider>();   //We want everyone to share data, even in tests. That's because
+                                                                        //all my tests are bad
 
             //you'll NEED to add the default configurations at some point too!!!
 
             return services;
         }
 
+        protected IServiceProvider serviceProvider = null;
+        protected readonly object providerLock = new object();
+
         public T CreateService<T>()
         {
-            var services = CreateServices();
-            var provider = services.BuildServiceProvider();
-            return (T)ActivatorUtilities.GetServiceOrCreateInstance(provider, typeof(T));
+            lock(providerLock)
+            {
+                if (serviceProvider == null)
+                {
+                    var services = CreateServices();
+                    serviceProvider = services.BuildServiceProvider();
+                }
+            }
+
+            return (T)ActivatorUtilities.GetServiceOrCreateInstance(serviceProvider, typeof(T));
+        }
+
+        public void AssertThrows<T>(Action a) where T : Exception
+        {
+            try
+            {
+                a();
+                Assert.True(false, "Action was supposed to throw an exception!");
+            }
+            catch(T)
+            {
+                //it's ok
+            }
         }
 
         public T AssertWait<T>(Task<T> task)
