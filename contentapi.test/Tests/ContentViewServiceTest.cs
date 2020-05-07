@@ -23,9 +23,13 @@ namespace contentapi.test
 
 
         //Get the boring stuff out of the way.
-        [Fact] public override void SimpleEmptyTests() { base.SimpleEmptyTests(); }
-        [Fact] public override void SimpleOwnerTests() { base.SimpleOwnerTests(); }
-        [Fact] public override void SimpleSuperTests() { base.SimpleSuperTests(); }
+        [Fact] public override void SimpleEmptyCanUser() { base.SimpleEmptyCanUser(); }
+        [Fact] public override void SimpleEmptyRead() { base.SimpleEmptyRead(); }
+        [Fact] public override void SimpleOwnerInsert() { base.SimpleOwnerInsert(); }
+        [Fact] public override void SimpleOwnerMultiInsert() { base.SimpleOwnerMultiInsert(); }
+        [Fact] public override void SimpleOwnerUpdate() { base.SimpleOwnerUpdate(); }
+        [Fact] public override void SimpleOwnerDelete() { base.SimpleOwnerDelete(); }
+        [Fact] public override void SimpleNoParentSuper() { base.SimpleNoParentSuper(); }
 
         [Fact]
         public void TestSingleSuperCache()

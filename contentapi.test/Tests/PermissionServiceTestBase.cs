@@ -60,14 +60,9 @@ namespace contentapi.test
             Assert.Empty(result);
         } 
 
-        public virtual void SimpleEmptyTests()
-        {
-            SimpleEmptyCanUser();
-            SimpleEmptyRead();
-        }
-
         //Now insert a single thing and make sure we can read it. Also make sure various fields are OK
-        public virtual void SimpleOwnerInsert(long userId = 1)
+        public virtual void SimpleOwnerInsert() { SimpleOwnerInsertId(1); }
+        public virtual void SimpleOwnerInsertId(long userId)
         {
             var view = NewView();
             var start = DateTime.Now;
@@ -98,37 +93,70 @@ namespace contentapi.test
             var search = new S();
             for(var i = 1; i <= 10; i++)
             {
-                SimpleOwnerInsert(i);
+                SimpleOwnerInsertId(i);
                 search.Ids.Add(i);
                 var result = service.SearchAsync(search, new Requester() {system = true}).Result;  //Get them ALL
                 Assert.Equal(i, result.Count);
             }
         }
 
-        public virtual void SimpleOwnerUpdate()
+        public virtual void SimpleOwnerUpdate() { SimpleOwnerUpdateId(1); }
+        public virtual void SimpleOwnerUpdateId(long userId)
         {
             var view = NewView();
             var start = DateTime.Now;
-            var requester = new Requester() { userId = 1};
+            var requester = new Requester() { userId = userId};
 
             var writeView = service.WriteAsync(view, requester).Result;
-            var readViews = service.SearchAsync(new S(), requester).Result; //owners should always be able to read this
 
+            //Owners should be able to SPECIFICALLY modify permissions
+            writeView.permissions.Add("0", "CR");
+            var writeView2 = service.WriteAsync(writeView, requester).Result;
+
+            Assert.NotEqual(writeView2.permissions, writeView.permissions);
+
+            var readViews = service.SearchAsync(new S(), requester).Result; //owners should always be able to read this
             Assert.Single(readViews);
 
             var readView = readViews.First();
 
-            Assert.Equal(1, readView.createUserId);
+            Assert.Equal(userId, readView.createUserId);
+            Assert.Equal(userId, readView.editUserId);
             Assert.True(readView.createDate - start < TimeSpan.FromSeconds(60)); //Make sure the date is KINDA close
+            Assert.True(readView.editDate - start < TimeSpan.FromSeconds(60)); //Make sure the date is KINDA close
+            Assert.NotEqual(readView.editDate, readView.createDate); //Make sure the date is KINDA close
             Assert.True(readView.id > 0);
+            Assert.True(writeView2.permissions.ContainsKey("0"));
+            Assert.True(writeView2.permissions["0"].ToLower() == "cr" || writeView2.permissions["0"].ToLower() == "rc");
 
             //I don't assume what edit date/user will be on create.
+            AssertViewsEqual(readView, writeView2);
         }
 
-        public virtual void SimpleOwnerTests()
+
+        public virtual void SimpleOwnerDelete() { SimpleOwnerDeleteId(1); }
+        public virtual void SimpleOwnerDeleteId(long userId)
         {
-            SimpleOwnerInsert();
-            SimpleOwnerMultiInsert();
+            var view = NewView();
+            var start = DateTime.Now;
+            var requester = new Requester() { userId = userId};
+
+            var writeView = service.WriteAsync(view, requester).Result;
+            var readViews = service.SearchAsync(new S(), requester).Result; //owners should always be able to read this
+            Assert.Single(readViews); //Assume this is us
+            Assert.Equal(readViews.First().id, writeView.id);
+
+            var deleteView = service.DeleteAsync(writeView.id, requester).Result;
+
+            Assert.True(deleteView.createDate - start < TimeSpan.FromSeconds(60)); //Make sure the date is KINDA close
+            Assert.True(deleteView.editDate - start < TimeSpan.FromSeconds(60)); //Make sure the date is KINDA close
+            Assert.True(deleteView.id > 0);
+
+            //I don't assume what edit date/user will be on create.
+            AssertViewsEqual(readViews.First(), deleteView);
+
+            readViews = service.SearchAsync(new S(), requester).Result; //owners should always be able to read this
+            Assert.Empty(readViews);
         }
 
         //For now, you CANNOT insert things without a parent.
@@ -147,11 +175,6 @@ namespace contentapi.test
                 var writeView = service.WriteAsync(view, requester).Result;
                 Assert.True(writeView.id > 0);
             }
-        }
-
-        public virtual void SimpleSuperTests()
-        {
-            SimpleNoParentSuper();
         }
     }
 }
