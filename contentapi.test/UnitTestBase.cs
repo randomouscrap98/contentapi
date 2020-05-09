@@ -2,8 +2,10 @@ using System;
 using System.Collections.Generic;
 using System.Linq;
 using System.Threading.Tasks;
+using contentapi.Services.Implementations;
 using Microsoft.Data.Sqlite;
 using Microsoft.EntityFrameworkCore;
+using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Logging;
 using Randomous.EntitySystem;
@@ -52,11 +54,14 @@ namespace contentapi.test
                 options => options.UseSqlite(connection).EnableSensitiveDataLogging(true),
                 d => d.Database.EnsureCreated());
 
-            contentApiProvider.AddDefaultServices(services);
-            services.AddSingleton<IEntityProvider, EntityProvider>();   //We want everyone to share data, even in tests. That's because
-                                                                        //all my tests are bad
+            //EMPTY CONFIGS! Hopefully we won't need to test anything requiring these configs...
+            IConfiguration config = new ConfigurationBuilder()
+                //.AddJsonFile("appsettings.Development.json", true, true)
+                .Build();
 
-            //you'll NEED to add the default configurations at some point too!!!
+            contentApiProvider.AddDefaultServices(services);
+            contentApiProvider.AddServiceConfigurations(services, config);
+            services.AddSingleton<IEntityProvider, EntityProvider>();   //We want everyone to share data, even in tests. That's because all my tests are bad
 
             return services;
         }

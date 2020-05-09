@@ -68,6 +68,7 @@ namespace contentapi.Services.Implementations
             AddConfiguration<SystemConfig>(services, config);
             AddConfiguration<TempTokenServiceConfig>(services, config);
             AddConfiguration<TokenServiceConfig>(services, config);
+            services.AddSingleton<HashConfig>();
         }
     }
 }

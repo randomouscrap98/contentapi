@@ -48,12 +48,12 @@ namespace contentapi.Services.Implementations
             return view;
         }
 
-        public override Task<CategoryView> CleanViewGeneralAsync(CategoryView view, Requester requester)
-        {
-            //Always fail unless super, nobody can write categories etc.
-            FailUnlessSuper(requester);
-            return base.CleanViewGeneralAsync(view, requester);
-        }
+        //public override Task<CategoryView> CleanViewGeneralAsync(CategoryView view, Requester requester)
+        //{
+        //    //Always fail unless super, nobody can write categories etc.
+        //    FailUnlessSuper(requester);
+        //    return base.CleanViewGeneralAsync(view, requester);
+        //}
 
         public override async Task<EntityPackage> DeleteCheckAsync(long id, Requester requester)
         {

@@ -68,7 +68,6 @@ namespace contentapi
 
             //Also a singleton for the token system which we'll use for websockets
             services.AddSingleton<ITempTokenService<long>, TempTokenService<long>>();
-            services.AddSingleton<HashConfig>();    //Just use defaults
 
             //A special case for websockets: we determine what the websockets will handle right here and now
             services.AddSingleton<WebSocketMiddlewareConfig>((p) =>

@@ -178,7 +178,7 @@ namespace contentapi.Services.Implementations
         public void FailUnlessSuper(Requester requester)
         {
             if(!services.permissions.IsSuper(requester)) //services.systemConfig.SuperUsers.Contains(GetRequesterUidNoFail()))
-                throw new UnauthorizedAccessException("Must be super user to perform this action!");
+                throw new AuthorizationException("Must be super user to perform this action!");
         }
     }
 }
