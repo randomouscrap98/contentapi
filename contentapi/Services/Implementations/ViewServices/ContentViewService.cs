@@ -83,9 +83,14 @@ namespace contentapi.Services.Implementations
             var result = base.CanUser(requester, action, package);
 
             if(cachedSupers == null)
+            {
                 logger.LogWarning("CanUser called without cached supers");
+            }
             else
-                result = result || action != keys.ReadAction && package.HasRelation(keys.ParentRelation) && cachedSupers[package.GetRelation(keys.ParentRelation).entityId1].Contains(requester.userId);
+            {
+                var parentId = package.HasRelation(keys.ParentRelation) ? package.GetRelation(keys.ParentRelation).entityId1 : -1;
+                result = result || action != keys.ReadAction && cachedSupers.ContainsKey(parentId) && cachedSupers[parentId].Contains(requester.userId);
+            }
 
             return result;
         }

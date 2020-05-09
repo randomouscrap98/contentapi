@@ -73,6 +73,7 @@ namespace contentapi.Services.Implementations
             if(userIds.Count == 0)
                 return;
 
+            //TODO: searching for users should be done by the user view service! why are all these services mixing together aaaaa
             var found = await provider.ApplyEntitySearch(
                 provider.GetQueryable<Entity>(), 
                 new EntitySearch() { TypeLike = keys.UserType, Ids = userIds }).CountAsync();
@@ -100,7 +101,7 @@ namespace contentapi.Services.Implementations
                 //Only for CREATING. This is a silly weird thing since this is the general cleanup...
                 //Almost NOTHING requires cleanup specifically for create.
                 if(view.id == 0 && !CanUser(requester, keys.CreateAction, parent))
-                    throw new BadRequestException($"User cannot create entities in parent {view.parentId}");
+                    throw new AuthorizationException($"User cannot create entities in parent {view.parentId}");
             }
             else if (!AllowOrphanPosts)
             {
@@ -140,7 +141,7 @@ namespace contentapi.Services.Implementations
             var result = await base.DeleteCheckAsync(standinId, requester);
 
             if(!CanUser(requester, keys.DeleteAction, result))
-                throw new InvalidOperationException("No permission to delete");
+                throw new AuthorizationException("No permission to delete");
 
             return result;
         }

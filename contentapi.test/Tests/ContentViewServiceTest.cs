@@ -31,6 +31,28 @@ namespace contentapi.test
         [Fact] public override void SimpleOwnerDelete() { base.SimpleOwnerDelete(); }
         [Fact] public override void SimpleNoParentSuper() { base.SimpleNoParentSuper(); }
 
+        [Theory]
+        [InlineData("c", 0, "", false, false)]  //First four are standard user no perm disallow
+        [InlineData("r", 0, "", false, false)]
+        [InlineData("u", 0, "", false, false)]
+        [InlineData("d", 0, "", false, false)]
+        [InlineData("c", 0, "", true, true)]    //next are super users, not allowed to read but can do all else
+        [InlineData("r", 0, "", true, false)]
+        [InlineData("u", 0, "", true, true)]
+        [InlineData("d", 0, "", true, true)]
+        [InlineData("c", 0, "c", false, true)]  //Now if you are in the default group, you can do it all
+        [InlineData("r", 0, "r", false, true)]
+        [InlineData("u", 0, "u", false, true)]
+        [InlineData("d", 0, "d", false, true)]
+        [InlineData("c", 2, "c", false, true)]  //And then for the particular user.
+        [InlineData("r", 2, "r", false, true)]
+        [InlineData("u", 2, "u", false, true)]
+        [InlineData("d", 2, "d", false, true)]
+        public override void PermissionGeneral(string action, long permUser, string permValue, bool super, bool allowed)
+        {
+            base.PermissionGeneral(action, permUser, permValue, super, allowed);
+        }
+
         [Fact]
         public void TestSingleSuperCache()
         {

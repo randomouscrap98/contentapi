@@ -17,23 +17,41 @@ namespace contentapi.test
 
         protected override SystemConfig config => sysConfig;
 
-        public long parentId = -1;
-
         //Assume most things can have a parent that is of the same type (this is mostly true...)
-        public virtual long SetupParent()
+        public virtual long SetupParent(Action<BasePermissionView> modify = null) //BAD DEPENDENCIES TEST BREAK AGGHH
         {
             var view = new V() { };
-            view.permissions.Add("0", "C"); //BAD DEPENDENCIES TEST BREAKK AGHHG
+            if(modify != null)
+                modify(view);
+            //view.permissions.Add("0", defaultPerms);
             view = service.WriteAsync(view, new Requester(){system = true}).Result; //This will result in a creator of 0
             return view.id;
         }
 
-        public virtual V NewView()
+        public virtual async Task<V> BasicInsertAsync(Requester requester, Action<V> modify = null, bool insertThrows = false, Action<BasePermissionView> parentModify = null)//string parentDefaultPerms = "C")
         {
-            if(parentId <= 0)
-                parentId = SetupParent();
+            //Assume you want to be able to create in the parent lol
+            if(parentModify == null)
+                parentModify = (v) => v.permissions.Add("0", "C");
 
-            return new V() { parentId = parentId };
+            var parentId = SetupParent(parentModify);
+            var view = new V() { parentId = parentId };
+
+            if(modify != null) 
+                modify(view);
+
+            try
+            {
+                var writeView = await service.WriteAsync(view, requester);
+                return writeView;
+            }
+            catch(AuthorizationException)
+            {
+                if(!insertThrows)
+                    throw;
+
+                return view;
+            }
         }
 
         public void AssertViewsEqual(V expected, V check)
@@ -45,6 +63,7 @@ namespace contentapi.test
             Assert.Equal(expected.createUserId, check.createUserId);
             Assert.Equal(expected.editUserId, check.editUserId);
             Assert.Equal(expected.parentId, check.parentId);
+            Assert.Equal(expected.permissions, check.permissions);
         }
 
         public virtual void SimpleEmptyCanUser()
@@ -60,15 +79,14 @@ namespace contentapi.test
             Assert.Empty(result);
         } 
 
-        //Now insert a single thing and make sure we can read it. Also make sure various fields are OK
+        //Now insert a single thing and make sure we can read it. Also make sure various fields are OK.
+        //This is also the test that ensures the data is written relatively properly.
         public virtual void SimpleOwnerInsert() { SimpleOwnerInsertId(1); }
         public virtual void SimpleOwnerInsertId(long userId)
         {
-            var view = NewView();
             var start = DateTime.Now;
-            var requester = new Requester() { userId = userId };
-
-            var writeView = service.WriteAsync(view, requester).Result;
+            var requester = new Requester() {userId = userId};
+            var writeView = BasicInsertAsync(requester).Result;
 
             var search = new S();
             search.Ids.Add(writeView.id);
@@ -100,14 +118,15 @@ namespace contentapi.test
             }
         }
 
+        //Test ONLY if the owner CAN update their own view (they should be able to)
         public virtual void SimpleOwnerUpdate() { SimpleOwnerUpdateId(1); }
         public virtual void SimpleOwnerUpdateId(long userId)
         {
-            var view = NewView();
+            //var view = NewView();
             var start = DateTime.Now;
             var requester = new Requester() { userId = userId};
 
-            var writeView = service.WriteAsync(view, requester).Result;
+            var writeView = BasicInsertAsync(requester).Result; //service.WriteAsync(view, requester).Result;
 
             //Owners should be able to SPECIFICALLY modify permissions
             writeView.permissions.Add("0", "CR");
@@ -116,15 +135,16 @@ namespace contentapi.test
             Assert.NotEqual(writeView2.permissions, writeView.permissions);
 
             var readViews = service.SearchAsync(new S(), requester).Result; //owners should always be able to read this
-            Assert.Single(readViews);
+            Assert.Single(readViews); //Just to make sure an update didn't create a copy.
 
             var readView = readViews.First();
 
+            //Oh right: updating also ensures the fields are set properly. This won't have to be tested in other updates.
             Assert.Equal(userId, readView.createUserId);
             Assert.Equal(userId, readView.editUserId);
             Assert.True(readView.createDate - start < TimeSpan.FromSeconds(60)); //Make sure the date is KINDA close
             Assert.True(readView.editDate - start < TimeSpan.FromSeconds(60)); //Make sure the date is KINDA close
-            Assert.NotEqual(readView.editDate, readView.createDate); //Make sure the date is KINDA close
+            Assert.NotEqual(readView.editDate, readView.createDate);
             Assert.True(readView.id > 0);
             Assert.True(writeView2.permissions.ContainsKey("0"));
             Assert.True(writeView2.permissions["0"].ToLower() == "cr" || writeView2.permissions["0"].ToLower() == "rc");
@@ -137,11 +157,11 @@ namespace contentapi.test
         public virtual void SimpleOwnerDelete() { SimpleOwnerDeleteId(1); }
         public virtual void SimpleOwnerDeleteId(long userId)
         {
-            var view = NewView();
+            //var view = NewView();
             var start = DateTime.Now;
             var requester = new Requester() { userId = userId};
 
-            var writeView = service.WriteAsync(view, requester).Result;
+            var writeView = BasicInsertAsync(requester).Result; //service.WriteAsync(view, requester).Result;
             var readViews = service.SearchAsync(new S(), requester).Result; //owners should always be able to read this
             Assert.Single(readViews); //Assume this is us
             Assert.Equal(readViews.First().id, writeView.id);
@@ -176,5 +196,86 @@ namespace contentapi.test
                 Assert.True(writeView.id > 0);
             }
         }
+
+        public virtual async Task<Requester> CreateFakeUserAsync()
+        {
+            var provider = CreateService<IEntityProvider>();
+            var entity = new Entity() { type = keys.UserType};
+            await provider.WriteAsync(entity);
+
+            return new Requester { userId = entity.id };
+        }
+
+        //PRETTY DANG HACKY IF I DO SAY SO MYSELF. This assumes owners can always do everything on their 
+        //own content, so I'm not even bothering testing that. All tests are on content someone else owns.
+        public virtual void PermissionGeneral(string action, long permUser, string permValue, bool super, bool allowed)
+        {
+            if(super)
+                config.SuperUsers.Add(2);
+            else
+                config.SuperUsers.RemoveAll(x => x == 2);
+
+            //Insert two "users", these will be our requesters.
+            var isAction = new Func<string, bool>((s) => action.ToLower().StartsWith(s.ToLower()));
+
+            var creator = CreateFakeUserAsync().Result;
+            var requester = CreateFakeUserAsync().Result;
+
+            if(isAction("c"))
+            {
+                //This will throw on fail, so...
+                var view = BasicInsertAsync(requester, null, !allowed, (v) => v.permissions.Add(permUser.ToString(), permValue)).Result;
+            }
+            else
+            {
+                var view = BasicInsertAsync(creator, (v) => v.permissions.Add(permUser.ToString(), permValue)).Result;
+                //Don't set anything on the view for update, will this be an acceptable test?
+                var tryAction = new Action<Action>((a) =>
+                {
+                    try 
+                    {   
+                        a(); 
+                        Assert.True(allowed);
+                    }
+                    catch(AuthorizationException) 
+                    { 
+                        Assert.False(allowed); 
+                    }
+                    catch(AggregateException ex) when (ex.InnerException is AuthorizationException) 
+                    { 
+                        Assert.False(allowed); 
+                    }
+                });
+
+                if(isAction("r"))
+                {
+                    var search = new S();
+                    search.Ids.Add(view.id);
+                    var results = service.SearchAsync(search, requester).Result;
+
+                    if(allowed)
+                        Assert.Single(results);
+                    else
+                        Assert.Empty(results);
+                }
+                else if(isAction("u"))
+                {
+                    tryAction(() => service.WriteAsync(view, requester).Wait());
+                }
+                else if(isAction("d"))
+                {
+                    tryAction(() => service.DeleteAsync(view.id, requester).Wait());
+                }
+                else
+                {
+                    throw new InvalidOperationException($"Unknown action type: {action}");
+                }
+            }
+        }
+
+        //public virtual void SimpleRegularCreate()
+        //{
+        //    //We should NOT be able to insert into a parent without create. We SHOULD be able to otherwise.
+        //}
     }
 }
