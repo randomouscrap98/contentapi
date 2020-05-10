@@ -3,6 +3,7 @@ using System.Collections.Generic;
 using System.Linq;
 using System.Threading.Tasks;
 using contentapi.Services;
+using contentapi.Services.Extensions;
 using contentapi.Services.Implementations;
 using contentapi.Views;
 using Randomous.EntitySystem;
@@ -88,14 +89,8 @@ namespace contentapi.test
             var requester = new Requester() {userId = userId};
             var writeView = BasicInsertAsync(requester).Result;
 
-            var search = new S();
-            search.Ids.Add(writeView.id);
-
-            var readViews = service.SearchAsync(search, requester).Result; //owners should always be able to read this
-
-            Assert.Single(readViews);
-
-            var readView = readViews.First();
+            var readView = FindByIdAsync(writeView.id, requester).Result;
+            Assert.NotNull(readView);
 
             Assert.Equal(userId, readView.createUserId);
             Assert.True(readView.createDate - start < TimeSpan.FromSeconds(60)); //Make sure the date is KINDA close
@@ -206,6 +201,13 @@ namespace contentapi.test
             return new Requester { userId = entity.id };
         }
 
+        public virtual async Task<V> FindByIdAsync(long id, Requester requester)
+        {
+            var search = new S();
+            search.Ids.Add(id);
+            return (await service.SearchAsync(search, requester)).OnlySingle();
+        }
+
         //PRETTY DANG HACKY IF I DO SAY SO MYSELF. This assumes owners can always do everything on their 
         //own content, so I'm not even bothering testing that. All tests are on content someone else owns.
         public virtual void PermissionGeneral(string action, long permUser, string permValue, bool super, bool allowed)
@@ -249,14 +251,12 @@ namespace contentapi.test
 
                 if(isAction("r"))
                 {
-                    var search = new S();
-                    search.Ids.Add(view.id);
-                    var results = service.SearchAsync(search, requester).Result;
+                    var result = FindByIdAsync(view.id, requester).Result; //service.SearchAsync(search, requester).Result;
 
                     if(allowed)
-                        Assert.Single(results);
+                        Assert.NotNull(result);
                     else
-                        Assert.Empty(results);
+                        Assert.Null(result);
                 }
                 else if(isAction("u"))
                 {

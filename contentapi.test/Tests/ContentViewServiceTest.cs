@@ -1,3 +1,4 @@
+using System;
 using System.Collections.Generic;
 using System.Threading.Tasks;
 using contentapi.Services;
@@ -51,6 +52,87 @@ namespace contentapi.test
         public override void PermissionGeneral(string action, long permUser, string permValue, bool super, bool allowed)
         {
             base.PermissionGeneral(action, permUser, permValue, super, allowed);
+        }
+
+        [Theory]
+        [InlineData("c", true, true)] 
+        [InlineData("r", true, false)]
+        [InlineData("u", true, true)]
+        [InlineData("d", true, true)]
+        [InlineData("c", false, false)] 
+        [InlineData("r", false, false)]
+        [InlineData("u", false, false)]
+        [InlineData("d", false, false)]
+        public void LocalSuperPermission(string action, bool localSuper, bool allowed)
+        {
+            var isAction = new Func<string, bool>((s) => action.ToLower().StartsWith(s.ToLower()));
+
+            var tryAction = new Action<Action>((a) =>
+            {
+                try 
+                {   
+                    a(); 
+                    Assert.True(allowed);
+                }
+                catch(AuthorizationException) 
+                { 
+                    Assert.False(allowed); 
+                }
+                catch(AggregateException ex) when (ex.InnerException is AuthorizationException) 
+                { 
+                    Assert.False(allowed); 
+                }
+            });
+
+            //var contentOwner = CreateFakeUserAsync().Result;
+            var requester = CreateFakeUserAsync().Result;
+            var system = new Requester() { system = true };
+
+            //Need to create a category with no supers.
+            var category = new CategoryView() { name = "whatever" };
+            if(localSuper) category.localSupers.Add(requester.userId);
+            var categoryService = CreateService<CategoryViewService>();
+            var writtenCategory = categoryService.WriteAsync(category, system).Result;
+
+            //Need to reset content to get new local supers. they are cached per "request"
+            service.SetupAsync().Wait();
+
+            //Now we need to do a basic insert for a content.
+            var content = new ContentView() { name = "myContent", parentId = writtenCategory.id };
+            ContentView writtenContent = null;
+
+            //If we're TESTING create, stop here.
+            if(isAction("c"))
+            {
+                tryAction(() => writtenContent = service.WriteAsync(content, requester).Result);
+            }
+            else
+            {
+                writtenContent = service.WriteAsync(content, system).Result;
+
+                //Now try to do the OTHEr things on it.
+                if(isAction("r"))
+                {
+                    var result = FindByIdAsync(writtenContent.id, requester).Result;
+
+                    if(allowed)
+                        Assert.NotNull(result);
+                    else
+                        Assert.Null(result);
+                }
+                else if(isAction("u"))
+                {
+                    tryAction(() => service.WriteAsync(writtenContent, requester).Wait());
+                }
+                else if(isAction("d"))
+                {
+                    tryAction(() => service.DeleteAsync(writtenContent.id, requester).Wait());
+                }
+                else
+                {
+                    throw new InvalidOperationException($"Unknown action type: {action}");
+                }
+            }
         }
 
         [Fact]

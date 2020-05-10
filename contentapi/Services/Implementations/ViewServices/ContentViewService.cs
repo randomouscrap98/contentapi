@@ -89,7 +89,9 @@ namespace contentapi.Services.Implementations
             else
             {
                 var parentId = package.HasRelation(keys.ParentRelation) ? package.GetRelation(keys.ParentRelation).entityId1 : -1;
-                result = result || action != keys.ReadAction && cachedSupers.ContainsKey(parentId) && cachedSupers[parentId].Contains(requester.userId);
+                result = result || action != keys.ReadAction && 
+                    (cachedSupers.ContainsKey(parentId) && cachedSupers[parentId].Contains(requester.userId) ||
+                     cachedSupers.ContainsKey(package.Entity.id) && cachedSupers[package.Entity.id].Contains(requester.userId));
             }
 
             return result;
