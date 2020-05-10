@@ -4,6 +4,7 @@ using System.Linq;
 using System.Threading.Tasks;
 using AutoMapper;
 using contentapi.Services;
+using contentapi.Services.Constants;
 using contentapi.Services.Extensions;
 using contentapi.Views;
 using Microsoft.AspNetCore.Mvc;
@@ -65,7 +66,7 @@ namespace contentapi.Services.Implementations
             activity.entityId1 = user;
             activity.entityId2 = -entity.id; //It has to be NEGATIVE because we don't want them linked to content
             activity.createDate = DateTime.Now;
-            activity.type = keys.ActivityKey + entity.type;
+            activity.type = Keys.ActivityKey + entity.type;
             activity.value = action;
 
             if(!string.IsNullOrWhiteSpace(extra))
@@ -82,9 +83,9 @@ namespace contentapi.Services.Implementations
             view.date = (DateTime)relation.createDateProper();
             view.userId = relation.entityId1;
             view.contentId = -relation.entityId2;
-            view.contentType = relation.type.Substring(keys.ActivityKey.Length); // + keys.ContentType.Length);
+            view.contentType = relation.type.Substring(Keys.ActivityKey.Length); // + Keys.ContentType.Length);
             view.action = relation.value.Substring(1, 1); //Assume it's 1 character
-            view.extra = relation.value.Substring(keys.CreateAction.Length);
+            view.extra = relation.value.Substring(Keys.CreateAction.Length);
 
             return view;
         }
@@ -93,7 +94,7 @@ namespace contentapi.Services.Implementations
         {
             //It is safe to just call any endpoint, because the count is limited to 1000.
             search = LimitSearch(search);
-            search.TypeLike = $"{keys.ActivityKey}";
+            search.TypeLike = $"{Keys.ActivityKey}";
             return search;
         }
 
@@ -116,7 +117,7 @@ namespace contentapi.Services.Implementations
             relationSearch.TypeLike += search.Type;
 
             var query = BasicReadQuery(requester, relationSearch, x => -x.entityId2, new PermissionExtras() { allowNegativeOwnerRelation = search.IncludeAnonymous} )
-                            .Where(x => x.relation.type != $"{keys.ActivityKey}{keys.FileType}");
+                            .Where(x => x.relation.type != $"{Keys.ActivityKey}{Keys.FileType}");
 
             var relations = await services.provider.GetListAsync(FinalizeQuery<EntityRelation>(query, x=> x.relation.id, relationSearch));
 
@@ -124,7 +125,7 @@ namespace contentapi.Services.Implementations
             {
                 var view = activityService.ConvertToView(x);
                 //Strip the typing too. This is probably unsafe, I don't know what to do about it for now
-                view.contentType = view.contentType.Substring(keys.ContentType.Length);
+                view.contentType = view.contentType.Substring(Keys.ContentType.Length);
                 return view;
             }).ToList();
         }
@@ -138,7 +139,7 @@ namespace contentapi.Services.Implementations
             {
                 var commentSearch = new EntityRelationSearch()
                 {
-                    TypeLike = $"{keys.CommentHack}%",
+                    TypeLike = $"{Keys.CommentHack}%",
                     CreateStart = DateTime.Now.Subtract(search.recentCommentTime),
                     Reverse = true
                 };

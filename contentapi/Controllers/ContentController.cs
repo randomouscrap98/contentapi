@@ -8,8 +8,8 @@ namespace contentapi.Controllers
 {
     public class ContentController : BaseViewServiceController<ContentViewService, ContentView, ContentSearch>
     {
-        public ContentController(Keys keys, ILogger<BaseSimpleController> logger, ContentViewService service) 
-            : base(keys, logger, service) { }
+        public ContentController(ILogger<BaseSimpleController> logger, ContentViewService service) 
+            : base(logger, service) { }
         
         protected override Task SetupAsync()
         {

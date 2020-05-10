@@ -3,6 +3,7 @@ using System.Collections.Generic;
 using System.Linq;
 using System.Threading.Tasks;
 using contentapi.Services;
+using contentapi.Services.Constants;
 using contentapi.Services.Extensions;
 using contentapi.Services.Implementations;
 using contentapi.Views;
@@ -69,7 +70,7 @@ namespace contentapi.test
 
         public virtual void SimpleEmptyCanUser()
         {
-            var result = service.CanUser(new Requester(){userId = 1}, keys.UpdateAction, NewPackage());
+            var result = service.CanUser(new Requester(){userId = 1}, Keys.UpdateAction, NewPackage());
             Assert.False(result);
         }
 
@@ -195,7 +196,7 @@ namespace contentapi.test
         public virtual async Task<Requester> CreateFakeUserAsync()
         {
             var provider = CreateService<IEntityProvider>();
-            var entity = new Entity() { type = keys.UserType};
+            var entity = new Entity() { type = Keys.UserType};
             await provider.WriteAsync(entity);
 
             return new Requester { userId = entity.id };

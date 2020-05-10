@@ -4,6 +4,7 @@ using System.Linq;
 using System.Linq.Expressions;
 using System.Threading.Tasks;
 using AutoMapper;
+using contentapi.Services.Constants;
 using contentapi.Services.Extensions;
 using contentapi.Views;
 using Microsoft.EntityFrameworkCore;
@@ -16,16 +17,13 @@ namespace contentapi.Services.Implementations
     {
         public IEntityProvider provider;
         public IMapper mapper;
-        public Keys keys;
         public IPermissionService permissions;
         public IHistoryService history;
 
-        public ViewServicePack(IEntityProvider provider, IMapper mapper, Keys keys, IPermissionService permissions, 
-            IHistoryService history)
+        public ViewServicePack(IEntityProvider provider, IMapper mapper, IPermissionService permissions, IHistoryService history)
         {
             this.provider = provider;
             this.mapper = mapper;
-            this.keys = keys;
             this.permissions = permissions;
             this.history = history;
         }
@@ -38,7 +36,6 @@ namespace contentapi.Services.Implementations
         protected ViewServicePack services;
         protected ILogger logger;
         
-        protected Keys keys => services.keys;
         protected IEntityProvider provider => services.provider;
 
         public BaseViewServices(ViewServicePack services, ILogger<BaseViewServices> logger)
@@ -100,7 +97,7 @@ namespace contentapi.Services.Implementations
                 .Join(Q<EntityRelation>(), selector, r => r.entityId2, 
                 (e,r) => new EntityGroup() { entity = e, permission = r});
 
-            query = services.permissions.PermissionWhere(query, requester, keys.ReadAction, extras);
+            query = services.permissions.PermissionWhere(query, requester, Keys.ReadAction, extras);
 
             return query;
         }
@@ -111,7 +108,7 @@ namespace contentapi.Services.Implementations
                 .Join(Q<EntityRelation>(), selector, r2 => r2.entityId2, 
                 (r, r2) => new EntityGroup() { relation = r, permission = r2});
 
-            query = services.permissions.PermissionWhere(query, requester, keys.ReadAction, extras);
+            query = services.permissions.PermissionWhere(query, requester, Keys.ReadAction, extras);
 
             return query;
         }
@@ -144,7 +141,7 @@ namespace contentapi.Services.Implementations
             return query
                 .Join(Q<EntityRelation>(), e => e.entity.id, r => r.entityId2, 
                         (e,r) => new EntityGroup() { entity = e.entity, relation = r, permission = e.permission })
-                .Where(x => x.relation.type == keys.ParentRelation && parentIds.Contains(x.relation.entityId1));
+                .Where(x => x.relation.type == Keys.ParentRelation && parentIds.Contains(x.relation.entityId1));
         }
 
         /// <summary>

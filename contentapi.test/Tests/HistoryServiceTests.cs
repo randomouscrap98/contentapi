@@ -22,7 +22,7 @@ namespace contentapi.test
         public HistoryServiceTests()
         {
             provider = CreateService<IEntityProvider>();
-            service = new HistoryService(CreateService<ILogger<HistoryService>>(), CreateService<Keys>(), provider,
+            service = new HistoryService(CreateService<ILogger<HistoryService>>(), provider,
                 CreateService<IActivityService>());
         }
 
@@ -206,6 +206,8 @@ namespace contentapi.test
             }
         }
 
+        //Can't test delete in this way because to the PROVIDER, the entity still exists.
+        //This is ofc problematic... the test will have to be performed in the view thing
         //[Fact]
         //public void SimpleDelete() //Lots of tests with updating
         //{

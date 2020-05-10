@@ -3,6 +3,7 @@ using System.Collections.Generic;
 using System.Linq;
 using System.Threading.Tasks;
 using AutoMapper;
+using contentapi.Services.Constants;
 using contentapi.Views;
 using Microsoft.Extensions.Logging;
 using Randomous.EntitySystem;
@@ -17,18 +18,18 @@ namespace contentapi.Services.Implementations
         public CategoryViewService(ViewServicePack services, ILogger<CategoryViewService> logger) 
             : base(services, logger) { }
 
-        public override string EntityType => keys.CategoryType;
-        public override string ParentType => keys.CategoryType;
+        public override string EntityType => Keys.CategoryType;
+        public override string ParentType => Keys.CategoryType;
 
         public override EntityPackage CreateBasePackage(CategoryView view)
         {
             var package = NewEntity(view.name, view.description);
 
             foreach(var v in view.values)
-                package.Add(NewValue(keys.AssociatedValueKey + v.Key, v.Value));
+                package.Add(NewValue(Keys.AssociatedValueKey + v.Key, v.Value));
             
             foreach(var v in view.localSupers)
-                package.Add(NewRelation(v, keys.SuperRelation));
+                package.Add(NewRelation(v, Keys.SuperRelation));
 
             return package;
         }
@@ -39,10 +40,10 @@ namespace contentapi.Services.Implementations
             view.name = package.Entity.name;
             view.description = package.Entity.content;
 
-            foreach(var v in package.Values.Where(x => x.key.StartsWith(keys.AssociatedValueKey)))
-                view.values.Add(v.key.Substring(keys.AssociatedValueKey.Length), v.value);
+            foreach(var v in package.Values.Where(x => x.key.StartsWith(Keys.AssociatedValueKey)))
+                view.values.Add(v.key.Substring(Keys.AssociatedValueKey.Length), v.value);
             
-            foreach(var v in package.Relations.Where(x => x.type == keys.SuperRelation))
+            foreach(var v in package.Relations.Where(x => x.type == Keys.SuperRelation))
                 view.localSupers.Add(v.entityId1);
 
             return view;

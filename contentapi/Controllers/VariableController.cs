@@ -3,6 +3,7 @@ using System.Collections.Generic;
 using System.Linq;
 using System.Threading.Tasks;
 using contentapi.Services;
+using contentapi.Services.Constants;
 using contentapi.Services.Extensions;
 using contentapi.Services.Implementations;
 using Microsoft.AspNetCore.Authorization;
@@ -20,7 +21,7 @@ namespace contentapi.Controllers
         protected ConcurrentDictionary<long, object> userlocks = new ConcurrentDictionary<long, object>();
         protected IEntityProvider provider;
 
-        public VariableController(Keys keys, ILogger<BaseSimpleController> logger, IEntityProvider provider) : base(keys, logger)
+        public VariableController(ILogger<BaseSimpleController> logger, IEntityProvider provider) : base(logger)
         {
             this.provider = provider;
         }
@@ -30,7 +31,7 @@ namespace contentapi.Controllers
         {
             var search = new EntityValueSearch()
             {
-                KeyLike = keys.VariableKey + "%",
+                KeyLike = Keys.VariableKey + "%",
             };
 
             search.EntityIds.Add(-GetRequesterUid());
@@ -38,7 +39,7 @@ namespace contentapi.Controllers
             var baseValues = provider.GetQueryable<EntityValue>();
             var searchValues = provider.ApplyEntityValueSearch(baseValues, search);
 
-            return await provider.GetListAsync(searchValues.Select(x => x.key.Substring(keys.VariableKey.Length)));
+            return await provider.GetListAsync(searchValues.Select(x => x.key.Substring(Keys.VariableKey.Length)));
         }
 
         protected async Task<EntityValue> GetVariable(string key)
@@ -47,12 +48,12 @@ namespace contentapi.Controllers
 
             var query = 
                 from v in provider.GetQueryable<EntityValue>()
-                where EF.Functions.Like(v.key, keys.VariableKey + key) && v.entityId == -uid
+                where EF.Functions.Like(v.key, Keys.VariableKey + key) && v.entityId == -uid
                 join e in provider.GetQueryable<Entity>() on -v.entityId equals e.id
-                where EF.Functions.Like(e.type, $"{keys.UserType}%")
+                where EF.Functions.Like(e.type, $"{Keys.UserType}%")
                 select v;
                 //The JOIN is REQUIRED because we had some issues in the past of values getting
-                //duplicated across history keys. Now this code is stuck here forever until the database
+                //duplicated across history Keys. Now this code is stuck here forever until the database
                 //gets cleaned up.
 
             return (await provider.GetListAsync(query)).OnlySingle();
@@ -80,7 +81,7 @@ namespace contentapi.Controllers
 
                 if (existing == null)
                 {
-                    existing = new EntityValue() { key = keys.VariableKey + key, value = data };
+                    existing = new EntityValue() { key = Keys.VariableKey + key, value = data };
                     existing.entityId = -uid;
                 }
                 else

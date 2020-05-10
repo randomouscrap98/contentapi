@@ -1,4 +1,5 @@
 using System;
+using contentapi.Services.Constants;
 using contentapi.Views;
 using Microsoft.Extensions.Logging;
 using Randomous.EntitySystem;
@@ -7,13 +8,11 @@ namespace contentapi.Services.Implementations
 {
     public class ActivityService : IActivityService
     {
-        protected Keys keys;
         protected ILogger logger;
 
-        public ActivityService(ILogger<ActivityService> logger, Keys keys)
+        public ActivityService(ILogger<ActivityService> logger)
         {
             this.logger = logger;
-            this.keys = keys;
         }
 
         /// <summary>
@@ -29,7 +28,7 @@ namespace contentapi.Services.Implementations
             activity.entityId1 = user;
             activity.entityId2 = -entity.id; //It has to be NEGATIVE because we don't want them linked to content
             activity.createDate = DateTime.Now;
-            activity.type = keys.ActivityKey + entity.type;
+            activity.type = Keys.ActivityKey + entity.type;
             activity.value = action;
 
             if(!string.IsNullOrWhiteSpace(extra))
@@ -46,9 +45,9 @@ namespace contentapi.Services.Implementations
             view.date = (DateTime)relation.createDateProper();
             view.userId = relation.entityId1;
             view.contentId = -relation.entityId2;
-            view.contentType = relation.type.Substring(keys.ActivityKey.Length); // + keys.ContentType.Length);
+            view.contentType = relation.type.Substring(Keys.ActivityKey.Length); // + keys.ContentType.Length);
             view.action = relation.value.Substring(1, 1); //Assume it's 1 character
-            view.extra = relation.value.Substring(keys.CreateAction.Length);
+            view.extra = relation.value.Substring(Keys.CreateAction.Length);
 
             return view;
         }

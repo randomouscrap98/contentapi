@@ -3,6 +3,7 @@ using System.Collections.Generic;
 using System.Linq;
 using System.Threading.Tasks;
 using AutoMapper;
+using contentapi.Services.Constants;
 using contentapi.Services.Extensions;
 using contentapi.Views;
 using Microsoft.Extensions.Logging;
@@ -46,7 +47,7 @@ namespace contentapi.Services.Implementations
         {
             var view = CreateBaseView(package);
 
-            var creatorRelation = package.GetRelation(keys.CreatorRelation);
+            var creatorRelation = package.GetRelation(Keys.CreatorRelation);
 
             view.createDate = (DateTime)package.Entity.createDateProper();
             view.id = package.Entity.id;
@@ -67,7 +68,7 @@ namespace contentapi.Services.Implementations
             package.Entity.type = EntityType + (package.Entity.type ?? "");
             package.Entity.createDate = view.createDate;
 
-            var relation = NewRelation(view.createUserId, keys.CreatorRelation, view.editUserId.ToString());
+            var relation = NewRelation(view.createUserId, Keys.CreatorRelation, view.editUserId.ToString());
             relation.createDate = view.editDate;
             package.Add(relation);
 
@@ -102,7 +103,7 @@ namespace contentapi.Services.Implementations
         {
             //FORCE these to be what they were before.
             view.createDate = (DateTime)existing.Entity.createDateProper();
-            view.createUserId = existing.GetRelation(keys.CreatorRelation).entityId1;
+            view.createUserId = existing.GetRelation(Keys.CreatorRelation).entityId1;
 
             //Don't allow posting over some other entity! THIS IS SUUUUPER IMPORTANT!!!
             if(!existing.Entity.type.StartsWith(EntityType))

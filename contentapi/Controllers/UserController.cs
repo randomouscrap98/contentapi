@@ -9,6 +9,7 @@ using contentapi.Services;
 using Microsoft.Extensions.Logging;
 using AutoMapper;
 using contentapi.Services.Implementations;
+using contentapi.Services.Constants;
 
 namespace contentapi.Controllers
 {
@@ -29,10 +30,10 @@ namespace contentapi.Controllers
 
         protected UserControllerConfig config;
 
-        public UserController(ILogger<UserController> logger, Keys keys, IHashService hashService,
+        public UserController(ILogger<UserController> logger, IHashService hashService,
             ITokenService tokenService, ILanguageService languageService, IEmailService emailService,
             UserControllerConfig config, UserViewService service, IMapper mapper)
-            :base(keys, logger)
+            :base(logger)
         { 
             this.hashService = hashService;
             this.tokenService = tokenService;
@@ -99,7 +100,7 @@ namespace contentapi.Controllers
         {
             return tokenService.GetToken(new Dictionary<string, string>()
             {
-                { keys.UserIdentifier, id.ToString() }
+                { Keys.UserIdentifier, id.ToString() }
             }, expireOverride);
         }
 

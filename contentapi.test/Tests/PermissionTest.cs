@@ -1,5 +1,6 @@
 using System.Collections.Generic;
 using System.Linq;
+using contentapi.Services.Constants;
 using contentapi.Services.Implementations;
 using Randomous.EntitySystem;
 using Xunit;
@@ -35,10 +36,10 @@ namespace contentapi.test
             var package = NewPackage();
 
             //A non-user should not be able to do anything
-            Assert.False(service.CanUser(1, keys.CreateAction, package));
-            Assert.False(service.CanUser(1, keys.UpdateAction, package));
-            Assert.False(service.CanUser(1, keys.ReadAction, package));
-            Assert.False(service.CanUser(1, keys.DeleteAction, package));
+            Assert.False(service.CanUser(1, Keys.CreateAction, package));
+            Assert.False(service.CanUser(1, Keys.UpdateAction, package));
+            Assert.False(service.CanUser(1, Keys.ReadAction, package));
+            Assert.False(service.CanUser(1, Keys.DeleteAction, package));
         }
 
         [Fact]
@@ -47,15 +48,15 @@ namespace contentapi.test
             var package = NewPackage();
             package.Relations.Add(new EntityRelation()
             {
-                type = keys.CreatorRelation,
+                type = Keys.CreatorRelation,
                 entityId1 = 1
             });
 
             //A creator should be able to do everything.
-            Assert.True(service.CanUser(1, keys.CreateAction, package));
-            Assert.True(service.CanUser(1, keys.UpdateAction, package));
-            Assert.True(service.CanUser(1, keys.ReadAction, package));
-            Assert.True(service.CanUser(1, keys.DeleteAction, package));
+            Assert.True(service.CanUser(1, Keys.CreateAction, package));
+            Assert.True(service.CanUser(1, Keys.UpdateAction, package));
+            Assert.True(service.CanUser(1, Keys.ReadAction, package));
+            Assert.True(service.CanUser(1, Keys.DeleteAction, package));
         }
 
         [Fact]
@@ -66,15 +67,15 @@ namespace contentapi.test
             //BIG WARN: Packages with NO relations will NOT allow super user permissions!
             package.Relations.Add(new EntityRelation()
             {
-                type = keys.CreatorRelation,
+                type = Keys.CreatorRelation,
                 entityId1 = 1
             });
 
             //A super-user should not be able to read but be able to do everything else
-            Assert.True(service.CanUser(5, keys.CreateAction, package));
-            Assert.True(service.CanUser(5, keys.UpdateAction, package));
-            Assert.False(service.CanUser(5, keys.ReadAction, package));
-            Assert.True(service.CanUser(5, keys.DeleteAction, package));
+            Assert.True(service.CanUser(5, Keys.CreateAction, package));
+            Assert.True(service.CanUser(5, Keys.UpdateAction, package));
+            Assert.False(service.CanUser(5, Keys.ReadAction, package));
+            Assert.True(service.CanUser(5, Keys.DeleteAction, package));
         }
 
         protected void AssertPermsEqual(Dictionary<string, string> perms1, Dictionary<string, string> perms2)

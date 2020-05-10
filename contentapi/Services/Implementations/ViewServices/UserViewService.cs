@@ -8,6 +8,7 @@ using Randomous.EntitySystem;
 using AutoMapper;
 using contentapi.Services.Extensions;
 using Randomous.EntitySystem.Extensions;
+using contentapi.Services.Constants;
 
 namespace contentapi.Services.Implementations
 {
@@ -46,23 +47,23 @@ namespace contentapi.Services.Implementations
             this.emailService = emailService;
         }
 
-        public override string EntityType => keys.UserType;
+        public override string EntityType => Keys.UserType;
 
         public override UserViewFull CreateBaseView(EntityPackage user)
         {
             var result = new UserViewFull() 
             { 
                 username = user.Entity.name, 
-                email = user.GetValue(keys.EmailKey).value, 
+                email = user.GetValue(Keys.EmailKey).value, 
                 super = services.permissions.IsSuper(user.Entity.id),
-                password = user.GetValue(keys.PasswordHashKey).value,
-                salt = user.GetValue(keys.PasswordSaltKey).value
+                password = user.GetValue(Keys.PasswordHashKey).value,
+                salt = user.GetValue(Keys.PasswordSaltKey).value
             };
 
-            if(user.HasValue(keys.AvatarKey))
-                result.avatar = long.Parse(user.GetValue(keys.AvatarKey).value);
-            if(user.HasValue(keys.RegistrationCodeKey))
-                result.registrationKey = user.GetValue(keys.RegistrationCodeKey).value;
+            if(user.HasValue(Keys.AvatarKey))
+                result.avatar = long.Parse(user.GetValue(Keys.AvatarKey).value);
+            if(user.HasValue(Keys.RegistrationCodeKey))
+                result.registrationKey = user.GetValue(Keys.RegistrationCodeKey).value;
 
             return result;
         }
@@ -70,14 +71,14 @@ namespace contentapi.Services.Implementations
         public override EntityPackage CreateBasePackage(UserViewFull user)
         {
             var newUser = NewEntity(user.username)
-                .Add(NewValue(keys.AvatarKey, user.avatar.ToString()))
-                .Add(NewValue(keys.EmailKey, user.email))
-                .Add(NewValue(keys.PasswordSaltKey, user.salt))
-                .Add(NewValue(keys.PasswordHashKey, user.password));
+                .Add(NewValue(Keys.AvatarKey, user.avatar.ToString()))
+                .Add(NewValue(Keys.EmailKey, user.email))
+                .Add(NewValue(Keys.PasswordSaltKey, user.salt))
+                .Add(NewValue(Keys.PasswordHashKey, user.password));
             //Can't do anything about super
             
             if(!string.IsNullOrWhiteSpace(user.registrationKey))
-                newUser.Add(NewValue(keys.RegistrationCodeKey, user.registrationKey));
+                newUser.Add(NewValue(Keys.RegistrationCodeKey, user.registrationKey));
 
             return newUser;
         }
@@ -89,7 +90,7 @@ namespace contentapi.Services.Implementations
             //Go look up the avatar. Make sure it's A FILE DAMGIT
             var file = await provider.FindByIdBaseAsync(view.avatar);
 
-            if(file != null && (!file.type.StartsWith(keys.FileType) || !file.content.ToLower().StartsWith("image")))
+            if(file != null && (!file.type.StartsWith(Keys.FileType) || !file.content.ToLower().StartsWith("image")))
                 throw new BadRequestException("Avatar isn't an image type content!");
 
             return view;
@@ -107,7 +108,7 @@ namespace contentapi.Services.Implementations
             return ConvertToView(await WriteViewBaseAsync(view, requester, (p) =>
             {
                 //Before creating the user, we need to set the owner as themselves, not as anonymous.
-                var creatorRelation = p.GetRelation(keys.CreatorRelation);
+                var creatorRelation = p.GetRelation(Keys.CreatorRelation);
                 creatorRelation.entityId1 = creatorRelation.entityId2;
                 creatorRelation.value = creatorRelation.entityId2.ToString(); //Warn: this is VERY implementation specific! Kinda sucks to have two pieces of code floating around!
             }));
@@ -133,12 +134,12 @@ namespace contentapi.Services.Implementations
 
         public Task<UserViewFull> FindByEmailAsync(string email, Requester requester)
         {
-            return FindByExactValueAsync(keys.EmailKey, email, requester);
+            return FindByExactValueAsync(Keys.EmailKey, email, requester);
         }
 
         public Task<UserViewFull> FindByRegistration(string registrationKey, Requester requester)
         {
-            return FindByExactValueAsync(keys.RegistrationCodeKey, registrationKey, requester);
+            return FindByExactValueAsync(Keys.RegistrationCodeKey, registrationKey, requester);
         }
     }
 }

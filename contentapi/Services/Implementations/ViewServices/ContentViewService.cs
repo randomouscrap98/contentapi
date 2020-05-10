@@ -3,6 +3,7 @@ using System.Collections.Generic;
 using System.Linq;
 using System.Threading.Tasks;
 using AutoMapper;
+using contentapi.Services.Constants;
 using contentapi.Views;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.Logging;
@@ -39,7 +40,7 @@ namespace contentapi.Services.Implementations
             this.categoryService = categoryService;
         }
 
-        public override string EntityType => keys.ContentType;
+        public override string EntityType => Keys.ContentType;
         public override string ParentType => null;
 
         public List<long> BuildSupersForId(long id, Dictionary<long, List<long>> existing, IList<CategoryView> categories)
@@ -88,8 +89,8 @@ namespace contentapi.Services.Implementations
             }
             else
             {
-                var parentId = package.HasRelation(keys.ParentRelation) ? package.GetRelation(keys.ParentRelation).entityId1 : -1;
-                result = result || action != keys.ReadAction && 
+                var parentId = package.HasRelation(Keys.ParentRelation) ? package.GetRelation(Keys.ParentRelation).entityId1 : -1;
+                result = result || action != Keys.ReadAction && 
                     (cachedSupers.ContainsKey(parentId) && cachedSupers[parentId].Contains(requester.userId) ||
                      cachedSupers.ContainsKey(package.Entity.id) && cachedSupers[package.Entity.id].Contains(requester.userId));
             }
@@ -103,10 +104,10 @@ namespace contentapi.Services.Implementations
 
             //Need to add LOTS OF CRAP
             foreach(var keyword in view.keywords)
-                package.Add(NewValue(keys.KeywordKey, keyword));
+                package.Add(NewValue(Keys.KeywordKey, keyword));
             
             foreach(var v in view.values)
-                package.Add(NewValue(keys.AssociatedValueKey + v.Key, v.Value));
+                package.Add(NewValue(Keys.AssociatedValueKey + v.Key, v.Value));
             
             //Bad coding, too many dependencies. We set the type without the base because someone else will do it for us.
             package.Entity.type = view.type;
@@ -121,11 +122,11 @@ namespace contentapi.Services.Implementations
             view.content = package.Entity.content;
             view.type = package.Entity.type.Substring(EntityType.Length);
 
-            foreach(var keyword in package.Values.Where(x => x.key == keys.KeywordKey))
+            foreach(var keyword in package.Values.Where(x => x.key == Keys.KeywordKey))
                 view.keywords.Add(keyword.value);
             
-            foreach(var v in package.Values.Where(x => x.key.StartsWith(keys.AssociatedValueKey)))
-                view.values.Add(v.key.Substring(keys.AssociatedValueKey.Length), v.value);
+            foreach(var v in package.Values.Where(x => x.key.StartsWith(Keys.AssociatedValueKey)))
+                view.values.Add(v.key.Substring(Keys.AssociatedValueKey.Length), v.value);
 
             return view; //view;
         }
@@ -149,7 +150,7 @@ namespace contentapi.Services.Implementations
                 initial = initial
                     .Join(provider.GetQueryable<EntityValue>(), e => e.entity.id, v => v.entityId, 
                           (e,v) => new EntityGroup() { entity = e.entity, relation = e.relation, value = v})
-                    .Where(x => x.value.key == keys.KeywordKey && EF.Functions.Like(x.value.value, search.Keyword));
+                    .Where(x => x.value.key == Keys.KeywordKey && EF.Functions.Like(x.value.value, search.Keyword));
             }
 
             return await ViewResult(FinalizeQuery(initial, entitySearch), requester);

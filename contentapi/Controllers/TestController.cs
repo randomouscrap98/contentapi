@@ -24,8 +24,8 @@ namespace contentapi.Controllers
     {
         protected IEntityProvider provider;
 
-        public TestController(Keys keys, ILogger<BaseSimpleController> logger, IEntityProvider provider) 
-            : base(keys, logger) 
+        public TestController(ILogger<BaseSimpleController> logger, IEntityProvider provider) 
+            : base(logger) 
         { 
             this.provider = provider;
         }

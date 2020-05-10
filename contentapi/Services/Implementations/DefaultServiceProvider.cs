@@ -1,4 +1,5 @@
 using AutoMapper;
+using contentapi.Services.Constants;
 using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Options;
@@ -48,12 +49,8 @@ namespace contentapi.Services.Implementations
             //And now, the service config that goes into EVERY controller.
             services.AddTransient<ViewServicePack>();
 
-            services.AddSingleton(p =>
-            {
-                var keys = new Keys();
-                keys.EnsureAllUnique();
-                return keys;
-            });
+            //Just always good to be safe!
+            Keys.EnsureAllUnique();
         }
 
         public void AddConfiguration<T>(IServiceCollection services, IConfiguration config) where T : class

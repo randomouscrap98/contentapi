@@ -2,6 +2,7 @@ using System;
 using System.Collections.Generic;
 using System.Linq;
 using System.Threading.Tasks;
+using contentapi.Services.Constants;
 using contentapi.Services.Extensions;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.Logging;
@@ -16,21 +17,19 @@ namespace contentapi.Services.Implementations
     public class HistoryService : IHistoryService
     {
         protected ILogger logger;
-        protected Keys keys;
         protected IEntityProvider provider;
         protected IActivityService activityService;
 
-        public HistoryService(ILogger<HistoryService> logger, Keys keys, IEntityProvider provider, IActivityService activityService)
+        public HistoryService(ILogger<HistoryService> logger, IEntityProvider provider, IActivityService activityService)
         {
             this.logger = logger;
-            this.keys = keys;
             this.provider = provider;
             this.activityService = activityService;
         }
 
         public void MakeHistoric(Entity entity)
         {
-            entity.type = keys.HistoryKey + (entity.type ?? "");
+            entity.type = Keys.HistoryKey + (entity.type ?? "");
         }
 
         /// <summary>
@@ -57,7 +56,7 @@ namespace contentapi.Services.Implementations
         {
             return new EntityRelation()
             {
-                type = keys.HistoryRelation,
+                type = Keys.HistoryRelation,
                 entityId1 = originalEntity.id,
                 entityId2 = historicCopy.id,
                 createDate = DateTime.Now
@@ -68,7 +67,7 @@ namespace contentapi.Services.Implementations
         {
             return provider.GetListAsync(
                 from r in provider.GetQueryable<EntityRelation>()
-                where r.entityId1 == packageId && r.type == keys.HistoryRelation
+                where r.entityId1 == packageId && r.type == Keys.HistoryRelation
                 select r.entityId2);
         }
 
@@ -110,7 +109,7 @@ namespace contentapi.Services.Implementations
                 writes.AddRange(originalData.Values);
                 writes.AddRange(originalData.Relations);
 
-                writes.Add(activityService.MakeActivity(updateData.Entity, user, keys.UpdateAction, history.id.ToString()));
+                writes.Add(activityService.MakeActivity(updateData.Entity, user, Keys.UpdateAction, history.id.ToString()));
 
                 await provider.WriteAsync(writes.ToArray());
             }
@@ -141,7 +140,7 @@ namespace contentapi.Services.Implementations
                 writes.AddRange(newData.Values);
                 writes.AddRange(newData.Relations);
 
-                writes.Add(activityService.MakeActivity(newData.Entity, user, keys.CreateAction));
+                writes.Add(activityService.MakeActivity(newData.Entity, user, Keys.CreateAction));
 
                 await provider.WriteAsync(writes.ToArray());
             }
@@ -167,7 +166,7 @@ namespace contentapi.Services.Implementations
             //Notice it is a WRITe and not a delete. The activity extra will include the title.
             await provider.WriteAsync<EntityBase>(
                 historicPart, 
-                activityService.MakeActivity(historicPart, user, keys.DeleteAction, package.Entity.name));     
+                activityService.MakeActivity(historicPart, user, Keys.DeleteAction, package.Entity.name));     
         }
 
         public EntityPackage ConvertHistoryToUpdate(EntityPackage history)
@@ -175,15 +174,15 @@ namespace contentapi.Services.Implementations
             var result = new EntityPackage(history);
 
             //Pull out (literally) the history relation
-            var historyLink = result.Relations.Where(x => x.type == keys.HistoryRelation).OnlySingle();
-            result.Relations.RemoveAll(x => x.type == keys.HistoryRelation);
+            var historyLink = result.Relations.Where(x => x.type == Keys.HistoryRelation).OnlySingle();
+            result.Relations.RemoveAll(x => x.type == Keys.HistoryRelation);
 
             //Update the id from history, relink to us (I don't know if relinking matters...)
             result.Entity.id = historyLink.entityId1;
             result.Relink();
 
             //Finally, mark the type as would normally be
-            result.Entity.type = result.Entity.type.Substring(keys.HistoryKey.Length);
+            result.Entity.type = result.Entity.type.Substring(Keys.HistoryKey.Length);
 
             return result;
         }

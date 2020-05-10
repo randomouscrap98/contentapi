@@ -15,8 +15,8 @@ namespace contentapi.Controllers
     {
         protected T service;
 
-        public BaseViewServiceController(Keys keys, ILogger<BaseSimpleController> logger, T service) 
-            : base(keys, logger)
+        public BaseViewServiceController(ILogger<BaseSimpleController> logger, T service) 
+            : base(logger)
         {
             this.service = service;
         }

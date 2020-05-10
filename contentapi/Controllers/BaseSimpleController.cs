@@ -2,6 +2,7 @@ using System;
 using System.Security.Claims;
 using System.Threading.Tasks;
 using contentapi.Services;
+using contentapi.Services.Constants;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.Extensions.Logging;
 
@@ -19,21 +20,17 @@ namespace contentapi.Controllers
     [ApiController]
     public abstract class BaseSimpleController : ControllerBase
     {
-        //protected ControllerServices services;
-
-        protected Keys keys;
         protected ILogger logger;
 
-        public BaseSimpleController(Keys keys, ILogger<BaseSimpleController> logger)
+        public BaseSimpleController(ILogger<BaseSimpleController> logger)
         {
-            this.keys = keys;
             this.logger = logger;
         }
 
         protected long GetRequesterUid()
         {
             //Look for the UID from the JWT 
-            var id = User.FindFirstValue(keys.UserIdentifier);
+            var id = User.FindFirstValue(Keys.UserIdentifier);
 
             if(id == null)
                 throw new InvalidOperationException("User not logged in!");

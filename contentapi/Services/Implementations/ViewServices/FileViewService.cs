@@ -1,6 +1,7 @@
 using System;
 using System.Collections.Generic;
 using System.Threading.Tasks;
+using contentapi.Services.Constants;
 using contentapi.Views;
 using Microsoft.Extensions.Logging;
 using Randomous.EntitySystem;
@@ -14,8 +15,8 @@ namespace contentapi.Services.Implementations
         public FileViewService(ViewServicePack services, ILogger<FileViewService> logger) 
             : base(services, logger) { }
 
-        public override string ParentType => keys.UserType;
-        public override string EntityType => keys.FileType;
+        public override string ParentType => Keys.UserType;
+        public override string EntityType => Keys.FileType;
         public override bool AllowOrphanPosts => true;
 
         public override EntityPackage CreateBasePackage(FileView view)

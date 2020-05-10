@@ -4,6 +4,7 @@ using System.Linq;
 using System.Threading;
 using System.Threading.Tasks;
 using AutoMapper;
+using contentapi.Services.Constants;
 using contentapi.Services.Extensions;
 using contentapi.Views;
 using Microsoft.EntityFrameworkCore;
@@ -107,7 +108,7 @@ namespace contentapi.Services.Implementations
         {
             var view = ConvertToViewSimple(package.Main);
             var orderedRelations = package.Related.OrderBy(x => x.id);
-            var lastEdit = orderedRelations.LastOrDefault(x => x.type.StartsWith(keys.CommentHistoryHack));
+            var lastEdit = orderedRelations.LastOrDefault(x => x.type.StartsWith(Keys.CommentHistoryHack));
             var last = orderedRelations.LastOrDefault();
 
             if(lastEdit != null)
@@ -116,7 +117,7 @@ namespace contentapi.Services.Implementations
                 view.editUserId = -lastEdit.entityId2;
             }
 
-            view.deleted = last != null && last.type.StartsWith(keys.CommentDeleteHack);
+            view.deleted = last != null && last.type.StartsWith(Keys.CommentDeleteHack);
 
             return view;
         }
@@ -124,7 +125,7 @@ namespace contentapi.Services.Implementations
         protected EntityRelation ConvertFromViewSimple(CommentView view)
         {
             var relation = services.mapper.Map<EntityRelation>(view);
-            relation.type = keys.CommentHack;
+            relation.type = Keys.CommentHack;
             relation.entityId2 *= -1;
             return relation;
         }
@@ -154,7 +155,7 @@ namespace contentapi.Services.Implementations
             var parent = await provider.FindByIdAsync(parentId);
 
             //Parent must be content
-            if (parent == null || !parent.Entity.type.StartsWith(keys.ContentType))
+            if (parent == null || !parent.Entity.type.StartsWith(Keys.ContentType))
                 throw new InvalidOperationException("Parent is not content!");
 
             return parent;
@@ -190,7 +191,7 @@ namespace contentapi.Services.Implementations
             //Have to go find existing.
             var existing = await provider.FindRelationByIdAsync(id);
 
-            if (existing == null || !existing.type.StartsWith(keys.CommentHack) || existing.entityId2 == 0)
+            if (existing == null || !existing.type.StartsWith(Keys.CommentHack) || existing.entityId2 == 0)
                 throw new BadRequestException($"Couldn't find comment with id {id}");
 
             return existing;
@@ -211,7 +212,7 @@ namespace contentapi.Services.Implementations
         protected EntityRelationSearch ModifySearch(EntityRelationSearch search)
         {
             search = LimitSearch(search);
-            search.TypeLike = $"{keys.CommentHack}%";
+            search.TypeLike = $"{Keys.CommentHack}%";
             return search;
         }
 
@@ -232,7 +233,7 @@ namespace contentapi.Services.Implementations
         public async Task<List<CommentListener>> GetListenersAsync(long parentId, List<long> lastListeners, Requester requester, CancellationToken token)
         {
             //Need to see if user has perms to read this.
-            var parent = await FullParentCheckAsync(parentId, keys.ReadAction, requester);
+            var parent = await FullParentCheckAsync(parentId, Keys.ReadAction, requester);
 
             DateTime start = DateTime.Now;
             var listenSet = lastListeners.ToHashSet();
@@ -265,7 +266,7 @@ namespace contentapi.Services.Implementations
         //This is a direct copy from the controller, eventually fix this to be more generic / better
         public async Task<List<CommentView>> ListenAsync(long parentId, long lastId, long firstId, Requester requester, CancellationToken token)
         {
-            var parent = await FullParentCheckAsync(parentId, keys.ReadAction, requester);
+            var parent = await FullParentCheckAsync(parentId, Keys.ReadAction, requester);
             var listenId = new CommentListener() { UserId = requester.userId, ContentListenId = parentId };
 
             int entrances = 0;
@@ -276,16 +277,16 @@ namespace contentapi.Services.Implementations
                     entrances++;
                     var result = q.Where(x =>
                         //The new messages!
-                        (x.entityId1 == parentId && (EF.Functions.Like(x.type, $"{keys.CommentHack}%") && x.id > lastId)) ||
+                        (x.entityId1 == parentId && (EF.Functions.Like(x.type, $"{Keys.CommentHack}%") && x.id > lastId)) ||
                         //Edits to old ones (but only after the first pass!
-                        ((x.type == $"{keys.CommentDeleteHack}{parentId}") || (x.type == $"{keys.CommentHistoryHack}{parentId}")) &&
+                        ((x.type == $"{Keys.CommentDeleteHack}{parentId}") || (x.type == $"{Keys.CommentHistoryHack}{parentId}")) &&
                             (entrances > 1) && -x.entityId1 >= firstId);
 
                     return result;
                 },
                 config.ListenTimeout, token);
 
-            var goodComments = comments.Where(x => x.type.StartsWith(keys.CommentHack)).ToList(); //new List<EntityRelation>();
+            var goodComments = comments.Where(x => x.type.StartsWith(Keys.CommentHack)).ToList(); //new List<EntityRelation>();
             var badComments = comments.Except(goodComments);
 
             if (badComments.Any())
@@ -308,7 +309,7 @@ namespace contentapi.Services.Implementations
             view.createDate = DateTime.Now;  //Ignore create date, it's always now
             view.createUserId = requester.userId;    //Always requester
 
-            var parent = await FullParentCheckAsync(view.parentId, keys.CreateAction, requester);
+            var parent = await FullParentCheckAsync(view.parentId, Keys.CreateAction, requester);
 
             //now actually write the dang thing.
             var relation = ConvertFromViewSimple(view);
@@ -329,7 +330,7 @@ namespace contentapi.Services.Implementations
             var relation = ConvertFromViewSimple(view);
 
             //Write a copy of the current comment as historic
-            var copy = MakeHistoryCopy(existing, keys.CommentHistoryHack, uid);
+            var copy = MakeHistoryCopy(existing, Keys.CommentHistoryHack, uid);
             await provider.WriteAsync(copy, relation);
 
             var package = new EntityRelationPackage() { Main = relation };
@@ -344,7 +345,7 @@ namespace contentapi.Services.Implementations
             var existing = await ExistingCheckAsync(id);
             var parent = await ModifyCheckAsync(existing, requester);
 
-            var copy = MakeHistoryCopy(existing, keys.CommentDeleteHack, uid);
+            var copy = MakeHistoryCopy(existing, Keys.CommentDeleteHack, uid);
             existing.value = "";
             existing.entityId2 = 0;
             await provider.WriteAsync(copy, existing);

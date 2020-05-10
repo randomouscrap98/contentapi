@@ -3,6 +3,7 @@ using System.Collections.Generic;
 using System.Linq;
 using System.Text;
 using System.Threading.Tasks;
+using contentapi.Services.Constants;
 using contentapi.Services.Extensions;
 using contentapi.Views;
 using Microsoft.EntityFrameworkCore;
@@ -26,7 +27,7 @@ namespace contentapi.Services.Implementations
 
             //There doesn't HAVE to be a parent
             if(view.parentId > 0)
-                package.Add(NewRelation(view.parentId, keys.ParentRelation));
+                package.Add(NewRelation(view.parentId, Keys.ParentRelation));
             
             //Now set up all the permission relations
             services.permissions.ConvertPermsToRelations(view.permissions).ForEach(x => 
@@ -43,8 +44,8 @@ namespace contentapi.Services.Implementations
         {
             var view = base.ConvertToView(package);
 
-            if(package.HasRelation(keys.ParentRelation))
-                view.parentId = package.GetRelation(keys.ParentRelation).entityId1;
+            if(package.HasRelation(Keys.ParentRelation))
+                view.parentId = package.GetRelation(Keys.ParentRelation).entityId1;
 
             view.permissions = services.permissions.ConvertRelationsToPerms(package.Relations);
 
@@ -76,7 +77,7 @@ namespace contentapi.Services.Implementations
             //TODO: searching for users should be done by the user view service! why are all these services mixing together aaaaa
             var found = await provider.ApplyEntitySearch(
                 provider.GetQueryable<Entity>(), 
-                new EntitySearch() { TypeLike = keys.UserType, Ids = userIds }).CountAsync();
+                new EntitySearch() { TypeLike = Keys.UserType, Ids = userIds }).CountAsync();
 
             //Note: there is NO type checking. Is this safe? Do you want people to be able to set permissions for 
             //things that aren't users? What about the 0 id?
@@ -100,7 +101,7 @@ namespace contentapi.Services.Implementations
 
                 //Only for CREATING. This is a silly weird thing since this is the general cleanup...
                 //Almost NOTHING requires cleanup specifically for create.
-                if(view.id == 0 && !CanUser(requester, keys.CreateAction, parent))
+                if(view.id == 0 && !CanUser(requester, Keys.CreateAction, parent))
                     throw new AuthorizationException($"User cannot create entities in parent {view.parentId}");
             }
             else if (!AllowOrphanPosts)
@@ -126,11 +127,11 @@ namespace contentapi.Services.Implementations
         {
             view = await base.CleanViewUpdateAsync(view, existing, requester);
 
-            if (!CanUser(requester, keys.UpdateAction, existing))
+            if (!CanUser(requester, Keys.UpdateAction, existing))
                 throw new AuthorizationException("User cannot update this entity");
 
             //Restore the permissions from the package, don't bother throwing an error.
-            if(!services.permissions.IsSuper(requester) && existing.GetRelation(keys.CreatorRelation).entityId1 != requester.userId)
+            if(!services.permissions.IsSuper(requester) && existing.GetRelation(Keys.CreatorRelation).entityId1 != requester.userId)
                 view.permissions = services.permissions.ConvertRelationsToPerms(existing.Relations);
 
             return view;
@@ -140,7 +141,7 @@ namespace contentapi.Services.Implementations
         {
             var result = await base.DeleteCheckAsync(standinId, requester);
 
-            if(!CanUser(requester, keys.DeleteAction, result))
+            if(!CanUser(requester, Keys.DeleteAction, result))
                 throw new AuthorizationException("No permission to delete");
 
             return result;
@@ -160,7 +161,7 @@ namespace contentapi.Services.Implementations
 
             foreach(var c in content)
             {
-                foreach(var action in services.permissions.PermissionActionMap)
+                foreach(var action in Actions.ActionMap) //services.permissions.PermissionActionMap)
                 {
                     if(CanUser(requester, action.Value, c))
                         result[c.Entity.id].Append(action.Key);

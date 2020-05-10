@@ -24,8 +24,8 @@ namespace contentapi.Controllers
 
         protected UserViewService service;
 
-        public ModuleController(Keys keys, ILogger<BaseSimpleController> logger, UserViewService service) 
-            : base(keys, logger) 
+        public ModuleController(ILogger<BaseSimpleController> logger, UserViewService service) 
+            : base(logger) 
         { 
             this.service = service;
         }
