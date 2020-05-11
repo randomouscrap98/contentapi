@@ -1,5 +1,7 @@
 using System;
 using System.Collections.Generic;
+using System.Linq;
+using contentapi.Services.Extensions;
 
 namespace contentapi.Views
 {
@@ -30,8 +32,8 @@ namespace contentapi.Views
         protected override bool EqualsSelf(object obj)
         {
             var c = (BasePermissionView)obj;
-            return base.EqualsSelf(obj) && c.parentId == parentId && c.myPerms == myPerms && c.permissions.Equals(permissions) &&
-                c.values.Equals(values);
+            return base.EqualsSelf(obj) && c.parentId == parentId && c.myPerms == myPerms && 
+                c.permissions.RealEqual(permissions) && c.values.RealEqual(values);
         }
     }
 }

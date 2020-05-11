@@ -41,7 +41,7 @@ namespace contentapi.Services.Views.Implementations
         {
             ApplyFromViewBasic(view, package.Entity);
 
-            package.Entity.type = type + (package.Entity.type ?? "");
+            package.Entity.type = type; // + (package.Entity.type ?? "");
 
             var relation = new EntityRelation()
             {

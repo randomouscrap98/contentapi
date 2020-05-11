@@ -105,7 +105,8 @@ namespace contentapi.Services.Views.Implementations
                 {
                     entityId1 = view.parentId,
                     entityId2 = view.id,
-                    type = Keys.ParentRelation
+                    type = Keys.ParentRelation,
+                    createDate = null
                 });
             }
             

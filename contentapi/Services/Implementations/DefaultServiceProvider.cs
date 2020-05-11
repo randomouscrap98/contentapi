@@ -45,7 +45,7 @@ namespace contentapi.Services.Implementations
             services.AddTransient<UserViewService>();
 
             services.AddTransient<UserViewConverter>();
-            services.AddTransient<ContentViewConvter>();
+            services.AddTransient<ContentViewConverter>();
             services.AddTransient<CategoryViewConverter>();
             services.AddTransient<FileViewConverter>();
 

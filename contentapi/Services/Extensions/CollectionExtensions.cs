@@ -4,7 +4,7 @@ using System.Linq;
 
 namespace contentapi.Services.Extensions
 {
-    public static class IEnumerableExtensions
+    public static class CollectionExtensions
     {
         /// <summary>
         /// Get a single element, return null if none, or fail on multiple (throw exception)
@@ -18,6 +18,11 @@ namespace contentapi.Services.Extensions
                 throw new InvalidOperationException("Multiple values found; expected 1");
             
             return list.FirstOrDefault();
+        }
+
+        public static bool RealEqual<T,S>(this Dictionary<T,S> ours, Dictionary<T,S> other)
+        {
+            return ours.OrderBy(x => x.Key).SequenceEqual(other.OrderBy(x => x.Key));
         }
     }
 }

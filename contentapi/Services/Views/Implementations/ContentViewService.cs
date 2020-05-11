@@ -34,7 +34,7 @@ namespace contentapi.Services.Views.Implementations
         
         protected Dictionary<long, List<long>> cachedSupers = null;
 
-        public ContentViewService(ViewServicePack services, ILogger<ContentViewService> logger, CategoryViewService categoryService, ContentViewConvter converter) 
+        public ContentViewService(ViewServicePack services, ILogger<ContentViewService> logger, CategoryViewService categoryService, ContentViewConverter converter) 
             : base(services, logger, converter) 
         { 
             this.categoryService = categoryService;
