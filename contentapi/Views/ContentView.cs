@@ -15,8 +15,6 @@ namespace contentapi.Views
 
         public string type {get;set;}
 
-        public Dictionary<string, string> values {get;set;} = new Dictionary<string, string>();
-
         public List<string> keywords {get;set;} = new List<string>();
     }
 }

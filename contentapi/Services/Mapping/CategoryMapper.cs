@@ -13,12 +13,6 @@ namespace contentapi.Services.Mapping
             var package = NewEntity(view.name, view.description);
             ApplyFromViewPermissive(view, package, Keys.CategoryType);
 
-            FromViewValues(view.values).ForEach(x => 
-            {
-                x.entityId = view.id;
-                package.Add(x);
-            });
-            
             foreach(var v in view.localSupers)
             {
                 package.Add(new EntityRelation()
@@ -40,7 +34,6 @@ namespace contentapi.Services.Mapping
 
             view.name = package.Entity.name;
             view.description = package.Entity.content;
-            view.values = ToViewValues(package.Values);
             
             foreach(var v in package.Relations.Where(x => x.type == Keys.SuperRelation))
                 view.localSupers.Add(v.entityId1);

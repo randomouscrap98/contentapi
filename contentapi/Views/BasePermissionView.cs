@@ -19,10 +19,19 @@ namespace contentapi.Views
         /// <returns></returns>
         public Dictionary<string, string> permissions {get;set;} = new Dictionary<string, string>();
 
+        public Dictionary<string, string> values {get;set;} = new Dictionary<string, string>();
+
         /// <summary>
         /// This is a readonly field technically. I know that makes the API confusing but... ugh don't have TIMMEEE
         /// </summary>
         /// <value></value>
         public string myPerms {get;set;}
+
+        protected override bool EqualsSelf(object obj)
+        {
+            var c = (BasePermissionView)obj;
+            return base.EqualsSelf(obj) && c.parentId == parentId && c.myPerms == myPerms && c.permissions.Equals(permissions) &&
+                c.values.Equals(values);
+        }
     }
 }

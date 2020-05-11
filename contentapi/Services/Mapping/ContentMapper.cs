@@ -13,13 +13,6 @@ namespace contentapi.Services.Mapping
             var package = NewEntity(view.name, view.content);
             ApplyFromViewPermissive(view, package, Keys.ContentType);
 
-            //Need to add LOTS OF CRAP
-            FromViewValues(view.values).ForEach(x =>
-            {
-                x.entityId = view.id;
-                package.Add(x);
-            });
-
             foreach(var v in view.values)
             {
                 package.Add(new EntityValue()
@@ -45,11 +38,10 @@ namespace contentapi.Services.Mapping
             view.name = package.Entity.name;
             view.content = package.Entity.content;
             view.type = package.Entity.type.Substring(Keys.ContentType.Length);
-            view.values = ToViewValues(package.Values);
-            
-            foreach(var v in package.Values.Where(x => x.key.StartsWith(Keys.AssociatedValueKey)))
-                view.values.Add(v.key.Substring(Keys.AssociatedValueKey.Length), v.value);
 
+            foreach(var keyword in package.Values.Where(x => x.key == Keys.KeywordKey))
+                view.keywords.Add(keyword.value);
+            
             return view;
         }
 

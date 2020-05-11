@@ -32,6 +32,7 @@ namespace contentapi.Services.Mapping
                     result.Add(new EntityRelation()
                     {
                         entityId1 = userId,
+                        createDate = null,
                         type = Actions.ActionMap[p]
                     });
                 }
@@ -55,6 +56,33 @@ namespace contentapi.Services.Mapping
             return result;
         }
 
+        public List<EntityValue> FromViewValues(Dictionary<string,string> values)
+        {
+            var result = new List<EntityValue>();
+
+            foreach(var v in values)
+            {
+                result.Add(new EntityValue()
+                {
+                    key = Keys.AssociatedValueKey + v.Key,
+                    createDate = null,
+                    value = v.Value
+                });
+            }
+
+            return result;
+        }
+
+        public Dictionary<string,string> ToViewValues(IEnumerable<EntityValue> values)
+        {
+            var result = new Dictionary<string, string>();
+
+            foreach(var v in values.Where(x => x.key.StartsWith(Keys.AssociatedValueKey)))
+                result.Add(v.key.Substring(Keys.AssociatedValueKey.Length), v.value);
+
+            return result;
+        }
+
         public void ApplyToViewPermissive(EntityPackage package, BasePermissionView view)
         {
             ApplyToViewHistoric(package, view);
@@ -63,6 +91,7 @@ namespace contentapi.Services.Mapping
                 view.parentId = package.GetRelation(Keys.ParentRelation).entityId1;
 
             view.permissions = ConvertRelationsToPerms(package.Relations);
+            view.values = ToViewValues(package.Values);
         }
 
         public void ApplyFromViewPermissive(BasePermissionView view, EntityPackage package, string type)
@@ -84,9 +113,15 @@ namespace contentapi.Services.Mapping
             ConvertPermsToRelations(view.permissions).ForEach(x => 
             {
                 x.entityId2 = view.id;
-                x.createDate = null; //Don't store create date!
                 package.Add(x);
             });
+
+            FromViewValues(view.values).ForEach(x => 
+            {
+                x.entityId = view.id;
+                package.Add(x);
+            });
+            
         }
     }
 }
