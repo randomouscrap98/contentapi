@@ -3,6 +3,7 @@ using System.Threading;
 using System.Threading.Tasks;
 using contentapi.Services;
 using contentapi.Services.Implementations;
+using contentapi.Services.Views.Implementations;
 using contentapi.Views;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;

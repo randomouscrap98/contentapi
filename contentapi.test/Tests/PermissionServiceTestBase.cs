@@ -6,6 +6,7 @@ using contentapi.Services;
 using contentapi.Services.Constants;
 using contentapi.Services.Extensions;
 using contentapi.Services.Implementations;
+using contentapi.Services.Views.Implementations;
 using contentapi.Views;
 using Randomous.EntitySystem;
 using Randomous.EntitySystem.Extensions;

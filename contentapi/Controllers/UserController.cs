@@ -10,6 +10,7 @@ using Microsoft.Extensions.Logging;
 using AutoMapper;
 using contentapi.Services.Implementations;
 using contentapi.Services.Constants;
+using contentapi.Services.Views.Implementations;
 
 namespace contentapi.Controllers
 {
