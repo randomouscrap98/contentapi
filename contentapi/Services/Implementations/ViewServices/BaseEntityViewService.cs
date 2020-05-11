@@ -5,6 +5,7 @@ using System.Threading.Tasks;
 using AutoMapper;
 using contentapi.Services.Constants;
 using contentapi.Services.Extensions;
+using contentapi.Services.Mapping;
 using contentapi.Views;
 using Microsoft.Extensions.Logging;
 using Randomous.EntitySystem;
@@ -14,8 +15,13 @@ namespace contentapi.Services.Implementations
 {
     public abstract class BaseEntityViewService<V,S> : BaseViewServices, IViewService<V,S> where V : BaseEntityView where S : EntitySearchBase, new()
     {
-        public BaseEntityViewService(ViewServicePack services, ILogger<BaseEntityViewService<V,S>> logger) 
-            : base(services, logger) { }
+        protected IViewConverter<V,EntityPackage> converter;
+
+        public BaseEntityViewService(ViewServicePack services, ILogger<BaseEntityViewService<V,S>> logger, IViewConverter<V,EntityPackage> converter) 
+            : base(services, logger) 
+        { 
+            this.converter = converter;
+        }
 
         public abstract string EntityType {get;}
 
@@ -28,52 +34,52 @@ namespace contentapi.Services.Implementations
             return (await SearchAsync(search, requester)).OnlySingle();
         }
 
-        /// <summary>
-        /// Create a view with ONLY the unique fields for your controller filled in. You could fill in the
-        /// others I guess, but they will be overwritten
-        /// </summary>
-        /// <param name="package"></param>
-        /// <returns></returns>
-        public abstract V CreateBaseView(EntityPackage package);
+        ///// <summary>
+        ///// Create a view with ONLY the unique fields for your controller filled in. You could fill in the
+        ///// others I guess, but they will be overwritten
+        ///// </summary>
+        ///// <param name="package"></param>
+        ///// <returns></returns>
+        //public abstract V CreateBaseView(EntityPackage package);
 
-        /// <summary>
-        /// Create a package with ONLY the unique fields for your controller filled in. 
-        /// </summary>
-        /// <param name="view"></param>
-        /// <returns></returns>
-        public abstract EntityPackage CreateBasePackage(V view);
+        ///// <summary>
+        ///// Create a package with ONLY the unique fields for your controller filled in. 
+        ///// </summary>
+        ///// <param name="view"></param>
+        ///// <returns></returns>
+        //public abstract EntityPackage CreateBasePackage(V view);
 
-        public virtual V ConvertToView(EntityPackage package)
-        {
-            var view = CreateBaseView(package);
+        //public virtual V ConvertToView(EntityPackage package)
+        //{
+        //    var view = CreateBaseView(package);
 
-            var creatorRelation = package.GetRelation(Keys.CreatorRelation);
+        //    var creatorRelation = package.GetRelation(Keys.CreatorRelation);
 
-            view.createDate = (DateTime)package.Entity.createDateProper();
-            view.id = package.Entity.id;
+        //    view.createDate = (DateTime)package.Entity.createDateProper();
+        //    view.id = package.Entity.id;
 
-            view.editDate = (DateTime)creatorRelation.createDateProper();
-            view.createUserId = creatorRelation.entityId1;
-            view.editUserId = long.Parse(creatorRelation.value);
+        //    view.editDate = (DateTime)creatorRelation.createDateProper();
+        //    view.createUserId = creatorRelation.entityId1;
+        //    view.editUserId = long.Parse(creatorRelation.value);
 
-            return view;
-        }
+        //    return view;
+        //}
 
-        //TRUST the view. Assume it is written correctly, that createdate is set properly, etc.
-        public virtual EntityPackage ConvertFromView(V view)
-        {
-            var package = CreateBasePackage(view);
+        ////TRUST the view. Assume it is written correctly, that createdate is set properly, etc.
+        //public virtual EntityPackage ConvertFromView(V view)
+        //{
+        //    var package = CreateBasePackage(view);
 
-            package.Entity.id = view.id;
-            package.Entity.type = EntityType + (package.Entity.type ?? "");
-            package.Entity.createDate = view.createDate;
+        //    package.Entity.id = view.id;
+        //    package.Entity.type = EntityType + (package.Entity.type ?? "");
+        //    package.Entity.createDate = view.createDate;
 
-            var relation = NewRelation(view.createUserId, Keys.CreatorRelation, view.editUserId.ToString());
-            relation.createDate = view.editDate;
-            package.Add(relation);
+        //    var relation = NewRelation(view.createUserId, Keys.CreatorRelation, view.editUserId.ToString());
+        //    relation.createDate = view.editDate;
+        //    package.Add(relation);
 
-            return package;
-        }
+        //    return package;
+        //}
 
         /// <summary>
         /// Clean the view for general purpose, assume some defaults (run before udpate)
@@ -127,7 +133,7 @@ namespace contentapi.Services.Implementations
             }
 
             //Now that the view they gave is all clean, do the full conversion! It should be safe!
-            var package = ConvertFromView(view);
+            var package = converter.FromView(view);
 
             //If this is an UPDATE, do some STUFF
             if (view.id != 0)
@@ -140,7 +146,7 @@ namespace contentapi.Services.Implementations
 
         public virtual async Task<V> WriteAsync(V view, Requester requester)
         {
-            return ConvertToView(await WriteViewBaseAsync(view, requester));
+            return converter.ToView(await WriteViewBaseAsync(view, requester));
         }
 
         /// <summary>
@@ -151,7 +157,7 @@ namespace contentapi.Services.Implementations
         public async Task<V> DeleteAsync(long entityId, Requester requester)
         {
             var package = await DeleteCheckAsync(entityId, requester);
-            var view = ConvertToView(package);
+            var view = converter.ToView(package);
             await services.history.DeleteWithHistoryAsync(package, requester.userId);
             return view;
         }
@@ -161,7 +167,7 @@ namespace contentapi.Services.Implementations
             var search = new EntitySearch();
             search.Ids = await services.history.GetRevisionIdsAsync(id);
             var packages = await provider.GetEntityPackagesAsync(search);
-            return packages.Select(x => ConvertToView(services.history.ConvertHistoryToUpdate(x))).ToList();
+            return packages.Select(x => converter.ToView(services.history.ConvertHistoryToUpdate(x))).ToList();
         }
 
         /// <summary>

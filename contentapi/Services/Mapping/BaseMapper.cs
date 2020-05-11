@@ -4,6 +4,9 @@ using Randomous.EntitySystem;
 
 namespace contentapi.Services.Mapping
 {
+    /// <summary>
+    /// The most basic mapper: everything has an ID and a create date
+    /// </summary>
     public class BaseMapper
     {
         public void ApplyToViewBasic(EntityBase entityBase, BaseView view)

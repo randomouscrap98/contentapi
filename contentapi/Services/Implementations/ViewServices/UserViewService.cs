@@ -9,6 +9,7 @@ using AutoMapper;
 using contentapi.Services.Extensions;
 using Randomous.EntitySystem.Extensions;
 using contentapi.Services.Constants;
+using contentapi.Services.Mapping;
 
 namespace contentapi.Services.Implementations
 {
@@ -38,8 +39,9 @@ namespace contentapi.Services.Implementations
         protected IEmailService emailService;
 
         public UserViewService(ILogger<UserViewService> logger, ViewServicePack services, IHashService hashService,
-            ITokenService tokenService, ILanguageService languageService, IEmailService emailService)
-            :base(services, logger)
+            ITokenService tokenService, ILanguageService languageService, IEmailService emailService,
+            UserMapper converter)
+            :base(services, logger, converter)
         { 
             this.hashService = hashService;
             this.tokenService = tokenService;
@@ -49,39 +51,39 @@ namespace contentapi.Services.Implementations
 
         public override string EntityType => Keys.UserType;
 
-        public override UserViewFull CreateBaseView(EntityPackage user)
-        {
-            var result = new UserViewFull() 
-            { 
-                username = user.Entity.name, 
-                email = user.GetValue(Keys.EmailKey).value, 
-                super = services.permissions.IsSuper(user.Entity.id),
-                password = user.GetValue(Keys.PasswordHashKey).value,
-                salt = user.GetValue(Keys.PasswordSaltKey).value
-            };
+        //public override UserViewFull CreateBaseView(EntityPackage user)
+        //{
+        //    var result = new UserViewFull() 
+        //    { 
+        //        username = user.Entity.name, 
+        //        email = user.GetValue(Keys.EmailKey).value, 
+        //        super = services.permissions.IsSuper(user.Entity.id),
+        //        password = user.GetValue(Keys.PasswordHashKey).value,
+        //        salt = user.GetValue(Keys.PasswordSaltKey).value
+        //    };
 
-            if(user.HasValue(Keys.AvatarKey))
-                result.avatar = long.Parse(user.GetValue(Keys.AvatarKey).value);
-            if(user.HasValue(Keys.RegistrationCodeKey))
-                result.registrationKey = user.GetValue(Keys.RegistrationCodeKey).value;
+        //    if(user.HasValue(Keys.AvatarKey))
+        //        result.avatar = long.Parse(user.GetValue(Keys.AvatarKey).value);
+        //    if(user.HasValue(Keys.RegistrationCodeKey))
+        //        result.registrationKey = user.GetValue(Keys.RegistrationCodeKey).value;
 
-            return result;
-        }
+        //    return result;
+        //}
 
-        public override EntityPackage CreateBasePackage(UserViewFull user)
-        {
-            var newUser = NewEntity(user.username)
-                .Add(NewValue(Keys.AvatarKey, user.avatar.ToString()))
-                .Add(NewValue(Keys.EmailKey, user.email))
-                .Add(NewValue(Keys.PasswordSaltKey, user.salt))
-                .Add(NewValue(Keys.PasswordHashKey, user.password));
-            //Can't do anything about super
-            
-            if(!string.IsNullOrWhiteSpace(user.registrationKey))
-                newUser.Add(NewValue(Keys.RegistrationCodeKey, user.registrationKey));
+        //public override EntityPackage CreateBasePackage(UserViewFull user)
+        //{
+        //    var newUser = NewEntity(user.username)
+        //        .Add(NewValue(Keys.AvatarKey, user.avatar.ToString()))
+        //        .Add(NewValue(Keys.EmailKey, user.email))
+        //        .Add(NewValue(Keys.PasswordSaltKey, user.salt))
+        //        .Add(NewValue(Keys.PasswordHashKey, user.password));
+        //    //Can't do anything about super
+        //    
+        //    if(!string.IsNullOrWhiteSpace(user.registrationKey))
+        //        newUser.Add(NewValue(Keys.RegistrationCodeKey, user.registrationKey));
 
-            return newUser;
-        }
+        //    return newUser;
+        //}
 
         public override async Task<UserViewFull> CleanViewGeneralAsync(UserViewFull view, Requester requester)
         {
@@ -100,12 +102,12 @@ namespace contentapi.Services.Implementations
         {
             logger.LogDebug($"User SearchAsync called by {requester}");
             var entitySearch = ModifySearch(services.mapper.Map<EntitySearch>(search));
-            return (await provider.GetEntityPackagesAsync(entitySearch)).Select(x => ConvertToView(x)).ToList();
+            return (await provider.GetEntityPackagesAsync(entitySearch)).Select(x => converter.ToView(x)).ToList();
         }
 
         public override async Task<UserViewFull> WriteAsync(UserViewFull view, Requester requester)
         {
-            return ConvertToView(await WriteViewBaseAsync(view, requester, (p) =>
+            return converter.ToView(await WriteViewBaseAsync(view, requester, (p) =>
             {
                 //Before creating the user, we need to set the owner as themselves, not as anonymous.
                 var creatorRelation = p.GetRelation(Keys.CreatorRelation);
