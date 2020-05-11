@@ -2,7 +2,7 @@ using contentapi.Services.Constants;
 using contentapi.Views;
 using Randomous.EntitySystem;
 
-namespace contentapi.Services.ViewConversion
+namespace contentapi.Services.Views.Implementations
 {
     public class FileViewConverter : BasePermissionViewConverter, IViewConverter<FileView, EntityPackage>
     {

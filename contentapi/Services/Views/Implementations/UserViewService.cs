@@ -9,9 +9,8 @@ using AutoMapper;
 using contentapi.Services.Extensions;
 using Randomous.EntitySystem.Extensions;
 using contentapi.Services.Constants;
-using contentapi.Services.ViewConversion;
 
-namespace contentapi.Services.Implementations
+namespace contentapi.Services.Views.Implementations
 {
     public class UserSearch : EntitySearchBase
     {

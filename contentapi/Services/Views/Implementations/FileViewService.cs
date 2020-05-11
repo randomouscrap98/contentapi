@@ -2,12 +2,11 @@ using System;
 using System.Collections.Generic;
 using System.Threading.Tasks;
 using contentapi.Services.Constants;
-using contentapi.Services.ViewConversion;
 using contentapi.Views;
 using Microsoft.Extensions.Logging;
 using Randomous.EntitySystem;
 
-namespace contentapi.Services.Implementations
+namespace contentapi.Services.Views.Implementations
 {
     public class FileSearch : BaseContentSearch { }
 

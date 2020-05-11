@@ -5,13 +5,12 @@ using System.Threading.Tasks;
 using AutoMapper;
 using contentapi.Services.Constants;
 using contentapi.Services.Extensions;
-using contentapi.Services.ViewConversion;
 using contentapi.Views;
 using Microsoft.Extensions.Logging;
 using Randomous.EntitySystem;
 using Randomous.EntitySystem.Extensions;
 
-namespace contentapi.Services.Implementations
+namespace contentapi.Services.Views.Implementations
 {
     public abstract class BaseEntityViewService<V,S> : BaseViewServices, IViewService<V,S> where V : BaseEntityView where S : EntitySearchBase, new()
     {

@@ -4,7 +4,7 @@ using System.Threading.Tasks;
 using contentapi.Views;
 using Randomous.EntitySystem;
 
-namespace contentapi.Services
+namespace contentapi.Services.Views
 {
     //public class EntityGroup
     //{ 
@@ -13,18 +13,6 @@ namespace contentapi.Services
     //    public EntityValue value;
     //    public EntityRelation permission; 
     //}
-
-    public class Requester
-    {
-        public long userId;
-
-        public bool system = false;
-
-        public override string ToString()
-        {
-            return $"{userId}";
-        }
-    }
 
     //V and S don't have to be any particular kind of thing... there can be more exact derived interfaces
     //if you want, but sometimes a controller isn't specifically one or another thing.

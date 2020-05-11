@@ -2,7 +2,7 @@ using System;
 using contentapi.Views;
 using Randomous.EntitySystem;
 
-namespace contentapi.Services.ViewConversion
+namespace contentapi.Services.Views.Implementations
 {
     /// <summary>
     /// The most basic mapper: everything has an ID and a create date

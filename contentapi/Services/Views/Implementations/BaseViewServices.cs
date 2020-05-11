@@ -11,7 +11,7 @@ using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.Logging;
 using Randomous.EntitySystem;
 
-namespace contentapi.Services.Implementations
+namespace contentapi.Services.Views.Implementations
 {
     public class ViewServicePack 
     {

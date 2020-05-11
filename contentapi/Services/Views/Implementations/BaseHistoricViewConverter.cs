@@ -6,7 +6,7 @@ using contentapi.Views;
 using Randomous.EntitySystem;
 using Randomous.EntitySystem.Extensions;
 
-namespace contentapi.Services.ViewConversion
+namespace contentapi.Services.Views.Implementations
 {
     /// <summary>
     /// Slightly more complex mapper: historic entities have creators and editors 

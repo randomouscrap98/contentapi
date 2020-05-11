@@ -4,13 +4,12 @@ using System.Linq;
 using System.Threading.Tasks;
 using AutoMapper;
 using contentapi.Services.Constants;
-using contentapi.Services.ViewConversion;
 using contentapi.Views;
 using Microsoft.Extensions.Logging;
 using Randomous.EntitySystem;
 using Randomous.EntitySystem.Extensions;
 
-namespace contentapi.Services.Implementations
+namespace contentapi.Services.Views.Implementations
 {
     public class CategorySearch : BaseContentSearch { }
 

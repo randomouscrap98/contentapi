@@ -5,14 +5,13 @@ using System.Text;
 using System.Threading.Tasks;
 using contentapi.Services.Constants;
 using contentapi.Services.Extensions;
-using contentapi.Services.ViewConversion;
 using contentapi.Views;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.Logging;
 using Randomous.EntitySystem;
 using Randomous.EntitySystem.Extensions;
 
-namespace contentapi.Services.Implementations
+namespace contentapi.Services.Views.Implementations
 {
     public abstract class BasePermissionViewService<V,S> : BaseEntityViewService<V,S> where V : BasePermissionView where S : EntitySearchBase, new()
     {

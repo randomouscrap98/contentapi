@@ -1,7 +1,7 @@
 using System.Collections.Generic;
 using System.Linq;
 
-namespace contentapi.Services.ViewConversion
+namespace contentapi.Services.Views
 {
     /// <summary>
     /// Simple conversion between views and a type T

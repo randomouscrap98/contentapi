@@ -4,7 +4,7 @@ using contentapi.Views;
 using Randomous.EntitySystem;
 using Randomous.EntitySystem.Extensions;
 
-namespace contentapi.Services.ViewConversion
+namespace contentapi.Services.Views.Implementations
 {
     public class ContentViewConvter : BasePermissionViewConverter, IViewConverter<ContentView, EntityPackage>
     {

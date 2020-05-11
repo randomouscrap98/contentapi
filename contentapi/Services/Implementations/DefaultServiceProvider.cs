@@ -1,6 +1,6 @@
 using AutoMapper;
 using contentapi.Services.Constants;
-using contentapi.Services.ViewConversion;
+using contentapi.Services.Views.Implementations;
 using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Options;

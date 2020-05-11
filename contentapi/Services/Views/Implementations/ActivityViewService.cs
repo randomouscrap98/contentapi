@@ -7,11 +7,10 @@ using contentapi.Services;
 using contentapi.Services.Constants;
 using contentapi.Services.Extensions;
 using contentapi.Views;
-using Microsoft.AspNetCore.Mvc;
 using Microsoft.Extensions.Logging;
 using Randomous.EntitySystem;
 
-namespace contentapi.Services.Implementations
+namespace contentapi.Services.Views.Implementations
 {
     public class ActivitySearch : EntitySearchBase
     {

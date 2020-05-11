@@ -6,7 +6,7 @@ using contentapi.Views;
 using Randomous.EntitySystem;
 using Randomous.EntitySystem.Extensions;
 
-namespace contentapi.Services.ViewConversion
+namespace contentapi.Services.Views.Implementations
 {
     /// <summary>
     /// A permissive entity has permissions and a parent, essentially. Also assumed to be historic

@@ -1,6 +1,6 @@
 using System.Collections.Generic;
 using System.Linq;
-using contentapi.Services.ViewConversion;
+using contentapi.Services.Views.Implementations;
 using Xunit;
 
 namespace contentapi.test
