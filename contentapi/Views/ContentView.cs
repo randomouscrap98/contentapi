@@ -1,5 +1,6 @@
 using System.Collections.Generic;
 using System.ComponentModel.DataAnnotations;
+using System.Linq;
 
 namespace contentapi.Views
 {
@@ -16,5 +17,12 @@ namespace contentapi.Views
         public string type {get;set;}
 
         public List<string> keywords {get;set;} = new List<string>();
+
+        protected override bool EqualsSelf(object obj)
+        {
+            var o = (ContentView)obj;
+            return base.EqualsSelf(obj) && o.name == name && o.content == content && o.type == type &&
+                o.keywords.OrderBy(x => x).SequenceEqual(keywords.OrderBy(x => x));
+        }
     }
 }

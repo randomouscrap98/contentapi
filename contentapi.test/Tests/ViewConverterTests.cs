@@ -44,7 +44,75 @@ namespace contentapi.test
                 type = "kek"
             };
 
+            view.keywords.AddRange(new[] {"this", "is", "spret"});
+
             FillPermissionView(view);
+
+            var temp = service.FromView(view);
+            var view2 = service.ToView(temp);
+
+            Assert.Equal(view, view2);
+        }
+
+        [Fact]
+        public void TestCategoryConvert()
+        {
+            var service = CreateService<CategoryViewConverter>();
+
+            //Just some standard content view
+            var view = new CategoryView()
+            {
+                description = "wow it's a category",
+                name = "somethingtosee"
+            };
+
+            view.localSupers.AddRange(new[] { 99L, 100 });
+
+            FillPermissionView(view);
+
+            var temp = service.FromView(view);
+            var view2 = service.ToView(temp);
+
+            Assert.Equal(view, view2);
+        }
+
+        [Fact]
+        public void TestFileConvert()
+        {
+            var service = CreateService<FileViewConverter>();
+
+            //Just some standard content view
+            var view = new FileView()
+            {
+                fileType = "sys/wow",
+                name = "filesHaveNamesQuestionMark"
+            };
+
+            FillPermissionView(view);
+
+            var temp = service.FromView(view);
+            var view2 = service.ToView(temp);
+
+            Assert.Equal(view, view2);
+        }
+
+        [Fact]
+        public void TestUserConvert()
+        {
+            var service = CreateService<UserViewConverter>();
+
+            //Just some standard content view
+            var view = new UserViewFull()
+            {
+                username = "random",
+                password = "notactuallyapassword",
+                salt = "thesearebytefieldsbro",
+                avatar = 88,
+                email = "email@ameila.com",
+                registrationKey = "12345"
+            };
+
+            FillHistoricView(view);
 
             var temp = service.FromView(view);
             var view2 = service.ToView(temp);

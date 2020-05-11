@@ -12,7 +12,20 @@ namespace contentapi.Services.Views.Implementations
         {
             var package = NewEntity(view.name, view.content);
             ApplyFromViewPermissive(view, package, Keys.ContentType);
+
+            foreach(var v in view.keywords)
+            {
+                package.Add(new EntityValue()
+                {
+                    entityId = view.id,
+                    key = Keys.KeywordKey, //Keys.AssociatedValueKey + v.Key, 
+                    value = v,
+                    createDate = null
+                });
+            }
+            
             package.Entity.type += view.type;
+
             return package;
         }
 
