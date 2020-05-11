@@ -19,16 +19,6 @@ namespace contentapi.Services.Views.Implementations
         public override string EntityType => Keys.FileType;
         public override bool AllowOrphanPosts => true;
 
-        //public override EntityPackage CreateBasePackage(FileView view)
-        //{
-        //    return NewEntity(view.name, view.fileType);
-        //}
-
-        //public override FileView CreateBaseView(EntityPackage package)
-        //{
-        //    return new FileView() { name = package.Entity.name, fileType = package.Entity.content };
-        //}
-
         public override async Task<FileView> CleanViewUpdateAsync(FileView view, EntityPackage existing, Requester requester)
         {
             var result = await base.CleanViewGeneralAsync(view, requester);

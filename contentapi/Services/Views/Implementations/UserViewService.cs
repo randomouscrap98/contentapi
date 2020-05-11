@@ -50,40 +50,6 @@ namespace contentapi.Services.Views.Implementations
 
         public override string EntityType => Keys.UserType;
 
-        //public override UserViewFull CreateBaseView(EntityPackage user)
-        //{
-        //    var result = new UserViewFull() 
-        //    { 
-        //        username = user.Entity.name, 
-        //        email = user.GetValue(Keys.EmailKey).value, 
-        //        super = services.permissions.IsSuper(user.Entity.id),
-        //        password = user.GetValue(Keys.PasswordHashKey).value,
-        //        salt = user.GetValue(Keys.PasswordSaltKey).value
-        //    };
-
-        //    if(user.HasValue(Keys.AvatarKey))
-        //        result.avatar = long.Parse(user.GetValue(Keys.AvatarKey).value);
-        //    if(user.HasValue(Keys.RegistrationCodeKey))
-        //        result.registrationKey = user.GetValue(Keys.RegistrationCodeKey).value;
-
-        //    return result;
-        //}
-
-        //public override EntityPackage CreateBasePackage(UserViewFull user)
-        //{
-        //    var newUser = NewEntity(user.username)
-        //        .Add(NewValue(Keys.AvatarKey, user.avatar.ToString()))
-        //        .Add(NewValue(Keys.EmailKey, user.email))
-        //        .Add(NewValue(Keys.PasswordSaltKey, user.salt))
-        //        .Add(NewValue(Keys.PasswordHashKey, user.password));
-        //    //Can't do anything about super
-        //    
-        //    if(!string.IsNullOrWhiteSpace(user.registrationKey))
-        //        newUser.Add(NewValue(Keys.RegistrationCodeKey, user.registrationKey));
-
-        //    return newUser;
-        //}
-
         public override async Task<UserViewFull> CleanViewGeneralAsync(UserViewFull view, Requester requester)
         {
             view = await base.CleanViewGeneralAsync(view, requester);

@@ -98,39 +98,6 @@ namespace contentapi.Services.Views.Implementations
             return result;
         }
 
-        //public override EntityPackage CreateBasePackage(ContentView view)
-        //{
-        //    var package = NewEntity(view.name, view.content);
-
-        //    //Need to add LOTS OF CRAP
-        //    foreach(var keyword in view.keywords)
-        //        package.Add(NewValue(Keys.KeywordKey, keyword));
-        //    
-        //    foreach(var v in view.values)
-        //        package.Add(NewValue(Keys.AssociatedValueKey + v.Key, v.Value));
-        //    
-        //    //Bad coding, too many dependencies. We set the type without the base because someone else will do it for us.
-        //    package.Entity.type = view.type;
-
-        //    return package;
-        //}
-
-        //public override ContentView CreateBaseView(EntityPackage package)
-        //{
-        //    var view = new ContentView();
-        //    view.name = package.Entity.name;
-        //    view.content = package.Entity.content;
-        //    view.type = package.Entity.type.Substring(EntityType.Length);
-
-        //    foreach(var keyword in package.Values.Where(x => x.key == Keys.KeywordKey))
-        //        view.keywords.Add(keyword.value);
-        //    
-        //    foreach(var v in package.Values.Where(x => x.key.StartsWith(Keys.AssociatedValueKey)))
-        //        view.values.Add(v.key.Substring(Keys.AssociatedValueKey.Length), v.value);
-
-        //    return view; //view;
-        //}
-
         public override async Task<IList<ContentView>> SearchAsync(ContentSearch search, Requester requester)
         {
             logger.LogTrace($"Content SearchAsync called by {requester}");

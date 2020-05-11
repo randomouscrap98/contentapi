@@ -21,37 +21,6 @@ namespace contentapi.Services.Views.Implementations
         public abstract string ParentType {get;}
         public virtual bool AllowOrphanPosts => false;
 
-        //public override EntityPackage ConvertFromView(V view)
-        //{
-        //    var package = base.ConvertFromView(view);
-
-        //    //There doesn't HAVE to be a parent
-        //    if(view.parentId > 0)
-        //        package.Add(NewRelation(view.parentId, Keys.ParentRelation));
-        //    
-        //    //Now set up all the permission relations
-        //    services.permissions.ConvertPermsToRelations(view.permissions).ForEach(x => 
-        //    {
-        //        x.createDate = null; //Don't store create date!
-        //        package.Add(x);
-        //    });
-
-        //    //Done!
-        //    return package;
-        //}
-
-        //public override V ConvertToView(EntityPackage package)
-        //{
-        //    var view = base.ConvertToView(package);
-
-        //    if(package.HasRelation(Keys.ParentRelation))
-        //        view.parentId = package.GetRelation(Keys.ParentRelation).entityId1;
-
-        //    view.permissions = services.permissions.ConvertRelationsToPerms(package.Relations);
-
-        //    return view;
-        //}
-
         public async Task CheckPermissionUsersAsync(V view)
         {
             //And now make sure every single user exists

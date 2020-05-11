@@ -33,53 +33,6 @@ namespace contentapi.Services.Views.Implementations
             return (await SearchAsync(search, requester)).OnlySingle();
         }
 
-        ///// <summary>
-        ///// Create a view with ONLY the unique fields for your controller filled in. You could fill in the
-        ///// others I guess, but they will be overwritten
-        ///// </summary>
-        ///// <param name="package"></param>
-        ///// <returns></returns>
-        //public abstract V CreateBaseView(EntityPackage package);
-
-        ///// <summary>
-        ///// Create a package with ONLY the unique fields for your controller filled in. 
-        ///// </summary>
-        ///// <param name="view"></param>
-        ///// <returns></returns>
-        //public abstract EntityPackage CreateBasePackage(V view);
-
-        //public virtual V ConvertToView(EntityPackage package)
-        //{
-        //    var view = CreateBaseView(package);
-
-        //    var creatorRelation = package.GetRelation(Keys.CreatorRelation);
-
-        //    view.createDate = (DateTime)package.Entity.createDateProper();
-        //    view.id = package.Entity.id;
-
-        //    view.editDate = (DateTime)creatorRelation.createDateProper();
-        //    view.createUserId = creatorRelation.entityId1;
-        //    view.editUserId = long.Parse(creatorRelation.value);
-
-        //    return view;
-        //}
-
-        ////TRUST the view. Assume it is written correctly, that createdate is set properly, etc.
-        //public virtual EntityPackage ConvertFromView(V view)
-        //{
-        //    var package = CreateBasePackage(view);
-
-        //    package.Entity.id = view.id;
-        //    package.Entity.type = EntityType + (package.Entity.type ?? "");
-        //    package.Entity.createDate = view.createDate;
-
-        //    var relation = NewRelation(view.createUserId, Keys.CreatorRelation, view.editUserId.ToString());
-        //    relation.createDate = view.editDate;
-        //    package.Add(relation);
-
-        //    return package;
-        //}
-
         /// <summary>
         /// Clean the view for general purpose, assume some defaults (run before udpate)
         /// </summary>

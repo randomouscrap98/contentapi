@@ -21,41 +21,6 @@ namespace contentapi.Services.Views.Implementations
         public override string EntityType => Keys.CategoryType;
         public override string ParentType => Keys.CategoryType;
 
-        //public override EntityPackage CreateBasePackage(CategoryView view)
-        //{
-        //    var package = NewEntity(view.name, view.description);
-
-        //    foreach(var v in view.values)
-        //        package.Add(NewValue(Keys.AssociatedValueKey + v.Key, v.Value));
-        //    
-        //    foreach(var v in view.localSupers)
-        //        package.Add(NewRelation(v, Keys.SuperRelation));
-
-        //    return package;
-        //}
-
-        //public override CategoryView CreateBaseView(EntityPackage package)
-        //{
-        //    var view = new CategoryView();
-        //    view.name = package.Entity.name;
-        //    view.description = package.Entity.content;
-
-        //    foreach(var v in package.Values.Where(x => x.key.StartsWith(Keys.AssociatedValueKey)))
-        //        view.values.Add(v.key.Substring(Keys.AssociatedValueKey.Length), v.value);
-        //    
-        //    foreach(var v in package.Relations.Where(x => x.type == Keys.SuperRelation))
-        //        view.localSupers.Add(v.entityId1);
-
-        //    return view;
-        //}
-
-        //public override Task<CategoryView> CleanViewGeneralAsync(CategoryView view, Requester requester)
-        //{
-        //    //Always fail unless super, nobody can write categories etc.
-        //    FailUnlessSuper(requester);
-        //    return base.CleanViewGeneralAsync(view, requester);
-        //}
-
         public override async Task<EntityPackage> DeleteCheckAsync(long id, Requester requester)
         {
             var package = await base.DeleteCheckAsync(id, requester);

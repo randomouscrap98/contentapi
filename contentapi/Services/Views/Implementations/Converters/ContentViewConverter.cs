@@ -18,7 +18,7 @@ namespace contentapi.Services.Views.Implementations
                 package.Add(new EntityValue()
                 {
                     entityId = view.id,
-                    key = Keys.KeywordKey, //Keys.AssociatedValueKey + v.Key, 
+                    key = Keys.KeywordKey,
                     value = v,
                     createDate = null
                 });
