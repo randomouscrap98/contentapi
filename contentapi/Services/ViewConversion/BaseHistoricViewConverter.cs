@@ -6,12 +6,12 @@ using contentapi.Views;
 using Randomous.EntitySystem;
 using Randomous.EntitySystem.Extensions;
 
-namespace contentapi.Services.Mapping
+namespace contentapi.Services.ViewConversion
 {
     /// <summary>
     /// Slightly more complex mapper: historic entities have creators and editors 
     /// </summary>
-    public class BaseHistoricMapper : BaseMapper
+    public class BaseHistoricViewConverter : BaseViewConverter
     {
         public EntityPackage NewEntity(string name, string content = null)
         {

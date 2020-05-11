@@ -2,12 +2,12 @@ using System;
 using contentapi.Views;
 using Randomous.EntitySystem;
 
-namespace contentapi.Services.Mapping
+namespace contentapi.Services.ViewConversion
 {
     /// <summary>
     /// The most basic mapper: everything has an ID and a create date
     /// </summary>
-    public class BaseMapper
+    public class BaseViewConverter
     {
         public void ApplyToViewBasic(EntityBase entityBase, BaseView view)
         {

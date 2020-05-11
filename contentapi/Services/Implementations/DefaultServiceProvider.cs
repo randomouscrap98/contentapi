@@ -1,6 +1,6 @@
 using AutoMapper;
 using contentapi.Services.Constants;
-using contentapi.Services.Mapping;
+using contentapi.Services.ViewConversion;
 using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Options;
@@ -44,10 +44,10 @@ namespace contentapi.Services.Implementations
             services.AddTransient<FileViewService>();
             services.AddTransient<UserViewService>();
 
-            services.AddTransient<UserMapper>();
-            services.AddTransient<ContentMapper>();
-            services.AddTransient<CategoryMapper>();
-            services.AddTransient<FileMapper>();
+            services.AddTransient<UserViewConverter>();
+            services.AddTransient<ContentViewConvter>();
+            services.AddTransient<CategoryViewConverter>();
+            services.AddTransient<FileViewConverter>();
 
             //We need automapper for our view services
             services.AddAutoMapper(GetType());

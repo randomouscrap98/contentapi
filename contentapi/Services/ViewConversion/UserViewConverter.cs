@@ -4,13 +4,13 @@ using contentapi.Views;
 using Randomous.EntitySystem;
 using Randomous.EntitySystem.Extensions;
 
-namespace contentapi.Services.Mapping
+namespace contentapi.Services.ViewConversion
 {
-    public class UserMapper : BaseHistoricMapper, IViewConverter<UserViewFull, EntityPackage>
+    public class UserViewConverter : BaseHistoricViewConverter, IViewConverter<UserViewFull, EntityPackage>
     {
         protected IPermissionService service;
 
-        public UserMapper(IPermissionService service)
+        public UserViewConverter(IPermissionService service)
         {
             this.service = service;
         }

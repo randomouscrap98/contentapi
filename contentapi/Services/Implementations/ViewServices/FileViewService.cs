@@ -2,7 +2,7 @@ using System;
 using System.Collections.Generic;
 using System.Threading.Tasks;
 using contentapi.Services.Constants;
-using contentapi.Services.Mapping;
+using contentapi.Services.ViewConversion;
 using contentapi.Views;
 using Microsoft.Extensions.Logging;
 using Randomous.EntitySystem;
@@ -13,7 +13,7 @@ namespace contentapi.Services.Implementations
 
     public class FileViewService : BasePermissionViewService<FileView, FileSearch>
     {
-        public FileViewService(ViewServicePack services, ILogger<FileViewService> logger, FileMapper converter) 
+        public FileViewService(ViewServicePack services, ILogger<FileViewService> logger, FileViewConverter converter) 
             : base(services, logger, converter) { }
 
         public override string ParentType => Keys.UserType;

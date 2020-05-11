@@ -9,7 +9,7 @@ using AutoMapper;
 using contentapi.Services.Extensions;
 using Randomous.EntitySystem.Extensions;
 using contentapi.Services.Constants;
-using contentapi.Services.Mapping;
+using contentapi.Services.ViewConversion;
 
 namespace contentapi.Services.Implementations
 {
@@ -40,7 +40,7 @@ namespace contentapi.Services.Implementations
 
         public UserViewService(ILogger<UserViewService> logger, ViewServicePack services, IHashService hashService,
             ITokenService tokenService, ILanguageService languageService, IEmailService emailService,
-            UserMapper converter)
+            UserViewConverter converter)
             :base(services, logger, converter)
         { 
             this.hashService = hashService;

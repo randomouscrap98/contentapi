@@ -4,7 +4,7 @@ using System.Linq;
 using System.Threading.Tasks;
 using AutoMapper;
 using contentapi.Services.Constants;
-using contentapi.Services.Mapping;
+using contentapi.Services.ViewConversion;
 using contentapi.Views;
 using Microsoft.Extensions.Logging;
 using Randomous.EntitySystem;
@@ -16,7 +16,7 @@ namespace contentapi.Services.Implementations
 
     public class CategoryViewService : BasePermissionViewService<CategoryView, CategorySearch>
     {
-        public CategoryViewService(ViewServicePack services, ILogger<CategoryViewService> logger, CategoryMapper converter) 
+        public CategoryViewService(ViewServicePack services, ILogger<CategoryViewService> logger, CategoryViewConverter converter) 
             : base(services, logger, converter) { }
 
         public override string EntityType => Keys.CategoryType;

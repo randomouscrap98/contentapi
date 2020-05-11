@@ -6,13 +6,13 @@ using contentapi.Views;
 using Randomous.EntitySystem;
 using Randomous.EntitySystem.Extensions;
 
-namespace contentapi.Services.Mapping
+namespace contentapi.Services.ViewConversion
 {
     /// <summary>
     /// A permissive entity has permissions and a parent, essentially. Also assumed to be historic
     /// (why WOULDN'T you want to keep track of permission changes?!)
     /// </summary>
-    public class BasePermissiveMapper : BaseHistoricMapper
+    public class BasePermissionViewConverter : BaseHistoricViewConverter
     {
         public List<EntityRelation> ConvertPermsToRelations(Dictionary<string, string> perms)
         {

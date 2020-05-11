@@ -1,11 +1,11 @@
 using System.Collections.Generic;
 using System.Linq;
-using contentapi.Services.Mapping;
+using contentapi.Services.ViewConversion;
 using Xunit;
 
 namespace contentapi.test
 {
-    public class BaseMapperTests : ServiceTestBase<BasePermissiveMapper>
+    public class BaseMapperTests : ServiceTestBase<BasePermissionViewConverter>
     {
         protected void AssertPermsEqual(Dictionary<string, string> perms1, Dictionary<string, string> perms2)
         {

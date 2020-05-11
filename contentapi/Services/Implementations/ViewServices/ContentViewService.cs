@@ -4,7 +4,7 @@ using System.Linq;
 using System.Threading.Tasks;
 using AutoMapper;
 using contentapi.Services.Constants;
-using contentapi.Services.Mapping;
+using contentapi.Services.ViewConversion;
 using contentapi.Views;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.Logging;
@@ -35,7 +35,7 @@ namespace contentapi.Services.Implementations
         
         protected Dictionary<long, List<long>> cachedSupers = null;
 
-        public ContentViewService(ViewServicePack services, ILogger<ContentViewService> logger, CategoryViewService categoryService, ContentMapper converter) 
+        public ContentViewService(ViewServicePack services, ILogger<ContentViewService> logger, CategoryViewService categoryService, ContentViewConvter converter) 
             : base(services, logger, converter) 
         { 
             this.categoryService = categoryService;

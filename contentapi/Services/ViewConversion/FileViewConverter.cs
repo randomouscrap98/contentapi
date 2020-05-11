@@ -2,9 +2,9 @@ using contentapi.Services.Constants;
 using contentapi.Views;
 using Randomous.EntitySystem;
 
-namespace contentapi.Services.Mapping
+namespace contentapi.Services.ViewConversion
 {
-    public class FileMapper : BasePermissiveMapper, IViewConverter<FileView, EntityPackage>
+    public class FileViewConverter : BasePermissionViewConverter, IViewConverter<FileView, EntityPackage>
     {
         public EntityPackage FromView(FileView view)
         {

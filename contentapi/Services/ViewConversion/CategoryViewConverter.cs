@@ -4,9 +4,9 @@ using contentapi.Views;
 using Randomous.EntitySystem;
 using Randomous.EntitySystem.Extensions;
 
-namespace contentapi.Services.Mapping
+namespace contentapi.Services.ViewConversion
 {
-    public class CategoryMapper : BasePermissiveMapper, IViewConverter<CategoryView, EntityPackage>
+    public class CategoryViewConverter : BasePermissionViewConverter, IViewConverter<CategoryView, EntityPackage>
     {
         public EntityPackage FromView(CategoryView view)
         {

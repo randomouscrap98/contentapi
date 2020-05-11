@@ -5,7 +5,7 @@ using System.Text;
 using System.Threading.Tasks;
 using contentapi.Services.Constants;
 using contentapi.Services.Extensions;
-using contentapi.Services.Mapping;
+using contentapi.Services.ViewConversion;
 using contentapi.Views;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.Logging;

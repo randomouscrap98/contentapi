@@ -5,7 +5,7 @@ using System.Threading.Tasks;
 using AutoMapper;
 using contentapi.Services.Constants;
 using contentapi.Services.Extensions;
-using contentapi.Services.Mapping;
+using contentapi.Services.ViewConversion;
 using contentapi.Views;
 using Microsoft.Extensions.Logging;
 using Randomous.EntitySystem;
