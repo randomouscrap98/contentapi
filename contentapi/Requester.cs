@@ -1,4 +1,4 @@
-namespace contentapi.Services
+namespace contentapi
 {
     public class Requester
     {

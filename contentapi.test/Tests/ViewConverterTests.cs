@@ -1,6 +1,8 @@
 using System;
+using contentapi.Services.Constants;
 using contentapi.Services.Views.Implementations;
 using contentapi.Views;
+using Randomous.EntitySystem;
 using Xunit;
 
 namespace contentapi.test
@@ -118,6 +120,27 @@ namespace contentapi.test
             var view2 = service.ToView(temp);
 
             Assert.Equal(view, view2);
+        }
+
+        [Fact]
+        public void TestCommentConvertSIMPLE()
+        {
+            var service = CreateService<CommentViewConverter>();
+
+            //Do it the OTHER way since we're only testing the "simple" portion.
+            var relation = new EntityRelation()
+            {
+                entityId1 = 4,
+                entityId2 = -6,
+                value = "wow",
+                type = Keys.CommentHack,
+                createDate = DateTime.Now
+            };
+
+            var temp = service.ToViewSimple(relation);
+            var relation2 = service.FromViewSimple(temp);
+
+            Assert.Equal(relation, relation2);
         }
     }
 }

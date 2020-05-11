@@ -5,7 +5,7 @@ using Xunit;
 
 namespace contentapi.test
 {
-    public class BaseMapperTests : ServiceTestBase<BasePermissionViewConverter>
+    public class BaseViewConverterTests : ServiceTestBase<BasePermissionViewConverter>
     {
         protected void AssertPermsEqual(Dictionary<string, string> perms1, Dictionary<string, string> perms2)
         {

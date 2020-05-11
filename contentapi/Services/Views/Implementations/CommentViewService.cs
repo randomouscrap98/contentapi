@@ -50,11 +50,11 @@ namespace contentapi.Services.Views.Implementations
     {
         public CommentControllerProfile()
         {
-            CreateMap<CommentView, EntityRelation>()
-                .ForMember(x => x.entityId1, o => o.MapFrom(s => s.parentId))
-                .ForMember(x => x.entityId2, o => o.MapFrom(s => s.createUserId))
-                .ForMember(x => x.value, o => o.MapFrom(s => s.content))
-                .ReverseMap();
+            //CreateMap<CommentView, EntityRelation>()
+            //    .ForMember(x => x.entityId1, o => o.MapFrom(s => s.parentId))
+            //    .ForMember(x => x.entityId2, o => o.MapFrom(s => s.createUserId))
+            //    .ForMember(x => x.value, o => o.MapFrom(s => s.content))
+            //    .ReverseMap();
 
             CreateMap<CommentSearch, EntityRelationSearch>()
                 .ForMember(x => x.EntityIds1, o => o.MapFrom(s => s.ParentIds))
@@ -63,23 +63,19 @@ namespace contentapi.Services.Views.Implementations
         }
     }
 
-    public class EntityRelationPackage
-    {
-        public EntityRelation Main;
-        public List<EntityRelation> Related = new List<EntityRelation>();
-    }
-
     public class CommentViewService : BaseViewServices, IViewService<CommentView, CommentSearch>
     {
         public static IDecayer<CommentListener> listenDecayer = null;
         public static readonly object listenDecayLock = new object();
 
         protected SystemConfig config;
+        protected CommentViewConverter converter;
 
         public CommentViewService(ViewServicePack services, ILogger<CommentViewService> logger, IDecayer<CommentListener> decayer,
-            SystemConfig config) : base(services, logger)
+            SystemConfig config, CommentViewConverter converter) : base(services, logger)
         {
             this.config = config; 
+            this.converter = converter;
 
             lock(listenDecayLock)
             {
@@ -89,46 +85,46 @@ namespace contentapi.Services.Views.Implementations
             }
         }
 
-        protected CommentView ConvertToViewSimple(EntityRelation relation)
-        {
-            var view = services.mapper.Map<CommentView>(relation);
-            view.createUserId *= -1;
+        //protected CommentView ConvertToViewSimple(EntityRelation relation)
+        //{
+        //    var view = services.mapper.Map<CommentView>(relation);
+        //    view.createUserId *= -1;
 
-            //Mapper usually handles everything, but this is special
-            view.createDate = (DateTime)relation.createDateProper();
+        //    //Mapper usually handles everything, but this is special
+        //    view.createDate = (DateTime)relation.createDateProper();
 
-            //Assume (bad assume!) that these are OK values
-            view.editUserId = view.createUserId;
-            view.editDate = view.createDate;
+        //    //Assume (bad assume!) that these are OK values
+        //    view.editUserId = view.createUserId;
+        //    view.editDate = view.createDate;
 
-            return view;
-        }
+        //    return view;
+        //}
 
-        protected CommentView ConvertToView(EntityRelationPackage package)
-        {
-            var view = ConvertToViewSimple(package.Main);
-            var orderedRelations = package.Related.OrderBy(x => x.id);
-            var lastEdit = orderedRelations.LastOrDefault(x => x.type.StartsWith(Keys.CommentHistoryHack));
-            var last = orderedRelations.LastOrDefault();
+        //protected CommentView ConvertToView(EntityRelationPackage package)
+        //{
+        //    var view = ConvertToViewSimple(package.Main);
+        //    var orderedRelations = package.Related.OrderBy(x => x.id);
+        //    var lastEdit = orderedRelations.LastOrDefault(x => x.type.StartsWith(Keys.CommentHistoryHack));
+        //    var last = orderedRelations.LastOrDefault();
 
-            if(lastEdit != null)
-            {
-                view.editDate = (DateTime)lastEdit.createDateProper();
-                view.editUserId = -lastEdit.entityId2;
-            }
+        //    if(lastEdit != null)
+        //    {
+        //        view.editDate = (DateTime)lastEdit.createDateProper();
+        //        view.editUserId = -lastEdit.entityId2;
+        //    }
 
-            view.deleted = last != null && last.type.StartsWith(Keys.CommentDeleteHack);
+        //    view.deleted = last != null && last.type.StartsWith(Keys.CommentDeleteHack);
 
-            return view;
-        }
+        //    return view;
+        //}
 
-        protected EntityRelation ConvertFromViewSimple(CommentView view)
-        {
-            var relation = services.mapper.Map<EntityRelation>(view);
-            relation.type = Keys.CommentHack;
-            relation.entityId2 *= -1;
-            return relation;
-        }
+        //protected EntityRelation ConvertFromViewSimple(CommentView view)
+        //{
+        //    var relation = services.mapper.Map<EntityRelation>(view);
+        //    relation.type = Keys.CommentHack;
+        //    relation.entityId2 *= -1;
+        //    return relation;
+        //}
 
         protected async Task<List<EntityRelationPackage>> LinkAsync(IEnumerable<EntityRelation> relations)
         {
@@ -147,7 +143,7 @@ namespace contentapi.Services.Views.Implementations
 
         protected async Task<List<CommentView>> ViewResult(IEnumerable<EntityRelation> relations)
         {
-            return (await LinkAsync(relations)).Select(x => ConvertToView(x)).ToList();
+            return (await LinkAsync(relations)).Select(x => converter.ToView(x)).ToList();
         }
 
         protected async Task<EntityPackage> BasicParentCheckAsync(long parentId)
@@ -292,7 +288,7 @@ namespace contentapi.Services.Views.Implementations
             if (badComments.Any())
                 goodComments.AddRange(await provider.GetEntityRelationsAsync(new EntityRelationSearch() { Ids = badComments.Select(x => -x.entityId1).ToList() }));
 
-            return (await LinkAsync(goodComments)).Select(x => ConvertToView(x)).ToList();
+            return (await LinkAsync(goodComments)).Select(x => converter.ToView(x)).ToList();
         }
 
         public Task<CommentView> WriteAsync(CommentView view, Requester requester)
@@ -312,9 +308,9 @@ namespace contentapi.Services.Views.Implementations
             var parent = await FullParentCheckAsync(view.parentId, Keys.CreateAction, requester);
 
             //now actually write the dang thing.
-            var relation = ConvertFromViewSimple(view);
+            var relation = converter.FromViewSimple(view);
             await services.provider.WriteAsync(relation);
-            return ConvertToViewSimple(relation);
+            return converter.ToViewSimple(relation);
         }
 
         public async Task<CommentView> UpdateAsync(CommentView view, Requester requester)
@@ -327,7 +323,7 @@ namespace contentapi.Services.Views.Implementations
 
             var parent = await ModifyCheckAsync(existing, requester);
 
-            var relation = ConvertFromViewSimple(view);
+            var relation = converter.FromViewSimple(view);
 
             //Write a copy of the current comment as historic
             var copy = MakeHistoryCopy(existing, Keys.CommentHistoryHack, uid);
@@ -335,7 +331,7 @@ namespace contentapi.Services.Views.Implementations
 
             var package = new EntityRelationPackage() { Main = relation };
             package.Related.Add(copy);
-            return ConvertToView(package);
+            return converter.ToView(package);
 
         }
 
@@ -351,7 +347,7 @@ namespace contentapi.Services.Views.Implementations
             await provider.WriteAsync(copy, existing);
 
             var relationPackage = (await LinkAsync(new[] { existing })).OnlySingle();
-            return ConvertToView(relationPackage);
+            return converter.ToView(relationPackage);
         }
 
         public async Task<CommentView> FindByIdAsync(long id, Requester requester)
