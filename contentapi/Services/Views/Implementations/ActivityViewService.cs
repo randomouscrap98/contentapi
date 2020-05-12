@@ -50,7 +50,7 @@ namespace contentapi.Services.Views.Implementations
         //When you split the interface into read-only and other, get rid of these
         public Task<ActivityView> WriteAsync(ActivityView view, Requester requester) { throw new NotImplementedException(); }
         public Task<ActivityView> DeleteAsync(long id, Requester requester) { throw new NotImplementedException(); }
-        public Task<IList<ActivityView>> GetRevisions(long id, Requester requester) { throw new NotImplementedException(); }
+        public Task<List<ActivityView>> GetRevisions(long id, Requester requester) { throw new NotImplementedException(); }
 
         /// <summary>
         /// Produce an activity for the given entity and action. Can include ONE piece of extra data.
@@ -106,7 +106,7 @@ namespace contentapi.Services.Views.Implementations
             };
         }
 
-        public async Task<IList<ActivityView>> SearchAsync(ActivitySearch search, Requester requester)
+        public async Task<List<ActivityView>> SearchAsync(ActivitySearch search, Requester requester)
         {
             var relationSearch = ModifySearch(services.mapper.Map<EntityRelationSearch>(search));
 
@@ -129,7 +129,7 @@ namespace contentapi.Services.Views.Implementations
             }).ToList();
         }
 
-        public async Task<IList<CommentActivityView>> SearchCommentsAsync(ActivitySearch search, Requester requester)
+        public async Task<List<CommentActivityView>> SearchCommentsAsync(ActivitySearch search, Requester requester)
         {
             var result = new List<CommentActivityView>();
 

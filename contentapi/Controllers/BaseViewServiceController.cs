@@ -28,7 +28,7 @@ namespace contentapi.Controllers
         }
 
         [HttpGet]
-        public async Task<ActionResult<IList<V>>> GetAsync([FromQuery]S search)
+        public async Task<ActionResult<List<V>>> GetAsync([FromQuery]S search)
         {
             logger.LogInformation($"GetAsync called, {typeof(V)}");
             await SetupAsync();

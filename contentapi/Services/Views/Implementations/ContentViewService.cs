@@ -98,7 +98,7 @@ namespace contentapi.Services.Views.Implementations
             return result;
         }
 
-        public override async Task<IList<ContentView>> SearchAsync(ContentSearch search, Requester requester)
+        public override async Task<List<ContentView>> SearchAsync(ContentSearch search, Requester requester)
         {
             logger.LogTrace($"Content SearchAsync called by {requester}");
 

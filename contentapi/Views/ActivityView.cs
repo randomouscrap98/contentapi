@@ -2,9 +2,8 @@ using System;
 
 namespace contentapi.Views
 {
-    public class ActivityView
+    public class ActivityView : IdView
     {
-        public long id {get;set;}
         public DateTime date {get;set;}
 
         public long userId {get;set;}

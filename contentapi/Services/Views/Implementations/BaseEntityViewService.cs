@@ -24,7 +24,7 @@ namespace contentapi.Services.Views.Implementations
 
         public abstract string EntityType {get;}
 
-        public abstract Task<IList<V>> SearchAsync(S search, Requester requester);
+        public abstract Task<List<V>> SearchAsync(S search, Requester requester);
         
         public async Task<V> FindByIdAsync(long id, Requester requester)
         {
@@ -114,7 +114,7 @@ namespace contentapi.Services.Views.Implementations
             return view;
         }
 
-        public async Task<IList<V>> GetRevisions(long id, Requester requester)
+        public async Task<List<V>> GetRevisions(long id, Requester requester)
         {
             var search = new EntitySearch();
             search.Ids = await services.history.GetRevisionIdsAsync(id);

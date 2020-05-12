@@ -212,7 +212,7 @@ namespace contentapi.Services.Views.Implementations
             return search;
         }
 
-        public async Task<IList<CommentView>> SearchAsync(CommentSearch search, Requester requester)
+        public async Task<List<CommentView>> SearchAsync(CommentSearch search, Requester requester)
         {
             logger.LogTrace($"Comment GetAsync called by {requester}");
 
@@ -358,7 +358,7 @@ namespace contentapi.Services.Views.Implementations
         }
 
         //Don't feel like implementing this right now.
-        public Task<IList<CommentView>> GetRevisions(long id, Requester requester)
+        public Task<List<CommentView>> GetRevisions(long id, Requester requester)
         {
             throw new NotImplementedException();
         }

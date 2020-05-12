@@ -201,7 +201,7 @@ namespace contentapi.Controllers
         }
 
         [HttpGet]
-        public Task<ActionResult<IList<FileView>>> GetAsync([FromQuery]FileSearch search)
+        public Task<ActionResult<List<FileView>>> GetAsync([FromQuery]FileSearch search)
         {
             return ThrowToAction(() => service.SearchAsync(search, GetRequesterNoFail()));
         }

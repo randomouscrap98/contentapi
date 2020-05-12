@@ -63,7 +63,7 @@ namespace contentapi.Services.Views.Implementations
             return view;
         }
 
-        public override async Task<IList<UserViewFull>> SearchAsync(UserSearch search, Requester requester)
+        public override async Task<List<UserViewFull>> SearchAsync(UserSearch search, Requester requester)
         {
             logger.LogDebug($"User SearchAsync called by {requester}");
             var entitySearch = ModifySearch(services.mapper.Map<EntitySearch>(search));

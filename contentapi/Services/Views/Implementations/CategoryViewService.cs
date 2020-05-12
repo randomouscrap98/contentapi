@@ -28,7 +28,7 @@ namespace contentapi.Services.Views.Implementations
             return package;
         }
 
-        public override async Task<IList<CategoryView>> SearchAsync(CategorySearch search, Requester requester)
+        public override async Task<List<CategoryView>> SearchAsync(CategorySearch search, Requester requester)
         {
             logger.LogTrace($"Category SearchAsync called by {requester}");
 

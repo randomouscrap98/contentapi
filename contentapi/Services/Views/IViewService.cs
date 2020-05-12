@@ -19,11 +19,11 @@ namespace contentapi.Services.Views
     public interface IViewService<V,S>
     {
         Task<V> FindByIdAsync(long id, Requester requester);
-        Task<IList<V>> SearchAsync(S search, Requester requester);
+        Task<List<V>> SearchAsync(S search, Requester requester);
         Task<V> WriteAsync(V view, Requester requester); //This can be either update or insert
         Task<V> DeleteAsync(long id, Requester requester);
 
-        Task<IList<V>> GetRevisions(long id, Requester requester);
+        Task<List<V>> GetRevisions(long id, Requester requester);
         
         //IQueryable<EntityGroup> GetBaseQueryable(S search);
     }

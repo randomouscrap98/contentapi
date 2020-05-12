@@ -22,7 +22,7 @@ namespace contentapi.Controllers
         }
 
         [HttpGet]
-        public Task<ActionResult<IList<CommentView>>> GetAsync([FromQuery]CommentSearch search)
+        public Task<ActionResult<List<CommentView>>> GetAsync([FromQuery]CommentSearch search)
         {
             return ThrowToAction(() => service.SearchAsync(search, GetRequesterNoFail()));
         }

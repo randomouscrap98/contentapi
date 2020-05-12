@@ -29,7 +29,7 @@ namespace contentapi.Services.Views.Implementations
             return result;
         }
 
-        public override async Task<IList<FileView>> SearchAsync(FileSearch search, Requester requester)
+        public override async Task<List<FileView>> SearchAsync(FileSearch search, Requester requester)
         {
             var entitySearch = ModifySearch(services.mapper.Map<EntitySearch>(search));
 
