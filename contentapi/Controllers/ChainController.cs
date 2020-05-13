@@ -1,6 +1,8 @@
 using System;
 using System.Collections.Generic;
+using System.Dynamic;
 using System.Linq;
+using System.Reflection;
 using System.Text.Json;
 using System.Text.RegularExpressions;
 using System.Threading.Tasks;
@@ -16,27 +18,31 @@ using Randomous.EntitySystem;
 
 namespace contentapi.Controllers
 {
-    public class ChainResult
+    //public class ChainResult
+    //{
+    //    public List<FileView> file {get;set;} = new List<FileView>();
+    //    public List<UserViewBasic> user {get;set;} = new List<UserViewBasic>();
+    //    public List<ContentView> content {get;set;} = new List<ContentView>();
+    //    public List<CategoryView> category {get;set;} = new List<CategoryView>();
+    //    public List<CommentView> comment {get;set;} = new List<CommentView>();
+    //    public List<ActivityView> activity {get;set;} = new List<ActivityView>();
+    //}
+
+    public class ChainServices
     {
-        public List<FileView> file {get;set;} = new List<FileView>();
-        public List<UserViewBasic> user {get;set;} = new List<UserViewBasic>();
-        public List<ContentView> content {get;set;} = new List<ContentView>();
-        public List<CategoryView> category {get;set;} = new List<CategoryView>();
-        public List<CommentView> comment {get;set;} = new List<CommentView>();
-        public List<ActivityView> activity {get;set;} = new List<ActivityView>();
+        public FileViewService file {get;set;}
+        public UserViewService user {get;set;}
+        public ContentViewService content {get;set;}
+        public CategoryViewService category {get;set;}
+        public CommentViewService comment {get;set;}
+        public ActivityViewService activity {get;set;}
     }
 
     public class ReadController : BaseSimpleController
     {
-        protected FileViewService file;
-        protected UserViewService user;
-        protected ContentViewService content;
-        protected CategoryViewService category;
-        protected CommentViewService comment;
-        protected ActivityViewService activity;
-
         protected IMapper mapper;
         protected ILanguageService docService;
+        protected ChainServices services;
 
         protected Regex requestRegex = new Regex(@"^(?<endpoint>[a-z]+)(\.(?<chain>\d+[a-z]+))*(-(?<search>.+))?$", 
             RegexOptions.Compiled | RegexOptions.IgnoreCase);
@@ -48,22 +54,11 @@ namespace contentapi.Controllers
         };
 
         public ReadController(ILogger<BaseSimpleController> logger, IMapper mapper, ILanguageService docService,
-            FileViewService file, 
-            UserViewService user,
-            ContentViewService content,
-            CategoryViewService category,
-            CommentViewService comment,
-            ActivityViewService activity) : base(logger)
+            ChainServices services) : base(logger)
         {
             this.mapper = mapper;
             this.docService = docService;
-
-            this.file = file;
-            this.user = user;
-            this.content = content;
-            this.category = category;
-            this.comment = comment;
-            this.activity = activity;
+            this.services = services;
         }
 
         protected List<long> ParseChain(string chain, List<List<IdView>> existingChains)
@@ -94,16 +89,70 @@ namespace contentapi.Controllers
             return existingChains[realIndex].Select(x => (long)property.GetValue(x)).ToList();
         }
 
-        protected async Task ChainAsync<S,V>(string search, IEnumerable<string> chains, IViewService<V,S> service, Requester requester, 
-            List<List<IdView>> existingChains, List<V> results) where V : IdView where S : EntitySearchBase
+        public class ChainData
         {
-            if(string.IsNullOrWhiteSpace(search))
-                search = "{}";
+            public string search;
+            public string endpoint;
+            public IEnumerable<string> chains;
+        }
 
-            var searchobject = JsonSerializer.Deserialize<S>(search, jsonOptions);
+        public class ChainResult
+        {
+            public ExpandoObject result;
+            public long id;
+        }
+
+        protected ChainData ParseChainData(string request)
+        {
+            var match = requestRegex.Match(request);
+
+            var result = new ChainData()
+            {
+                search = match.Groups["search"].Value,
+                endpoint = match.Groups["endpoint"].Value,
+                chains = match.Groups["chain"].Captures.Select(x => x.Value)
+            };
+
+            if(string.IsNullOrWhiteSpace(result.search))
+                result.search = "{}";
+            
+            return result;
+        }
+
+        protected async Task ChainAsync<S,V>(
+            ChainData data, 
+            IViewService<V,S> service, 
+            Requester requester, 
+            List<List<IdView>> existingChains, 
+            List<ChainResult> results,
+            List<string> fields
+        ) where V : IdView where S : EntitySearchBase
+        {
+            Dictionary<string, PropertyInfo> properties = null;
+
+            Type type = typeof(V);
+
+            if(type == typeof(UserViewFull))
+                type = typeof(UserViewBasic);
+
+            //Before doing ANYTHING, IMMEDIATELY convert fields to actual properties. It's easy if they pass us null: they want everything.
+            if(fields == null)
+            {
+                properties = typeof(V).GetProperties().ToDictionary(x => x.Name, x => x);
+            }
+            else
+            {
+                var lowerFields = fields.Select(x => x.ToLower());
+                properties = typeof(V).GetProperties().Where(x => lowerFields.Contains(x.Name.ToLower())).ToDictionary(x => x.Name, x => x);
+
+                if(properties.Count != fields.Count)
+                    throw new InvalidOperationException($"Unknown fields in list: {string.Join(",", fields)}");
+            }
+
+            var searchobject = JsonSerializer.Deserialize<S>(data.search, jsonOptions);
 
             //Parse the chains, get the ids
-            foreach(var c in chains)
+            foreach(var c in data.chains)
                 searchobject.Ids.AddRange(ParseChain(c, existingChains));
 
             var myResults = await service.SearchAsync(searchobject, requester);
@@ -113,52 +162,66 @@ namespace contentapi.Controllers
             foreach(var v in myResults)
             {
                 if(!results.Any(x => x.id == v.id))
-                    results.Add(v);
+                {
+                    var result = new ChainResult() { id = v.id, result = new ExpandoObject() };
+
+                    foreach(var p in properties)
+                        result.result.TryAdd(p.Key, p.Value.GetValue(v));
+
+                    results.Add(result);
+                }
             }
         }
 
         [HttpGet("chain")]
-        public async Task<ActionResult<ChainResult>> ChainAsync([FromQuery]List<string> requests)
+        public async Task<ActionResult<Dictionary<string, List<ExpandoObject>>>> ChainAsync([FromQuery]List<string> requests, [FromQuery]Dictionary<string, List<string>> fields)
         {
             logger.LogInformation($"ChainAsync called for {requests.Count} requests");
 
             if(requests == null)
                 requests = new List<string>();
+            if(fields == null)
+                fields = new Dictionary<string, List<string>>();
+
+            fields = fields.ToDictionary(x => x.Key, y => y.Value.SelectMany(z => z.Split(",", StringSplitOptions.RemoveEmptyEntries)).ToList());
 
             if(requests.Count > 5)
                 throw new InvalidOperationException("Can't chain deeper than 5");
 
             var requester = GetRequesterNoFail();
-            var result = new ChainResult();
+            //var results = new Dictionary<string, List<ExpandoObject>>();
+            var results = new Dictionary<string, List<ChainResult>>();
             var userResults = new List<UserViewFull>();
 
             var chainResults = new List<List<IdView>>();
 
             foreach(var request in requests)
             {
-                var match = requestRegex.Match(request);
+                var data = ParseChainData(request);
 
-                var search = match.Groups["search"].Value;
-                var endpoint = match.Groups["endpoint"].Value;
-                var chains = match.Groups["chain"].Captures.Select(x => x.Value);
+                if(!results.ContainsKey(data.endpoint))
+                    results.Add(data.endpoint, new List<ChainResult>());
+                
+                var r = results[data.endpoint];
+                var f = fields.ContainsKey(data.endpoint) ? fields[data.endpoint] : null;
 
                 //Go find the endpoint
-                if(endpoint == "file")
-                    await ChainAsync(search, chains, file, requester, chainResults, result.file);
-                else if(endpoint == "user")
-                    await ChainAsync(search, chains, user, requester, chainResults, userResults);
-                else if(endpoint == "content")
-                    await ChainAsync(search, chains, content, requester, chainResults, result.content);
-                else if(endpoint == "category")
-                    await ChainAsync(search, chains, category, requester, chainResults, result.category);
-                else if(endpoint == "comment")
-                    await ChainAsync(search, chains, comment, requester, chainResults, result.comment);
-                else if(endpoint == "activity")
-                    await ChainAsync(search, chains, activity, requester, chainResults, result.activity);
+                if(data.endpoint == "file")
+                    await ChainAsync(data, services.file, requester, chainResults, r, f);
+                else if(data.endpoint == "user")
+                    await ChainAsync(data, services.user, requester, chainResults, r, f);
+                else if(data.endpoint == "content")
+                    await ChainAsync(data, services.content, requester, chainResults, r, f);
+                else if(data.endpoint == "category")
+                    await ChainAsync(data, services.category, requester, chainResults, r, f);
+                else if(data.endpoint == "comment")
+                    await ChainAsync(data, services.comment, requester, chainResults, r, f);
+                else if(data.endpoint == "activity")
+                    await ChainAsync(data, services.activity, requester, chainResults, r, f);
             }
 
-            result.user = userResults.Select(x => mapper.Map<UserViewBasic>(x)).ToList();
-            return result;
+            //result.user = userResults.Select(x => mapper.Map<UserViewBasic>(x)).ToList();
+            return results.ToDictionary(x => x.Key, y => y.Value.Select(x => x.result).ToList());
         }
 
         [HttpGet("chain/docs")]

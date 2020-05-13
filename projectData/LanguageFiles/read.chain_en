@@ -9,7 +9,7 @@ content. You can do that in one request with the chain endpoint.
 
 An example:
 
-/api/read/chain?request=content&request=user.0createUserId.0editUserId
+/api/read/chain?requests=content&request=user.0createUserId.0editUserId
 
 There are two requests here: content and user. Content is a full request, it will
 retrieve as much content as possible. The user request is "chained" to the content:

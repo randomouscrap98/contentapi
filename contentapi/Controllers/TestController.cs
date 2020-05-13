@@ -1,5 +1,6 @@
 using System;
 using System.Collections.Generic;
+using System.Dynamic;
 using System.Threading.Tasks;
 using AutoMapper;
 using contentapi.Services;
@@ -49,6 +50,24 @@ namespace contentapi.Controllers
                 EntityCount = entities.Count,
                 ValueCount = values.Count,
                 RelationCount = relations.Count
+            };
+        }
+
+        [HttpGet("dynamic")]
+        public ActionResult<List<ExpandoObject>> GetDynamic()
+        {
+            dynamic one = new ExpandoObject();
+            one.whatever = "yes";
+            one.thisisnum = 56;
+
+            dynamic two = new ExpandoObject();
+            two.whatever = new List<int>() { 1, 2, 8 };
+            two.aagh = new Dictionary<string, string>() { {"a", "432"}};
+
+            return new List<ExpandoObject>()
+            {
+                one,
+                two
             };
         }
         

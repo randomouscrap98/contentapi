@@ -6,6 +6,7 @@ using contentapi.Controllers;
 using contentapi.Middleware;
 using contentapi.Services;
 using contentapi.Services.Implementations;
+using contentapi.Services.Views.Implementations;
 using Microsoft.AspNetCore.Authentication.JwtBearer;
 using Microsoft.AspNetCore.Builder;
 using Microsoft.AspNetCore.Hosting;
@@ -68,6 +69,16 @@ namespace contentapi
 
             //Also a singleton for the token system which we'll use for websockets
             services.AddSingleton<ITempTokenService<long>, TempTokenService<long>>();
+
+            services.AddTransient((p) => new ChainServices()
+            {
+                file = p.GetService<FileViewService>(),
+                user = p.GetService<UserViewService>(),
+                content = p.GetService<ContentViewService>(),
+                category = p.GetService<CategoryViewService>(),
+                comment = p.GetService<CommentViewService>(),
+                activity = p.GetService<ActivityViewService>()
+            });
 
             //A special case for websockets: we determine what the websockets will handle right here and now
             services.AddSingleton<WebSocketMiddlewareConfig>((p) =>
