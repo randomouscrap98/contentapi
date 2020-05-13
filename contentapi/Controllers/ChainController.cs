@@ -133,17 +133,17 @@ namespace contentapi.Controllers
             Type type = typeof(V);
 
             if(type == typeof(UserViewFull))
-                type = typeof(UserViewBasic);
+                type = typeof(IUserViewBasic);
 
             //Before doing ANYTHING, IMMEDIATELY convert fields to actual properties. It's easy if they pass us null: they want everything.
             if(fields == null)
             {
-                properties = typeof(V).GetProperties().ToDictionary(x => x.Name, x => x);
+                properties = type.GetProperties().ToDictionary(x => x.Name, x => x);
             }
             else
             {
                 var lowerFields = fields.Select(x => x.ToLower());
-                properties = typeof(V).GetProperties().Where(x => lowerFields.Contains(x.Name.ToLower())).ToDictionary(x => x.Name, x => x);
+                properties = type.GetProperties().Where(x => lowerFields.Contains(x.Name.ToLower())).ToDictionary(x => x.Name, x => x);
 
                 if(properties.Count != fields.Count)
                     throw new InvalidOperationException($"Unknown fields in list: {string.Join(",", fields)}");
@@ -189,7 +189,6 @@ namespace contentapi.Controllers
                 throw new InvalidOperationException("Can't chain deeper than 5");
 
             var requester = GetRequesterNoFail();
-            //var results = new Dictionary<string, List<ExpandoObject>>();
             var results = new Dictionary<string, List<ChainResult>>();
             var userResults = new List<UserViewFull>();
 
@@ -220,7 +219,6 @@ namespace contentapi.Controllers
                     await ChainAsync(data, services.activity, requester, chainResults, r, f);
             }
 
-            //result.user = userResults.Select(x => mapper.Map<UserViewBasic>(x)).ToList();
             return results.ToDictionary(x => x.Key, y => y.Value.Select(x => x.result).ToList());
         }
 

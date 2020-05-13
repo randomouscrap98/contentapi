@@ -4,14 +4,22 @@ using System;
 
 namespace contentapi.Views
 {
-    public class UserViewBasic : BaseView
+    public interface IUserViewBasic
+    {
+        DateTime createDate {get;set;}
+        long id {get;set;}
+        long avatar {get;set;}
+        string username {get;set;}
+    }
+
+    public class UserViewBasic : BaseView, IUserViewBasic
     {
         public string username { get; set; }
         public long avatar {get;set;}
     }
 
     //This is the user as we give them out
-    public class UserView : BaseEntityView 
+    public class UserView : BaseEntityView, IUserViewBasic
     {
         public string username { get; set; }
         public long avatar {get;set;}
@@ -28,7 +36,7 @@ namespace contentapi.Views
         }
     }
 
-    public class UserViewFull : UserView
+    public class UserViewFull : UserView, IUserViewBasic
     {
         public string password {get;set;}
         public string salt {get;set;}

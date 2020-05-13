@@ -7,22 +7,23 @@ request a list of content, then request the create and edit users for all of sai
 content. You can do that in one request with the chain endpoint.
 
 
-An example:
+* An example:
 
-/api/read/chain?requests=content&request=user.0createUserId.0editUserId
+  /api/read/chain?requests=content&request=user.0createUserId.0editUserId
 
-There are two requests here: content and user. Content is a full request, it will
-retrieve as much content as possible. The user request is "chained" to the content:
-the content request was index 0 and we want to pull users from the createUserId and
-editUserId fields. 
+This is two separate requests chained into one. This will pull all content first, 
+then pull users where their ids are in the content's set of createUserId and 
+editUserId. The .0 on user indicates the request index and field to pull from.
+In the user case, we want users for the ids found in the content request's 
+createUserId and editUserId fields (content was first request, index 0).
 
 There can be as many or as few links within a chain as you want, however there is
 a maximum of 5 requests in a chain.
 
 
-Another example:
+* Another example:
 
-/api/Read/chain?requests=activity&requests=user.0userId&requests=content.0contentId
+  /api/Read/chain?requests=activity&requests=user.0userId&requests=content.0contentId
 
 This requests as much activity as possible, then links in users to the activity 
 userId field, and links content into the activity contentId field. This is three
@@ -32,8 +33,20 @@ requests, but the last two are linked to just the first one.
 You can add the standard endpoint search parameters as URL encoded json after the
 request, separated by -. Example:
 
-/api/Read/chain?requests=activity-%7B%22createStart%22%3A%222020-05-01%22%7D&requests=user.0userId&requests=content.0contentId
+  /api/Read/chain?requests=activity-%7B%22createStart%22%3A%222020-05-01%22%7D&requests=user.0userId&requests=content.0contentId
 
 This is the same request as above, but the activity is constrained by createStart.
 ANY request in the chain can have search filters. Chaining does NOT need to 
 necessarily link: all requests can be individual with no actual chaining.
+
+
+* Field limiting
+
+Unlike the standard GET endpoints, you can limit the fields returned in chaining.
+Say you want to perform the first example request (content with linked users) but
+you only want the user's id and username. That would be:
+
+  /api/read/chain?requests=content&request=user.0createUserId.0editUserId&user=id,username
+
+Just add a query parameter with the endpoint name = a comma separated list of 
+field names. You can limit any or all or none of the endpoint results.
