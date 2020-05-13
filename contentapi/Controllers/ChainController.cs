@@ -5,6 +5,8 @@ using System.Text.Json;
 using System.Text.RegularExpressions;
 using System.Threading.Tasks;
 using AutoMapper;
+using contentapi.Services;
+using contentapi.Services.Implementations;
 using contentapi.Services.Views;
 using contentapi.Services.Views.Implementations;
 using contentapi.Views;
@@ -34,6 +36,7 @@ namespace contentapi.Controllers
         protected ActivityViewService activity;
 
         protected IMapper mapper;
+        protected ILanguageService docService;
 
         protected Regex requestRegex = new Regex(@"^(?<endpoint>[a-z]+)(\.(?<chain>\d+[a-z]+))*(-(?<search>.+))?$", 
             RegexOptions.Compiled | RegexOptions.IgnoreCase);
@@ -44,7 +47,7 @@ namespace contentapi.Controllers
             PropertyNameCaseInsensitive = true
         };
 
-        public ReadController(ILogger<BaseSimpleController> logger, IMapper mapper,
+        public ReadController(ILogger<BaseSimpleController> logger, IMapper mapper, ILanguageService docService,
             FileViewService file, 
             UserViewService user,
             ContentViewService content,
@@ -53,6 +56,7 @@ namespace contentapi.Controllers
             ActivityViewService activity) : base(logger)
         {
             this.mapper = mapper;
+            this.docService = docService;
 
             this.file = file;
             this.user = user;
@@ -62,7 +66,7 @@ namespace contentapi.Controllers
             this.activity = activity;
         }
 
-        public List<long> ParseChain(string chain, List<List<IdView>> existingChains)
+        protected List<long> ParseChain(string chain, List<List<IdView>> existingChains)
         {
             var match = chainRegex.Match(chain);
             var index = match.Groups["index"].Value;
@@ -90,7 +94,7 @@ namespace contentapi.Controllers
             return existingChains[realIndex].Select(x => (long)property.GetValue(x)).ToList();
         }
 
-        public async Task ChainAsync<S,V>(string search, IEnumerable<string> chains, IViewService<V,S> service, Requester requester, 
+        protected async Task ChainAsync<S,V>(string search, IEnumerable<string> chains, IViewService<V,S> service, Requester requester, 
             List<List<IdView>> existingChains, List<V> results) where V : IdView where S : EntitySearchBase
         {
             if(string.IsNullOrWhiteSpace(search))
@@ -155,6 +159,12 @@ namespace contentapi.Controllers
 
             result.user = userResults.Select(x => mapper.Map<UserViewBasic>(x)).ToList();
             return result;
+        }
+
+        [HttpGet("chain/docs")]
+        public Task<ActionResult<string>> ChainDocsAsync()
+        {
+            return ThrowToAction(() => Task.FromResult(docService.GetString("read.chain", "en")));
         }
     }
 }

@@ -1,0 +1,39 @@
+Chaining Documentation
+----------------------
+
+Chaining allows you to make multiple standard API GET requests in a single request.
+It also allows you to link requests together to reduce work. For instance, you may
+request a list of content, then request the create and edit users for all of said
+content. You can do that in one request with the chain endpoint.
+
+
+An example:
+
+/api/read/chain?request=content&request=user.0createUserId.0editUserId
+
+There are two requests here: content and user. Content is a full request, it will
+retrieve as much content as possible. The user request is "chained" to the content:
+the content request was index 0 and we want to pull users from the createUserId and
+editUserId fields. 
+
+There can be as many or as few links within a chain as you want, however there is
+a maximum of 5 requests in a chain.
+
+
+Another example:
+
+/api/Read/chain?requests=activity&requests=user.0userId&requests=content.0contentId
+
+This requests as much activity as possible, then links in users to the activity 
+userId field, and links content into the activity contentId field. This is three
+requests, but the last two are linked to just the first one. 
+
+
+You can add the standard endpoint search parameters as URL encoded json after the
+request, separated by -. Example:
+
+/api/Read/chain?requests=activity-%7B%22createStart%22%3A%222020-05-01%22%7D&requests=user.0userId&requests=content.0contentId
+
+This is the same request as above, but the activity is constrained by createStart.
+ANY request in the chain can have search filters. Chaining does NOT need to 
+necessarily link: all requests can be individual with no actual chaining.

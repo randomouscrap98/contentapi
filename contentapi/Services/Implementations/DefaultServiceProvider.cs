@@ -36,6 +36,7 @@ namespace contentapi.Services.Implementations
             services.AddTransient<IHistoryService, HistoryService>();
             services.AddTransient(typeof(IDecayer<>), typeof(Decayer<>));
             services.AddTransient(typeof(ITempTokenService<>), typeof(TempTokenService<>));
+            //services.AddTransient<DocumentationService>();
 
             services.AddTransient<ActivityViewService>();
             services.AddTransient<CategoryViewService>();
@@ -72,6 +73,7 @@ namespace contentapi.Services.Implementations
             AddConfiguration<SystemConfig>(services, config);
             AddConfiguration<TempTokenServiceConfig>(services, config);
             AddConfiguration<TokenServiceConfig>(services, config);
+            //AddConfiguration<DocumentationConfig>(services, config);
             services.AddSingleton<HashConfig>();
         }
     }
