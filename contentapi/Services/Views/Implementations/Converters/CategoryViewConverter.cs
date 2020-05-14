@@ -1,17 +1,18 @@
 using System.Linq;
 using contentapi.Services.Constants;
+using contentapi.Services.Views.Extensions;
 using contentapi.Views;
 using Randomous.EntitySystem;
 using Randomous.EntitySystem.Extensions;
 
 namespace contentapi.Services.Views.Implementations
 {
-    public class CategoryViewConverter : BasePermissionViewConverter, IViewConverter<CategoryView, EntityPackage>
+    public class CategoryViewConverter : BaseViewConverter , IViewConverter<CategoryView, EntityPackage>
     {
         public EntityPackage FromView(CategoryView view)
         {
-            var package = NewEntity(view.name, view.description);
-            ApplyFromViewPermissive(view, package, Keys.CategoryType);
+            var package = this.NewEntity(view.name, view.description);
+            this.ApplyFromStandard(view, package, Keys.CategoryType);
 
             foreach(var v in view.localSupers)
             {
@@ -30,7 +31,7 @@ namespace contentapi.Services.Views.Implementations
         public CategoryView ToView(EntityPackage package)
         {
             var view = new CategoryView();
-            ApplyToViewPermissive(package, view);
+            this.ApplyToStandard(package, view);
 
             view.name = package.Entity.name;
             view.description = package.Entity.content;

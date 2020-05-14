@@ -8,7 +8,6 @@ using System.Text.RegularExpressions;
 using System.Threading.Tasks;
 using AutoMapper;
 using contentapi.Services;
-using contentapi.Services.Implementations;
 using contentapi.Services.Views;
 using contentapi.Services.Views.Implementations;
 using contentapi.Views;
@@ -18,16 +17,6 @@ using Randomous.EntitySystem;
 
 namespace contentapi.Controllers
 {
-    //public class ChainResult
-    //{
-    //    public List<FileView> file {get;set;} = new List<FileView>();
-    //    public List<UserViewBasic> user {get;set;} = new List<UserViewBasic>();
-    //    public List<ContentView> content {get;set;} = new List<ContentView>();
-    //    public List<CategoryView> category {get;set;} = new List<CategoryView>();
-    //    public List<CommentView> comment {get;set;} = new List<CommentView>();
-    //    public List<ActivityView> activity {get;set;} = new List<ActivityView>();
-    //}
-
     public class ChainServices
     {
         public FileViewService file {get;set;}
@@ -61,7 +50,7 @@ namespace contentapi.Controllers
             this.services = services;
         }
 
-        protected List<long> ParseChain(string chain, List<List<IdView>> existingChains)
+        protected List<long> ParseChain(string chain, List<List<IIdView>> existingChains)
         {
             var match = chainRegex.Match(chain);
             var index = match.Groups["index"].Value;
@@ -123,10 +112,10 @@ namespace contentapi.Controllers
             ChainData data, 
             IViewService<V,S> service, 
             Requester requester, 
-            List<List<IdView>> existingChains, 
+            List<List<IIdView>> existingChains, 
             List<ChainResult> results,
             List<string> fields
-        ) where V : IdView where S : EntitySearchBase
+        ) where V : IIdView where S : EntitySearchBase
         {
             Dictionary<string, PropertyInfo> properties = null;
 
@@ -156,7 +145,7 @@ namespace contentapi.Controllers
                 searchobject.Ids.AddRange(ParseChain(c, existingChains));
 
             var myResults = await service.SearchAsync(searchobject, requester);
-            existingChains.Add(myResults.Cast<IdView>().ToList());
+            existingChains.Add(myResults.Cast<IIdView>().ToList());
 
             //Only add ones that aren't in the list
             foreach(var v in myResults)
@@ -192,7 +181,7 @@ namespace contentapi.Controllers
             var results = new Dictionary<string, List<ChainResult>>();
             var userResults = new List<UserViewFull>();
 
-            var chainResults = new List<List<IdView>>();
+            var chainResults = new List<List<IIdView>>();
 
             foreach(var request in requests)
             {

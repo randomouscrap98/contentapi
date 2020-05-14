@@ -2,19 +2,20 @@ using System;
 using System.Collections.Generic;
 using System.Linq;
 using contentapi.Services.Constants;
+using contentapi.Services.Views.Implementations;
 using contentapi.Views;
 using Randomous.EntitySystem;
 using Randomous.EntitySystem.Extensions;
 
-namespace contentapi.Services.Views.Implementations
+namespace contentapi.Services.Views.Extensions
 {
     /// <summary>
     /// A permissive entity has permissions and a parent, essentially. Also assumed to be historic
     /// (why WOULDN'T you want to keep track of permission changes?!)
     /// </summary>
-    public class BasePermissionViewConverter : BaseHistoricViewConverter
+    public static class PermissionViewExtensions
     {
-        public List<EntityRelation> ConvertPermsToRelations(Dictionary<string, string> perms)
+        public static List<EntityRelation> ConvertPermsToRelations(Dictionary<string, string> perms)
         {
             var result = new List<EntityRelation>();
             foreach(var perm in perms)
@@ -40,7 +41,7 @@ namespace contentapi.Services.Views.Implementations
             return result;
         }
 
-        public Dictionary<string, string> ConvertRelationsToPerms(IEnumerable<EntityRelation> relations)
+        public static Dictionary<string, string> ConvertRelationsToPerms(IEnumerable<EntityRelation> relations)
         {
             var result = new Dictionary<string, string>();
             foreach(var relation in relations)
@@ -56,48 +57,16 @@ namespace contentapi.Services.Views.Implementations
             return result;
         }
 
-        public List<EntityValue> FromViewValues(Dictionary<string,string> values)
+        public static void ApplyToPermissionView(this BaseViewConverter converter, EntityPackage package, IPermissionView view)
         {
-            var result = new List<EntityValue>();
-
-            foreach(var v in values)
-            {
-                result.Add(new EntityValue()
-                {
-                    key = Keys.AssociatedValueKey + v.Key,
-                    createDate = null,
-                    value = v.Value
-                });
-            }
-
-            return result;
-        }
-
-        public Dictionary<string,string> ToViewValues(IEnumerable<EntityValue> values)
-        {
-            var result = new Dictionary<string, string>();
-
-            foreach(var v in values.Where(x => x.key.StartsWith(Keys.AssociatedValueKey)))
-                result.Add(v.key.Substring(Keys.AssociatedValueKey.Length), v.value);
-
-            return result;
-        }
-
-        public void ApplyToViewPermissive(EntityPackage package, BasePermissionView view)
-        {
-            ApplyToViewHistoric(package, view);
-
             if(package.HasRelation(Keys.ParentRelation))
                 view.parentId = package.GetRelation(Keys.ParentRelation).entityId1;
 
             view.permissions = ConvertRelationsToPerms(package.Relations);
-            view.values = ToViewValues(package.Values);
         }
 
-        public void ApplyFromViewPermissive(BasePermissionView view, EntityPackage package, string type)
+        public static void ApplyFromPermissionView(this BaseViewConverter converter, IPermissionView view, EntityPackage package, string type)
         {
-            ApplyFromViewHistoric(view, package, type);
-
             //There doesn't HAVE to be a parent
             if(view.parentId > 0)
             {
@@ -116,13 +85,6 @@ namespace contentapi.Services.Views.Implementations
                 x.entityId2 = view.id;
                 package.Add(x);
             });
-
-            FromViewValues(view.values).ForEach(x => 
-            {
-                x.entityId = view.id;
-                package.Add(x);
-            });
-            
         }
     }
 }

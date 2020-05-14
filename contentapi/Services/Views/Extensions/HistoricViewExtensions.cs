@@ -2,18 +2,19 @@ using System;
 using System.Collections.Generic;
 using System.Linq;
 using contentapi.Services.Constants;
+using contentapi.Services.Views.Implementations;
 using contentapi.Views;
 using Randomous.EntitySystem;
 using Randomous.EntitySystem.Extensions;
 
-namespace contentapi.Services.Views.Implementations
+namespace contentapi.Services.Views.Extensions
 {
     /// <summary>
     /// Slightly more complex mapper: historic entities have creators and editors 
     /// </summary>
-    public class BaseHistoricViewConverter : BaseViewConverter
+    public static class EditViewExtensions
     {
-        public EntityPackage NewEntity(string name, string content = null)
+        public static EntityPackage NewEntity(this BaseViewConverter converter, string name, string content = null)
         {
             return new EntityPackage()
             {
@@ -25,9 +26,9 @@ namespace contentapi.Services.Views.Implementations
             };
         }
 
-        public void ApplyToViewHistoric(EntityPackage package, BaseEntityView view)
+        public static void ApplyToEditView(this BaseViewConverter converter, EntityPackage package, IEditView view)
         {
-            ApplyToViewBasic(package.Entity, view);
+            converter.ApplyToBaseView(package.Entity, view);
 
             //History has a creator and an editor. The create date comes from base
             var creatorRelation = package.GetRelation(Keys.CreatorRelation);
@@ -37,9 +38,9 @@ namespace contentapi.Services.Views.Implementations
             view.editUserId = long.Parse(creatorRelation.value);
         }
 
-        public void ApplyFromViewHistoric(BaseEntityView view, EntityPackage package, string type)
+        public static void ApplyFromEditView(this BaseViewConverter converter, IEditView view, EntityPackage package, string type)
         {
-            ApplyFromViewBasic(view, package.Entity);
+            converter.ApplyFromBaseView(view, package.Entity);
 
             package.Entity.type = type; // + (package.Entity.type ?? "");
 

@@ -61,4 +61,16 @@ namespace contentapi.Views
             return base.EqualsSelf(obj) && c.permissions.RealEqual(permissions) && c.values.RealEqual(values);
         }
     }
+
+    public class StandardView : BasePermissionView, IEditView, IPermissionView, IValueVlue
+    {
+        public long parentId { get; set; }
+
+        public DateTime createDate { get; set;}
+        public DateTime editDate { get;set;}
+        public long createUserId { get;set;} 
+        public long editUserId { get;set;}
+
+        public string myPerms { get; set; }
+    }
 }

@@ -1,12 +1,13 @@
 using System;
 using contentapi.Services.Constants;
+using contentapi.Services.Views.Extensions;
 using contentapi.Views;
 using Randomous.EntitySystem;
 using Randomous.EntitySystem.Extensions;
 
 namespace contentapi.Services.Views.Implementations
 {
-    public class UserViewConverter : BaseHistoricViewConverter, IViewConverter<UserViewFull, EntityPackage>
+    public class UserViewConverter : BaseViewConverter, IViewConverter<UserViewFull, EntityPackage>
     {
         protected IPermissionService service;
 
@@ -26,7 +27,7 @@ namespace contentapi.Services.Views.Implementations
                 salt = user.GetValue(Keys.PasswordSaltKey).value
             };
 
-            ApplyToViewHistoric(user, result);
+            this.ApplyToEditView(user, result);
 
             if(user.HasValue(Keys.AvatarKey))
                 result.avatar = long.Parse(user.GetValue(Keys.AvatarKey).value);
@@ -46,12 +47,12 @@ namespace contentapi.Services.Views.Implementations
                 value = v
             });
 
-            var newUser = NewEntity(user.username)
+            var newUser = this.NewEntity(user.username)
                 .Add(NewValue(Keys.AvatarKey, user.avatar.ToString()))
                 .Add(NewValue(Keys.EmailKey, user.email))
                 .Add(NewValue(Keys.PasswordSaltKey, user.salt))
                 .Add(NewValue(Keys.PasswordHashKey, user.password));
-            ApplyFromViewHistoric(user, newUser, Keys.UserType);
+            this.ApplyFromEditView(user, newUser, Keys.UserType);
             //Can't do anything about super
             
             if(!string.IsNullOrWhiteSpace(user.registrationKey))
@@ -59,6 +60,5 @@ namespace contentapi.Services.Views.Implementations
 
             return newUser;
         }
-
     }
 }

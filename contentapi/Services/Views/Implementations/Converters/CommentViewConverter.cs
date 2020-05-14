@@ -11,7 +11,7 @@ namespace contentapi.Services.Views.Implementations
         public CommentView ToViewSimple(EntityRelation relation)
         {
             var view = new CommentView();
-            ApplyToViewBasic(relation, view);
+            this.ApplyToBaseView(relation, view);
             view.createUserId = -relation.entityId2;
             view.content = relation.value;
             view.parentId = relation.entityId1;
@@ -26,7 +26,7 @@ namespace contentapi.Services.Views.Implementations
         public EntityRelation FromViewSimple(CommentView view)
         {
             var relation = new EntityRelation();
-            ApplyFromViewBasic(view, relation);
+            this.ApplyFromBaseView(view, relation);
             relation.type = Keys.CommentHack;
             relation.value = view.content;
             relation.entityId1 = view.parentId;
