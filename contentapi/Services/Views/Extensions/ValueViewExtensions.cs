@@ -41,12 +41,12 @@ namespace contentapi.Services.Views.Implementations
             return result;
         }
 
-        public static void ApplyToValueView(this BaseViewConverter converter, EntityPackage package, IValueVlue view)
+        public static void ApplyToValueView(this BaseViewConverter converter, EntityPackage package, IValueView view)
         {
             view.values = ToViewValues(package.Values);
         }
 
-        public static void ApplyFromValueView(this BaseViewConverter converter, IValueVlue view, EntityPackage package, string type)
+        public static void ApplyFromValueView(this BaseViewConverter converter, IValueView view, EntityPackage package, string type)
         {
             FromViewValues(view.values).ForEach(x => 
             {

@@ -1,11 +1,12 @@
 using System.Collections.Generic;
 using System.Linq;
+using contentapi.Services.Views.Extensions;
 using contentapi.Services.Views.Implementations;
 using Xunit;
 
 namespace contentapi.test
 {
-    public class BaseViewConverterTests : ServiceTestBase<BasePermissionViewConverter>
+    public class BaseViewConverterTests : UnitTestBase //ServiceTestBase<BasePermissionViewConverter>
     {
         protected void AssertPermsEqual(Dictionary<string, string> perms1, Dictionary<string, string> perms2)
         {
@@ -24,8 +25,8 @@ namespace contentapi.test
                 { "3", "CRU" }
             };
 
-            var relations = service.ConvertPermsToRelations(perms);
-            var reperms = service.ConvertRelationsToPerms(relations);
+            var relations = PermissionViewExtensions.ConvertPermsToRelations(perms);
+            var reperms = PermissionViewExtensions.ConvertRelationsToPerms(relations);
             AssertPermsEqual(perms, reperms);
         }
     }

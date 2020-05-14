@@ -48,7 +48,7 @@ namespace contentapi.Views
     /// <summary>
     /// Views that have an array of associated values.
     /// </summary>
-    public interface IValueVlue : IBaseView
+    public interface IValueView : IBaseView
     {
         Dictionary<string,string> values {get;set;}
     }

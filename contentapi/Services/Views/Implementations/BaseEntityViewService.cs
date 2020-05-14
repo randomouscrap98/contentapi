@@ -12,7 +12,7 @@ using Randomous.EntitySystem.Extensions;
 
 namespace contentapi.Services.Views.Implementations
 {
-    public abstract class BaseEntityViewService<V,S> : BaseViewServices, IViewService<V,S> where V : BaseEntityView where S : EntitySearchBase, new()
+    public abstract class BaseEntityViewService<V,S> : BaseViewServices, IViewService<V,S> where V : IEditView where S : EntitySearchBase, new()
     {
         protected IViewConverter<V,EntityPackage> converter;
 

@@ -5,10 +5,17 @@ using contentapi.Services.Extensions;
 
 namespace contentapi.Views
 {
+    public class IgnoreCompareAttribute : Attribute { }
+
     public class BaseView : IIdView
     {
         public long id {get;set;}
 
+        /// <summary>
+        /// This is a SLOW comparison function but I don't care: comparison is probably only performed on unit tests.
+        /// </summary>
+        /// <param name="obj"></param>
+        /// <returns></returns>
         protected virtual bool EqualsSelf(object obj)
         {
             var type = obj.GetType();
@@ -18,12 +25,18 @@ namespace contentapi.Views
             
             foreach(var property in type.GetProperties())
             {
-                if(!(property.PropertyType.IsGenericType && property.PropertyType.IsAssignableFrom(typeof(List<>)) || 
-                    property.PropertyType.IsAssignableFrom(typeof(Dictionary<,>))))
+                if(Attribute.IsDefined(property, typeof(IgnoreCompareAttribute)))
+                    continue;
+
+                if(property.PropertyType.IsGenericType)
                 {
-                    if(!property.GetValue(obj).Equals(property.GetValue(this)))
-                        return false;
+                    var generic = property.PropertyType.GetGenericTypeDefinition();
+                    if(generic.IsAssignableFrom(typeof(List<>)) || generic.IsAssignableFrom(typeof(Dictionary<,>)))
+                        continue;
                 }
+
+                if(!property.GetValue(obj).Equals(property.GetValue(this)))
+                    return false;
             }
 
             return true;
@@ -62,7 +75,7 @@ namespace contentapi.Views
         }
     }
 
-    public class StandardView : BasePermissionView, IEditView, IPermissionView, IValueVlue
+    public class StandardView : BasePermissionView, IEditView, IPermissionView, IValueView
     {
         public long parentId { get; set; }
 
@@ -71,6 +84,7 @@ namespace contentapi.Views
         public long createUserId { get;set;} 
         public long editUserId { get;set;}
 
+        [IgnoreCompare]
         public string myPerms { get; set; }
     }
 }

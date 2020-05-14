@@ -9,13 +9,13 @@ namespace contentapi.test
 {
     public class ViewConverterTests : UnitTestBase
     {
-        protected void FillBaseView(BaseView view)
+        protected void FillBaseView(IBaseView view)
         {
             view.id = 5;
             view.createDate = DateTime.Now.Subtract(TimeSpan.FromDays(1));
         }
 
-        protected void FillHistoricView(BaseEntityView view)
+        protected void FillHistoricView(IEditView view)
         {
             FillBaseView(view);
             view.editUserId = 4;
@@ -23,7 +23,7 @@ namespace contentapi.test
             view.editDate = DateTime.Now;
         }
 
-        protected void FillPermissionView(BasePermissionView view)
+        protected void FillPermissionView(StandardView view)
         {
             FillHistoricView(view);
             view.parentId = 7;
