@@ -1,11 +1,21 @@
+using System;
 using System.Collections.Generic;
 using System.ComponentModel.DataAnnotations;
 using System.Linq;
 
 namespace contentapi.Views
 {
-    public class CategoryView : BasePermissionView
+    public class CategoryView : BasePermissionView, IEditView, IPermissionView, IValueVlue
     {
+        public long parentId { get; set; }
+
+        public DateTime createDate { get; set;}
+        public DateTime editDate { get;set;}
+        public long createUserId { get;set;} 
+        public long editUserId { get;set;}
+
+        public string myPerms { get; set; }
+
         [Required]
         [StringLength(128, MinimumLength = 1)]
         public string name {get;set;}
@@ -18,8 +28,7 @@ namespace contentapi.Views
         protected override bool EqualsSelf(object obj)
         {
             var o = (CategoryView)obj;
-            return base.EqualsSelf(obj) && o.name == name && o.description == description && 
-                o.localSupers.OrderBy(x => x).SequenceEqual(localSupers.OrderBy(x => x));
+            return base.EqualsSelf(obj) && o.localSupers.OrderBy(x => x).SequenceEqual(localSupers.OrderBy(x => x));
         }
     }
 }

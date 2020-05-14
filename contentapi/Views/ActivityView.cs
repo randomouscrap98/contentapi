@@ -2,7 +2,7 @@ using System;
 
 namespace contentapi.Views
 {
-    public class ActivityView : IdView
+    public class ActivityView : BaseView
     {
         public DateTime date {get;set;}
 

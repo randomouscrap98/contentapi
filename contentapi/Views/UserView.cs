@@ -1,26 +1,23 @@
-using System.ComponentModel.DataAnnotations.Schema;
-using System.ComponentModel.DataAnnotations;
+
 using System;
 
 namespace contentapi.Views
 {
-    public interface IUserViewBasic
-    {
-        DateTime createDate {get;set;}
-        long id {get;set;}
-        long avatar {get;set;}
-        string username {get;set;}
-    }
-
     public class UserViewBasic : BaseView, IUserViewBasic
     {
         public string username { get; set; }
         public long avatar {get;set;}
+        public DateTime createDate { get; set; }
     }
 
     //This is the user as we give them out
-    public class UserView : BaseEntityView, IUserViewBasic
+    public class UserView : BaseView, IUserViewBasic, IEditView
     {
+        public DateTime createDate { get; set;}
+        public DateTime editDate { get;set;}
+        public long createUserId { get;set;} 
+        public long editUserId { get;set;}
+
         public string username { get; set; }
         public long avatar {get;set;}
 
@@ -36,7 +33,7 @@ namespace contentapi.Views
         }
     }
 
-    public class UserViewFull : UserView, IUserViewBasic
+    public class UserViewFull : UserView
     {
         public string password {get;set;}
         public string salt {get;set;}

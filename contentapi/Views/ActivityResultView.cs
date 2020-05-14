@@ -7,7 +7,6 @@ namespace contentapi.Views
     {
         public List<ActivityView> activity {get;set;} = new List<ActivityView>();
         public List<CommentActivityView> comments {get;set;} = new List<CommentActivityView>();
-        //public List<UserViewBasic>  userData {get;set;}
     }
 
     public class CommentActivityView
