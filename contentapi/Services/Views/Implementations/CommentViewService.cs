@@ -50,12 +50,6 @@ namespace contentapi.Services.Views.Implementations
     {
         public CommentControllerProfile()
         {
-            //CreateMap<CommentView, EntityRelation>()
-            //    .ForMember(x => x.entityId1, o => o.MapFrom(s => s.parentId))
-            //    .ForMember(x => x.entityId2, o => o.MapFrom(s => s.createUserId))
-            //    .ForMember(x => x.value, o => o.MapFrom(s => s.content))
-            //    .ReverseMap();
-
             CreateMap<CommentSearch, EntityRelationSearch>()
                 .ForMember(x => x.EntityIds1, o => o.MapFrom(s => s.ParentIds))
                 .ForMember(x => x.EntityIds2, o => o.MapFrom(s => s.UserIds.Select(x => -x).ToList()));
@@ -84,47 +78,6 @@ namespace contentapi.Services.Views.Implementations
                     listenDecayer = decayer;
             }
         }
-
-        //protected CommentView ConvertToViewSimple(EntityRelation relation)
-        //{
-        //    var view = services.mapper.Map<CommentView>(relation);
-        //    view.createUserId *= -1;
-
-        //    //Mapper usually handles everything, but this is special
-        //    view.createDate = (DateTime)relation.createDateProper();
-
-        //    //Assume (bad assume!) that these are OK values
-        //    view.editUserId = view.createUserId;
-        //    view.editDate = view.createDate;
-
-        //    return view;
-        //}
-
-        //protected CommentView ConvertToView(EntityRelationPackage package)
-        //{
-        //    var view = ConvertToViewSimple(package.Main);
-        //    var orderedRelations = package.Related.OrderBy(x => x.id);
-        //    var lastEdit = orderedRelations.LastOrDefault(x => x.type.StartsWith(Keys.CommentHistoryHack));
-        //    var last = orderedRelations.LastOrDefault();
-
-        //    if(lastEdit != null)
-        //    {
-        //        view.editDate = (DateTime)lastEdit.createDateProper();
-        //        view.editUserId = -lastEdit.entityId2;
-        //    }
-
-        //    view.deleted = last != null && last.type.StartsWith(Keys.CommentDeleteHack);
-
-        //    return view;
-        //}
-
-        //protected EntityRelation ConvertFromViewSimple(CommentView view)
-        //{
-        //    var relation = services.mapper.Map<EntityRelation>(view);
-        //    relation.type = Keys.CommentHack;
-        //    relation.entityId2 *= -1;
-        //    return relation;
-        //}
 
         protected async Task<List<EntityRelationPackage>> LinkAsync(IEnumerable<EntityRelation> relations)
         {

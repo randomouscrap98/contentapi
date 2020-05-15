@@ -12,7 +12,7 @@ using contentapi.Services.Constants;
 
 namespace contentapi.Services.Views.Implementations
 {
-    public class UserSearch : EntitySearchBase
+    public class UserSearch : BaseSearch
     {
         public string Username {get;set;}
     }

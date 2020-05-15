@@ -15,13 +15,13 @@ namespace contentapi.Services.Constants
         public const string HistoryKey = "_";
         public const string ActivityKey = ".";
 
-
         //General Relation keys (just relations, no appending)
         //Creator meaning is twofold: entityid1 is the creator of this content and the value is the editor
         public const string CreatorRelation = "rc"; 
         public const string ParentRelation = "rp";
         public const string HistoryRelation = "rh";
         public const string SuperRelation = "rs";
+        public const string WatchRelation = "rw";
 
 
         //General Value keys

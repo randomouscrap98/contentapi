@@ -115,7 +115,7 @@ namespace contentapi.Controllers
             List<List<IIdView>> existingChains, 
             List<ChainResult> results,
             List<string> fields
-        ) where V : IIdView where S : EntitySearchBase
+        ) where V : IIdView where S : IIdSearcher
         {
             Dictionary<string, PropertyInfo> properties = null;
 

@@ -12,7 +12,7 @@ using Randomous.EntitySystem;
 
 namespace contentapi.Services.Views.Implementations
 {
-    public class ActivitySearch : EntitySearchBase
+    public class ActivitySearch : BaseSearch
     {
         public List<long> UserIds {get;set;} = new List<long>();
         public List<long> ContentIds {get;set;} = new List<long>();

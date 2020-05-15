@@ -5,12 +5,15 @@ using Randomous.EntitySystem;
 
 namespace contentapi.Services.Views.Implementations
 {
-    public class BaseParentSearch : EntitySearchBase 
+    //Literally just a stand-in / abstraction away from the entity system. I don't know
+    public class BaseSearch : EntitySearchBase, IIdSearcher { }
+
+    public class BaseParentSearch : BaseSearch
     {
         public List<long> ParentIds {get;set;} = new List<long>();
     }
 
-    public class BaseContentSearch : BaseParentSearch 
+    public class BaseContentSearch : BaseParentSearch
     {
         public string Name {get;set;}
     }
