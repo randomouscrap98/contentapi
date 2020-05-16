@@ -13,9 +13,9 @@ using Randomous.EntitySystem.Extensions;
 
 namespace contentapi.Services.Views.Implementations
 {
-    public abstract class BasePermissionViewService<V,S> : BaseEntityViewService<V,S> where V : StandardView where S : EntitySearchBase, new()
+    public abstract class BasePermissionViewService<V,S> : BaseEntityViewService<V,S> where V : StandardView where S : BaseSearch, new()
     {
-        public BasePermissionViewService(ViewServicePack services, ILogger<BasePermissionViewService<V, S>> logger, IViewConverter<V,EntityPackage> converter) 
+        public BasePermissionViewService(ViewServicePack services, ILogger<BasePermissionViewService<V, S>> logger, IViewSource<V,EntityPackage,EntityGroup,S> converter) 
             : base(services, logger, converter) { }
 
         public abstract string ParentType {get;}

@@ -77,59 +77,6 @@ namespace contentapi.Services.Views.Implementations
             };
         }
 
-        //public IQueryable<EntityGroup> BasicReadQuery(Requester requester, EntitySearch search, Expression<Func<Entity, long>> selector, PermissionExtras extras = null)
-        //{
-        //    var query = provider.ApplyEntitySearch(Q<Entity>(), search, false)
-        //        .Join(Q<EntityRelation>(), selector, r => r.entityId2, 
-        //        (e,r) => new EntityGroup() { entity = e, permission = r});
-
-        //    query = services.permissions.PermissionWhere(query, requester, Keys.ReadAction, extras);
-
-        //    return query;
-        //}
-
-        //public IQueryable<EntityGroup> BasicReadQuery(Requester requester, EntityRelationSearch search, Expression<Func<EntityRelation, long>> selector, PermissionExtras extras = null)
-        //{
-        //    var query = provider.ApplyEntityRelationSearch(Q<EntityRelation>(), search, false)
-        //        .Join(Q<EntityRelation>(), selector, r2 => r2.entityId2, 
-        //        (r, r2) => new EntityGroup() { relation = r, permission = r2});
-
-        //    query = services.permissions.PermissionWhere(query, requester, Keys.ReadAction, extras);
-
-        //    return query;
-        //}
-
-        ///// <summary>
-        ///// Given a completed IQueryable, apply the final touches to get a real list of entities
-        ///// </summary>
-        ///// <param name="foundEntities"></param>
-        ///// <param name="search"></param>
-        ///// <returns></returns>
-        //public IQueryable<E> FinalizeQuery<E>(IQueryable<EntityGroup> groups, Expression<Func<EntityGroup, long>> groupId, EntitySearchBase search) where E : EntityBase
-        //{
-        //    //Group givens by grouping id and select only the grouped ID (all databases can do this)
-        //    var husks = groups.GroupBy(groupId).Select(x => new EntityBase() { id = x.Key });
-
-        //    //Apply the final search parameters on the RESULT (that would be ordering/limiting/etc)
-        //    var ids = provider.ApplyFinal(husks, search).Select(x => x.id);
-
-        //    //Join the ids with the actual table you want to get the final product (since grouping doesn't persist... ugh)
-        //    var join =
-        //        from e in provider.GetQueryable<E>()
-        //        join i in ids on e.id equals i
-        //        select e;
-
-        //    return join;
-        //}
-
-        //public IQueryable<EntityGroup> WhereParents(IQueryable<EntityGroup> query, List<long> parentIds)
-        //{
-        //    return query
-        //        .Join(Q<EntityRelation>(), e => e.entity.id, r => r.entityId2, 
-        //                (e,r) => new EntityGroup() { entity = e.entity, relation = r, permission = e.permission })
-        //        .Where(x => x.relation.type == Keys.ParentRelation && parentIds.Contains(x.relation.entityId1));
-        //}
-
         /// <summary>
         /// Find a value by key/value/id (added constraints)
         /// </summary>

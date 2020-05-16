@@ -6,6 +6,7 @@ using System.Threading.Tasks;
 using AutoMapper;
 using contentapi.Services.Constants;
 using contentapi.Services.Extensions;
+using contentapi.Services.Views.Extensions;
 using contentapi.Views;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.Logging;
@@ -41,16 +42,16 @@ namespace contentapi.Services.Views.Implementations
 
     }
 
-    public class CommentViewService : BaseViewServices, IViewService<CommentView, CommentSearch>
+    public class CommentViewService : BaseViewServices, IViewRevisionService<CommentView, CommentSearch>
     {
         public static IDecayer<CommentListener> listenDecayer = null;
         public static readonly object listenDecayLock = new object();
 
         protected SystemConfig config;
-        protected CommentViewConverter converter;
+        protected CommentViewSource converter;
 
         public CommentViewService(ViewServicePack services, ILogger<CommentViewService> logger, IDecayer<CommentListener> decayer,
-            SystemConfig config, CommentViewConverter converter) : base(services, logger)
+            SystemConfig config, CommentViewSource converter) : base(services, logger)
         {
             this.config = config; 
             this.converter = converter;
@@ -62,11 +63,6 @@ namespace contentapi.Services.Views.Implementations
                     listenDecayer = decayer;
             }
         }
-
-        //protected async Task<List<CommentView>> ViewResult(IEnumerable<EntityRelation> relations)
-        //{
-        //    return (await LinkAsync(relations)).Select(x => converter.ToView(x)).ToList();
-        //}
 
         protected async Task<EntityPackage> BasicParentCheckAsync(long parentId)
         {
@@ -127,18 +123,12 @@ namespace contentapi.Services.Views.Implementations
             return copy;
         }
 
-        public async Task<List<CommentView>> SearchAsync(CommentSearch search, Requester requester)
+        public Task<List<CommentView>> SearchAsync(CommentSearch search, Requester requester)
         {
             logger.LogTrace($"Comment GetAsync called by {requester}");
 
-            var relationSearch = ModifySearch(services.mapper.Map<EntityRelationSearch>(search));
-
-            //Entity1 is the content, content owns comments. The hack is entity2, which is not a child but a user.
-            var query = BasicReadQuery(requester, relationSearch, x => x.entityId1);
-
-            var relations = await services.provider.GetListAsync(FinalizeQuery<EntityRelation>(query, x=> x.relation.id, relationSearch));
-
-            return await ViewResult(relations);
+            return converter.SimpleSearchAsync(search, q =>
+                services.permissions.PermissionWhere(q, requester, Keys.ReadAction));
         }
 
         public async Task<List<CommentListener>> GetListenersAsync(long parentId, List<long> lastListeners, Requester requester, CancellationToken token)
@@ -203,7 +193,7 @@ namespace contentapi.Services.Views.Implementations
             if (badComments.Any())
                 goodComments.AddRange(await provider.GetEntityRelationsAsync(new EntityRelationSearch() { Ids = badComments.Select(x => -x.entityId1).ToList() }));
 
-            return (await LinkAsync(goodComments)).Select(x => converter.ToView(x)).ToList();
+            return (await converter.LinkAsync(goodComments)).Select(x => converter.ToView(x)).ToList();
         }
 
         public Task<CommentView> WriteAsync(CommentView view, Requester requester)
@@ -261,7 +251,7 @@ namespace contentapi.Services.Views.Implementations
             existing.entityId2 = 0;
             await provider.WriteAsync(copy, existing);
 
-            var relationPackage = (await LinkAsync(new[] { existing })).OnlySingle();
+            var relationPackage = (await converter.LinkAsync(new[] { existing })).OnlySingle();
             return converter.ToView(relationPackage);
         }
 

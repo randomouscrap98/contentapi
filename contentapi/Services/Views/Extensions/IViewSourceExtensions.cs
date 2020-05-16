@@ -7,9 +7,9 @@ using contentapi.Views;
 
 namespace contentapi.Services.Views.Extensions
 {
-    public static class GenericViewSourceExtensions
+    public static class IViewSourceExtensions
     {
-        public static async Task<List<V>> SimpleSearch<V,T,E,S>(
+        public static async Task<List<V>> SimpleSearchAsync<V,T,E,S>(
             this IViewSource<V,T,E,S> source, S search, Func<IQueryable<E>, IQueryable<E>> modify = null) 
             where V : IIdView where S : IIdSearcher where E : EntityGroup
         {
@@ -24,7 +24,7 @@ namespace contentapi.Services.Views.Extensions
         {
             var search = new S();
             search.Ids.Add(id);
-            return (await source.SimpleSearch(search, modify)).OnlySingle();
+            return (await source.SimpleSearchAsync(search, modify)).OnlySingle();
         }
     }
 }

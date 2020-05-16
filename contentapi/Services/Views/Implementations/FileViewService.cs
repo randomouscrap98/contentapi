@@ -11,7 +11,7 @@ namespace contentapi.Services.Views.Implementations
 
     public class FileViewService : BasePermissionViewService<FileView, FileSearch>
     {
-        public FileViewService(ViewServicePack services, ILogger<FileViewService> logger, FileViewConverter converter) 
+        public FileViewService(ViewServicePack services, ILogger<FileViewService> logger, FileViewSource converter) 
             : base(services, logger, converter) { }
 
         public override string ParentType => Keys.UserType;
@@ -26,18 +26,6 @@ namespace contentapi.Services.Views.Implementations
             result.fileType = existing.Entity.content;
 
             return result;
-        }
-
-        public override async Task<List<FileView>> SearchAsync(FileSearch search, Requester requester)
-        {
-            var entitySearch = ModifySearch(services.mapper.Map<EntitySearch>(search));
-
-            var perms = BasicReadQuery(requester, entitySearch);
-
-            if(search.ParentIds.Count > 0)
-                perms = WhereParents(perms, search.ParentIds);
-
-            return await ViewResult(FinalizeQuery(perms, entitySearch), requester);
         }
     }
 }

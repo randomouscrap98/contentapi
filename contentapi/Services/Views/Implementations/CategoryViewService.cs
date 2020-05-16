@@ -4,6 +4,7 @@ using System.Linq;
 using System.Threading.Tasks;
 using AutoMapper;
 using contentapi.Services.Constants;
+using contentapi.Services.Views.Extensions;
 using contentapi.Views;
 using Microsoft.Extensions.Logging;
 using Randomous.EntitySystem;
@@ -14,7 +15,7 @@ namespace contentapi.Services.Views.Implementations
 
     public class CategoryViewService : BasePermissionViewService<CategoryView, CategorySearch>
     {
-        public CategoryViewService(ViewServicePack services, ILogger<CategoryViewService> logger, CategoryViewConverter converter) 
+        public CategoryViewService(ViewServicePack services, ILogger<CategoryViewService> logger, CategoryViewSource converter) 
             : base(services, logger, converter) { }
 
         public override string EntityType => Keys.CategoryType;
@@ -25,20 +26,6 @@ namespace contentapi.Services.Views.Implementations
             var package = await base.DeleteCheckAsync(id, requester);
             FailUnlessSuper(requester); //Also only super users can delete
             return package;
-        }
-
-        public override async Task<List<CategoryView>> SearchAsync(CategorySearch search, Requester requester)
-        {
-            logger.LogTrace($"Category SearchAsync called by {requester}");
-
-            var entitySearch = ModifySearch(services.mapper.Map<EntitySearch>(search));
-
-            var perms = BasicReadQuery(requester, entitySearch);
-
-            if(search.ParentIds.Count > 0)
-                perms = WhereParents(perms, search.ParentIds);
-
-            return await ViewResult(FinalizeQuery(perms, entitySearch), requester);
         }
     }
 }

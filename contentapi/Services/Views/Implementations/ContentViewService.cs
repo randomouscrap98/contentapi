@@ -18,7 +18,7 @@ namespace contentapi.Services.Views.Implementations
         
         protected Dictionary<long, List<long>> cachedSupers = null;
 
-        public ContentViewService(ViewServicePack services, ILogger<ContentViewService> logger, CategoryViewService categoryService, ContentViewConverter converter) 
+        public ContentViewService(ViewServicePack services, ILogger<ContentViewService> logger, CategoryViewService categoryService, ContentViewSource converter) 
             : base(services, logger, converter) 
         { 
             this.categoryService = categoryService;
@@ -80,31 +80,6 @@ namespace contentapi.Services.Views.Implementations
             }
 
             return result;
-        }
-
-        public override async Task<List<ContentView>> SearchAsync(ContentSearch search, Requester requester)
-        {
-            logger.LogTrace($"Content SearchAsync called by {requester}");
-
-            var entitySearch = ModifySearch(services.mapper.Map<EntitySearch>(search));
-
-            var initial = BasicReadQuery(requester, entitySearch);
-
-            //Right now, entities are matched with very specific read relations and MAYBE some creator ones.
-            //Be VERY CAREFUL, I get the feeling the entity count can get blown out of proportion with this massive join.
-
-            if(search.ParentIds.Count > 0)
-                initial = WhereParents(initial, search.ParentIds);
-
-            if(!string.IsNullOrWhiteSpace(search.Keyword))
-            {
-                initial = initial
-                    .Join(provider.GetQueryable<EntityValue>(), e => e.entity.id, v => v.entityId, 
-                          (e,v) => new EntityGroup() { entity = e.entity, relation = e.relation, value = v})
-                    .Where(x => x.value.key == Keys.KeywordKey && EF.Functions.Like(x.value.value, search.Keyword));
-            }
-
-            return await ViewResult(FinalizeQuery(initial, entitySearch), requester);
         }
     }
 }

@@ -16,8 +16,6 @@ namespace contentapi.Services.Views.Implementations
     {
         public UserControllerProfile()
         {
-            CreateMap<UserSearch, EntitySearch>().ForMember(x => x.NameLike, o => o.MapFrom(s => s.Username));
-
             CreateMap<UserViewBasic, UserView>().ReverseMap();
             CreateMap<UserViewBasic, UserViewFull>().ReverseMap();
             CreateMap<UserView, UserViewFull>().ReverseMap();
@@ -34,7 +32,7 @@ namespace contentapi.Services.Views.Implementations
 
         public UserViewService(ILogger<UserViewService> logger, ViewServicePack services, IHashService hashService,
             ITokenService tokenService, ILanguageService languageService, IEmailService emailService,
-            UserViewConverter converter)
+            UserViewSource converter)
             :base(services, logger, converter)
         { 
             this.hashService = hashService;
@@ -58,12 +56,12 @@ namespace contentapi.Services.Views.Implementations
             return view;
         }
 
-        public override async Task<List<UserViewFull>> SearchAsync(UserSearch search, Requester requester)
-        {
-            logger.LogDebug($"User SearchAsync called by {requester}");
-            var entitySearch = ModifySearch(services.mapper.Map<EntitySearch>(search));
-            return (await provider.GetEntityPackagesAsync(entitySearch)).Select(x => converter.ToView(x)).ToList();
-        }
+        //public override async Task<List<UserViewFull>> SearchAsync(UserSearch search, Requester requester)
+        //{
+        //    logger.LogDebug($"User SearchAsync called by {requester}");
+        //    var entitySearch = ModifySearch(services.mapper.Map<EntitySearch>(search));
+        //    return (await provider.GetEntityPackagesAsync(entitySearch)).Select(x => converter.ToView(x)).ToList();
+        //}
 
         public override async Task<UserViewFull> WriteAsync(UserViewFull view, Requester requester)
         {

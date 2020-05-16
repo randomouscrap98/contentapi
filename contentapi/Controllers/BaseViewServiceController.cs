@@ -3,6 +3,7 @@ using System.Threading.Tasks;
 using contentapi.Services;
 using contentapi.Services.Implementations;
 using contentapi.Services.Views;
+using contentapi.Services.Views.Implementations;
 using contentapi.Views;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
@@ -12,7 +13,7 @@ using Randomous.EntitySystem;
 namespace contentapi.Controllers
 {
     public class BaseViewServiceController<T,V,S> : BaseSimpleController 
-        where T : IViewService<V,S> where V : BaseView where S : EntitySearchBase
+        where T : IViewService<V,S> where V : BaseView where S : BaseSearch
     {
         protected T service;
 

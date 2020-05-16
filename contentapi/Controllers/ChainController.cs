@@ -110,7 +110,7 @@ namespace contentapi.Controllers
 
         protected async Task ChainAsync<S,V>(
             ChainData data, 
-            IViewService<V,S> service, 
+            IViewReadService<V,S> service, 
             Requester requester, 
             List<List<IIdView>> existingChains, 
             List<ChainResult> results,

@@ -5,6 +5,7 @@ using System.Threading.Tasks;
 using AutoMapper;
 using contentapi.Services.Constants;
 using contentapi.Services.Extensions;
+using contentapi.Services.Views.Extensions;
 using contentapi.Views;
 using Microsoft.Extensions.Logging;
 using Randomous.EntitySystem;
@@ -12,11 +13,11 @@ using Randomous.EntitySystem.Extensions;
 
 namespace contentapi.Services.Views.Implementations
 {
-    public abstract class BaseEntityViewService<V,S> : BaseViewServices, IViewService<V,S> where V : IEditView where S : EntitySearchBase, new()
+    public abstract class BaseEntityViewService<V,S> : BaseViewServices, IViewService<V,S> where V : IEditView where S : BaseSearch, new()
     {
-        protected IViewConverter<V,EntityPackage> converter;
+        protected IViewSource<V,EntityPackage,EntityGroup,S> converter;
 
-        public BaseEntityViewService(ViewServicePack services, ILogger<BaseEntityViewService<V,S>> logger, IViewConverter<V,EntityPackage> converter) 
+        public BaseEntityViewService(ViewServicePack services, ILogger<BaseEntityViewService<V,S>> logger, IViewSource<V,EntityPackage,EntityGroup,S> converter) 
             : base(services, logger) 
         { 
             this.converter = converter;
@@ -24,7 +25,14 @@ namespace contentapi.Services.Views.Implementations
 
         public abstract string EntityType {get;}
 
-        public abstract Task<List<V>> SearchAsync(S search, Requester requester);
+        public virtual Task<List<V>> SearchAsync(S search, Requester requester)
+        {
+            logger.LogTrace($"{typeof(V)} SearchAsync called by {requester}");
+
+            return converter.SimpleSearchAsync(search, (q) =>
+                services.permissions.PermissionWhere(q, requester, Keys.ReadAction)
+            );
+        }
         
         public async Task<V> FindByIdAsync(long id, Requester requester)
         {
@@ -137,35 +145,6 @@ namespace contentapi.Services.Views.Implementations
             return last;
         }
 
-        ///// <summary>
-        ///// Modify a search converted from users so it works with real entities
-        ///// </summary>
-        ///// <param name="search"></param>
-        ///// <returns></returns>
-        //public EntitySearch ModifySearch(EntitySearch search)
-        //{
-        //    //The easy modifications
-        //    search = LimitSearch(search);
-
-        //    if(string.IsNullOrWhiteSpace(search.TypeLike))
-        //        search.TypeLike = "%";
-
-        //    search.TypeLike = EntityType + (search.TypeLike ?? "%");
-
-        //    return search;
-        //}
-
-        ///// <summary>
-        ///// A shortcut for producing a list of views from a list of base entities
-        ///// </summary>
-        ///// <param name="query"></param>
-        ///// <returns></returns>
-        //public async virtual Task<List<V>> ViewResult(IQueryable<Entity> query)
-        //{
-        //    var packages = await provider.LinkAsync(query);
-        //    return packages.Select(x => ConvertToView(x)).ToList();
-        //}
-
         public async Task<T> FindByNameAsyncGeneric<T>(string name, Func<EntitySearch, Task<List<T>>> searcher)
         {
             return (await searcher(new EntitySearch() {NameLike = name, TypeLike = $"{EntityType}%"})).OnlySingle();
@@ -197,15 +176,5 @@ namespace contentapi.Services.Views.Implementations
         {
             return FindValueAsync(EntityType, key, value, id);
         }
-
-        //public IQueryable<EntityGroup> BasicReadQuery(Requester requester, EntitySearch search)
-        //{
-        //    return BasicReadQuery(requester, search, x => x.id);
-        //}
-
-        //public IQueryable<Entity> FinalizeQuery(IQueryable<EntityGroup> groups, EntitySearch search)
-        //{
-        //    return FinalizeQuery<Entity>(groups, x => x.entity.id, search);
-        //}
     }
 }

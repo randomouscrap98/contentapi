@@ -165,5 +165,26 @@ namespace contentapi.test
 
             Assert.Equal(view, view2);
         }
+
+        [Fact]
+        public void TestWatchConvert()
+        {
+            var service = CreateService<WatchViewSource>();
+
+            //Just some standard content view
+            var view = new WatchView()
+            {
+                id = 99,
+                contentId = 5,
+                userId = 6,
+                lastNotificationId = 89,
+                createDate = DateTime.Now
+            };
+
+            var temp = service.FromView(view);
+            var view2 = service.ToView(temp);
+
+            Assert.Equal(view, view2);
+        }
     }
 }
