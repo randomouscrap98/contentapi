@@ -45,11 +45,12 @@ namespace contentapi.Services.Implementations
             services.AddTransient<FileViewService>();
             services.AddTransient<UserViewService>();
 
-            services.AddTransient<UserViewConverter>();
-            services.AddTransient<ContentViewConverter>();
-            services.AddTransient<CategoryViewConverter>();
-            services.AddTransient<FileViewConverter>();
-            services.AddTransient<CommentViewConverter>();
+            services.AddTransient<CategoryViewSource>();
+            services.AddTransient<CommentViewSource>();
+            services.AddTransient<ContentViewSource>();
+            services.AddTransient<FileViewSource>();
+            services.AddTransient<UserViewSource>();
+            services.AddTransient<WatchViewSource>();
 
             //We need automapper for our view services
             services.AddAutoMapper(GetType());

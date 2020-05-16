@@ -137,23 +137,23 @@ namespace contentapi.Services.Views.Implementations
             return last;
         }
 
-        /// <summary>
-        /// Modify a search converted from users so it works with real entities
-        /// </summary>
-        /// <param name="search"></param>
-        /// <returns></returns>
-        public EntitySearch ModifySearch(EntitySearch search)
-        {
-            //The easy modifications
-            search = LimitSearch(search);
+        ///// <summary>
+        ///// Modify a search converted from users so it works with real entities
+        ///// </summary>
+        ///// <param name="search"></param>
+        ///// <returns></returns>
+        //public EntitySearch ModifySearch(EntitySearch search)
+        //{
+        //    //The easy modifications
+        //    search = LimitSearch(search);
 
-            if(string.IsNullOrWhiteSpace(search.TypeLike))
-                search.TypeLike = "%";
+        //    if(string.IsNullOrWhiteSpace(search.TypeLike))
+        //        search.TypeLike = "%";
 
-            search.TypeLike = EntityType + (search.TypeLike ?? "%");
+        //    search.TypeLike = EntityType + (search.TypeLike ?? "%");
 
-            return search;
-        }
+        //    return search;
+        //}
 
         ///// <summary>
         ///// A shortcut for producing a list of views from a list of base entities
@@ -198,14 +198,14 @@ namespace contentapi.Services.Views.Implementations
             return FindValueAsync(EntityType, key, value, id);
         }
 
-        public IQueryable<EntityGroup> BasicReadQuery(Requester requester, EntitySearch search)
-        {
-            return BasicReadQuery(requester, search, x => x.id);
-        }
+        //public IQueryable<EntityGroup> BasicReadQuery(Requester requester, EntitySearch search)
+        //{
+        //    return BasicReadQuery(requester, search, x => x.id);
+        //}
 
-        public IQueryable<Entity> FinalizeQuery(IQueryable<EntityGroup> groups, EntitySearch search)
-        {
-            return FinalizeQuery<Entity>(groups, x => x.entity.id, search);
-        }
+        //public IQueryable<Entity> FinalizeQuery(IQueryable<EntityGroup> groups, EntitySearch search)
+        //{
+        //    return FinalizeQuery<Entity>(groups, x => x.entity.id, search);
+        //}
     }
 }

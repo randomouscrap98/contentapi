@@ -36,7 +36,7 @@ namespace contentapi.test
         [Fact]
         public void TestContentConvert()
         {
-            var service = CreateService<ContentViewConverter>();
+            var service = CreateService<ContentViewSource>();
 
             //Just some standard content view
             var view = new ContentView()
@@ -59,7 +59,7 @@ namespace contentapi.test
         [Fact]
         public void TestCategoryConvert()
         {
-            var service = CreateService<CategoryViewConverter>();
+            var service = CreateService<CategoryViewSource>();
 
             //Just some standard content view
             var view = new CategoryView()
@@ -81,7 +81,7 @@ namespace contentapi.test
         [Fact]
         public void TestFileConvert()
         {
-            var service = CreateService<FileViewConverter>();
+            var service = CreateService<FileViewSource>();
 
             //Just some standard content view
             var view = new FileView()
@@ -101,7 +101,7 @@ namespace contentapi.test
         [Fact]
         public void TestUserConvert()
         {
-            var service = CreateService<UserViewConverter>();
+            var service = CreateService<UserViewSource>();
 
             //Just some standard content view
             var view = new UserViewFull()
@@ -125,7 +125,7 @@ namespace contentapi.test
         [Fact]
         public void TestCommentConvertSIMPLE()
         {
-            var service = CreateService<CommentViewConverter>();
+            var service = CreateService<CommentViewSource>();
 
             //Do it the OTHER way since we're only testing the "simple" portion.
             var relation = new EntityRelation()
