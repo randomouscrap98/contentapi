@@ -4,6 +4,7 @@ using System.Linq;
 using System.Threading.Tasks;
 using contentapi.Services.Constants;
 using contentapi.Services.Extensions;
+using contentapi.Services.Views.Implementations;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.Logging;
 using Randomous.EntitySystem;
@@ -18,9 +19,9 @@ namespace contentapi.Services.Implementations
     {
         protected ILogger logger;
         protected IEntityProvider provider;
-        protected IActivityService activityService;
+        protected ActivityViewSource activityService;
 
-        public HistoryService(ILogger<HistoryService> logger, IEntityProvider provider, IActivityService activityService)
+        public HistoryService(ILogger<HistoryService> logger, IEntityProvider provider, ActivityViewSource activityService)
         {
             this.logger = logger;
             this.provider = provider;

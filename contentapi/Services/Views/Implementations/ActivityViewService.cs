@@ -12,31 +12,6 @@ using Randomous.EntitySystem;
 
 namespace contentapi.Services.Views.Implementations
 {
-    public class ActivitySearch : BaseSearch
-    {
-        public List<long> UserIds {get;set;} = new List<long>();
-        public List<long> ContentIds {get;set;} = new List<long>();
-
-        public string Type {get;set;}
-        public bool IncludeAnonymous {get;set;}
-        public TimeSpan recentCommentTime {get;set;}
-    }
-
-    public class ActivityControllerProfile : Profile
-    {
-        public ActivityControllerProfile() 
-        {
-            CreateMap<ActivitySearch, EntityRelationSearch>()
-                .ForMember(x => x.EntityIds1, o => o.MapFrom(s => s.UserIds))
-                .ForMember(x => x.EntityIds2, o => o.MapFrom(s => s.ContentIds.Select(x => -x).ToList()));
-            CreateMap<EntityRelation, ActivityView>()
-                .ForMember(x => x.date, o => o.MapFrom(s => s.createDate))
-                .ForMember(x => x.userId, o => o.MapFrom(s => s.entityId1))
-                .ForMember(x => x.contentId, o => o.MapFrom(s => -s.entityId2))
-                ; //Don't need to reverse this one
-        }
-    }
-
     public class ActivityViewService : BaseViewServices, IViewService<ActivityView, ActivitySearch>
     {
         protected IActivityService activityService;
@@ -52,50 +27,50 @@ namespace contentapi.Services.Views.Implementations
         public Task<ActivityView> DeleteAsync(long id, Requester requester) { throw new NotImplementedException(); }
         public Task<List<ActivityView>> GetRevisions(long id, Requester requester) { throw new NotImplementedException(); }
 
-        /// <summary>
-        /// Produce an activity for the given entity and action. Can include ONE piece of extra data.
-        /// </summary>
-        /// <param name="entity"></param>
-        /// <param name="action"></param>
-        /// <param name="extra"></param>
-        /// <returns></returns>
-        public EntityRelation MakeActivity(Entity entity, long user, string action, string extra = null)
-        {
-            var activity = new EntityRelation();
-            activity.entityId1 = user;
-            activity.entityId2 = -entity.id; //It has to be NEGATIVE because we don't want them linked to content
-            activity.createDate = DateTime.Now;
-            activity.type = Keys.ActivityKey + entity.type;
-            activity.value = action;
+        ///// <summary>
+        ///// Produce an activity for the given entity and action. Can include ONE piece of extra data.
+        ///// </summary>
+        ///// <param name="entity"></param>
+        ///// <param name="action"></param>
+        ///// <param name="extra"></param>
+        ///// <returns></returns>
+        //public EntityRelation MakeActivity(Entity entity, long user, string action, string extra = null)
+        //{
+        //    var activity = new EntityRelation();
+        //    activity.entityId1 = user;
+        //    activity.entityId2 = -entity.id; //It has to be NEGATIVE because we don't want them linked to content
+        //    activity.createDate = DateTime.Now;
+        //    activity.type = Keys.ActivityKey + entity.type;
+        //    activity.value = action;
 
-            if(!string.IsNullOrWhiteSpace(extra))
-                activity.value += extra;
+        //    if(!string.IsNullOrWhiteSpace(extra))
+        //        activity.value += extra;
 
-            return activity;
-        }
+        //    return activity;
+        //}
 
-        public ActivityView ConvertToView(EntityRelation relation)
-        {
-            var view = new ActivityView();
+        //public ActivityView ConvertToView(EntityRelation relation)
+        //{
+        //    var view = new ActivityView();
 
-            view.id = relation.id;
-            view.date = (DateTime)relation.createDateProper();
-            view.userId = relation.entityId1;
-            view.contentId = -relation.entityId2;
-            view.contentType = relation.type.Substring(Keys.ActivityKey.Length); // + Keys.ContentType.Length);
-            view.action = relation.value.Substring(1, 1); //Assume it's 1 character
-            view.extra = relation.value.Substring(Keys.CreateAction.Length);
+        //    view.id = relation.id;
+        //    view.date = (DateTime)relation.createDateProper();
+        //    view.userId = relation.entityId1;
+        //    view.contentId = -relation.entityId2;
+        //    view.contentType = relation.type.Substring(Keys.ActivityKey.Length); // + Keys.ContentType.Length);
+        //    view.action = relation.value.Substring(1, 1); //Assume it's 1 character
+        //    view.extra = relation.value.Substring(Keys.CreateAction.Length);
 
-            return view;
-        }
+        //    return view;
+        //}
 
-        protected EntityRelationSearch ModifySearch(EntityRelationSearch search)
-        {
-            //It is safe to just call any endpoint, because the count is limited to 1000.
-            search = LimitSearch(search);
-            search.TypeLike = $"{Keys.ActivityKey}";
-            return search;
-        }
+        //protected EntityRelationSearch ModifySearch(EntityRelationSearch search)
+        //{
+        //    //It is safe to just call any endpoint, because the count is limited to 1000.
+        //    search = LimitSearch(search);
+        //    search.TypeLike = $"{Keys.ActivityKey}";
+        //    return search;
+        //}
 
         public async Task<ActivityResultView> SearchResultAsync(ActivitySearch search, Requester requester)
         {

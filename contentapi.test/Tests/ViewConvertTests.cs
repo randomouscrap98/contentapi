@@ -142,5 +142,28 @@ namespace contentapi.test
 
             Assert.Equal(relation, relation2);
         }
+
+        [Fact]
+        public void TestActivityConvert()
+        {
+            var service = CreateService<ActivityViewSource>();
+
+            //Just some standard content view
+            var view = new ActivityView()
+            {
+                id = 99,
+                contentId = 5,
+                userId = 6,
+                contentType = "pansu",
+                date = DateTime.Now,
+                extra = "yeah yeah ok",
+                action = "u"
+            };
+
+            var temp = service.FromView(view);
+            var view2 = service.ToView(temp);
+
+            Assert.Equal(view, view2);
+        }
     }
 }

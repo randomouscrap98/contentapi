@@ -6,14 +6,6 @@ using Randomous.EntitySystem;
 
 namespace contentapi.Services.Views
 {
-    //public class EntityGroup
-    //{ 
-    //    public Entity entity;
-    //    public EntityRelation relation;
-    //    public EntityValue value;
-    //    public EntityRelation permission; 
-    //}
-
     //V and S don't have to be any particular kind of thing... there can be more exact derived interfaces
     //if you want, but sometimes a controller isn't specifically one or another thing.
     public interface IViewService<V,S>

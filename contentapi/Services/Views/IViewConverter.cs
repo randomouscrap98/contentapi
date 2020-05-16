@@ -12,6 +12,5 @@ namespace contentapi.Services.Views
     {
         V ToView(T basic);
         T FromView(V view);
-
     }
 }

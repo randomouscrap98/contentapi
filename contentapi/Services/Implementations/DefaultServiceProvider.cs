@@ -32,7 +32,7 @@ namespace contentapi.Services.Implementations
             services.AddTransient<ITokenService, TokenService>();
             services.AddTransient<IHashService, HashService>();
             services.AddTransient<IPermissionService, PermissionService>();
-            services.AddTransient<IActivityService, ActivityService>();
+            //services.AddTransient<IActivityService, ActivityService>();
             services.AddTransient<IHistoryService, HistoryService>();
             services.AddTransient(typeof(IDecayer<>), typeof(Decayer<>));
             services.AddTransient(typeof(ITempTokenService<>), typeof(TempTokenService<>));
@@ -45,6 +45,7 @@ namespace contentapi.Services.Implementations
             services.AddTransient<FileViewService>();
             services.AddTransient<UserViewService>();
 
+            services.AddTransient<ActivityViewSource>();
             services.AddTransient<CategoryViewSource>();
             services.AddTransient<CommentViewSource>();
             services.AddTransient<ContentViewSource>();
