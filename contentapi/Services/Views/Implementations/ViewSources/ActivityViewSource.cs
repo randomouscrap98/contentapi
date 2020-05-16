@@ -17,8 +17,6 @@ namespace contentapi.Services.Views.Implementations
         public List<long> ContentIds {get;set;} = new List<long>();
 
         public string Type {get;set;}
-        //public bool IncludeAnonymous {get;set;}
-        //public TimeSpan recentCommentTime {get;set;}
     }
 
     public class ActivityViewSourceProfile : Profile
@@ -67,9 +65,9 @@ namespace contentapi.Services.Views.Implementations
             view.date = (DateTime)relation.createDateProper();
             view.userId = relation.entityId1;
             view.contentId = -relation.entityId2;
-            view.contentType = relation.type.Substring(Keys.ActivityKey.Length); // + keys.ContentType.Length);
-            view.action = relation.value.Substring(1, 1); //Assume it's 1 character
-            view.extra = relation.value.Substring(Keys.CreateAction.Length);
+            view.contentType = relation.type.Substring(Keys.ActivityKey.Length); //Skip the actual activity type, it starts the type field
+            view.action = relation.value.Substring(0, 1); //Assume it's 1 character
+            view.extra = relation.value.Substring(1);
 
             return view;
         }
@@ -79,9 +77,10 @@ namespace contentapi.Services.Views.Implementations
             var activity = new EntityRelation();
             activity.entityId1 = view.userId;
             activity.entityId2 = -view.contentId; //It has to be NEGATIVE because we don't want them linked to content
-            activity.createDate = view.date; //DateTime.Now;
-            activity.type = Keys.ActivityKey + view.contentType; //entity.type;
+            activity.createDate = view.date;
+            activity.type = Keys.ActivityKey + view.contentType; 
             activity.value = view.action;
+            activity.id = view.id;
 
             if(!string.IsNullOrWhiteSpace(view.extra))
                 activity.value += view.extra;
