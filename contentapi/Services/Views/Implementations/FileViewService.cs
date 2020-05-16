@@ -8,7 +8,6 @@ using Randomous.EntitySystem;
 
 namespace contentapi.Services.Views.Implementations
 {
-    public class FileSearch : BaseContentSearch { }
 
     public class FileViewService : BasePermissionViewService<FileView, FileSearch>
     {

@@ -13,11 +13,6 @@ using Randomous.EntitySystem;
 
 namespace contentapi.Services.Views.Implementations
 {
-    public class CommentSearch : BaseParentSearch
-    {
-        public List<long> UserIds {get;set;}
-    }
-
     public class CommentListener
     {
         public long UserId {get;set;}
@@ -46,17 +41,6 @@ namespace contentapi.Services.Views.Implementations
 
     }
 
-    public class CommentControllerProfile : Profile
-    {
-        public CommentControllerProfile()
-        {
-            CreateMap<CommentSearch, EntityRelationSearch>()
-                .ForMember(x => x.EntityIds1, o => o.MapFrom(s => s.ParentIds))
-                .ForMember(x => x.EntityIds2, o => o.MapFrom(s => s.UserIds.Select(x => -x).ToList()));
-                //We actually CAN map parent ids directly
-        }
-    }
-
     public class CommentViewService : BaseViewServices, IViewService<CommentView, CommentSearch>
     {
         public static IDecayer<CommentListener> listenDecayer = null;
@@ -79,25 +63,10 @@ namespace contentapi.Services.Views.Implementations
             }
         }
 
-        protected async Task<List<EntityRelationPackage>> LinkAsync(IEnumerable<EntityRelation> relations)
-        {
-            //This finds historical data (if there is any, it's probably none every time)
-            var secondarySearch = new EntityRelationSearch();
-            secondarySearch.EntityIds1 = relations.Select(x => -x.id).ToList();
-
-            var historyRelations = await services.provider.GetEntityRelationsAsync(secondarySearch);
-
-            return relations.Select(x => new EntityRelationPackage()
-            {
-                Main = x,
-                Related = historyRelations.Where(y => y.entityId1 == -x.id).ToList()
-            }).ToList();
-        }
-
-        protected async Task<List<CommentView>> ViewResult(IEnumerable<EntityRelation> relations)
-        {
-            return (await LinkAsync(relations)).Select(x => converter.ToView(x)).ToList();
-        }
+        //protected async Task<List<CommentView>> ViewResult(IEnumerable<EntityRelation> relations)
+        //{
+        //    return (await LinkAsync(relations)).Select(x => converter.ToView(x)).ToList();
+        //}
 
         protected async Task<EntityPackage> BasicParentCheckAsync(long parentId)
         {
@@ -156,13 +125,6 @@ namespace contentapi.Services.Views.Implementations
             copy.createDate = DateTime.Now; //The history shows the edit date (confusingly, it's because this is the "update" record)
 
             return copy;
-        }
-
-        protected EntityRelationSearch ModifySearch(EntityRelationSearch search)
-        {
-            search = LimitSearch(search);
-            search.TypeLike = $"{Keys.CommentHack}%";
-            return search;
         }
 
         public async Task<List<CommentView>> SearchAsync(CommentSearch search, Requester requester)

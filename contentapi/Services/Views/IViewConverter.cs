@@ -4,7 +4,7 @@ using System.Linq;
 namespace contentapi.Services.Views
 {
     /// <summary>
-    /// Simple conversion between views and a type T
+    /// The general source of most view translation
     /// </summary>
     /// <typeparam name="V"></typeparam>
     /// <typeparam name="T"></typeparam>
@@ -12,5 +12,6 @@ namespace contentapi.Services.Views
     {
         V ToView(T basic);
         T FromView(V view);
+
     }
 }

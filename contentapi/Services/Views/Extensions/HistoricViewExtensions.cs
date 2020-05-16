@@ -14,7 +14,7 @@ namespace contentapi.Services.Views.Extensions
     /// </summary>
     public static class EditViewExtensions
     {
-        public static EntityPackage NewEntity(this BaseViewConverter converter, string name, string content = null)
+        public static EntityPackage NewEntity<V,T>(this IViewConverter<V,T> converter, string name, string content = null)
         {
             return new EntityPackage()
             {
@@ -26,7 +26,7 @@ namespace contentapi.Services.Views.Extensions
             };
         }
 
-        public static void ApplyToEditView(this BaseViewConverter converter, EntityPackage package, IEditView view)
+        public static void ApplyToEditView<V,T>(this IViewConverter<V,T> converter, EntityPackage package, IEditView view)
         {
             converter.ApplyToBaseView(package.Entity, view);
 
@@ -38,7 +38,7 @@ namespace contentapi.Services.Views.Extensions
             view.editUserId = long.Parse(creatorRelation.value);
         }
 
-        public static void ApplyFromEditView(this BaseViewConverter converter, IEditView view, EntityPackage package, string type)
+        public static void ApplyFromEditView<V,T>(this IViewConverter<V,T> converter, IEditView view, EntityPackage package, string type)
         {
             converter.ApplyFromBaseView(view, package.Entity);
 

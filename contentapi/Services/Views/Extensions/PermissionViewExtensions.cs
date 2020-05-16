@@ -57,7 +57,7 @@ namespace contentapi.Services.Views.Extensions
             return result;
         }
 
-        public static void ApplyToPermissionView(this BaseViewConverter converter, EntityPackage package, IPermissionView view)
+        public static void ApplyToPermissionView<V,T>(this IViewConverter<V,T> converter, EntityPackage package, IPermissionView view)
         {
             if(package.HasRelation(Keys.ParentRelation))
                 view.parentId = package.GetRelation(Keys.ParentRelation).entityId1;
@@ -65,7 +65,7 @@ namespace contentapi.Services.Views.Extensions
             view.permissions = ConvertRelationsToPerms(package.Relations);
         }
 
-        public static void ApplyFromPermissionView(this BaseViewConverter converter, IPermissionView view, EntityPackage package, string type)
+        public static void ApplyFromPermissionView<V,T>(this IViewConverter<V,T> converter, IPermissionView view, EntityPackage package, string type)
         {
             //There doesn't HAVE to be a parent
             if(view.parentId > 0)

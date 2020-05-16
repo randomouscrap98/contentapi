@@ -15,24 +15,7 @@ using Randomous.EntitySystem;
 
 namespace contentapi.Services.Views.Implementations
 {
-    //public class WatchSearch : BaseSearch
-    //{
-    //    public List<long> UserIds {get;set;} = new List<long>();
-    //    public List<long> ContentIds {get;set;} = new List<long>();
-    //}
 
-    public class WatchViewServiceProfile : Profile 
-    {
-        public WatchViewServiceProfile()
-        {
-            //Only map direct fields which are the same. We lose contentid and other things... perhaps
-            //they will be added later.
-            CreateMap<BaseSearch, EntityRelationSearch>();
-            //CreateMap<WatchSearch, EntityRelationSearch>()
-            //    .ForMember(x => x.EntityIds1, o => o.MapFrom(s => s.UserIds))
-            //    .ForMember(x => x.EntityIds2, o => o.MapFrom(s => s.ContentIds.Select(x => -x).ToList()));
-        }
-    }
 
     public class WatchViewService : BaseViewServices, IViewService<WatchView, BaseSearch> //WatchSearch>
     {

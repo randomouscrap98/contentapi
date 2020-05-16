@@ -11,7 +11,6 @@ using Randomous.EntitySystem.Extensions;
 
 namespace contentapi.Services.Views.Implementations
 {
-    public class CategorySearch : BaseContentSearch { }
 
     public class CategoryViewService : BasePermissionViewService<CategoryView, CategorySearch>
     {

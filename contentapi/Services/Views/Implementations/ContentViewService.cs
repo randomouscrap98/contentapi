@@ -12,22 +12,6 @@ using Randomous.EntitySystem.Extensions;
 
 namespace contentapi.Services.Views.Implementations
 {
-    public class ContentSearch : BaseContentSearch
-    {
-        public string Keyword {get;set;}
-        public string Type {get;set;}
-    }
-
-    public class ContentControllerProfile : Profile
-    {
-        public ContentControllerProfile()
-        {
-            CreateMap<ContentSearch, EntitySearch>()
-                .ForMember(x => x.TypeLike, o => o.MapFrom(s => s.Type));
-                //Can't do keyword, it's special search
-        }
-    }
-
     public class ContentViewService : BasePermissionViewService<ContentView, ContentSearch>
     {
         protected CategoryViewService categoryService;

@@ -77,41 +77,27 @@ namespace contentapi.Services.Views.Implementations
             };
         }
 
-        /// <summary>
-        /// Apply various limits to a search
-        /// </summary>
-        /// <param name="search"></param>
-        /// <typeparam name="S"></typeparam>
-        /// <returns></returns>
-        public virtual E LimitSearch<E>(E search) where E : EntitySearchBase
-        {
-            if(search.Limit < 0 || search.Limit > 1000)
-                search.Limit = 1000;
-            
-            return search;
-        }
+        //public IQueryable<EntityGroup> BasicReadQuery(Requester requester, EntitySearch search, Expression<Func<Entity, long>> selector, PermissionExtras extras = null)
+        //{
+        //    var query = provider.ApplyEntitySearch(Q<Entity>(), search, false)
+        //        .Join(Q<EntityRelation>(), selector, r => r.entityId2, 
+        //        (e,r) => new EntityGroup() { entity = e, permission = r});
 
-        public IQueryable<EntityGroup> BasicReadQuery(Requester requester, EntitySearch search, Expression<Func<Entity, long>> selector, PermissionExtras extras = null)
-        {
-            var query = provider.ApplyEntitySearch(Q<Entity>(), search, false)
-                .Join(Q<EntityRelation>(), selector, r => r.entityId2, 
-                (e,r) => new EntityGroup() { entity = e, permission = r});
+        //    query = services.permissions.PermissionWhere(query, requester, Keys.ReadAction, extras);
 
-            query = services.permissions.PermissionWhere(query, requester, Keys.ReadAction, extras);
+        //    return query;
+        //}
 
-            return query;
-        }
+        //public IQueryable<EntityGroup> BasicReadQuery(Requester requester, EntityRelationSearch search, Expression<Func<EntityRelation, long>> selector, PermissionExtras extras = null)
+        //{
+        //    var query = provider.ApplyEntityRelationSearch(Q<EntityRelation>(), search, false)
+        //        .Join(Q<EntityRelation>(), selector, r2 => r2.entityId2, 
+        //        (r, r2) => new EntityGroup() { relation = r, permission = r2});
 
-        public IQueryable<EntityGroup> BasicReadQuery(Requester requester, EntityRelationSearch search, Expression<Func<EntityRelation, long>> selector, PermissionExtras extras = null)
-        {
-            var query = provider.ApplyEntityRelationSearch(Q<EntityRelation>(), search, false)
-                .Join(Q<EntityRelation>(), selector, r2 => r2.entityId2, 
-                (r, r2) => new EntityGroup() { relation = r, permission = r2});
+        //    query = services.permissions.PermissionWhere(query, requester, Keys.ReadAction, extras);
 
-            query = services.permissions.PermissionWhere(query, requester, Keys.ReadAction, extras);
-
-            return query;
-        }
+        //    return query;
+        //}
 
         /// <summary>
         /// Given a completed IQueryable, apply the final touches to get a real list of entities
@@ -136,13 +122,13 @@ namespace contentapi.Services.Views.Implementations
             return join;
         }
 
-        public IQueryable<EntityGroup> WhereParents(IQueryable<EntityGroup> query, List<long> parentIds)
-        {
-            return query
-                .Join(Q<EntityRelation>(), e => e.entity.id, r => r.entityId2, 
-                        (e,r) => new EntityGroup() { entity = e.entity, relation = r, permission = e.permission })
-                .Where(x => x.relation.type == Keys.ParentRelation && parentIds.Contains(x.relation.entityId1));
-        }
+        //public IQueryable<EntityGroup> WhereParents(IQueryable<EntityGroup> query, List<long> parentIds)
+        //{
+        //    return query
+        //        .Join(Q<EntityRelation>(), e => e.entity.id, r => r.entityId2, 
+        //                (e,r) => new EntityGroup() { entity = e.entity, relation = r, permission = e.permission })
+        //        .Where(x => x.relation.type == Keys.ParentRelation && parentIds.Contains(x.relation.entityId1));
+        //}
 
         /// <summary>
         /// Find a value by key/value/id (added constraints)

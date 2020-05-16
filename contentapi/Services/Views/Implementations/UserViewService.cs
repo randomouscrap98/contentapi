@@ -12,11 +12,6 @@ using contentapi.Services.Constants;
 
 namespace contentapi.Services.Views.Implementations
 {
-    public class UserSearch : BaseSearch
-    {
-        public string Username {get;set;}
-    }
-
     public class UserControllerProfile : Profile
     {
         public UserControllerProfile()
