@@ -11,6 +11,7 @@ using AutoMapper;
 using contentapi.Services.Implementations;
 using contentapi.Services.Constants;
 using contentapi.Services.Views.Implementations;
+using System.Text.RegularExpressions;
 
 namespace contentapi.Controllers
 {
@@ -145,6 +146,14 @@ namespace contentapi.Controllers
             await emailService.SendEmailAsync(new EmailMessage(recipient, subject, body));
         }
 
+        protected bool ValidUsername(string username)
+        {
+            if(Regex.IsMatch(username, @"[\s,|]"))
+                return false;
+            
+            return true;
+        }
+
         //You 'Create' a new user by posting ONLY 'credentials'. This is different than most other types of things...
         //passwords and emails and such shouldn't be included in every view unlike regular models where every field is there.
         [HttpPost("register")]
@@ -159,6 +168,9 @@ namespace contentapi.Controllers
             if(string.IsNullOrWhiteSpace(user.password))
                 return BadRequest("Must provide a password!");
             
+            if(!ValidUsername(user.username))
+                return BadRequest("Bad username: no spaces!");
+
             var requester = GetRequesterNoFail();
 
             if(await service.FindByUsernameAsync(user.username, requester) != null || await service.FindByEmailAsync(user.email, requester) != null)
@@ -268,6 +280,9 @@ namespace contentapi.Controllers
             {
                 if(change.username == fullUser.username)
                     return BadRequest("That's your current username!");
+
+                if(!ValidUsername(change.username))
+                    return BadRequest("Bad username: no spaces!");
 
                 //If two users come in at the same time and do this without locking, the world will crumble.
                 if(await service.FindByUsernameAsync(change.username, requester) != null)
