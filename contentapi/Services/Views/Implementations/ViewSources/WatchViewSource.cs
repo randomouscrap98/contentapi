@@ -40,6 +40,7 @@ namespace contentapi.Services.Views.Implementations
         {
             var relation = new EntityRelation()
             {
+                type = EntityType,
                 value = view.lastNotificationId.ToString(),
                 entityId1 = view.userId,
                 entityId2 = -view.contentId

@@ -44,6 +44,7 @@ namespace contentapi.Services.Implementations
             services.AddTransient<ContentViewService>();
             services.AddTransient<FileViewService>();
             services.AddTransient<UserViewService>();
+            services.AddTransient<WatchViewService>();
 
             services.AddTransient<ActivityViewSource>();
             services.AddTransient<CategoryViewSource>();

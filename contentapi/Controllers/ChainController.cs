@@ -25,6 +25,7 @@ namespace contentapi.Controllers
         public CategoryViewService category {get;set;}
         public CommentViewService comment {get;set;}
         public ActivityViewService activity {get;set;}
+        public WatchViewService watch {get;set;}
     }
 
     public class ReadController : BaseSimpleController
@@ -206,6 +207,8 @@ namespace contentapi.Controllers
                     await ChainAsync(data, services.comment, requester, chainResults, r, f);
                 else if(data.endpoint == "activity")
                     await ChainAsync(data, services.activity, requester, chainResults, r, f);
+                else if(data.endpoint == "watch")
+                    await ChainAsync(data, services.watch, requester, chainResults, r, f);
             }
 
             return results.ToDictionary(x => x.Key, y => y.Value.Select(x => x.result).ToList());

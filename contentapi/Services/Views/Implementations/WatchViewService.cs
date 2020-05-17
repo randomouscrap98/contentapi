@@ -7,6 +7,7 @@ using contentapi.Services.Constants;
 using contentapi.Services.Extensions;
 using contentapi.Services.Views.Extensions;
 using contentapi.Views;
+using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.Logging;
 using Randomous.EntitySystem;
 
@@ -15,11 +16,14 @@ namespace contentapi.Services.Views.Implementations
     public class WatchViewService : BaseViewServices, IViewService<WatchView, WatchSearch>
     {
         protected WatchViewSource converter;
+        protected ContentViewService contentService;
 
-        public WatchViewService(ViewServicePack services, ILogger<BaseViewServices> logger, WatchViewSource converter) 
+        public WatchViewService(ViewServicePack services, ILogger<BaseViewServices> logger, WatchViewSource converter,
+            ContentViewService contentService) 
             : base(services, logger) 
         { 
             this.converter = converter;
+            this.contentService = contentService;
         }
 
         public async Task<WatchView> DeleteAsync(long id, Requester requester)
@@ -43,23 +47,71 @@ namespace contentapi.Services.Views.Implementations
             //You can only get your own watches.
         }
 
+        public async Task<WatchView> GetByContentId(long contentId, Requester requester)
+        {
+            var search = new WatchSearch();
+            search.ContentIds.Add(contentId);
+
+            var view = (await SearchAsync(search, requester)).OnlySingle();
+
+            if(view == null)
+                throw new NotFoundException($"No content found with id {contentId}");
+            
+            return view;
+        }
+
         public async Task<WatchView> WriteAsync(WatchView view, Requester requester)
         {
-            //Just don't even allow views with ids
             if(view.id != 0)
-                throw new BadRequestException("Can't edit watches! Only delete or insert!");
+            {
+                //Go get the existing view.
+                var existing = await this.FindByIdAsync(view.id, requester);
 
-            //must not watch things you can't be on. in the unlikely event that people are watching something
-            //that becomes readonly... oh well.
-            var content = await provider.FindByIdAsync(view.contentId);
+                //Can only do your own watches
+                if(existing == null || existing.userId != requester.userId)
+                    throw new NotFoundException($"No watch with id {view.id}"); //More things need to be "not found"
+                
+                //When updating, we ONLY (ONLY) allow the last id to be updated.
+                existing.lastNotificationId = view.lastNotificationId;
+                view = existing;
+            }
+            else
+            {
+                //Always set the view's create date to now and the user to us
+                view.createDate = DateTime.UtcNow;
+                view.userId = requester.userId;
 
-            if(content == null || !services.permissions.CanUser(requester, Keys.ReadAction, content))
-                throw new BadRequestException($"There is no content with id {view.contentId}");
+                //must not watch things you can't be on. in the unlikely event that people are watching something
+                //that becomes readonly... oh well.
 
-            //Now jsut write the releation
-            await provider.WriteAsync(converter.FromView(view));
+                //Can only watch content right now. Perhaps these checks should go in the controller? 
+                //But why the arbitrary cut off? Some can do this, some can't, yadda yadda? Yes actually...
+                //we need a requester for writing/deleting etc but it doesn't necessarily have to check.
+                //Perhaps the checks should go so far out... yes, that can be next refactor
+                //TODO: move permission checks out somewhere else
+                var existingContent = await contentService.FindByIdAsync(view.contentId, requester);
 
-            return view;
+                if (existingContent == null)
+                    throw new BadRequestException($"There is no content with id {view.contentId}");
+
+                //One last check: are we already watching thhis?
+                var existingSearch = new WatchSearch();
+                existingSearch.ContentIds.Add(view.contentId);
+                existingSearch.UserIds.Add(view.userId);
+
+                var existing = (await SearchAsync(existingSearch, requester)).OnlySingle();
+
+                if (existing != null)
+                    throw new BadRequestException($"Already watching {view.contentId}");
+
+                //Kind of a hack: we know activity and all things must come from relations. So since we 
+                //JUST watched it, the id will be... well, the last id
+                view.lastNotificationId = await Q<EntityRelation>().MaxAsync(x => x.id);
+            }
+
+            var rel = converter.FromView(view);
+            await provider.WriteAsync(rel);
+            return converter.ToView(rel);
         }
     }
 }

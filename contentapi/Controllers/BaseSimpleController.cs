@@ -64,6 +64,10 @@ namespace contentapi.Controllers
             {
                 return BadRequest(ex.Message);
             }
+            catch(NotFoundException ex)
+            {
+                return NotFound(ex.Message);
+            }
             catch(TimeoutException)
             {
                 Response.Headers.Add("SBS-Warning", "Non-critical timeout");
