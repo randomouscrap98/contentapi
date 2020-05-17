@@ -94,11 +94,11 @@ namespace contentapi.Services.Implementations
             //This requires intimate knowledge of how watches work. it's increasing the complexity/dependency,
             //but at least... I don't know, it's way more performant. Come up with some system perhaps after
             //you see what you need in other instances.
-            var watches = await watchSource.GroupAsync<EntityRelation>(
+            var watches = await watchSource.GroupAsync<EntityRelation, long>(
                 watchSource.SearchIds(new WatchSearch() { ContentIds = baseResult.Select(x => x.id).ToList() }),
                 x => x.entityId2);
 
-            var comments = await commentSource.GroupAsync<EntityRelation>(
+            var comments = await commentSource.GroupAsync<EntityRelation, long>(
                 commentSource.SearchIds(new CommentSearch() { ParentIds = baseResult.Select(x => x.id).ToList() }),
                 x => x.entityId1);
             

@@ -114,5 +114,13 @@ namespace contentapi.Services.Implementations
         {
             return LinkAsync(GetByIds<EntityRelation>(ids));
         }
+
+        //public async Task<List<CommentAggregate>> RetrieveAggregateAsync(IQueryable<long> ids)
+        //{
+        //    var commentGroups = 
+        //        from c in GetByIds<EntityRelation>(ids)
+        //        group c by c.entityId1, c.entityId2 into g;
+
+        //}//CommentSearch search, Func<IQueryable)
     }
 }

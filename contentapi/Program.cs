@@ -1,5 +1,7 @@
 using Microsoft.AspNetCore.Hosting;
 using Microsoft.Extensions.Hosting;
+using Serilog;
+using Serilog.Events;
 
 namespace contentapi
 {
@@ -15,6 +17,10 @@ namespace contentapi
                 .ConfigureWebHostDefaults(webBuilder =>
                 {
                     webBuilder.UseStartup<Startup>();
-                });
+                })
+                .UseSerilog((ctx,builder) => builder
+                    .ReadFrom.Configuration(ctx.Configuration)
+                    .MinimumLevel.Override("Microsoft.AspNetCore", LogEventLevel.Warning)
+                );
     }
 }

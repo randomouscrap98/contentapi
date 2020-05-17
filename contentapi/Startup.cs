@@ -17,6 +17,7 @@ using Microsoft.IdentityModel.Tokens;
 using Microsoft.OpenApi.Models;
 using Randomous.EntitySystem;
 using Randomous.EntitySystem.Implementations;
+using Serilog;
 
 namespace contentapi
 {
@@ -159,6 +160,7 @@ namespace contentapi
             else
                 app.UseExceptionHandler("/error");
             
+            app.UseSerilogRequestLogging();
 
             //Wide open for now, this might need to be changed later.
             app.UseCors(x => x.AllowAnyOrigin().AllowAnyMethod().AllowAnyHeader());

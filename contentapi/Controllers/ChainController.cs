@@ -164,7 +164,7 @@ namespace contentapi.Controllers
         [HttpGet("chain")]
         public async Task<ActionResult<Dictionary<string, List<ExpandoObject>>>> ChainAsync([FromQuery]List<string> requests, [FromQuery]Dictionary<string, List<string>> fields)
         {
-            logger.LogInformation($"ChainAsync called for {requests.Count} requests");
+            //logger.LogInformation($"ChainAsync called for {requests.Count} requests");
 
             if(requests == null)
                 requests = new List<string>();

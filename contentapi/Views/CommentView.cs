@@ -1,4 +1,5 @@
 using System;
+using System.Collections.Generic;
 using System.ComponentModel.DataAnnotations;
 
 namespace contentapi.Views
@@ -19,5 +20,14 @@ namespace contentapi.Views
         public string content {get;set;}
 
         public bool deleted {get;set;}
+    }
+
+    public class CommentAggregate : IIdView
+    {
+        public long id {get;set;} //This is PARENT id
+        public int count {get;set;}
+        public DateTime firstPost {get;set;}
+        public DateTime lastPost {get;set;}
+        public List<long> userIds {get;set;}
     }
 }

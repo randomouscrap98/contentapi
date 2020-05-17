@@ -78,12 +78,12 @@ namespace contentapi.Services.Implementations
             return provider.ApplyFinal(husks, search).Select(x => x.id);
         }
 
-        public async Task<Dictionary<long, SimpleAggregateData>> GroupAsync<R>(IQueryable<long> ids, Expression<Func<R,long>> keySelector) where R : EntityBase
+        public async Task<Dictionary<T, SimpleAggregateData>> GroupAsync<R,T>(IQueryable<long> ids, Expression<Func<R,T>> keySelector) where R : EntityBase
         {
             var pureList = await provider.GetListAsync(
                 ids.Join(Q<R>(), x => x, r => r.id, (x, r) => r).GroupBy(keySelector).Select(g => new 
                 { 
-                    id = g.Key, 
+                    key = g.Key, 
                     aggregate = new SimpleAggregateData()
                     {
                         count = g.Count(),
@@ -93,7 +93,7 @@ namespace contentapi.Services.Implementations
                 })
             );
             
-            return pureList.ToDictionary(x => x.id, y => y.aggregate);
+            return pureList.ToDictionary(x => x.key, y => y.aggregate);
         }
 
         //public async Task<Dictionary<long, T>> GroupAsync<R,T>(IQueryable<long> ids, Expression<Func<R,long>> keySelector, Func<IGrouping<long, R>,T> select) where R : EntityBase

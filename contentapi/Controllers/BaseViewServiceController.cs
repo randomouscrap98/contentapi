@@ -28,7 +28,7 @@ namespace contentapi.Controllers
         [HttpGet]
         public async Task<ActionResult<List<V>>> GetAsync([FromQuery]S search)
         {
-            logger.LogInformation($"GetAsync called, {typeof(V)}");
+            //logger.LogInformation($"GetAsync called, {typeof(V)}");
             await SetupAsync();
             return await ThrowToAction(() => service.SearchAsync(search, GetRequesterNoFail()));
         }
@@ -37,7 +37,7 @@ namespace contentapi.Controllers
         [Authorize]
         public async Task<ActionResult<V>> PostAsync([FromBody]V view)
         {
-            logger.LogInformation($"PostAsync called, {typeof(V)}");
+            //logger.LogInformation($"PostAsync called, {typeof(V)}");
             view.id = 0;
             await SetupAsync();
             return await ThrowToAction(() => service.WriteAsync(view, GetRequesterNoFail()));
@@ -47,7 +47,7 @@ namespace contentapi.Controllers
         [Authorize]
         public async Task<ActionResult<V>> PutAsync([FromRoute] long id, [FromBody]V view)
         {
-            logger.LogInformation($"PutAsync called, {typeof(V)}({view.id})");
+            //logger.LogInformation($"PutAsync called, {typeof(V)}({view.id})");
             view.id = id;
             await SetupAsync();
             return await ThrowToAction(() => service.WriteAsync(view, GetRequesterNoFail()));
@@ -57,7 +57,7 @@ namespace contentapi.Controllers
         [Authorize]
         public async Task<ActionResult<V>> DeleteAsync([FromRoute]long id)
         {
-            logger.LogInformation($"DeleteAsync called, {typeof(V)}({id})");
+            //logger.LogInformation($"DeleteAsync called, {typeof(V)}({id})");
             await SetupAsync();
             return await ThrowToAction(() => service.DeleteAsync(id, GetRequesterNoFail()));
         }
