@@ -22,12 +22,12 @@ namespace contentapi.Views
         public bool deleted {get;set;}
     }
 
-    public class CommentAggregate : IIdView
+    public class CommentAggregateView : IIdView
     {
         public long id {get;set;} //This is PARENT id
         public int count {get;set;}
-        public DateTime firstPost {get;set;}
-        public DateTime lastPost {get;set;}
+        public DateTime? firstPost {get;set;}
+        public DateTime? lastPost {get;set;}
         public List<long> userIds {get;set;}
     }
 }

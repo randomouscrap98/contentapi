@@ -18,7 +18,7 @@ namespace contentapi.Controllers
         }
 
         [HttpGet]
-        public Task<ActionResult<List<ActivityView>>> GetActivityAsync([FromQuery]CombinedActivitySearch search)
+        public Task<ActionResult<List<ActivityView>>> GetActivityAsync([FromQuery]ActivitySearch search)
         {
             return ThrowToAction(() => service.SearchAsync(search, GetRequesterNoFail()));
         }

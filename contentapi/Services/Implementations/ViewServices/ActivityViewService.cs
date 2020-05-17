@@ -8,13 +8,11 @@ using Microsoft.Extensions.Logging;
 
 namespace contentapi.Services.Implementations
 {
-    public class CombinedActivitySearch : ActivitySearch
-    {
-        public bool IncludeAnonymous {get;set;}
-        //public TimeSpan RecentCommentTime {get;set;}
-    }
+    //public class CombinedActivitySearch : ActivitySearch
+    //{
+    //}
 
-    public class ActivityViewService : BaseViewServices<ActivityView, CombinedActivitySearch>, IViewReadService<ActivityView, CombinedActivitySearch>
+    public class ActivityViewService : BaseViewServices<ActivityView, ActivitySearch>, IViewReadService<ActivityView, ActivitySearch>
     {
         protected ActivityViewSource activity;
         protected CommentViewSource comments;
@@ -27,7 +25,7 @@ namespace contentapi.Services.Implementations
             this.comments = comments;
         }
 
-        public override async Task<List<ActivityView>> PreparedSearchAsync(CombinedActivitySearch search, Requester requester)
+        public override async Task<List<ActivityView>> PreparedSearchAsync(ActivitySearch search, Requester requester)
         {
             var result = await activity.SimpleSearchAsync(search, (q) =>
                 services.permissions.PermissionWhere(

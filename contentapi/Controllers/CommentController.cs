@@ -1,4 +1,5 @@
 using System.Collections.Generic;
+using System.Linq;
 using System.Threading;
 using System.Threading.Tasks;
 using contentapi.Services.Implementations;
@@ -23,6 +24,13 @@ namespace contentapi.Controllers
         public Task<ActionResult<List<CommentView>>> GetAsync([FromQuery]CommentSearch search)
         {
             return ThrowToAction(() => service.SearchAsync(search, GetRequesterNoFail()));
+        }
+
+        [HttpGet("aggregate")]
+        public Task<ActionResult<List<CommentAggregateView>>> GetAggregateAsync([FromQuery]CommentSearch search)
+        {
+            //return ThrowToAction(async () => (await service.SearchAggregateAsync(search, GetRequesterNoFail())).Values.ToList());
+            return ThrowToAction(() => service.SearchAggregateAsync(search, GetRequesterNoFail()));
         }
 
         [HttpGet("listen/{parentId}/listeners")]

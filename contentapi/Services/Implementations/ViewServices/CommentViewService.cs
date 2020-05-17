@@ -129,6 +129,29 @@ namespace contentapi.Services.Implementations
                 services.permissions.PermissionWhere(q, requester, Keys.ReadAction));
         }
 
+        public class TempGroup
+        {
+            public long userId {get;set;}
+            public long contentId {get;set;}
+        }
+
+        public async Task<List<CommentAggregateView>> SearchAggregateAsync(CommentSearch search, Requester requester)
+        //public async Task<Dictionary<TempGroup, SimpleAggregateData>> SearchAggregateAsync(CommentSearch search, Requester requester)
+        {
+            var ids = converter.SearchIds(search, q => services.permissions.PermissionWhere(q, requester, Keys.ReadAction));
+
+            var groups = await converter.GroupAsync<EntityRelation,TempGroup>(ids, x => new TempGroup(){ userId = -x.entityId2, contentId = x.entityId1});
+
+            return groups.ToLookup(x => x.Key.contentId).Select(x => new CommentAggregateView()
+            {
+                id = x.Key,
+                count = x.Sum(y => y.Value.count),
+                lastPost = x.Max(y => y.Value.lastDate),
+                firstPost = x.Min(y => y.Value.firstDate),
+                userIds = x.Select(y => y.Key.userId).Distinct().ToList()
+            }).ToList();
+        }
+
         public async Task<List<CommentListener>> GetListenersAsync(long parentId, List<long> lastListeners, Requester requester, CancellationToken token)
         {
             //Need to see if user has perms to read this.
@@ -252,13 +275,6 @@ namespace contentapi.Services.Implementations
             var relationPackage = (await converter.LinkAsync(new[] { existing })).OnlySingle();
             return converter.ToView(relationPackage);
         }
-
-        //public async Task<CommentView> FindByIdAsync(long id, Requester requester)
-        //{
-        //    var search = new CommentSearch();
-        //    search.Ids.Add(id);
-        //    return (await SearchAsync(search, requester)).OnlySingle();
-        //}
 
         //Don't feel like implementing this right now.
         public Task<List<CommentView>> GetRevisions(long id, Requester requester)

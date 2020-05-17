@@ -71,10 +71,20 @@ namespace contentapi.Controllers
             var properties = type.GetProperties();
             var property = properties.FirstOrDefault(x => x.Name.ToLower() == field.ToLower());
 
-            if (property == null || property.PropertyType != typeof(long))
+            Func<IIdView, IEnumerable<long>> selector = null;
+
+            if (property != null)
+            {
+                if(property.PropertyType == typeof(long))
+                    selector = x => new [] { (long)property.GetValue(x) };
+                else if(property.PropertyType == typeof(List<long>)) //maybe need to get better about typing
+                    selector = x => (List<long>)property.GetValue(x);
+            } 
+
+            if(selector == null)
                 throw new InvalidOperationException($"Bad chain: {chain}");
 
-            return existingChains[realIndex].Select(x => (long)property.GetValue(x)).ToList();
+            return existingChains[realIndex].SelectMany(selector).ToList();
         }
 
         public class ChainData
@@ -107,10 +117,30 @@ namespace contentapi.Controllers
             return result;
         }
 
-        protected async Task ChainAsync<S,V>(
+        protected Task ChainAsync<S,V>(
             ChainData data, 
             IViewReadService<V,S> service, 
             Requester requester, 
+            List<List<IIdView>> existingChains, 
+            List<ChainResult> results,
+            List<string> fields
+        ) where V : IIdView where S : IConstrainedSearcher
+        {
+            return ChainAsync<S,V>(data, (s) => service.SearchAsync(s, requester), existingChains, results, fields);
+        }
+
+        //Eventually move this to something else
+        public IEnumerable<PropertyInfo> GetProperties(Type type)
+        {
+            if (!type.IsInterface)
+                return type.GetProperties();
+
+            return (new Type[] { type }).Concat(type.GetInterfaces()).SelectMany(i => i.GetProperties());
+        }
+
+        protected async Task ChainAsync<S,V>(
+            ChainData data, 
+            Func<S, Task<List<V>>> search, 
             List<List<IIdView>> existingChains, 
             List<ChainResult> results,
             List<string> fields
@@ -123,15 +153,17 @@ namespace contentapi.Controllers
             if(type == typeof(UserViewFull))
                 type = typeof(IUserViewBasic);
 
+            var baseProperties = GetProperties(type);
+
             //Before doing ANYTHING, IMMEDIATELY convert fields to actual properties. It's easy if they pass us null: they want everything.
             if(fields == null)
             {
-                properties = type.GetProperties().ToDictionary(x => x.Name, x => x);
+                properties = baseProperties.ToDictionary(x => x.Name, x => x);
             }
             else
             {
                 var lowerFields = fields.Select(x => x.ToLower());
-                properties = type.GetProperties().Where(x => lowerFields.Contains(x.Name.ToLower())).ToDictionary(x => x.Name, x => x);
+                properties = baseProperties.Where(x => lowerFields.Contains(x.Name.ToLower())).ToDictionary(x => x.Name, x => x);
 
                 if(properties.Count != fields.Count)
                     throw new InvalidOperationException($"Unknown fields in list: {string.Join(",", fields)}");
@@ -143,7 +175,7 @@ namespace contentapi.Controllers
             foreach(var c in data.chains)
                 searchobject.Ids.AddRange(ParseChain(c, existingChains));
 
-            var myResults = await service.SearchAsync(searchobject, requester);
+            var myResults = await search(searchobject); //service.SearchAsync(searchobject, requester);
             existingChains.Add(myResults.Cast<IIdView>().ToList());
 
             //Only add ones that aren't in the list
@@ -203,6 +235,8 @@ namespace contentapi.Controllers
                     await ChainAsync(data, services.category, requester, chainResults, r, f);
                 else if(data.endpoint == "comment")
                     await ChainAsync(data, services.comment, requester, chainResults, r, f);
+                else if(data.endpoint == "commentaggregate")
+                    await ChainAsync<CommentSearch, CommentAggregateView>(data, (s) => services.comment.SearchAggregateAsync(s, requester), chainResults, r, f);
                 else if(data.endpoint == "activity")
                     await ChainAsync(data, services.activity, requester, chainResults, r, f);
                 else if(data.endpoint == "watch")
