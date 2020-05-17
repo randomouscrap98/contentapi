@@ -1,13 +1,11 @@
 using System;
 using System.Collections.Generic;
 using System.Linq;
-using System.Linq.Expressions;
 using System.Threading.Tasks;
 using contentapi.Services.Extensions;
 using contentapi.Views;
-using Randomous.EntitySystem;
 
-namespace contentapi.Services.Views.Extensions
+namespace contentapi.Services.Extensions
 {
     public static class IViewSourceExtensions
     {

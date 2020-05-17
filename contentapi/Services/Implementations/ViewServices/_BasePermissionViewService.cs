@@ -11,7 +11,7 @@ using Microsoft.Extensions.Logging;
 using Randomous.EntitySystem;
 using Randomous.EntitySystem.Extensions;
 
-namespace contentapi.Services.Views.Implementations
+namespace contentapi.Services.Implementations
 {
     public abstract class BasePermissionViewService<V,S> : BaseEntityViewService<V,S> where V : StandardView where S : BaseSearch, new()
     {

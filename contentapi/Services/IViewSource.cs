@@ -6,7 +6,7 @@ using System.Threading.Tasks;
 using contentapi.Views;
 using Randomous.EntitySystem;
 
-namespace contentapi.Services.Views
+namespace contentapi.Services
 {
     public interface IViewSource<V,T,E,S> : IViewConverter<V, T> where E : EntityGroup where S : IIdSearcher where V : IIdView
     {

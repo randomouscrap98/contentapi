@@ -1,6 +1,5 @@
 using contentapi.Services.Constants;
 using contentapi.Services.Implementations;
-using contentapi.Services.Views.Implementations;
 using Randomous.EntitySystem;
 using Xunit;
 

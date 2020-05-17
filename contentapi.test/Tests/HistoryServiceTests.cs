@@ -4,7 +4,6 @@ using System.Linq;
 using contentapi.Services;
 using contentapi.Services.Extensions;
 using contentapi.Services.Implementations;
-using contentapi.Services.Views.Implementations;
 using Microsoft.Extensions.Logging;
 using Randomous.EntitySystem;
 using Randomous.EntitySystem.Extensions;

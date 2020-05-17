@@ -3,8 +3,6 @@ using System.Collections.Generic;
 using System.Dynamic;
 using System.Threading.Tasks;
 using AutoMapper;
-using contentapi.Services;
-using contentapi.Services.Implementations;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.Extensions.Logging;
 using Randomous.EntitySystem;

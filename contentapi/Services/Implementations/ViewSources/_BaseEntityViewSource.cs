@@ -6,7 +6,7 @@ using Microsoft.Extensions.Logging;
 using Randomous.EntitySystem;
 using Randomous.EntitySystem.Extensions;
 
-namespace contentapi.Services.Views.Implementations
+namespace contentapi.Services.Implementations
 {
     public abstract class BaseEntityViewSource : BaseViewSource
     {

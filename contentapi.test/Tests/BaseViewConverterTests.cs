@@ -1,7 +1,7 @@
 using System.Collections.Generic;
 using System.Linq;
-using contentapi.Services.Views.Extensions;
-using contentapi.Services.Views.Implementations;
+using contentapi.Services.Extensions;
+using contentapi.Services.Implementations;
 using Xunit;
 
 namespace contentapi.test

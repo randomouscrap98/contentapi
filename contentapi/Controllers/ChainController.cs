@@ -8,12 +8,10 @@ using System.Text.RegularExpressions;
 using System.Threading.Tasks;
 using AutoMapper;
 using contentapi.Services;
-using contentapi.Services.Views;
-using contentapi.Services.Views.Implementations;
+using contentapi.Services.Implementations;
 using contentapi.Views;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.Extensions.Logging;
-using Randomous.EntitySystem;
 
 namespace contentapi.Controllers
 {

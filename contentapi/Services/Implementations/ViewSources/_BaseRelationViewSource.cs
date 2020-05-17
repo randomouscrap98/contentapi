@@ -2,13 +2,11 @@ using System;
 using System.Collections.Generic;
 using System.Linq;
 using System.Linq.Expressions;
-using System.Threading.Tasks;
 using AutoMapper;
 using Microsoft.Extensions.Logging;
 using Randomous.EntitySystem;
-using Randomous.EntitySystem.Extensions;
 
-namespace contentapi.Services.Views.Implementations
+namespace contentapi.Services.Implementations
 {
     public abstract class BaseRelationViewSource : BaseViewSource
     {

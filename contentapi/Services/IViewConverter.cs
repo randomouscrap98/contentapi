@@ -1,7 +1,4 @@
-using System.Collections.Generic;
-using System.Linq;
-
-namespace contentapi.Services.Views
+namespace contentapi.Services
 {
     /// <summary>
     /// The general source of most view translation

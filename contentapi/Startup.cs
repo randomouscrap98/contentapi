@@ -6,7 +6,6 @@ using contentapi.Controllers;
 using contentapi.Middleware;
 using contentapi.Services;
 using contentapi.Services.Implementations;
-using contentapi.Services.Views.Implementations;
 using Microsoft.AspNetCore.Authentication.JwtBearer;
 using Microsoft.AspNetCore.Builder;
 using Microsoft.AspNetCore.Hosting;

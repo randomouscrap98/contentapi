@@ -1,17 +1,13 @@
 using contentapi.Views;
-using System.Linq;
-using System;
 using System.Threading.Tasks;
 using System.Collections.Generic;
 using Microsoft.Extensions.Logging;
-using Randomous.EntitySystem;
 using AutoMapper;
 using contentapi.Services.Extensions;
 using Randomous.EntitySystem.Extensions;
 using contentapi.Services.Constants;
-using contentapi.Services.Views.Extensions;
 
-namespace contentapi.Services.Views.Implementations
+namespace contentapi.Services.Implementations
 {
     public class UserControllerProfile : Profile
     {

@@ -1,17 +1,13 @@
-using System;
 using System.Collections.Generic;
 using System.Linq;
-using System.Linq.Expressions;
 using System.Threading.Tasks;
 using AutoMapper;
-using contentapi.Services.Constants;
 using contentapi.Services.Extensions;
-using contentapi.Views;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.Logging;
 using Randomous.EntitySystem;
 
-namespace contentapi.Services.Views.Implementations
+namespace contentapi.Services.Implementations
 {
     public class ViewServicePack 
     {
@@ -43,40 +39,6 @@ namespace contentapi.Services.Views.Implementations
             this.services = services;
             this.logger = logger;
         }
-
-        //protected EntityPackage NewEntity(string name, string content = null)
-        //{
-        //    return new EntityPackage()
-        //    {
-        //        Entity = new Entity() { 
-        //            name = name, 
-        //            content = content ,
-        //            createDate = DateTime.UtcNow
-        //        }
-        //    };
-        //}
-
-        //protected EntityValue NewValue(string key, string value)
-        //{
-        //    return new EntityValue() 
-        //    {
-        //        key = key, 
-        //        value = value, 
-        //        createDate = null 
-        //    };
-        //}
-
-        //protected EntityRelation NewRelation(long parent, string type, string value = null)
-        //{
-        //    return new EntityRelation()
-        //    {
-        //        entityId1 = parent,
-        //        type = type,
-        //        value = value,
-        //        createDate = null
-        //    };
-        //}
-
 
         public Task<List<V>> SearchAsync(S search, Requester requester)
         {

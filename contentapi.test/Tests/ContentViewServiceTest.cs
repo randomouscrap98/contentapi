@@ -3,7 +3,6 @@ using System.Collections.Generic;
 using System.Threading.Tasks;
 using contentapi.Services;
 using contentapi.Services.Implementations;
-using contentapi.Services.Views.Implementations;
 using contentapi.Views;
 using Xunit;
 

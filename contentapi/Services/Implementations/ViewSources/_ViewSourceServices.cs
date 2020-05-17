@@ -6,7 +6,7 @@ using contentapi.Views;
 using Randomous.EntitySystem;
 using Randomous.EntitySystem.Extensions;
 
-namespace contentapi.Services.Views.Implementations
+namespace contentapi.Services.Implementations
 {
     /// <summary>
     /// A bunch of independent functions for general modification of various types of views.

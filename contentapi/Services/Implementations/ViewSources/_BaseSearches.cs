@@ -1,9 +1,8 @@
 using System.Collections.Generic;
-using System.Linq;
 using AutoMapper;
 using Randomous.EntitySystem;
 
-namespace contentapi.Services.Views.Implementations
+namespace contentapi.Services.Implementations
 {
     //Literally just a stand-in / abstraction away from the entity system. I don't know
     public class BaseSearch : EntitySearchBase, IConstrainedSearcher { }

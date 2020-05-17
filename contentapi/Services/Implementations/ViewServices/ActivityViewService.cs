@@ -1,17 +1,12 @@
-using System;
 using System.Collections.Generic;
 using System.Linq;
 using System.Threading.Tasks;
-using AutoMapper;
-using contentapi.Services;
 using contentapi.Services.Constants;
 using contentapi.Services.Extensions;
-using contentapi.Services.Views.Extensions;
 using contentapi.Views;
 using Microsoft.Extensions.Logging;
-using Randomous.EntitySystem;
 
-namespace contentapi.Services.Views.Implementations
+namespace contentapi.Services.Implementations
 {
     public class CombinedActivitySearch : ActivitySearch
     {

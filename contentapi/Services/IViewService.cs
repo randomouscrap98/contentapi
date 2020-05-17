@@ -1,10 +1,8 @@
 using System.Collections.Generic;
-using System.Linq;
 using System.Threading.Tasks;
 using contentapi.Views;
-using Randomous.EntitySystem;
 
-namespace contentapi.Services.Views
+namespace contentapi.Services
 {
     //V and S don't have to be any particular kind of thing... there can be more exact derived interfaces
     //if you want, but sometimes a controller isn't specifically one or another thing.
