@@ -15,6 +15,11 @@ namespace contentapi.Services.Views.Implementations
         
         public abstract string EntityType {get;}
 
+        //public virtual Task<IQueryable<EntityPackage>> LinkAsync(IQueryable<long> ids)
+        //{
+        //    return GetByIds<ENtity
+        //}
+
         public virtual Task<List<EntityPackage>> RetrieveAsync(IQueryable<long> ids)
         {
             return provider.LinkAsync(GetByIds<Entity>(ids));

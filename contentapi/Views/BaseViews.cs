@@ -35,8 +35,20 @@ namespace contentapi.Views
                         continue;
                 }
 
-                if(!property.GetValue(obj).Equals(property.GetValue(this)))
-                    return false;
+                var thisVal = property.GetValue(this);
+                var otherVal = property.GetValue(obj);
+
+                //Can't do an equals on null. Must be careful!
+                if(thisVal == null)
+                {
+                    if(otherVal != null)
+                        return false;
+                }
+                else
+                {
+                    if(!thisVal.Equals(otherVal))
+                        return false;
+                }
             }
 
             return true;

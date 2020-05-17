@@ -9,7 +9,7 @@ namespace contentapi.Services.Views.Extensions
 {
     public static class IViewServiceExtensions
     {
-        public static async Task<V> FindByIdAsync<V,T,E,S>(this IViewService<V,S> service, long id, Requester requester)
+        public static async Task<V> FindByIdAsync<V,S>(this IViewReadService<V,S> service, long id, Requester requester)
             where V : IIdView where S : IIdSearcher, new()
         {
             var search = new S();

@@ -255,12 +255,12 @@ namespace contentapi.Services.Views.Implementations
             return converter.ToView(relationPackage);
         }
 
-        public async Task<CommentView> FindByIdAsync(long id, Requester requester)
-        {
-            var search = new CommentSearch();
-            search.Ids.Add(id);
-            return (await SearchAsync(search, requester)).OnlySingle();
-        }
+        //public async Task<CommentView> FindByIdAsync(long id, Requester requester)
+        //{
+        //    var search = new CommentSearch();
+        //    search.Ids.Add(id);
+        //    return (await SearchAsync(search, requester)).OnlySingle();
+        //}
 
         //Don't feel like implementing this right now.
         public Task<List<CommentView>> GetRevisions(long id, Requester requester)

@@ -4,6 +4,7 @@ using System.Linq;
 using System.Threading.Tasks;
 using AutoMapper;
 using contentapi.Services.Constants;
+using contentapi.Services.Views.Extensions;
 using contentapi.Views;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.Logging;
@@ -14,14 +15,20 @@ namespace contentapi.Services.Views.Implementations
 {
     public class ContentViewService : BasePermissionViewService<ContentView, ContentSearch>
     {
-        protected CategoryViewService categoryService;
+        protected CategoryViewSource categoryService;
+        protected CommentViewSource commentSource;
+        protected WatchViewSource watchSource;
         
         protected Dictionary<long, List<long>> cachedSupers = null;
 
-        public ContentViewService(ViewServicePack services, ILogger<ContentViewService> logger, CategoryViewService categoryService, ContentViewSource converter) 
+        public ContentViewService(ViewServicePack services, ILogger<ContentViewService> logger, 
+            CategoryViewSource categoryService, ContentViewSource converter,
+            CommentViewSource commentSource, WatchViewSource watchSource) 
             : base(services, logger, converter) 
         { 
             this.categoryService = categoryService;
+            this.commentSource = commentSource;
+            this.watchSource = watchSource;
         }
 
         public override string EntityType => Keys.ContentType;
@@ -59,7 +66,7 @@ namespace contentapi.Services.Views.Implementations
 
         public async Task SetupAsync()
         {
-            var categories = await categoryService.SearchAsync(new CategorySearch(), new Requester() { system = true });
+            var categories = await categoryService.SimpleSearchAsync(new CategorySearch());  //Just pull every dang category, whatever
             cachedSupers = GetAllSupers(categories);
         }
         
@@ -80,6 +87,32 @@ namespace contentapi.Services.Views.Implementations
             }
 
             return result;
+        }
+
+        public override async Task<List<ContentView>> SearchAsync(ContentSearch search, Requester requester)
+        {
+            var baseResult = await base.SearchAsync(search, requester);
+
+            //This requires intimate knowledge of how watches work. it's increasing the complexity/dependency,
+            //but at least... I don't know, it's way more performant. Come up with some system perhaps after
+            //you see what you need in other instances.
+            var watches = await watchSource.GroupAsync<EntityRelation>(
+                watchSource.SearchIds(new WatchSearch() { ContentIds = baseResult.Select(x => x.id).ToList() }),
+                x => x.entityId2);
+
+            var comments = await commentSource.GroupAsync<EntityRelation>(
+                commentSource.SearchIds(new CommentSearch() { ParentIds = baseResult.Select(x => x.id).ToList() }),
+                x => x.entityId1);
+            
+            baseResult.ForEach(x =>
+            {
+                if(watches.ContainsKey(-x.id))
+                    x.watches = watches[-x.id];
+                if(comments.ContainsKey(x.id))
+                    x.comments = comments[x.id];
+            });
+
+            return baseResult;
         }
     }
 }

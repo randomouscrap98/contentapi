@@ -2,6 +2,7 @@ using System;
 using System.Collections.Generic;
 using System.Linq;
 using System.Linq.Expressions;
+using System.Threading.Tasks;
 using AutoMapper;
 using contentapi.Services.Constants;
 using contentapi.Views;
@@ -90,5 +91,42 @@ namespace contentapi.Services.Views.Implementations
             //the fallback ordering. This is ID and random, which we don't need to implement up here.
             return provider.ApplyFinal(husks, search).Select(x => x.id);
         }
+
+        public async Task<Dictionary<long, SimpleAggregateData>> GroupAsync<R>(IQueryable<long> ids, Expression<Func<R,long>> keySelector) where R : EntityBase
+        {
+            var pureList = await provider.GetListAsync(
+                ids.Join(Q<R>(), x => x, r => r.id, (x, r) => r).GroupBy(keySelector).Select(g => new 
+                { 
+                    id = g.Key, 
+                    aggregate = new SimpleAggregateData()
+                    {
+                        count = g.Count(),
+                        lastDate = g.Max(x => x.createDate),
+                        firstDate = g.Min(x => x.createDate)
+                    }
+                })
+            );
+            
+            return pureList.ToDictionary(x => x.id, y => y.aggregate);
+        }
+
+        //public async Task<Dictionary<long, T>> GroupAsync<R,T>(IQueryable<long> ids, Expression<Func<R,long>> keySelector, Func<IGrouping<long, R>,T> select) where R : EntityBase
+        //{
+        //    var pureList = await provider.GetListAsync(
+        //        ids.Join(Q<R>(), x => x, r => r.id, (x, r) => r).GroupBy(keySelector).Select(g => new 
+        //        { 
+        //            id = g.Key, 
+        //            aggregate = select(g) 
+        //            //new SimpleAggregateData()
+        //            //{
+        //            //    count = g.Count(),
+        //            //    lastDate = g.Max(x => x.createDate),
+        //            //    firstDate = g.Min(x => x.createDate)
+        //            //}
+        //        })
+        //    );
+        //    
+        //    return pureList.ToDictionary(x => x.id, y => y.aggregate);
+        //}
     }
 }

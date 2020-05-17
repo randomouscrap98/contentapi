@@ -110,6 +110,7 @@ namespace contentapi.Services.Views.Implementations
             return FinalizeQuery(query, search, x => x.relation.id);
         }
 
+        //We have this simple code everywhere because we may NOT return the same thing every time
         public Task<List<EntityRelationPackage>> RetrieveAsync(IQueryable<long> ids)
         {
             return LinkAsync(GetByIds<EntityRelation>(ids));

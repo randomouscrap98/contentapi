@@ -9,6 +9,7 @@ using AutoMapper;
 using contentapi.Services.Extensions;
 using Randomous.EntitySystem.Extensions;
 using contentapi.Services.Constants;
+using contentapi.Services.Views.Extensions;
 
 namespace contentapi.Services.Views.Implementations
 {
@@ -56,13 +57,6 @@ namespace contentapi.Services.Views.Implementations
             return view;
         }
 
-        //public override async Task<List<UserViewFull>> SearchAsync(UserSearch search, Requester requester)
-        //{
-        //    logger.LogDebug($"User SearchAsync called by {requester}");
-        //    var entitySearch = ModifySearch(services.mapper.Map<EntitySearch>(search));
-        //    return (await provider.GetEntityPackagesAsync(entitySearch)).Select(x => converter.ToView(x)).ToList();
-        //}
-
         public override async Task<UserViewFull> WriteAsync(UserViewFull view, Requester requester)
         {
             return converter.ToView(await WriteViewBaseAsync(view, requester, (p) =>
@@ -100,6 +94,12 @@ namespace contentapi.Services.Views.Implementations
         public Task<UserViewFull> FindByRegistration(string registrationKey, Requester requester)
         {
             return FindByExactValueAsync(Keys.RegistrationCodeKey, registrationKey, requester);
+        }
+
+        public override Task<List<UserViewFull>> SearchAsync(UserSearch search, Requester requester)
+        {
+            //NO permissions check! All users are readable!
+            return converter.SimpleSearchAsync(search);
         }
     }
 }

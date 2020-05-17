@@ -24,5 +24,8 @@ namespace contentapi.Views
             var o = (ContentView)obj;
             return base.EqualsSelf(obj) && o.keywords.OrderBy(x => x).SequenceEqual(keywords.OrderBy(x => x));
         }
+
+        public SimpleAggregateData comments {get;set;} = new SimpleAggregateData();
+        public SimpleAggregateData watches {get;set;} = new SimpleAggregateData();
     }
 }

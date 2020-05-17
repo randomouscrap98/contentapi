@@ -95,6 +95,7 @@ namespace contentapi.Services.Views.Implementations
             return es;
         }
 
+        //We have this simple code everywhere because we may NOT return the same thing every time
         public Task<List<EntityRelation>> RetrieveAsync(IQueryable<long> ids)
         {
             return provider.GetListAsync(GetByIds<EntityRelation>(ids));
