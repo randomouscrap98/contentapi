@@ -31,51 +31,64 @@ namespace contentapi.Services.Views.Implementations
 
     //The very most basic view service functions. Eventually, fix this to be services; don't have
     //time right now.
-    public class BaseViewServices
+    public abstract class BaseViewServices<V,S> where S : IConstrainedSearcher
     {
         protected ViewServicePack services;
         protected ILogger logger;
         
         protected IEntityProvider provider => services.provider;
 
-        public BaseViewServices(ViewServicePack services, ILogger<BaseViewServices> logger)
+        public BaseViewServices(ViewServicePack services, ILogger<BaseViewServices<V,S>> logger)
         {
             this.services = services;
             this.logger = logger;
         }
 
-        protected EntityPackage NewEntity(string name, string content = null)
+        //protected EntityPackage NewEntity(string name, string content = null)
+        //{
+        //    return new EntityPackage()
+        //    {
+        //        Entity = new Entity() { 
+        //            name = name, 
+        //            content = content ,
+        //            createDate = DateTime.UtcNow
+        //        }
+        //    };
+        //}
+
+        //protected EntityValue NewValue(string key, string value)
+        //{
+        //    return new EntityValue() 
+        //    {
+        //        key = key, 
+        //        value = value, 
+        //        createDate = null 
+        //    };
+        //}
+
+        //protected EntityRelation NewRelation(long parent, string type, string value = null)
+        //{
+        //    return new EntityRelation()
+        //    {
+        //        entityId1 = parent,
+        //        type = type,
+        //        value = value,
+        //        createDate = null
+        //    };
+        //}
+
+
+        public Task<List<V>> SearchAsync(S search, Requester requester)
         {
-            return new EntityPackage()
-            {
-                Entity = new Entity() { 
-                    name = name, 
-                    content = content ,
-                    createDate = DateTime.UtcNow
-                }
-            };
+            if(search.Limit < 0 || search.Limit > 1000)
+                search.Limit = 1000;
+
+            //Can now ALSO track views here perhaps...
+
+            return PreparedSearchAsync(search, requester);
         }
 
-        protected EntityValue NewValue(string key, string value)
-        {
-            return new EntityValue() 
-            {
-                key = key, 
-                value = value, 
-                createDate = null 
-            };
-        }
-
-        protected EntityRelation NewRelation(long parent, string type, string value = null)
-        {
-            return new EntityRelation()
-            {
-                entityId1 = parent,
-                type = type,
-                value = value,
-                createDate = null
-            };
-        }
+        public abstract Task<List<V>> PreparedSearchAsync(S search, Requester requester);
 
         /// <summary>
         /// Find a value by key/value/id (added constraints)

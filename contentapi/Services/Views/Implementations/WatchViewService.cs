@@ -13,12 +13,12 @@ using Randomous.EntitySystem;
 
 namespace contentapi.Services.Views.Implementations
 {
-    public class WatchViewService : BaseViewServices, IViewService<WatchView, WatchSearch>
+    public class WatchViewService : BaseViewServices<WatchView, WatchSearch>, IViewService<WatchView, WatchSearch>
     {
         protected WatchViewSource converter;
         protected ContentViewService contentService;
 
-        public WatchViewService(ViewServicePack services, ILogger<BaseViewServices> logger, WatchViewSource converter,
+        public WatchViewService(ViewServicePack services, ILogger<WatchViewService> logger, WatchViewSource converter,
             ContentViewService contentService) 
             : base(services, logger) 
         { 
@@ -37,7 +37,7 @@ namespace contentapi.Services.Views.Implementations
             return converter.ToView(item);
         }
 
-        public Task<List<WatchView>> SearchAsync(WatchSearch search, Requester requester)
+        public override Task<List<WatchView>> PreparedSearchAsync(WatchSearch search, Requester requester)
         {
             logger.LogTrace($"Watch SearchAsync called by {requester}");
 

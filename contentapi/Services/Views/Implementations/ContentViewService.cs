@@ -89,9 +89,9 @@ namespace contentapi.Services.Views.Implementations
             return result;
         }
 
-        public override async Task<List<ContentView>> SearchAsync(ContentSearch search, Requester requester)
+        public override async Task<List<ContentView>> PreparedSearchAsync(ContentSearch search, Requester requester)
         {
-            var baseResult = await base.SearchAsync(search, requester);
+            var baseResult = await base.PreparedSearchAsync(search, requester);
 
             //This requires intimate knowledge of how watches work. it's increasing the complexity/dependency,
             //but at least... I don't know, it's way more performant. Come up with some system perhaps after

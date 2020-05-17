@@ -13,7 +13,7 @@ using Randomous.EntitySystem.Extensions;
 
 namespace contentapi.Services.Views.Implementations
 {
-    public abstract class BaseEntityViewService<V,S> : BaseViewServices, IViewService<V,S> where V : IEditView where S : BaseSearch, new()
+    public abstract class BaseEntityViewService<V,S> : BaseViewServices<V,S>, IViewService<V,S> where V : IEditView where S : BaseSearch, new()
     {
         protected IViewSource<V,EntityPackage,EntityGroup,S> converter;
 
@@ -25,7 +25,7 @@ namespace contentapi.Services.Views.Implementations
 
         public abstract string EntityType {get;}
 
-        public virtual Task<List<V>> SearchAsync(S search, Requester requester)
+        public override Task<List<V>> PreparedSearchAsync(S search, Requester requester)
         {
             logger.LogTrace($"{typeof(V)} SearchAsync called by {requester}");
 

@@ -23,8 +23,8 @@ namespace contentapi.Services.Views.Implementations
 
         public EntityPackage FromView(CategoryView view)
         {
-            var package = this.NewEntity(view.name, view.description);
-            this.ApplyFromStandard(view, package, Keys.CategoryType);
+            var package = NewEntity(view.name, view.description);
+                ApplyFromStandard(view, package, Keys.CategoryType);
 
             foreach(var v in view.localSupers)
             {

@@ -143,7 +143,7 @@ namespace contentapi.Services.Views.Implementations
             return Task.FromResult(result.ToDictionary(x => x.Key, y => y.Value.ToString()));
         }
 
-        public override async Task<List<V>> SearchAsync(S search, Requester requester)
+        public override async Task<List<V>> PreparedSearchAsync(S search, Requester requester)
         {
             var ids = converter.SearchIds(search, (q) => services.permissions.PermissionWhere(q, requester, Keys.ReadAction));
             var packages = await converter.RetrieveAsync(ids);
@@ -155,17 +155,5 @@ namespace contentapi.Services.Views.Implementations
                 return v;
             }).ToList();
         }
-
-        //public async Task<List<V>> ViewResult(IQueryable<Entity> query, Requester requester)
-        //{
-        //    var packages = await provider.LinkAsync(query);
-        //    var perms = await ComputeMyPermsAsync(packages, requester);
-        //    return packages.Select(x => 
-        //    {
-        //        var v = converter.ToView(x);
-        //        v.myPerms = perms[v.id]; //This could fail if perms dictionary gets messed up
-        //        return v;
-        //    }).ToList();
-        //}
     }
 }

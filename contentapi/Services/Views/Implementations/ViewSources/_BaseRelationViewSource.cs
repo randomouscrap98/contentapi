@@ -19,7 +19,7 @@ namespace contentapi.Services.Views.Implementations
 
         public virtual EntityRelationSearch CreateSearch<S>(S search) where S : BaseSearch
         {
-            var relationSearch = LimitSearch(mapper.Map<EntityRelationSearch>(search));
+            var relationSearch = mapper.Map<EntityRelationSearch>(search);
             relationSearch.TypeLike = EntityType;
             return relationSearch;
         }
@@ -32,15 +32,5 @@ namespace contentapi.Services.Views.Implementations
                 .Join(Q<EntityRelation>(), permIdSelector, r => r.entityId2, 
                 (r1, r2) => new EntityGroup() { relation = r1, permission = r2});
         }
-
-        //public virtual Task<List<EntityRelation>> RetrieveAsync(IQueryable<long> ids)
-        //{
-        //    return provider.GetListAsync(GetByIds<EntityRelation>(ids));
-        //}
-
-        //public Task<List<EntityRelation>> RetrieveAsync(IQueryable<EntityRelation> items)
-        //{
-        //    return provider.GetListAsync(items);
-        //}
     }
 }

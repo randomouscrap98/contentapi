@@ -6,7 +6,7 @@ using Xunit;
 
 namespace contentapi.test
 {
-    public class BaseViewConverterTests : UnitTestBase //ServiceTestBase<BasePermissionViewConverter>
+    public class BaseViewConverterTests : ServiceTestBase<ViewSourceServices>
     {
         protected void AssertPermsEqual(Dictionary<string, string> perms1, Dictionary<string, string> perms2)
         {
@@ -25,8 +25,8 @@ namespace contentapi.test
                 { "3", "CRU" }
             };
 
-            var relations = PermissionViewExtensions.ConvertPermsToRelations(perms);
-            var reperms = PermissionViewExtensions.ConvertRelationsToPerms(relations);
+            var relations = service.FromPerms(perms);
+            var reperms = service.ToPerms(relations);
             AssertPermsEqual(perms, reperms);
         }
     }

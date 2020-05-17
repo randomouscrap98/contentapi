@@ -2,7 +2,7 @@ using System;
 
 namespace contentapi.Views
 {
-    public class SimpleAggregateData
+    public class SimpleAggregateData : CompareBase
     {
         public DateTime? firstDate {get;set;}
         public DateTime? lastDate {get;set;}

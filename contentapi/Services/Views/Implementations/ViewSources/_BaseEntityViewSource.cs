@@ -15,11 +15,6 @@ namespace contentapi.Services.Views.Implementations
         
         public abstract string EntityType {get;}
 
-        //public virtual Task<IQueryable<EntityPackage>> LinkAsync(IQueryable<long> ids)
-        //{
-        //    return GetByIds<ENtity
-        //}
-
         public virtual Task<List<EntityPackage>> RetrieveAsync(IQueryable<long> ids)
         {
             return provider.LinkAsync(GetByIds<Entity>(ids));
@@ -27,7 +22,7 @@ namespace contentapi.Services.Views.Implementations
         
         public virtual EntitySearch CreateSearch<S>(S search) where S : BaseSearch
         {
-            var entitySearch = LimitSearch(mapper.Map<EntitySearch>(search));
+            var entitySearch = mapper.Map<EntitySearch>(search);
             entitySearch.TypeLike = EntityType;
             return entitySearch;
         }

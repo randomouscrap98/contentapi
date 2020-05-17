@@ -12,7 +12,7 @@ using Randomous.EntitySystem;
 
 namespace contentapi.Services.Views.Implementations
 {
-    public class BaseViewSource
+    public class BaseViewSource : ViewSourceServices
     {
         protected IMapper mapper;
         protected ILogger logger;
@@ -23,20 +23,6 @@ namespace contentapi.Services.Views.Implementations
             this.logger = logger;
             this.mapper = mapper;
             this.provider = provider;
-        }
-
-        /// <summary>
-        /// Apply various limits to a search
-        /// </summary>
-        /// <param name="search"></param>
-        /// <typeparam name="S"></typeparam>
-        /// <returns></returns>
-        public virtual E LimitSearch<E>(E search) where E : EntitySearchBase
-        {
-            if(search.Limit < 0 || search.Limit > 1000)
-                search.Limit = 1000;
-            
-            return search;
         }
 
         public IQueryable<E> Q<E>() where E : EntityBase

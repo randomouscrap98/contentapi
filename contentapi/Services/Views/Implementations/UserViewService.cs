@@ -96,7 +96,7 @@ namespace contentapi.Services.Views.Implementations
             return FindByExactValueAsync(Keys.RegistrationCodeKey, registrationKey, requester);
         }
 
-        public override Task<List<UserViewFull>> SearchAsync(UserSearch search, Requester requester)
+        public override Task<List<UserViewFull>> PreparedSearchAsync(UserSearch search, Requester requester)
         {
             //NO permissions check! All users are readable!
             return converter.SimpleSearchAsync(search);

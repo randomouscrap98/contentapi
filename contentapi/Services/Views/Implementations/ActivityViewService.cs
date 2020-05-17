@@ -16,10 +16,10 @@ namespace contentapi.Services.Views.Implementations
     public class CombinedActivitySearch : ActivitySearch
     {
         public bool IncludeAnonymous {get;set;}
-        public TimeSpan RecentCommentTime {get;set;}
+        //public TimeSpan RecentCommentTime {get;set;}
     }
 
-    public class ActivityViewService : BaseViewServices, IViewReadService<ActivityView, CombinedActivitySearch>
+    public class ActivityViewService : BaseViewServices<ActivityView, CombinedActivitySearch>, IViewReadService<ActivityView, CombinedActivitySearch>
     {
         protected ActivityViewSource activity;
         protected CommentViewSource comments;
@@ -32,16 +32,7 @@ namespace contentapi.Services.Views.Implementations
             this.comments = comments;
         }
 
-        public async Task<ActivityResultView> SearchResultAsync(CombinedActivitySearch search, Requester requester)
-        {
-            return new ActivityResultView()
-            {
-                activity = (await SearchAsync(search, requester)).ToList(),
-                comments = (await SearchCommentsAsync(search, requester)).ToList()
-            };
-        }
-
-        public async Task<List<ActivityView>> SearchAsync(CombinedActivitySearch search, Requester requester)
+        public override async Task<List<ActivityView>> PreparedSearchAsync(CombinedActivitySearch search, Requester requester)
         {
             var result = await activity.SimpleSearchAsync(search, (q) =>
                 services.permissions.PermissionWhere(
@@ -54,43 +45,43 @@ namespace contentapi.Services.Views.Implementations
             return result;
         }
 
-        public async Task<List<CommentActivityView>> SearchCommentsAsync(CombinedActivitySearch search, Requester requester)
-        {
-            var result = new List<CommentActivityView>();
+        //public async Task<List<CommentActivityView>> SearchCommentsAsync(CombinedActivitySearch search, Requester requester)
+        //{
+        //    var result = new List<CommentActivityView>();
 
-            //No matter the search, get comments for up to the recent thing.
-            if(search.RecentCommentTime.Ticks > 0)
-            {
-                var commentSearch = new CommentSearch()
-                {
-                    CreateStart = DateTime.Now.Subtract(search.RecentCommentTime),
-                    Reverse = true
-                };
+        //    //No matter the search, get comments for up to the recent thing.
+        //    if(search.RecentCommentTime.Ticks > 0)
+        //    {
+        //        var commentSearch = new CommentSearch()
+        //        {
+        //            CreateStart = DateTime.Now.Subtract(search.RecentCommentTime),
+        //            Reverse = true
+        //        };
 
-                //This is a little heavy... we pull all the comment content as well. If there's been like...
-                //10,000 comments each with 100 characters in the past day, that's 1 megabyte at least. Ah well...
-                //wait until it becomes a problem to fix it. Overengineering can be just as bad as no
-                var finalComments = await comments.SimpleSearchAsync(commentSearch, (q) =>
-                    services.permissions.PermissionWhere(q, requester, Keys.ReadAction));
+        //        //This is a little heavy... we pull all the comment content as well. If there's been like...
+        //        //10,000 comments each with 100 characters in the past day, that's 1 megabyte at least. Ah well...
+        //        //wait until it becomes a problem to fix it. Overengineering can be just as bad as no
+        //        var finalComments = await comments.SimpleSearchAsync(commentSearch, (q) =>
+        //            services.permissions.PermissionWhere(q, requester, Keys.ReadAction));
 
-                foreach(var group in finalComments.ToLookup(x => x.parentId))
-                {
-                    var commentActivity = new CommentActivityView()
-                    {
-                        count = group.Count(),
-                        parentId = group.Key,
-                        userIds = group.Select(x => x.createUserId).Distinct().ToList(),
-                        lastDate = group.Max(x => (DateTime)x.createDate),
-                    };
+        //        foreach(var group in finalComments.ToLookup(x => x.parentId))
+        //        {
+        //            var commentActivity = new CommentActivityView()
+        //            {
+        //                count = group.Count(),
+        //                parentId = group.Key,
+        //                userIds = group.Select(x => x.createUserId).Distinct().ToList(),
+        //                lastDate = group.Max(x => (DateTime)x.createDate),
+        //            };
 
-                    //Apply current timezone to the datetime. This MAY be dangerous
-                    //commentActivity.lastDate = new DateTime(commentActivity.lastDate.Ticks, DateTime.Now.Kind);
+        //            //Apply current timezone to the datetime. This MAY be dangerous
+        //            //commentActivity.lastDate = new DateTime(commentActivity.lastDate.Ticks, DateTime.Now.Kind);
 
-                    result.Add(commentActivity);
-                }
-            }
+        //            result.Add(commentActivity);
+        //        }
+        //    }
 
-            return result;
-        }
+        //    return result;
+        //}
     }
 }

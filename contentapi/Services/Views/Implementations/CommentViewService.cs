@@ -42,7 +42,7 @@ namespace contentapi.Services.Views.Implementations
 
     }
 
-    public class CommentViewService : BaseViewServices, IViewRevisionService<CommentView, CommentSearch>
+    public class CommentViewService : BaseViewServices<CommentView, CommentSearch>, IViewRevisionService<CommentView, CommentSearch>
     {
         public static IDecayer<CommentListener> listenDecayer = null;
         public static readonly object listenDecayLock = new object();
@@ -123,7 +123,7 @@ namespace contentapi.Services.Views.Implementations
             return copy;
         }
 
-        public Task<List<CommentView>> SearchAsync(CommentSearch search, Requester requester)
+        public override Task<List<CommentView>> PreparedSearchAsync(CommentSearch search, Requester requester)
         {
             logger.LogTrace($"Comment GetAsync called by {requester}");
 

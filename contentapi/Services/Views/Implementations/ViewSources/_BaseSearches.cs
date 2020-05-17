@@ -6,7 +6,7 @@ using Randomous.EntitySystem;
 namespace contentapi.Services.Views.Implementations
 {
     //Literally just a stand-in / abstraction away from the entity system. I don't know
-    public class BaseSearch : EntitySearchBase, IIdSearcher { }
+    public class BaseSearch : EntitySearchBase, IConstrainedSearcher { }
 
     public class BaseParentSearch : BaseSearch
     {
