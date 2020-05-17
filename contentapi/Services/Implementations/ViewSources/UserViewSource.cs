@@ -9,7 +9,7 @@ using Randomous.EntitySystem.Extensions;
 
 namespace contentapi.Services.Implementations
 {
-    public class UserSearch : BaseSearch
+    public class UserSearch : BaseHistorySearch
     {
         public string Username {get;set;}
     }
@@ -22,19 +22,19 @@ namespace contentapi.Services.Implementations
         }
     }
 
-    public class UserViewSource : BaseEntityViewSource, IViewSource<UserViewFull, EntityPackage, EntityGroup, UserSearch>
+    public class UserViewSource : BaseEntityViewSource<UserViewFull, EntityPackage, EntityGroup, UserSearch>
     {
         protected IPermissionService service;
 
         public override string EntityType => Keys.UserType;
 
-        public UserViewSource(ILogger<BaseViewSource> logger, IMapper mapper, IEntityProvider provider, IPermissionService service) 
+        public UserViewSource(ILogger<UserViewSource> logger, IMapper mapper, IEntityProvider provider, IPermissionService service) 
             : base(logger, mapper, provider) 
         { 
             this.service = service;
         }
 
-        public UserViewFull ToView(EntityPackage user)
+        public override UserViewFull ToView(EntityPackage user)
         {
             var result = new UserViewFull() 
             { 
@@ -55,7 +55,7 @@ namespace contentapi.Services.Implementations
             return result;
         }
 
-        public EntityPackage FromView(UserViewFull user)
+        public override EntityPackage FromView(UserViewFull user)
         {
             var NewValue = new Func<string, string, EntityValue>((k,v) => new EntityValue()
             {
@@ -77,18 +77,6 @@ namespace contentapi.Services.Implementations
                 newUser.Add(NewValue(Keys.RegistrationCodeKey, user.registrationKey));
 
             return newUser;
-        }
-
-        public IQueryable<long> SearchIds(UserSearch search, Func<IQueryable<EntityGroup>, IQueryable<EntityGroup>> modify = null)
-        {
-            var query = GetBaseQuery(search);
-
-            if(modify != null)
-                query = modify(query);
-
-           //Special sorting routines go here
-
-            return FinalizeQuery(query, search, x => x.entity.id);
         }
     }
 }

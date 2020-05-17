@@ -130,7 +130,8 @@ namespace contentapi.Controllers
         }
 
         //Eventually move this to something else
-        public IEnumerable<PropertyInfo> GetProperties(Type type)
+        //https://stackoverflow.com/a/26766221/1066474
+        protected IEnumerable<PropertyInfo> GetProperties(Type type)
         {
             if (!type.IsInterface)
                 return type.GetProperties();

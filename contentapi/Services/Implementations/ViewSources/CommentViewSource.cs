@@ -1,6 +1,7 @@
 using System;
 using System.Collections.Generic;
 using System.Linq;
+using System.Linq.Expressions;
 using System.Threading.Tasks;
 using AutoMapper;
 using contentapi.Services.Constants;
@@ -26,11 +27,12 @@ namespace contentapi.Services.Implementations
         }
     }
 
-    public class CommentViewSource : BaseRelationViewSource, IViewSource<CommentView, EntityRelationPackage, EntityGroup, CommentSearch>
+    public class CommentViewSource : BaseRelationViewSource<CommentView, EntityRelationPackage, EntityGroup, CommentSearch>
     {
         public override string EntityType => Keys.CommentHack;
+        public override Expression<Func<EntityRelation, long>> PermIdSelector => x => x.entityId1;
 
-        public CommentViewSource(ILogger<BaseViewSource> logger, IMapper mapper, IEntityProvider provider) 
+        public CommentViewSource(ILogger<CommentViewSource> logger, IMapper mapper, IEntityProvider provider) 
             : base(logger, mapper, provider) { }
 
         public CommentView ToViewSimple(EntityRelation relation)
@@ -59,7 +61,7 @@ namespace contentapi.Services.Implementations
             return relation;
         }
 
-        public CommentView ToView(EntityRelationPackage package)
+        public override CommentView ToView(EntityRelationPackage package)
         {
             var view = ToViewSimple(package.Main);
             var orderedRelations = package.Related.OrderBy(x => x.id);
@@ -77,7 +79,7 @@ namespace contentapi.Services.Implementations
             return view;
         }
 
-        public EntityRelationPackage FromView(CommentView view)
+        public override EntityRelationPackage FromView(CommentView view)
         {
             //WARN: this isn't PRECISELY correct!!! But it's basically impossible to produce a 
             //proper comment just from a view!
@@ -99,28 +101,10 @@ namespace contentapi.Services.Implementations
             }).ToList();
         }
 
-        public IQueryable<long> SearchIds(CommentSearch search, Func<IQueryable<EntityGroup>, IQueryable<EntityGroup>> modify = null)
-        {
-            var query = GetBaseQuery(search, x => x.entityId1);
-
-            if(modify != null)
-                query = modify(query);
-            
-            return FinalizeQuery(query, search, x => x.relation.id);
-        }
-
         //We have this simple code everywhere because we may NOT return the same thing every time
-        public Task<List<EntityRelationPackage>> RetrieveAsync(IQueryable<long> ids)
+        public override Task<List<EntityRelationPackage>> RetrieveAsync(IQueryable<long> ids)
         {
             return LinkAsync(GetByIds<EntityRelation>(ids));
         }
-
-        //public async Task<List<CommentAggregate>> RetrieveAggregateAsync(IQueryable<long> ids)
-        //{
-        //    var commentGroups = 
-        //        from c in GetByIds<EntityRelation>(ids)
-        //        group c by c.entityId1, c.entityId2 into g;
-
-        //}//CommentSearch search, Func<IQueryable)
     }
 }

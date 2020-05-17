@@ -12,22 +12,23 @@ using Randomous.EntitySystem;
 
 namespace contentapi.Services.Implementations
 {
-    public class BaseViewSource : ViewSourceServices
+    public abstract class BaseViewSource<V,T,E,S> : ViewSourceServices, IViewSource<V,T,E,S> 
+        where V : BaseView where E : EntityGroup where S : EntitySearchBase, IConstrainedSearcher
     {
         protected IMapper mapper;
         protected ILogger logger;
         protected IEntityProvider provider;
 
-        public BaseViewSource(ILogger<BaseViewSource> logger, IMapper mapper, IEntityProvider provider)
+        public BaseViewSource(ILogger<BaseViewSource<V,T,E,S>> logger, IMapper mapper, IEntityProvider provider)
         {
             this.logger = logger;
             this.mapper = mapper;
             this.provider = provider;
         }
 
-        public IQueryable<E> Q<E>() where E : EntityBase
+        public IQueryable<X> Q<X>() where X : EntityBase
         {
-            return provider.GetQueryable<E>();
+            return provider.GetQueryable<X>();
         }
 
         /// <summary>
@@ -37,7 +38,7 @@ namespace contentapi.Services.Implementations
         /// <param name="parentIds"></param>
         /// <typeparam name="E"></typeparam>
         /// <returns></returns>
-        public IQueryable<E> LimitByParents<E>(IQueryable<E> query, List<long> parentIds) where E : EntityGroup
+        public IQueryable<E> LimitByParents(IQueryable<E> query, List<long> parentIds)
         {
             return  from q in query
                     join r in Q<EntityRelation>() on q.entity.id equals r.entityId2
@@ -53,7 +54,7 @@ namespace contentapi.Services.Implementations
         /// <param name="valueLike"></param>
         /// <typeparam name="E"></typeparam>
         /// <returns></returns>
-        public IQueryable<E> LimitByValue<E>(IQueryable<E> query, string keyLike, string valueLike) where E : EntityGroup
+        public IQueryable<E> LimitByValue(IQueryable<E> query, string keyLike, string valueLike)
         {
             return  from q in query
                     join v in Q<EntityValue>() on q.entity.id equals v.entityId
@@ -61,15 +62,26 @@ namespace contentapi.Services.Implementations
                     select q;
         }
 
-        public IQueryable<E> GetByIds<E>(IQueryable<long> ids) where E : EntityBase
+        public IQueryable<E> LimitByCreateEdit(IQueryable<E> query, List<long> creators, List<long> editors)
+        {
+            var editorStrings = editors.Select(x => x.ToString());
+
+            return  from q in query
+                    join r in Q<EntityRelation>() on q.entity.id equals r.entityId2
+                    where (creators.Count == 0 || creators.Contains(r.entityId1)) && 
+                          (editors.Count == 0 || editorStrings.Contains(r.value))
+                    select q;
+        }
+
+        public IQueryable<X> GetByIds<X>(IQueryable<long> ids) where X : EntityBase
         {
             return
-                from e in provider.GetQueryable<E>()
+                from e in provider.GetQueryable<X>()
                 join i in ids on e.id equals i
                 select e;
         }
 
-        public virtual IQueryable<long> FinalizeQuery<E,S>(IQueryable<E> query, S search, Expression<Func<E,long>> mainIdSelector) where S : EntitySearchBase
+        public virtual IQueryable<long> FinalizeQuery(IQueryable<E> query, S search, Expression<Func<E,long>> mainIdSelector) //where S : EntitySearchBase
         {
             var husks = query.GroupBy(mainIdSelector).Select(x => new EntityBase() { id = x.Key });
 
@@ -78,7 +90,7 @@ namespace contentapi.Services.Implementations
             return provider.ApplyFinal(husks, search).Select(x => x.id);
         }
 
-        public async Task<Dictionary<T, SimpleAggregateData>> GroupAsync<R,T>(IQueryable<long> ids, Expression<Func<R,T>> keySelector) where R : EntityBase
+        public async Task<Dictionary<X, SimpleAggregateData>> GroupAsync<R,X>(IQueryable<long> ids, Expression<Func<R,X>> keySelector) where R : EntityBase
         {
             var pureList = await provider.GetListAsync(
                 ids.Join(Q<R>(), x => x, r => r.id, (x, r) => r).GroupBy(keySelector).Select(g => new 
@@ -96,23 +108,27 @@ namespace contentapi.Services.Implementations
             return pureList.ToDictionary(x => x.key, y => y.aggregate);
         }
 
-        //public async Task<Dictionary<long, T>> GroupAsync<R,T>(IQueryable<long> ids, Expression<Func<R,long>> keySelector, Func<IGrouping<long, R>,T> select) where R : EntityBase
-        //{
-        //    var pureList = await provider.GetListAsync(
-        //        ids.Join(Q<R>(), x => x, r => r.id, (x, r) => r).GroupBy(keySelector).Select(g => new 
-        //        { 
-        //            id = g.Key, 
-        //            aggregate = select(g) 
-        //            //new SimpleAggregateData()
-        //            //{
-        //            //    count = g.Count(),
-        //            //    lastDate = g.Max(x => x.createDate),
-        //            //    firstDate = g.Min(x => x.createDate)
-        //            //}
-        //        })
-        //    );
-        //    
-        //    return pureList.ToDictionary(x => x.id, y => y.aggregate);
-        //}
+        public abstract IQueryable<E> GetBaseQuery(S search);
+        public abstract Task<List<T>> RetrieveAsync(IQueryable<long> ids);
+        public abstract V ToView(T basic);
+        public abstract T FromView(V view);
+
+        public virtual IQueryable<E> ModifySearch(IQueryable<E> query, S search) { return query; }
+        public virtual IQueryable<E> OrderSearch(IQueryable<E> query, S search) { return query; }
+
+        public IQueryable<long> SearchIds(S search, Func<IQueryable<E>, IQueryable<E>> modify = null)
+        {
+            var query = GetBaseQuery(search);
+
+            query = ModifySearch(query, search);
+
+            if(modify != null)
+                query = modify(query);
+
+           //Special sorting routines go here
+           query = OrderSearch(query, search);
+
+            return FinalizeQuery(query, search, x => x.entity.id);
+        }
     }
 }

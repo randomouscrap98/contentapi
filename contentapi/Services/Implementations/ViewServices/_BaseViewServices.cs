@@ -27,7 +27,7 @@ namespace contentapi.Services.Implementations
 
     //The very most basic view service functions. Eventually, fix this to be services; don't have
     //time right now.
-    public abstract class BaseViewServices<V,S> where S : IConstrainedSearcher
+    public abstract class BaseViewServices<V,S> where S : BaseSearch //IConstrainedSearcher
     {
         protected ViewServicePack services;
         protected ILogger logger;
@@ -44,6 +44,10 @@ namespace contentapi.Services.Implementations
         {
             if(search.Limit < 0 || search.Limit > 1000)
                 search.Limit = 1000;
+
+            //This is the same, trust me (or it better be!). IDs are much faster
+            if(search.Sort.ToLower() == "createdate")
+                search.Sort = "id";
 
             //Can now ALSO track views here perhaps...
 

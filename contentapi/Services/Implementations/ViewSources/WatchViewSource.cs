@@ -1,6 +1,7 @@
 using System;
 using System.Collections.Generic;
 using System.Linq;
+using System.Linq.Expressions;
 using System.Threading.Tasks;
 using AutoMapper;
 using contentapi.Services.Constants;
@@ -28,14 +29,15 @@ namespace contentapi.Services.Implementations
         }
     }
 
-    public class WatchViewSource : BaseRelationViewSource, IViewSource<WatchView, EntityRelation, EntityGroup, WatchSearch>
+    public class WatchViewSource : BaseRelationViewSource<WatchView, EntityRelation, EntityGroup, WatchSearch>
     {
-        public WatchViewSource(ILogger<BaseViewSource> logger, IMapper mapper, IEntityProvider provider) 
+        public WatchViewSource(ILogger<WatchViewSource> logger, IMapper mapper, IEntityProvider provider) 
             : base(logger, mapper, provider) { }
 
         public override string EntityType => Keys.WatchRelation;
+        public override Expression<Func<EntityRelation, long>> PermIdSelector => x => -x.entityId2;
 
-        public EntityRelation FromView(WatchView view)
+        public override EntityRelation FromView(WatchView view)
         {
             var relation = new EntityRelation()
             {
@@ -50,7 +52,7 @@ namespace contentapi.Services.Implementations
             return relation;
         }
 
-        public WatchView ToView(EntityRelation basic)
+        public override WatchView ToView(EntityRelation basic)
         {
             var view = new WatchView()
             {
@@ -65,19 +67,9 @@ namespace contentapi.Services.Implementations
         }
 
         //We have this simple code everywhere because we may NOT return the same thing every time
-        public Task<List<EntityRelation>> RetrieveAsync(IQueryable<long> ids)
+        public override Task<List<EntityRelation>> RetrieveAsync(IQueryable<long> ids)
         {
             return provider.GetListAsync(GetByIds<EntityRelation>(ids));
-        }
-
-        public IQueryable<long> SearchIds(WatchSearch search, Func<IQueryable<EntityGroup>, IQueryable<EntityGroup>> modify = null)
-        {
-            var query = GetBaseQuery(search, x => -x.entityId2);
-
-            if(modify != null)
-                query = modify(query);
-            
-            return FinalizeQuery(query, search, x => x.relation.id);
         }
     }
 }

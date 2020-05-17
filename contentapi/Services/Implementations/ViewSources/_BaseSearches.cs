@@ -7,7 +7,13 @@ namespace contentapi.Services.Implementations
     //Literally just a stand-in / abstraction away from the entity system. I don't know
     public class BaseSearch : EntitySearchBase, IConstrainedSearcher { }
 
-    public class BaseParentSearch : BaseSearch
+    public class BaseHistorySearch : BaseSearch
+    {
+        public List<long> CreateUserIds {get;set;} = new List<long>();
+        public List<long> EditUserIds {get;set;} = new List<long>();
+    }
+
+    public class BaseParentSearch : BaseHistorySearch
     {
         public List<long> ParentIds {get;set;} = new List<long>();
     }

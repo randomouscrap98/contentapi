@@ -1,5 +1,7 @@
 using System;
+using System.Collections.Generic;
 using System.Linq;
+using System.Threading.Tasks;
 using AutoMapper;
 using contentapi.Services.Constants;
 using contentapi.Views;
@@ -11,14 +13,14 @@ namespace contentapi.Services.Implementations
 {
     public class CategorySearch : BaseContentSearch { }
 
-    public class CategoryViewSource : BaseEntityViewSource, IViewSource<CategoryView, EntityPackage, EntityGroup, CategorySearch>
+    public class CategoryViewSource : BaseStandardViewSource<CategoryView, EntityPackage, EntityGroup, CategorySearch>
     {
         public override string EntityType => Keys.CategoryType;
 
-        public CategoryViewSource(ILogger<BaseViewSource> logger, IMapper mapper, IEntityProvider provider) 
+        public CategoryViewSource(ILogger<CategoryViewSource> logger, IMapper mapper, IEntityProvider provider) 
             : base(logger, mapper, provider) { }
 
-        public EntityPackage FromView(CategoryView view)
+        public override EntityPackage FromView(CategoryView view)
         {
             var package = NewEntity(view.name, view.description);
                 ApplyFromStandard(view, package, Keys.CategoryType);
@@ -37,7 +39,7 @@ namespace contentapi.Services.Implementations
             return package;
         }
 
-        public CategoryView ToView(EntityPackage package)
+        public override CategoryView ToView(EntityPackage package)
         {
             var view = new CategoryView();
             this.ApplyToStandard(package, view);
@@ -49,21 +51,6 @@ namespace contentapi.Services.Implementations
                 view.localSupers.Add(v.entityId1);
 
             return view;
-        }
-
-        public IQueryable<long> SearchIds(CategorySearch search, Func<IQueryable<EntityGroup>, IQueryable<EntityGroup>> modify = null)
-        {
-            var query = GetBaseQuery(search);
-
-            if(search.ParentIds.Count > 0)
-                query = LimitByParents(query, search.ParentIds);
-
-            if(modify != null)
-                query = modify(query);
-
-            //Special sorting routines go here
-            
-            return FinalizeQuery(query, search, x => x.entity.id);
         }
     }
 }

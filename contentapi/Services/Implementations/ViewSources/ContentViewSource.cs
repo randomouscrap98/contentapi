@@ -25,14 +25,14 @@ namespace contentapi.Services.Implementations
         }
     }
 
-    public class ContentViewSource : BaseEntityViewSource, IViewSource<ContentView, EntityPackage, EntityGroup, ContentSearch>
+    public class ContentViewSource : BaseStandardViewSource<ContentView, EntityPackage, EntityGroup, ContentSearch>
     {
         public override string EntityType => Keys.ContentType;
 
-        public ContentViewSource(ILogger<BaseViewSource> logger, IMapper mapper, IEntityProvider provider) 
+        public ContentViewSource(ILogger<ContentViewSource> logger, IMapper mapper, IEntityProvider provider) 
             : base(logger, mapper, provider) { }
 
-        public EntityPackage FromView(ContentView view)
+        public override EntityPackage FromView(ContentView view)
         {
             var package = this.NewEntity(view.name, view.content);
             this.ApplyFromStandard(view, package, Keys.ContentType);
@@ -53,7 +53,7 @@ namespace contentapi.Services.Implementations
             return package;
         }
 
-        public ContentView ToView(EntityPackage package)
+        public override ContentView ToView(EntityPackage package)
         {
             var view = new ContentView();
             this.ApplyToStandard(package, view);
@@ -68,30 +68,21 @@ namespace contentapi.Services.Implementations
             return view;
         }
 
-        public override EntitySearch CreateSearch<S>(S search)
+        public override EntitySearch CreateSearch(ContentSearch search)
         {
             var es = base.CreateSearch(search);
-            es.TypeLike += ((search as ContentSearch).Type ?? "%");
+            es.TypeLike += (search.Type ?? "%");
             return es;
         }
 
-        public IQueryable<long> SearchIds(ContentSearch search, Func<IQueryable<EntityGroup>, IQueryable<EntityGroup>> modify = null)
+        public override IQueryable<EntityGroup> ModifySearch(IQueryable<EntityGroup> query, ContentSearch search)
         {
-            var query = GetBaseQuery(search);
-
-            if(search.ParentIds.Count > 0)
-                query = LimitByParents(query, search.ParentIds);
+            query = base.ModifySearch(query, search);
 
             if(!string.IsNullOrWhiteSpace(search.Keyword))
                 query = LimitByValue(query, Keys.KeywordKey, search.Keyword);
-
-            if(modify != null)
-                query = modify(query);
-
-           //Special sorting routines go here
-
-            return FinalizeQuery(query, search, x => x.entity.id);
+            
+            return query;
         }
-
     }
 }
