@@ -25,7 +25,7 @@ namespace contentapi.Services.Implementations
         }
     }
 
-    public class ContentViewSource : BaseStandardViewSource<ContentView, EntityPackage, EntityGroup, ContentSearch>
+    public class ContentViewSource : BaseStandardViewSource<ContentView, EntityPackage, ContentSearch>
     {
         public override string EntityType => Keys.ContentType;
 

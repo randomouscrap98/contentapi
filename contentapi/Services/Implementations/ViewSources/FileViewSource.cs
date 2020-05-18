@@ -10,7 +10,7 @@ namespace contentapi.Services.Implementations
 {
     public class FileSearch : BaseContentSearch { }
 
-    public class FileViewSource : BaseStandardViewSource<FileView, EntityPackage, EntityGroup, FileSearch>
+    public class FileViewSource : BaseStandardViewSource<FileView, EntityPackage, FileSearch>
     {
         public override string EntityType => Keys.FileType;
 

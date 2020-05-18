@@ -13,7 +13,7 @@ namespace contentapi.Services.Implementations
 {
     public class CategorySearch : BaseContentSearch { }
 
-    public class CategoryViewSource : BaseStandardViewSource<CategoryView, EntityPackage, EntityGroup, CategorySearch>
+    public class CategoryViewSource : BaseStandardViewSource<CategoryView, EntityPackage, CategorySearch>
     {
         public override string EntityType => Keys.CategoryType;
 

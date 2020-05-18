@@ -29,7 +29,7 @@ namespace contentapi.Services.Implementations
         }
     }
 
-    public class WatchViewSource : BaseRelationViewSource<WatchView, EntityRelation, EntityGroup, WatchSearch>
+    public class WatchViewSource : BaseRelationViewSource<WatchView, EntityRelation, WatchSearch>
     {
         public WatchViewSource(ILogger<WatchViewSource> logger, IMapper mapper, IEntityProvider provider) 
             : base(logger, mapper, provider) { }

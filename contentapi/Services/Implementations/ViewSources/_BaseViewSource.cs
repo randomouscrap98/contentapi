@@ -12,14 +12,16 @@ using Randomous.EntitySystem;
 
 namespace contentapi.Services.Implementations
 {
-    public abstract class BaseViewSource<V,T,E,S> : ViewSourceServices, IViewSource<V,T,E,S> 
-        where V : BaseView where E : EntityGroup where S : EntitySearchBase, IConstrainedSearcher
+    public abstract class BaseViewSource<V,T,S> : ViewSourceServices, IViewSource<V,T,EntityGroup,S> 
+        where V : BaseView where S : EntitySearchBase, IConstrainedSearcher
     {
         protected IMapper mapper;
         protected ILogger logger;
         protected IEntityProvider provider;
 
-        public BaseViewSource(ILogger<BaseViewSource<V,T,E,S>> logger, IMapper mapper, IEntityProvider provider)
+        public abstract Expression<Func<EntityGroup, long>> MainIdSelector {get;}
+
+        public BaseViewSource(ILogger<BaseViewSource<V,T,S>> logger, IMapper mapper, IEntityProvider provider)
         {
             this.logger = logger;
             this.mapper = mapper;
@@ -38,7 +40,7 @@ namespace contentapi.Services.Implementations
         /// <param name="parentIds"></param>
         /// <typeparam name="E"></typeparam>
         /// <returns></returns>
-        public IQueryable<E> LimitByParents(IQueryable<E> query, List<long> parentIds)
+        public IQueryable<EntityGroup> LimitByParents(IQueryable<EntityGroup> query, List<long> parentIds)
         {
             return  from q in query
                     join r in Q<EntityRelation>() on q.entity.id equals r.entityId2
@@ -54,7 +56,7 @@ namespace contentapi.Services.Implementations
         /// <param name="valueLike"></param>
         /// <typeparam name="E"></typeparam>
         /// <returns></returns>
-        public IQueryable<E> LimitByValue(IQueryable<E> query, string keyLike, string valueLike)
+        public IQueryable<EntityGroup> LimitByValue(IQueryable<EntityGroup> query, string keyLike, string valueLike)
         {
             return  from q in query
                     join v in Q<EntityValue>() on q.entity.id equals v.entityId
@@ -62,7 +64,7 @@ namespace contentapi.Services.Implementations
                     select q;
         }
 
-        public IQueryable<E> LimitByCreateEdit(IQueryable<E> query, List<long> creators, List<long> editors)
+        public IQueryable<EntityGroup> LimitByCreateEdit(IQueryable<EntityGroup> query, List<long> creators, List<long> editors)
         {
             var editorStrings = editors.Select(x => x.ToString());
 
@@ -81,7 +83,7 @@ namespace contentapi.Services.Implementations
                 select e;
         }
 
-        public virtual IQueryable<long> FinalizeQuery(IQueryable<E> query, S search, Expression<Func<E,long>> mainIdSelector) //where S : EntitySearchBase
+        public virtual IQueryable<long> FinalizeQuery(IQueryable<EntityGroup> query, S search, Expression<Func<EntityGroup,long>> mainIdSelector) //where S : EntitySearchBase
         {
             var husks = query.GroupBy(mainIdSelector).Select(x => new EntityBase() { id = x.Key });
 
@@ -108,15 +110,15 @@ namespace contentapi.Services.Implementations
             return pureList.ToDictionary(x => x.key, y => y.aggregate);
         }
 
-        public abstract IQueryable<E> GetBaseQuery(S search);
+        public abstract IQueryable<EntityGroup> GetBaseQuery(S search);
         public abstract Task<List<T>> RetrieveAsync(IQueryable<long> ids);
         public abstract V ToView(T basic);
         public abstract T FromView(V view);
 
-        public virtual IQueryable<E> ModifySearch(IQueryable<E> query, S search) { return query; }
-        public virtual IQueryable<E> OrderSearch(IQueryable<E> query, S search) { return query; }
+        public virtual IQueryable<EntityGroup> ModifySearch(IQueryable<EntityGroup> query, S search) { return query; }
+        public virtual IQueryable<EntityGroup> OrderSearch(IQueryable<EntityGroup> query, S search) { return query; }
 
-        public IQueryable<long> SearchIds(S search, Func<IQueryable<E>, IQueryable<E>> modify = null)
+        public IQueryable<long> SearchIds(S search, Func<IQueryable<EntityGroup>, IQueryable<EntityGroup>> modify = null)
         {
             var query = GetBaseQuery(search);
 
@@ -128,7 +130,7 @@ namespace contentapi.Services.Implementations
            //Special sorting routines go here
            query = OrderSearch(query, search);
 
-            return FinalizeQuery(query, search, x => x.entity.id);
+            return FinalizeQuery(query, search, MainIdSelector); //x => x.entity.id);
         }
     }
 }

@@ -27,7 +27,7 @@ namespace contentapi.Services.Implementations
         }
     }
 
-    public class CommentViewSource : BaseRelationViewSource<CommentView, EntityRelationPackage, EntityGroup, CommentSearch>
+    public class CommentViewSource : BaseRelationViewSource<CommentView, EntityRelationPackage, CommentSearch>
     {
         public override string EntityType => Keys.CommentHack;
         public override Expression<Func<EntityRelation, long>> PermIdSelector => x => x.entityId1;
