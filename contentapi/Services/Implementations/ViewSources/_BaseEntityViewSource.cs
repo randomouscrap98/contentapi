@@ -11,14 +11,14 @@ using Randomous.EntitySystem.Extensions;
 
 namespace contentapi.Services.Implementations
 {
-    public abstract class BaseEntityViewSource<V,T,S> : BaseViewSource<V,T,S>
-        where V : BaseView where S : BaseHistorySearch, IConstrainedSearcher where T : EntityPackage
+    public abstract class BaseEntityViewSource<V,T,E,S> : BaseViewSource<V,T,E,S>
+        where V : BaseView where E : EntityGroup, new() where S : BaseHistorySearch, IConstrainedSearcher where T : EntityPackage
     {
-        public BaseEntityViewSource(ILogger<BaseViewSource<V,T,S>> logger, IMapper mapper, IEntityProvider provider) 
+        public BaseEntityViewSource(ILogger<BaseViewSource<V,T,E,S>> logger, IMapper mapper, IEntityProvider provider) 
             : base(logger, mapper, provider) { }
         
         public abstract string EntityType {get;}
-        public override Expression<Func<EntityGroup, long>> MainIdSelector => x => x.entity.id;
+        public override Expression<Func<E, long>> MainIdSelector => x => x.entity.id;
 
         public override async Task<List<T>> RetrieveAsync(IQueryable<long> ids)
         {
@@ -32,16 +32,16 @@ namespace contentapi.Services.Implementations
             return entitySearch;
         }
 
-        public override IQueryable<EntityGroup> GetBaseQuery(S search)
+        public override IQueryable<E> GetBaseQuery(S search)
         {
             var entitySearch = CreateSearch(search);
 
             return provider.ApplyEntitySearch(Q<Entity>(), entitySearch, false)
                 .Join(Q<EntityRelation>(), e => e.id, r => r.entityId2, 
-                (e, r) => new EntityGroup() { entity = e, permission = r});
+                (e, r) => new E() { entity = e, permission = r});
         }
 
-        public override IQueryable<EntityGroup> ModifySearch(IQueryable<EntityGroup> query, S search)
+        public override IQueryable<E> ModifySearch(IQueryable<E> query, S search)
         {
             return LimitByCreateEdit(base.ModifySearch(query, search), search.CreateUserIds, search.EditUserIds);
         }

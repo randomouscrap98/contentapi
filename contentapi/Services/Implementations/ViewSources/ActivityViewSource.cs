@@ -30,7 +30,7 @@ namespace contentapi.Services.Implementations
         }
     }
 
-    public class ActivityViewSource : BaseRelationViewSource<ActivityView, EntityRelation, ActivitySearch>
+    public class ActivityViewSource : BaseRelationViewSource<ActivityView, EntityRelation, EntityGroup, ActivitySearch>
     {
         public ActivityViewSource(ILogger<ActivityViewSource> logger, IMapper mapper, IEntityProvider provider) 
             : base(logger, mapper, provider) { }
