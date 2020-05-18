@@ -70,8 +70,9 @@ namespace contentapi.Services.Implementations
 
             return  from q in query
                     join r in Q<EntityRelation>() on q.entity.id equals r.entityId2
-                    where (creators.Count == 0 || creators.Contains(r.entityId1)) && 
-                          (editors.Count == 0 || editorStrings.Contains(r.value))
+                    where r.type == Keys.CreatorRelation && 
+                        (creators.Count == 0 || creators.Contains(r.entityId1)) && 
+                        (editors.Count == 0 || editorStrings.Contains(r.value))
                     select q;
         }
 
@@ -83,13 +84,9 @@ namespace contentapi.Services.Implementations
                 select e;
         }
 
-        public virtual IQueryable<long> FinalizeQuery(IQueryable<E> query, S search, Expression<Func<E,long>> mainIdSelector) //where S : EntitySearchBase
+        public virtual IQueryable<long> FinalizeQuery(IQueryable<E> query, S search)  //where S : EntitySearchBase
         {
-            var husks = query.GroupBy(mainIdSelector).Select(x => new EntityBase() { id = x.Key });
-
-            //Note: applyfinal finalizes some limiters (such as skip/take) and ALSO tries to apply
-            //the fallback ordering. This is ID and random, which we don't need to implement up here.
-            return provider.ApplyFinal(husks, search).Select(x => x.id);
+            return query.GroupBy(MainIdSelector).Select(x => x.Key);
         }
 
         public async Task<Dictionary<X, SimpleAggregateData>> GroupAsync<R,X>(IQueryable<long> ids, Expression<Func<R,X>> keySelector) where R : EntityBase
@@ -116,7 +113,7 @@ namespace contentapi.Services.Implementations
         public abstract T FromView(V view);
 
         public virtual IQueryable<E> ModifySearch(IQueryable<E> query, S search) { return query; }
-        public virtual IQueryable<E> OrderSearch(IQueryable<E> query, S search) { return query; }
+        //public virtual Tuple<IQueryable<E>,Expression<Func<E, OrderSearch(IQueryable<E> query, S search) { return query; }
 
         public IQueryable<long> SearchIds(S search, Func<IQueryable<E>, IQueryable<E>> modify = null)
         {
@@ -127,10 +124,12 @@ namespace contentapi.Services.Implementations
             if(modify != null)
                 query = modify(query);
 
-           //Special sorting routines go here
-           query = OrderSearch(query, search);
+            //Finalize may include special sorting / etc.
+            var husks = FinalizeQuery(query, search).Select(x => new EntityBase() { id = x });
 
-            return FinalizeQuery(query, search, MainIdSelector); //x => x.entity.id);
+            //Note: applyfinal finalizes some limiters (such as skip/take) and ALSO tries to apply
+            //the fallback ordering. This is ID and random, which we don't need to implement up here.
+            return provider.ApplyFinal(husks, search).Select(x => x.id);
         }
     }
 }

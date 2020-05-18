@@ -17,7 +17,7 @@ namespace contentapi.Services.Implementations
         public List<long> ContentIds {get;set;} = new List<long>();
 
         public string Type {get;set;}
-        public bool IncludeAnonymous {get;set;} //This is queried in the SERVICE, eventually move it to HERE! 
+        //public bool IncludeAnonymous {get;set;} //This is queried in the SERVICE, eventually move it to HERE! 
     }
 
     public class ActivityViewSourceProfile : Profile
@@ -38,6 +38,8 @@ namespace contentapi.Services.Implementations
         public override string EntityType => Keys.ActivityKey;
         public override Expression<Func<EntityRelation, long>> PermIdSelector => x => -x.entityId2;
 
+        public int TypeLength => Keys.ContentType.Length;
+
         /// <summary>
         /// Produce an activity for the given entity and action. Can include ONE piece of extra data.
         /// </summary>
@@ -54,7 +56,8 @@ namespace contentapi.Services.Implementations
                 contentId = entity.id,
                 action = action,
                 extra = extra,
-                contentType = entity.type,
+                type = entity.type.Substring(0, TypeLength), //Assume all types are same length!
+                contentType = entity.type.Substring(TypeLength),
                 date = DateTime.Now
             });
         }
@@ -67,27 +70,28 @@ namespace contentapi.Services.Implementations
             view.date = (DateTime)relation.createDateProper();
             view.userId = relation.entityId1;
             view.contentId = -relation.entityId2;
-            view.contentType = relation.type.Substring(Keys.ActivityKey.Length); //Skip the actual activity type, it starts the type field
-            view.action = relation.value.Substring(0, 1); //Assume it's 1 character
-            view.extra = relation.value.Substring(1);
+            view.type = relation.type.Substring(Keys.ActivityKey.Length, TypeLength);
+            view.contentType = relation.type.Substring(Keys.ActivityKey.Length + TypeLength); //Skip the actual activity type, it starts the type field
+            view.action = relation.value.Substring(1, 1); //Assume it's 1 character, but skip first
+            view.extra = relation.value.Substring(2);
 
             return view;
         }
 
         public override EntityRelation FromView(ActivityView view)
         {
-            var activity = new EntityRelation();
-            activity.entityId1 = view.userId;
-            activity.entityId2 = -view.contentId; //It has to be NEGATIVE because we don't want them linked to content
-            activity.createDate = view.date;
-            activity.type = Keys.ActivityKey + view.contentType; 
-            activity.value = view.action;
-            activity.id = view.id;
+            var relation = new EntityRelation();
+            relation.entityId1 = view.userId;
+            relation.entityId2 = -view.contentId; //It has to be NEGATIVE because we don't want them linked to content
+            relation.createDate = view.date;
+            relation.type = Keys.ActivityKey + view.type + (view.contentType ?? ""); 
+            relation.value = view.action;
+            relation.id = view.id;
 
             if(!string.IsNullOrWhiteSpace(view.extra))
-                activity.value += view.extra;
+                relation.value += view.extra;
 
-            return activity;
+            return relation;
         }
 
         public override EntityRelationSearch CreateSearch(ActivitySearch search)

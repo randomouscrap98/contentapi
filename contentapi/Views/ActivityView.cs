@@ -9,6 +9,7 @@ namespace contentapi.Views
         public long userId {get;set;}
         public long contentId {get;set;}
 
+        public string type {get;set;}
         public string contentType {get;set;}
         public string action {get;set;}
         public string extra {get;set;}

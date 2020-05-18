@@ -4,6 +4,7 @@ using System.Linq;
 using System.Linq.Expressions;
 using System.Threading.Tasks;
 using AutoMapper;
+using contentapi.Services.Constants;
 using contentapi.Views;
 using Microsoft.Extensions.Logging;
 using Randomous.EntitySystem;
@@ -45,5 +46,34 @@ namespace contentapi.Services.Implementations
         {
             return LimitByCreateEdit(base.ModifySearch(query, search), search.CreateUserIds, search.EditUserIds);
         }
+
+        public override IQueryable<long> FinalizeQuery(IQueryable<E> query, S search)
+        {
+            if(search.Sort == "editdate")
+            {
+                var newGroups =  
+                    from q in query
+                    join r in Q<EntityRelation>() on q.entity.id equals r.entityId2
+                    where r.type == Keys.CreatorRelation
+                    select new E{ entity = q.entity, relation = r };
+                 
+                var condense = newGroups.GroupBy(MainIdSelector).Select(x => new { key = x.Key, sort = x.Max(y => y.relation.createDate) });
+
+                if(search.Reverse)
+                    condense = condense.OrderByDescending(x => x.sort);//.Select(x => x.q);
+                else
+                    condense = condense.OrderBy(x => x.sort);//.Select(x => x.q);
+                
+                return condense.Select(x => x.key);
+            }
+
+            return base.FinalizeQuery(query, search);
+        }
+
+        //public override IQueryable<E> OrderSearch(IQueryable<E> query, S search)
+        //{
+
+        //    return query;
+        //}
     }
 }

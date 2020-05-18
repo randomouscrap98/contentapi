@@ -21,6 +21,8 @@ namespace contentapi.Services.Implementations
     public class BaseContentSearch : BaseParentSearch
     {
         public string Name {get;set;}
+        public string AssociatedKey {get;set;}
+        public string AssociatedValue {get;set;}
     }
 
     //The profile for all searches

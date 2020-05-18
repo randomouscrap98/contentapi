@@ -32,14 +32,13 @@ namespace contentapi.Services.Implementations
             //};
         }
 
-        public IQueryable<E> PermissionWhere<E>(IQueryable<E> query, Requester requester, string action, PermissionExtras extras = null) where E : EntityGroup
+        //public IQueryable<E> PermissionWhere<E>(IQueryable<E> query, Requester requester, string action, PermissionExtras extras = null) where E : EntityGroup
+        public IQueryable<E> PermissionWhere<E>(IQueryable<E> query, Requester requester, string action) where E : EntityGroup
         {
-            extras = extras ?? new PermissionExtras();
-
             //Immediately apply a limiter so we're not joining on every dang relation ever (including comments etc).
             //The amount of creators and actions of a single type is SO MUCH LOWER. I'm not sure how optimized these
             //queries can get but better safe than sorry
-            query = query.Where(x => x.permission.type == Keys.CreatorRelation || x.permission.type == action);
+            //query = query.Where(x => x.permission.type == Keys.CreatorRelation || x.permission.type == action);
             
             //Nothing else to do, the user can do it if it's update or delete.
             if(requester.system || IsSuper(requester) && (action == Keys.UpdateAction || action == Keys.DeleteAction || action == Keys.CreateAction))
@@ -48,7 +47,7 @@ namespace contentapi.Services.Implementations
             var user = requester.userId;
 
             return query.Where(x => 
-                (extras.allowNegativeOwnerRelation && x.relation.entityId1 < 0) ||
+                //(extras.allowNegativeOwnerRelation && x.relation.entityId1 < 0) ||
                 (user > 0 && x.permission.type == Keys.CreatorRelation && x.permission.entityId1 == user) ||
                 (x.permission.type == action && (x.permission.entityId1 == 0 || x.permission.entityId1 == user)));
         }

@@ -40,14 +40,22 @@ namespace contentapi.Services.Implementations
             this.logger = logger;
         }
 
-        public Task<List<V>> SearchAsync(S search, Requester requester)
+        public virtual void LimitSearch(S search, Requester requester)
         {
             if(search.Limit < 0 || search.Limit > 1000)
                 search.Limit = 1000;
+            
+            if(search.Sort != null)
+                search.Sort = search.Sort.ToLower().Trim();
 
             //This is the same, trust me (or it better be!). IDs are much faster
             if(search.Sort.ToLower() == "createdate")
                 search.Sort = "id";
+        }
+
+        public Task<List<V>> SearchAsync(S search, Requester requester)
+        {
+            LimitSearch(search, requester);
 
             //Can now ALSO track views here perhaps...
 

@@ -30,10 +30,21 @@ namespace contentapi.Services.Implementations
             var result = await activity.SimpleSearchAsync(search, (q) =>
                 services.permissions.PermissionWhere(
                     q.Where(x => x.relation.type != $"{Keys.ActivityKey}{Keys.FileType}"),  //This may change sometime
-                    requester, Keys.ReadAction, new PermissionExtras() { allowNegativeOwnerRelation = search.IncludeAnonymous })
+                    requester, Keys.ReadAction)
+                    //requester, Keys.ReadAction, new PermissionExtras() { allowNegativeOwnerRelation = search.IncludeAnonymous })
             );
-            
-            result.ForEach(x => x.contentType = x.contentType.Substring(Keys.ContentType.Length));
+
+            result.ForEach(x => 
+            {
+                if(x.type == Keys.ContentType)
+                    x.type = "content";
+                else if(x.type == Keys.CategoryType)
+                    x.type = "category";
+                else if(x.type == Keys.UserType)
+                    x.type = "user";
+                else if(x.type == Keys.FileType)
+                    x.type = "file";
+            });
 
             return result;
         }

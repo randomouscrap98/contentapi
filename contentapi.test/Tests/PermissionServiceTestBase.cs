@@ -10,7 +10,7 @@ using Xunit;
 
 namespace contentapi.test
 {
-    public class PermissionServiceTestBase<T, V, S> : ServiceConfigTestBase<T, SystemConfig> where T : BasePermissionViewService<V, S> where V : StandardView, new() where S : BaseSearch, new()
+    public class PermissionServiceTestBase<T, V, S> : ServiceConfigTestBase<T, SystemConfig> where T : BasePermissionViewService<V, S> where V : StandardView, new() where S : BaseContentSearch, new()
     {
         protected SystemConfig sysConfig = new SystemConfig();
 

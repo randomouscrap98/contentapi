@@ -13,7 +13,7 @@ using Randomous.EntitySystem.Extensions;
 
 namespace contentapi.Services.Implementations
 {
-    public abstract class BasePermissionViewService<V,S> : BaseEntityViewService<V,S> where V : StandardView where S : BaseSearch, new()
+    public abstract class BasePermissionViewService<V,S> : BaseEntityViewService<V,S> where V : StandardView where S : BaseContentSearch, new()
     {
         public BasePermissionViewService(ViewServicePack services, ILogger<BasePermissionViewService<V, S>> logger, IViewSource<V,EntityPackage,EntityGroup,S> converter) 
             : base(services, logger, converter) { }
