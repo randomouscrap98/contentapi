@@ -31,7 +31,7 @@ namespace contentapi.Services.Implementations
             var entitySearch = CreateSearch(search);
 
             return provider.ApplyEntityRelationSearch(Q<EntityRelation>(), entitySearch, false)
-                .Join(Q<EntityRelation>(), x => -x.entityId2, r => r.entityId2, 
+                .Join(Q<EntityRelation>(), PermIdSelector, r => r.entityId2, 
                 (r1, r2) => new E() { relation = r1, permission = r2});
         }
     }

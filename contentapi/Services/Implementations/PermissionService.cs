@@ -13,27 +13,14 @@ namespace contentapi.Services.Implementations
         protected ILogger<PermissionService> logger;
 
         public List<long> SuperUsers => new List<long>(config.SuperUsers);
-        //public Dictionary<string, string> PermissionActionMap => new Dictionary<string, string>(permMapping);
-
-        //protected Dictionary<string, string> permMapping;
 
         public PermissionService(ILogger<PermissionService> logger, SystemConfig config)
         {
             this.logger = logger;
             this.config = config;
-
-            ////Static for now, not going to config just for this. It'll probably never change.
-            //permMapping = new Dictionary<string, string>()
-            //{
-            //    {"c", Keys.CreateAction},
-            //    {"r", Keys.ReadAction},
-            //    {"u", Keys.UpdateAction},
-            //    {"d", Keys.DeleteAction}
-            //};
         }
 
-        //public IQueryable<E> PermissionWhere<E>(IQueryable<E> query, Requester requester, string action, PermissionExtras extras = null) where E : EntityGroup
-        public IQueryable<E> PermissionWhere<E>(IQueryable<E> query, Requester requester, string action) where E : EntityGroup
+        public IQueryable<E> PermissionWhere<E>(IQueryable<E> query, Requester requester, string action, PermissionExtras extras = null) where E : EntityGroup
         {
             //Immediately apply a limiter so we're not joining on every dang relation ever (including comments etc).
             //The amount of creators and actions of a single type is SO MUCH LOWER. I'm not sure how optimized these
@@ -42,12 +29,15 @@ namespace contentapi.Services.Implementations
             
             //Nothing else to do, the user can do it if it's update or delete.
             if(requester.system || IsSuper(requester) && (action == Keys.UpdateAction || action == Keys.DeleteAction || action == Keys.CreateAction))
-                return query;
+                return query.Where(x => x.permission.type == Keys.CreatorRelation || x.permission.type == action);
 
             var user = requester.userId;
 
             return query.Where(x => 
-                //(extras.allowNegativeOwnerRelation && x.relation.entityId1 < 0) ||
+                //Note: the "extras" is a hack: I need "OR" parameters on permissions but can't
+                //just... do that. Until I get something better set up, this hack stuff is VEry particular and for
+                //VERY specific fields (that might not be there for every request, only the ones with the flags set.)
+                (extras.allowNegativeOwnerRelation && x.relation.entityId1 < 0) ||
                 (user > 0 && x.permission.type == Keys.CreatorRelation && x.permission.entityId1 == user) ||
                 (x.permission.type == action && (x.permission.entityId1 == 0 || x.permission.entityId1 == user)));
         }

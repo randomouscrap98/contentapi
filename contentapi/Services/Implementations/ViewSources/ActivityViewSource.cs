@@ -17,7 +17,7 @@ namespace contentapi.Services.Implementations
         public List<long> ContentIds {get;set;} = new List<long>();
 
         public string Type {get;set;}
-        //public bool IncludeAnonymous {get;set;} //This is queried in the SERVICE, eventually move it to HERE! 
+        public bool IncludeAnonymous {get;set;} //This is queried in the SERVICE, eventually move it to HERE! 
     }
 
     public class ActivityViewSourceProfile : Profile

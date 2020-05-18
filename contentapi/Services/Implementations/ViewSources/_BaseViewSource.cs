@@ -66,6 +66,10 @@ namespace contentapi.Services.Implementations
 
         public IQueryable<E> LimitByCreateEdit(IQueryable<E> query, List<long> creators, List<long> editors)
         {
+            //Nothing to do, no use joining.
+            if(creators.Count == 0 && editors.Count == 0)
+                return query;
+
             var editorStrings = editors.Select(x => x.ToString());
 
             return  from q in query
