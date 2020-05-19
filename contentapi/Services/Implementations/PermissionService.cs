@@ -22,6 +22,8 @@ namespace contentapi.Services.Implementations
 
         public IQueryable<E> PermissionWhere<E>(IQueryable<E> query, Requester requester, string action, PermissionExtras extras = null) where E : EntityGroup
         {
+            extras = extras ?? new PermissionExtras();
+
             //Immediately apply a limiter so we're not joining on every dang relation ever (including comments etc).
             //The amount of creators and actions of a single type is SO MUCH LOWER. I'm not sure how optimized these
             //queries can get but better safe than sorry

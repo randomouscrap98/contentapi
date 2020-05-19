@@ -11,6 +11,7 @@ using AutoMapper;
 using contentapi.Services.Implementations;
 using contentapi.Services.Constants;
 using System.Text.RegularExpressions;
+using System.ComponentModel.DataAnnotations;
 
 namespace contentapi.Controllers
 {
@@ -79,6 +80,9 @@ namespace contentapi.Controllers
         public class UserBasicPost
         {
             public long avatar {get;set;}
+
+            [MaxLength(256)]
+            public string special {get;set;} = null;
         }
 
         [HttpPut("basic")]
@@ -92,6 +96,9 @@ namespace contentapi.Controllers
                 //Only set avatar if they gave us something
                 if(data.avatar >= 0)
                     userView.avatar = data.avatar;
+
+                if(data.special != null)
+                    userView.special = data.special;
 
                 return mapper.Map<UserView>(await service.WriteAsync(userView, GetRequesterNoFail()));
             }); 

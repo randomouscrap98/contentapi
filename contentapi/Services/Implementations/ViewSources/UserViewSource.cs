@@ -47,6 +47,8 @@ namespace contentapi.Services.Implementations
 
             this.ApplyToEditView(user, result);
 
+            if(user.HasValue(Keys.UserSpecialKey))
+                result.special = user.GetValue(Keys.UserSpecialKey).value;
             if(user.HasValue(Keys.AvatarKey))
                 result.avatar = long.Parse(user.GetValue(Keys.AvatarKey).value);
             if(user.HasValue(Keys.RegistrationCodeKey))
@@ -67,6 +69,7 @@ namespace contentapi.Services.Implementations
 
             var newUser = this.NewEntity(user.username)
                 .Add(NewValue(Keys.AvatarKey, user.avatar.ToString()))
+                .Add(NewValue(Keys.UserSpecialKey, user.special))
                 .Add(NewValue(Keys.EmailKey, user.email))
                 .Add(NewValue(Keys.PasswordSaltKey, user.salt))
                 .Add(NewValue(Keys.PasswordHashKey, user.password));

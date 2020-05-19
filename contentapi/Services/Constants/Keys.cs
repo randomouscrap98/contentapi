@@ -49,6 +49,7 @@ namespace contentapi.Services.Constants
         public const string PasswordSaltKey = "sps";
         public const string RegistrationCodeKey = "srk";
         public const string AvatarKey = "sa";
+        public const string UserSpecialKey = "sus";
 
 
         //Awful hacks

@@ -8,6 +8,7 @@ namespace contentapi.Views
         public string username { get; set; }
         public long avatar {get;set;}
         public DateTime createDate { get; set; }
+        public string special {get;set;}
     }
 
     //This is the user as we give them out
@@ -20,6 +21,7 @@ namespace contentapi.Views
 
         public string username { get; set; }
         public long avatar {get;set;}
+        public string special {get;set;}
 
         public string email { get; set; } //This field SHOULDN'T be set unless the user is ourselves.
 
