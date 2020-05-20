@@ -11,6 +11,7 @@ using AutoMapper;
 using contentapi.Services;
 using contentapi.Services.Implementations;
 using contentapi.Views;
+using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.Extensions.Logging;
 
@@ -58,7 +59,7 @@ namespace contentapi.Controllers
             int realIndex;
 
             if (index == null || field == null || !int.TryParse(index, out realIndex) || realIndex < 0 || existingChains.Count <= realIndex)
-                throw new InvalidOperationException($"Bad chain: {chain}");
+                throw new BadRequestException($"Bad chain: {chain}");
 
             var analyze = existingChains[realIndex].FirstOrDefault();
 
@@ -83,7 +84,7 @@ namespace contentapi.Controllers
             } 
 
             if(selector == null)
-                throw new InvalidOperationException($"Bad chain: {chain}");
+                throw new BadRequestException($"Bad chain: {chain}");
 
             return existingChains[realIndex].SelectMany(selector).ToList();
         }
@@ -168,7 +169,7 @@ namespace contentapi.Controllers
                 properties = baseProperties.Where(x => lowerFields.Contains(x.Name.ToLower())).ToDictionary(x => x.Name, x => x);
 
                 if(properties.Count != fields.Count)
-                    throw new InvalidOperationException($"Unknown fields in list: {string.Join(",", fields)}");
+                    throw new BadRequestException($"Unknown fields in list: {string.Join(",", fields)}");
             }
 
             var searchobject = JsonSerializer.Deserialize<S>(data.search, jsonOptions);
@@ -195,20 +196,63 @@ namespace contentapi.Controllers
             }
         }
 
-        [HttpGet("chain")]
-        public async Task<ActionResult<Dictionary<string, List<ExpandoObject>>>> ChainAsync([FromQuery]List<string> requests, [FromQuery]Dictionary<string, List<string>> fields)
+        protected async Task ChainAsync(
+            string request,
+            Requester requester,
+            Dictionary<string, List<ChainResult>> results, 
+            List<List<IIdView>> chainResults,
+            Dictionary<string, List<string>> fields)
         {
-            //logger.LogInformation($"ChainAsync called for {requests.Count} requests");
+            var data = ParseChainData(request);
 
-            if(requests == null)
-                requests = new List<string>();
+            if (!results.ContainsKey(data.endpoint))
+                results.Add(data.endpoint, new List<ChainResult>());
+
+            var r = results[data.endpoint];
+            var f = fields.ContainsKey(data.endpoint) ? fields[data.endpoint] : null;
+
+            //Go find the endpoint
+            if (data.endpoint == "file")
+                await ChainAsync(data, services.file, requester, chainResults, r, f);
+            else if (data.endpoint == "user")
+                await ChainAsync(data, services.user, requester, chainResults, r, f);
+            else if (data.endpoint == "content")
+                await ChainAsync(data, services.content, requester, chainResults, r, f);
+            else if (data.endpoint == "category")
+                await ChainAsync(data, services.category, requester, chainResults, r, f);
+            else if (data.endpoint == "comment")
+                await ChainAsync(data, services.comment, requester, chainResults, r, f);
+            else if (data.endpoint == "commentaggregate")
+                await ChainAsync<CommentSearch, CommentAggregateView>(data, (s) => services.comment.SearchAggregateAsync(s, requester), chainResults, r, f);
+            else if (data.endpoint == "activity")
+                await ChainAsync(data, services.activity, requester, chainResults, r, f);
+            else if (data.endpoint == "watch")
+                await ChainAsync(data, services.watch, requester, chainResults, r, f);
+        }
+
+        public Dictionary<string, List<string>> FixFields(Dictionary<string, List<string>> fields)
+        {
             if(fields == null)
                 fields = new Dictionary<string, List<string>>();
 
-            fields = fields.ToDictionary(x => x.Key, y => y.Value.SelectMany(z => z.Split(",", StringSplitOptions.RemoveEmptyEntries)).ToList());
+            return fields.ToDictionary(x => x.Key, y => y.Value.SelectMany(z => z.Split(",", StringSplitOptions.RemoveEmptyEntries)).ToList());
+        }
+
+        public Dictionary<string, List<ExpandoObject>> ChainResultToReturn(Dictionary<string, List<ChainResult>> results)
+        {
+            return results.ToDictionary(x => x.Key, y => y.Value.Select(x => x.result).ToList());
+        }
+
+        [HttpGet("chain")]
+        public async Task<ActionResult<Dictionary<string, List<ExpandoObject>>>> ChainAsync([FromQuery]List<string> requests, [FromQuery]Dictionary<string, List<string>> fields)
+        {
+            if(requests == null)
+                requests = new List<string>();
+
+            fields = FixFields(fields);
 
             if(requests.Count > 5)
-                throw new InvalidOperationException("Can't chain deeper than 5");
+                throw new BadRequestException("Can't chain deeper than 5");
 
             var requester = GetRequesterNoFail();
             var results = new Dictionary<string, List<ChainResult>>();
@@ -218,34 +262,10 @@ namespace contentapi.Controllers
 
             foreach(var request in requests)
             {
-                var data = ParseChainData(request);
-
-                if(!results.ContainsKey(data.endpoint))
-                    results.Add(data.endpoint, new List<ChainResult>());
-                
-                var r = results[data.endpoint];
-                var f = fields.ContainsKey(data.endpoint) ? fields[data.endpoint] : null;
-
-                //Go find the endpoint
-                if(data.endpoint == "file")
-                    await ChainAsync(data, services.file, requester, chainResults, r, f);
-                else if(data.endpoint == "user")
-                    await ChainAsync(data, services.user, requester, chainResults, r, f);
-                else if(data.endpoint == "content")
-                    await ChainAsync(data, services.content, requester, chainResults, r, f);
-                else if(data.endpoint == "category")
-                    await ChainAsync(data, services.category, requester, chainResults, r, f);
-                else if(data.endpoint == "comment")
-                    await ChainAsync(data, services.comment, requester, chainResults, r, f);
-                else if(data.endpoint == "commentaggregate")
-                    await ChainAsync<CommentSearch, CommentAggregateView>(data, (s) => services.comment.SearchAggregateAsync(s, requester), chainResults, r, f);
-                else if(data.endpoint == "activity")
-                    await ChainAsync(data, services.activity, requester, chainResults, r, f);
-                else if(data.endpoint == "watch")
-                    await ChainAsync(data, services.watch, requester, chainResults, r, f);
+                await ChainAsync(request, requester, results, chainResults, fields);
             }
 
-            return results.ToDictionary(x => x.Key, y => y.Value.Select(x => x.result).ToList());
+            return ChainResultToReturn(results);
         }
 
         [HttpGet("chain/docs")]
@@ -254,69 +274,129 @@ namespace contentapi.Controllers
             return ThrowToAction(() => Task.FromResult(docService.GetString("read.chain", "en")));
         }
 
-        public class CommentListenQuery
-        {
-            public long firstId {get;set;}
-            public long lastId {get;set;}
-            public List<long> parentIds {get;set;}
+        public class CommentListenQuery : CommentListenConfig 
+        { 
+            public List<string> chain {get;set;} //= new List<string>();
         }
 
         public class ListenerQuery
         {
-            public Dictionary<string, List<long>> listener {get;set;}
+            public Dictionary<string, List<long>> parentIdsLast {get;set;}
         }
 
         public class ListenResult
         {
             public List<CommentView> comments {get;set;}
             public Dictionary<string, List<long>> listeners {get;set;}
-            Dictionary<string, List<ExpandoObject>> chain {get;set;}
+            public Dictionary<string, List<ExpandoObject>> chain {get;set;}
         }
 
+        public class PhonyListenerList : IIdView
+        {
+            public long id {get;set;}
+            public List<long> listeners {get;set;}
+        }
+
+        //public void MergeChainResults(Dictionary<string, List<ExpandoObject>> baseChain, Dictionary<string, List<ExpandoObject>> join)
+        //{
+        //    foreach(var chain in join)
+        //    {
+        //        if(!baseChain.ContainsKey(chain.Key))
+        //            baseChain.Add(chain.Key, new List<ExpandoObject>());
+        //        
+
+        //    }
+        //}
+
         [HttpGet("listen")]
-        public Task<ActionResult<ListenResult>> ListenAsync([FromQuery]Dictionary<string, List<string>> fields, [FromQuery]CommentListenQuery comment, [FromQuery]ListenerQuery listener, CancellationToken cancelToken)
+        [Authorize]
+        public Task<ActionResult<ListenResult>> ListenAsync([FromQuery]Dictionary<string, List<string>> fields, [FromQuery]string comment, [FromQuery]string listener, CancellationToken cancelToken)
         {
             return ThrowToAction(async () =>
             {
                 var result = new ListenResult();
                 var requester = GetRequesterNoFail();
+                fields = FixFields(fields);
+
+                var chainResults = new Dictionary<string, List<ChainResult>>();
 
                 //All the 
                 Task<Dictionary<long, List<CommentListener>>> listenWait = null;
                 Task<List<CommentView>> commentWait = null;
                 List<Task> waiters = new List<Task>();
 
-                if(listener?.listener != null)
+                var listenerObject = JsonSerializer.Deserialize<ListenerQuery>(listener ?? "{}", jsonOptions);
+                var commentObject = JsonSerializer.Deserialize<CommentListenQuery>(comment ?? "{}", jsonOptions);
+
+                //Create a new cancel source FROM the original token so that either us or the client can cancel
+                using (CancellationTokenSource linkedCts = CancellationTokenSource.CreateLinkedTokenSource(cancelToken))
                 {
-                    listenWait = services.comment.GetListenersAsync(listener.listener.ToDictionary(x => long.Parse(x.Key), y => y.Value), requester, cancelToken);
-                    waiters.Add(listenWait);
+                    try
+                    {
+                        //Only run the listeners that the user asked for
+                        if (listenerObject?.parentIdsLast != null)
+                        {
+                            listenWait = services.comment.GetListenersAsync(listenerObject.parentIdsLast.ToDictionary(x => long.Parse(x.Key), y => y.Value), requester, linkedCts.Token);
+                            waiters.Add(listenWait);
+                        }
+
+                        if (commentObject?.parentIds != null)
+                        {
+                            commentWait = services.comment.ListenAsync(commentObject, requester, linkedCts.Token);
+                            waiters.Add(commentWait);
+                        }
+
+                        if (waiters.Count == 0)
+                            throw new BadRequestException("No listeners registered");
+
+                        await Task.WhenAny(waiters.ToArray());
+
+                        //Fill in data based on who is finished
+                        if (commentWait != null && commentWait.IsCompleted)
+                        {
+                            result.comments = commentWait.Result;
+
+                            if(commentObject.chain != null)
+                            {
+                                //First result is the comments we got
+                                var tempViewResults = new List<List<IIdView>>() { result.comments.Cast<IIdView>().ToList() };
+
+                                foreach(var chain in commentObject.chain)
+                                    await ChainAsync(chain, requester, chainResults, tempViewResults, fields);
+                            }
+                        }
+                        if (listenWait != null && listenWait.IsCompleted)
+                        {
+                            result.listeners = listenWait.Result.ToDictionary(x => x.Key.ToString(), x => x.Value.Select(x => x.UserId).ToList());
+                            //Chaining would go here
+                        }
+                    }
+                    finally
+                    {
+                        linkedCts.Cancel();
+
+                        try
+                        {
+                            await Task.WhenAll(waiters.ToArray());
+                        }
+                        catch(OperationCanceledException)
+                        {
+                            logger.LogDebug("One or more listener tasks cancelled on page completion (normal)");
+                        }
+                    }
                 }
 
-                if(comment?.parentIds != null)
-                {
-                    commentWait = services.comment.ListenAsync(comment.parentIds, comment.lastId, comment.firstId, requester, cancelToken);
-                    waiters.Add(commentWait);
-                }
-
-                if(waiters.Count == 0)
-                    throw new BadRequestException("No listeners registered");
-
-                await Task.WhenAny(waiters.ToArray());
-
-                //Fill in data based on who is finished
-                if(commentWait != null && commentWait.IsCompleted)
-                {
-                    result.comments = commentWait.Result;
-                    //Chaining would go here
-                }
-                if(listenWait != null && listenWait.IsCompleted)
-                {
-                    result.listeners = listenWait.Result.ToDictionary(x => x.Key.ToString(), x => x.Value.Select(x => x.UserId).ToList());
-                    //Chaining would go here
-                }
+                if(chainResults.Count > 0)
+                    result.chain = ChainResultToReturn(chainResults);
 
                 return result;
             });
+        }
+
+        [HttpGet("listen/docs")]
+        public Task<ActionResult<string>> ListenDocsAsync()
+        {
+            return ThrowToAction(() => Task.FromResult(docService.GetString("read.listen", "en")));
         }
     }
 }

@@ -12,6 +12,14 @@ using Randomous.EntitySystem;
 
 namespace contentapi.Services.Implementations
 {
+    public class CommentListenConfig
+    {
+        public int limit {get;set;}
+        public long firstId {get;set;}
+        public long lastId {get;set;}
+        public List<long> parentIds {get;set;}
+    }
+
     public class CommentListener
     {
         public long UserId {get;set;}
@@ -202,13 +210,16 @@ namespace contentapi.Services.Implementations
             return realListeners.ToList();
         }
 
-        public async Task<List<CommentView>> ListenAsync(List<long> parentIds, long lastId, long firstId, Requester requester, CancellationToken token)
+        public async Task<List<CommentView>> ListenAsync(CommentListenConfig listenConfig, Requester requester, CancellationToken token)
         {
-            //Ensure we can read all the parents they're asking for. We will also show up in every room you're listening to.
-            var parents = await FullParentCheckAsync(parentIds, Keys.ReadAction, requester);
-            var listenId = new CommentListener() { UserId = requester.userId, CommentListenParents = parentIds };
+            if(listenConfig.limit <= 0 || listenConfig.limit > 1000)
+                listenConfig.limit = 1000;
 
-            var stringParents = parentIds.Select(x => x.ToString());
+            //Ensure we can read all the parents they're asking for. We will also show up in every room you're listening to.
+            var parents = await FullParentCheckAsync(listenConfig.parentIds, Keys.ReadAction, requester);
+            var listenId = new CommentListener() { UserId = requester.userId, CommentListenParents = listenConfig.parentIds };
+
+            var stringParents = listenConfig.parentIds.Select(x => x.ToString());
 
             int entrances = 0;
 
@@ -218,9 +229,9 @@ namespace contentapi.Services.Implementations
 
                 var result = q.Where(x =>
                     //The new messages!
-                    (parentIds.Contains(x.entityId1) && (EF.Functions.Like(x.type, $"{Keys.CommentHack}%") && x.id > lastId)) ||
+                    (listenConfig.parentIds.Contains(x.entityId1) && (EF.Functions.Like(x.type, $"{Keys.CommentHack}%") && x.id > listenConfig.lastId)) ||
                     //Edits to old ones (will be filtered out special later, EFCore can't do too much, which is first pass)
-                    (EF.Functions.Like(x.type, $"{Keys.CommentDeleteHack}%") || EF.Functions.Like(x.type, $"{Keys.CommentHistoryHack}%")) && -x.entityId1 >= firstId);
+                    (EF.Functions.Like(x.type, $"{Keys.CommentDeleteHack}%") || EF.Functions.Like(x.type, $"{Keys.CommentHistoryHack}%")) && -x.entityId1 >= listenConfig.firstId);
                 
                 if(entrances <= 1)
                 {
@@ -236,7 +247,7 @@ namespace contentapi.Services.Implementations
                         stringParents.Contains(x.type.Substring(Keys.CommentHistoryHack.Length)));
                 }
 
-                return result;
+                return result.OrderByDescending(x => x.id).Take(listenConfig.limit);
             },
             config.ListenTimeout, token);
 
@@ -247,7 +258,7 @@ namespace contentapi.Services.Implementations
             if (badComments.Any())
                 goodComments.AddRange(await provider.GetEntityRelationsAsync(new EntityRelationSearch() { Ids = badComments.Select(x => -x.entityId1).ToList() }));
 
-            return (await converter.LinkAsync(goodComments)).Select(x => converter.ToView(x)).ToList();
+            return (await converter.LinkAsync(goodComments)).Select(x => converter.ToView(x)).OrderBy(x => x.id).ToList();
         }
 
         public Task<CommentView> WriteAsync(CommentView view, Requester requester)
@@ -291,7 +302,6 @@ namespace contentapi.Services.Implementations
             var package = new EntityRelationPackage() { Main = relation };
             package.Related.Add(copy);
             return converter.ToView(package);
-
         }
 
         public async Task<CommentView> DeleteAsync(long id, Requester requester)

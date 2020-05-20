@@ -1,0 +1,55 @@
+Listen Documentation
+--------------------
+
+/api/listen is a long-polling endpoint that allows retrieval of SOME real-time 
+information, such as comments. You "listen" for things by giving a query param.
+You can listen for multiple things at once; i hope that one long-polling request
+will suffice all your needs.
+
+
+To listen for comments, you would visit: 
+
+/api/listen?comment=(a json string) 
+
+where the json string is (query encoded):
+
+{
+    "lastId" : num,
+    "firstId" : num,
+    "parentIds" : [num,num,etc]
+}
+
+The endpoint will return, when available, any new comment where id > lastId and
+any edited/deleted comment where id > firstId. It is ASSUMED you will read 
+an initial batch of comments using one of the standard GET endpoints, THEN call
+this with the range of ids. As you keep polling the endpoint, you need to 
+update these values, such as pushing lastId forward as you receive comments,
+or pushing firstId forward when you are no longer tracking comments that old.
+
+parentIds are all the content you want to listen for comments in. You can listen 
+to multiple parents at once; each comment will tell you the parent it came from.
+
+
+To listen for "listeners" (people in rooms) you would visit:
+
+/api/listen?listener=(a json string)
+
+where the json string is (query encoded):
+
+{
+    "parentIdsLast" : { "num" : [userlist], "num" : [userlist] }
+}
+
+The endpoint will return, when DIFFERENT from the userlists given, the list of
+user ids for users in the given parents. If you wish to simply know who is in
+each room, you could pass, for instance, [ 0 ] as the userlist, since user 0
+will never be in any room and thus even empty lists will return instantly.
+As with comments, you should send back what you think the userlists are for
+each parent, so it can poll for changes to those. 
+
+
+You can of course combine any combination of listeners. Any listener parameter
+given activates that listener, and the first one to complete will return its 
+data. For instance, if you listen for both listeners and comments, you may 
+receive a list of comments without users or a list of users without comments,
+whichever completes first.

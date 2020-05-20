@@ -33,6 +33,7 @@ namespace contentapi.Views
     {
         long avatar {get;set;}
         string username {get;set;}
+        string special {get;set;}
     }
 
     /// <summary>
