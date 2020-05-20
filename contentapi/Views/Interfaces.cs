@@ -29,13 +29,6 @@ namespace contentapi.Views
         long editUserId {get;set;}
     }
 
-    public interface IUserViewBasic : IBaseView
-    {
-        long avatar {get;set;}
-        string username {get;set;}
-        string special {get;set;}
-    }
-
     /// <summary>
     /// Views that have permissions MUST have parents, also show own permissions
     /// </summary>

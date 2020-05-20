@@ -154,7 +154,7 @@ namespace contentapi.Controllers
             Type type = typeof(V);
 
             if(type == typeof(UserViewFull))
-                type = typeof(IUserViewBasic);
+                type = typeof(UserViewBasic);
 
             var baseProperties = GetProperties(type);
 
@@ -179,7 +179,7 @@ namespace contentapi.Controllers
                 searchobject.Ids.AddRange(ParseChain(c, existingChains));
             
             //Oops, we're searching for NOTHING... yeah, this bad design is STILL BITING ME AAAGHH
-            if(searchobject.Ids.Count == 0)
+            if(data.chains.Count() > 0 && searchobject.Ids.Count == 0)
                 return;
 
             var myResults = await search(searchobject); //service.SearchAsync(searchobject, requester);
@@ -254,27 +254,30 @@ namespace contentapi.Controllers
         }
 
         [HttpGet("chain")]
-        public async Task<ActionResult<Dictionary<string, List<ExpandoObject>>>> ChainAsync([FromQuery]List<string> requests, [FromQuery]Dictionary<string, List<string>> fields)
+        public Task<ActionResult<Dictionary<string, List<ExpandoObject>>>> ChainAsync([FromQuery]List<string> requests, [FromQuery]Dictionary<string, List<string>> fields)
         {
-            if(requests == null)
-                requests = new List<string>();
-
-            fields = FixFields(fields);
-
-            CheckChainLimit(requests.Count);
-
-            var requester = GetRequesterNoFail();
-            var results = new Dictionary<string, List<ChainResult>>();
-            var userResults = new List<UserViewFull>();
-
-            var chainResults = new List<List<IIdView>>();
-
-            foreach(var request in requests)
+            return ThrowToAction(async() =>
             {
-                await ChainAsync(request, requester, results, chainResults, fields);
-            }
+                if (requests == null)
+                    requests = new List<string>();
 
-            return ChainResultToReturn(results);
+                fields = FixFields(fields);
+
+                CheckChainLimit(requests.Count);
+
+                var requester = GetRequesterNoFail();
+                var results = new Dictionary<string, List<ChainResult>>();
+                var userResults = new List<UserViewFull>();
+
+                var chainResults = new List<List<IIdView>>();
+
+                foreach (var request in requests)
+                {
+                    await ChainAsync(request, requester, results, chainResults, fields);
+                }
+
+                return ChainResultToReturn(results);
+            });
         }
 
         [HttpGet("chain/docs")]
@@ -285,13 +288,13 @@ namespace contentapi.Controllers
 
         public class CommentListenQuery : CommentListenConfig 
         { 
-            public List<string> chain {get;set;} //= new List<string>();
+            public List<string> chain {get;set;}
         }
 
         public class ListenerQuery
         {
             public Dictionary<string, List<long>> parentIdsLast {get;set;}
-            public List<string> chain {get;set;} //= new List<string>();
+            public List<string> chain {get;set;}
         }
 
         public class ListenResult
@@ -307,16 +310,6 @@ namespace contentapi.Controllers
             public List<long> listeners {get;set;}
         }
 
-        //public void MergeChainResults(Dictionary<string, List<ExpandoObject>> baseChain, Dictionary<string, List<ExpandoObject>> join)
-        //{
-        //    foreach(var chain in join)
-        //    {
-        //        if(!baseChain.ContainsKey(chain.Key))
-        //            baseChain.Add(chain.Key, new List<ExpandoObject>());
-        //        
-
-        //    }
-        //}
 
         [HttpGet("listen")]
         [Authorize]

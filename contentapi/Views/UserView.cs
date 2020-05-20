@@ -3,7 +3,10 @@ using System;
 
 namespace contentapi.Views
 {
-    public class UserViewBasic : BaseView, IUserViewBasic
+    /// <summary>
+    /// The user view most people see: the minimal amount of data
+    /// </summary>
+    public class UserViewBasic : BaseView
     {
         public string username { get; set; }
         public long avatar {get;set;}
@@ -11,17 +14,14 @@ namespace contentapi.Views
         public string special {get;set;}
     }
 
-    //This is the user as we give them out
-    public class UserView : BaseView, IUserViewBasic, IEditView
+    /// <summary>
+    /// The user view only the owner sees: it has their email, etc that other people shouldn't see
+    /// </summary>
+    public class UserView : UserViewBasic, IEditView
     {
-        public DateTime createDate { get; set;}
         public DateTime editDate { get;set;}
         public long createUserId { get;set;} 
         public long editUserId { get;set;}
-
-        public string username { get; set; }
-        public long avatar {get;set;}
-        public string special {get;set;}
 
         public string email { get; set; } //This field SHOULDN'T be set unless the user is ourselves.
 
@@ -35,6 +35,9 @@ namespace contentapi.Views
         }
     }
 
+    /// <summary>
+    /// The user view that ONLY the system uses. There should never be a way to retrieve the salt, password hash, etc.
+    /// </summary>
     public class UserViewFull : UserView
     {
         public string password {get;set;}
