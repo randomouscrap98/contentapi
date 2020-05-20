@@ -16,7 +16,8 @@ where the json string is (query encoded):
 {
     "lastId" : num,
     "firstId" : num,
-    "parentIds" : [num,num,etc]
+    "parentIds" : [num,num,etc],
+    "chain" : ["user.0createUserId", "etc" ]
 }
 
 The endpoint will return, when available, any new comment where id > lastId and
@@ -29,6 +30,10 @@ or pushing firstId forward when you are no longer tracking comments that old.
 parentIds are all the content you want to listen for comments in. You can listen 
 to multiple parents at once; each comment will tell you the parent it came from.
 
+You can also chain using standard chaining syntax. The 0th request will always 
+be the results from the comment long-polling. You can also include search
+json, just as with the standard chain endpoint, and you can chain repeatedly.
+
 
 To listen for "listeners" (people in rooms) you would visit:
 
@@ -37,7 +42,8 @@ To listen for "listeners" (people in rooms) you would visit:
 where the json string is (query encoded):
 
 {
-    "parentIdsLast" : { "num" : [userlist], "num" : [userlist] }
+    "parentIdsLast" : { "num" : [userlist], "num" : [userlist] },
+    "chain" : [ "user.0listeners", "etc" ]
 }
 
 The endpoint will return, when DIFFERENT from the userlists given, the list of
@@ -46,6 +52,11 @@ each room, you could pass, for instance, [ 0 ] as the userlist, since user 0
 will never be in any room and thus even empty lists will return instantly.
 As with comments, you should send back what you think the userlists are for
 each parent, so it can poll for changes to those. 
+
+As with comments, you can chain with listeners. However, unlike comments 
+which have defined fields you can chain to, listeners is a dictionary with
+no names. As such, the only "field" you can chain to is "listeners". just
+like comments, the list of listeners is always the 0th request.
 
 
 You can of course combine any combination of listeners. Any listener parameter

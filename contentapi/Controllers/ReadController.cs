@@ -177,6 +177,10 @@ namespace contentapi.Controllers
             //Parse the chains, get the ids
             foreach(var c in data.chains)
                 searchobject.Ids.AddRange(ParseChain(c, existingChains));
+            
+            //Oops, we're searching for NOTHING... yeah, this bad design is STILL BITING ME AAAGHH
+            if(searchobject.Ids.Count == 0)
+                return;
 
             var myResults = await search(searchobject); //service.SearchAsync(searchobject, requester);
             existingChains.Add(myResults.Cast<IIdView>().ToList());
@@ -230,7 +234,7 @@ namespace contentapi.Controllers
                 await ChainAsync(data, services.watch, requester, chainResults, r, f);
         }
 
-        public Dictionary<string, List<string>> FixFields(Dictionary<string, List<string>> fields)
+        protected Dictionary<string, List<string>> FixFields(Dictionary<string, List<string>> fields)
         {
             if(fields == null)
                 fields = new Dictionary<string, List<string>>();
@@ -238,9 +242,15 @@ namespace contentapi.Controllers
             return fields.ToDictionary(x => x.Key, y => y.Value.SelectMany(z => z.Split(",", StringSplitOptions.RemoveEmptyEntries)).ToList());
         }
 
-        public Dictionary<string, List<ExpandoObject>> ChainResultToReturn(Dictionary<string, List<ChainResult>> results)
+        protected Dictionary<string, List<ExpandoObject>> ChainResultToReturn(Dictionary<string, List<ChainResult>> results)
         {
             return results.ToDictionary(x => x.Key, y => y.Value.Select(x => x.result).ToList());
+        }
+
+        protected void CheckChainLimit(int? count)
+        {
+            if(count != null && count > 5)
+                throw new BadRequestException("Can't chain deeper than 5");
         }
 
         [HttpGet("chain")]
@@ -251,8 +261,7 @@ namespace contentapi.Controllers
 
             fields = FixFields(fields);
 
-            if(requests.Count > 5)
-                throw new BadRequestException("Can't chain deeper than 5");
+            CheckChainLimit(requests.Count);
 
             var requester = GetRequesterNoFail();
             var results = new Dictionary<string, List<ChainResult>>();
@@ -282,6 +291,7 @@ namespace contentapi.Controllers
         public class ListenerQuery
         {
             public Dictionary<string, List<long>> parentIdsLast {get;set;}
+            public List<string> chain {get;set;} //= new List<string>();
         }
 
         public class ListenResult
@@ -328,6 +338,9 @@ namespace contentapi.Controllers
                 var listenerObject = JsonSerializer.Deserialize<ListenerQuery>(listener ?? "{}", jsonOptions);
                 var commentObject = JsonSerializer.Deserialize<CommentListenQuery>(comment ?? "{}", jsonOptions);
 
+                CheckChainLimit(listenerObject?.chain?.Count);
+                CheckChainLimit(commentObject?.chain?.Count);
+
                 //Create a new cancel source FROM the original token so that either us or the client can cancel
                 using (CancellationTokenSource linkedCts = CancellationTokenSource.CreateLinkedTokenSource(cancelToken))
                 {
@@ -368,7 +381,17 @@ namespace contentapi.Controllers
                         if (listenWait != null && listenWait.IsCompleted)
                         {
                             result.listeners = listenWait.Result.ToDictionary(x => x.Key.ToString(), x => x.Value.Select(x => x.UserId).ToList());
-                            //Chaining would go here
+
+                            if(listenerObject.chain != null)
+                            {
+                                //First result is the comments we got
+                                var tempViewResults = new List<List<IIdView>>() { 
+                                    result.listeners.Select(x => new PhonyListenerList() {id = long.Parse(x.Key), listeners = x.Value })
+                                .Cast<IIdView>().ToList() };
+
+                                foreach(var chain in listenerObject.chain)
+                                    await ChainAsync(chain, requester, chainResults, tempViewResults, fields);
+                            }
                         }
                     }
                     finally

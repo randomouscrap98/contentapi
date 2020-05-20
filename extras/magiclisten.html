@@ -26,7 +26,7 @@
             auth.attr("readonly", "");
             var parents = parentIds.val().split(",");
             var queryobj = { 
-               "listener" : {"parentIdsLast" : {}}, 
+               "listener" : {"parentIdsLast" : {}, "chain" : ["user.0listeners"]}, 
                "comment" : {"lastId": 0, "firstId" : 0, "limit" : 10, "parentIds" : parents.map(x => Number(x)),
                             "chain": ["user.0createUserId"] }};
             for(var i = 0; i < parents.length; i++)
