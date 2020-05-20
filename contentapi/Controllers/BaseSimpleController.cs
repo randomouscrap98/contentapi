@@ -52,8 +52,15 @@ namespace contentapi.Controllers
         {
             try
             {
-                //Go find the parent. If it's not content, BAD BAD BAD
-                return await action();
+                try
+                {
+                    //Go find the parent. If it's not content, BAD BAD BAD
+                    return await action();
+                }
+                catch (AggregateException ex)
+                {
+                    throw ex.Flatten().InnerException;
+                }
             }
             catch(AuthorizationException ex)
             {

@@ -5,6 +5,7 @@ using System.Linq;
 using System.Reflection;
 using System.Text.Json;
 using System.Text.RegularExpressions;
+using System.Threading;
 using System.Threading.Tasks;
 using AutoMapper;
 using contentapi.Services;
@@ -251,6 +252,71 @@ namespace contentapi.Controllers
         public Task<ActionResult<string>> ChainDocsAsync()
         {
             return ThrowToAction(() => Task.FromResult(docService.GetString("read.chain", "en")));
+        }
+
+        public class CommentListenQuery
+        {
+            public long firstId {get;set;}
+            public long lastId {get;set;}
+            public List<long> parentIds {get;set;}
+        }
+
+        public class ListenerQuery
+        {
+            public Dictionary<string, List<long>> listener {get;set;}
+        }
+
+        public class ListenResult
+        {
+            public List<CommentView> comments {get;set;}
+            public Dictionary<string, List<long>> listeners {get;set;}
+            Dictionary<string, List<ExpandoObject>> chain {get;set;}
+        }
+
+        [HttpGet("listen")]
+        public Task<ActionResult<ListenResult>> ListenAsync([FromQuery]Dictionary<string, List<string>> fields, [FromQuery]CommentListenQuery comment, [FromQuery]ListenerQuery listener, CancellationToken cancelToken)
+        {
+            return ThrowToAction(async () =>
+            {
+                var result = new ListenResult();
+                var requester = GetRequesterNoFail();
+
+                //All the 
+                Task<Dictionary<long, List<CommentListener>>> listenWait = null;
+                Task<List<CommentView>> commentWait = null;
+                List<Task> waiters = new List<Task>();
+
+                if(listener?.listener != null)
+                {
+                    listenWait = services.comment.GetListenersAsync(listener.listener.ToDictionary(x => long.Parse(x.Key), y => y.Value), requester, cancelToken);
+                    waiters.Add(listenWait);
+                }
+
+                if(comment?.parentIds != null)
+                {
+                    commentWait = services.comment.ListenAsync(comment.parentIds, comment.lastId, comment.firstId, requester, cancelToken);
+                    waiters.Add(commentWait);
+                }
+
+                if(waiters.Count == 0)
+                    throw new BadRequestException("No listeners registered");
+
+                await Task.WhenAny(waiters.ToArray());
+
+                //Fill in data based on who is finished
+                if(commentWait != null && commentWait.IsCompleted)
+                {
+                    result.comments = commentWait.Result;
+                    //Chaining would go here
+                }
+                if(listenWait != null && listenWait.IsCompleted)
+                {
+                    result.listeners = listenWait.Result.ToDictionary(x => x.Key.ToString(), x => x.Value.Select(x => x.UserId).ToList());
+                    //Chaining would go here
+                }
+
+                return result;
+            });
         }
     }
 }
