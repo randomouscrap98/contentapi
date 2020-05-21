@@ -46,7 +46,20 @@ Unlike the standard GET endpoints, you can limit the fields returned in chaining
 Say you want to perform the first example request (content with linked users) but
 you only want the user's id and username. That would be:
 
-  /api/read/chain?requests=content&request=user.0createUserId.0editUserId&user=id,username
+  /api/read/chain?requests=content&requests=user.0createUserId.0editUserId&user=id,username
 
 Just add a query parameter with the endpoint name = a comma separated list of 
 field names. You can limit any or all or none of the endpoint results.
+
+
+* Specify Search Field
+
+So far, all these chains have linked some field from one request into the ID search
+for some other set. You can specify the search field to, for instance, search for
+parent ids. An example would be getting all content which are direct children of
+users (such as user pages?):
+
+ /api/read/chain?requests=user&requests=content.0id$parentids
+
+It's the same as before with .IDsomefield, but we add $searchfield to specify
+the field to search against. This defaults to "ids" when $ is not given.

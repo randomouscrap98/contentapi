@@ -1,7 +1,7 @@
 Listen Documentation
 --------------------
 
-/api/listen is a long-polling endpoint that allows retrieval of SOME real-time 
+/api/read/listen is a long-polling endpoint that allows retrieval of SOME real-time 
 information, such as comments. You "listen" for things by giving a query param.
 You can listen for multiple things at once; i hope that one long-polling request
 will suffice all your needs.
@@ -9,7 +9,7 @@ will suffice all your needs.
 
 To listen for comments, you would visit: 
 
-/api/listen?comment=(a json string) 
+/api/read/listen?comment=(a json string) 
 
 where the json string is (query encoded):
 
@@ -37,7 +37,7 @@ json, just as with the standard chain endpoint, and you can chain repeatedly.
 
 To listen for "listeners" (people in rooms) you would visit:
 
-/api/listen?listener=(a json string)
+/api/read/listen?listener=(a json string)
 
 where the json string is (query encoded):
 

@@ -34,9 +34,9 @@ namespace contentapi.Controllers
         protected ILanguageService docService;
         protected ChainServices services;
 
-        protected Regex requestRegex = new Regex(@"^(?<endpoint>[a-z]+)(\.(?<chain>\d+[a-z]+))*(-(?<search>.+))?$", 
+        protected Regex requestRegex = new Regex(@"^(?<endpoint>[a-z]+)(\.(?<chain>\d+[a-z]+(?:\$[a-z]+)?))*(-(?<search>.+))?$", 
             RegexOptions.Compiled | RegexOptions.IgnoreCase);
-        protected Regex chainRegex = new Regex(@"^(?<index>\d+)(?<field>[a-z]+)$", 
+        protected Regex chainRegex = new Regex(@"^(?<index>\d+)(?<field>[a-z]+)(\$(?<searchfield>[a-z]+))?$", 
             RegexOptions.Compiled | RegexOptions.IgnoreCase);
         protected JsonSerializerOptions jsonOptions = new JsonSerializerOptions()
         {
@@ -51,42 +51,64 @@ namespace contentapi.Controllers
             this.services = services;
         }
 
-        protected List<long> ParseChain(string chain, List<List<IIdView>> existingChains)
+        protected List<long> ChainIdSearch<S>(string chain, List<List<IIdView>> existingChains, S search) where S : IIdSearcher
         {
             var match = chainRegex.Match(chain);
             var index = match.Groups["index"].Value;
             var field = match.Groups["field"].Value;
+            var searchfield = match.Groups["searchfield"].Value;
+
+            if(string.IsNullOrEmpty(searchfield))
+                searchfield = "Ids";
+            
+            //We "pre-add" some faulty value (which yes, increases processing for all requests)
+            //to ensure that we're never searching "all" during a chain
+            var ids = new List<long>() { long.MaxValue };
+
+            //Parse the easy stuff before we get to reflection.
             int realIndex;
 
             if (index == null || field == null || !int.TryParse(index, out realIndex) || realIndex < 0 || existingChains.Count <= realIndex)
-                throw new BadRequestException($"Bad chain: {chain}");
+                throw new BadRequestException($"Bad chain index or missing field: {chain}");
 
             var analyze = existingChains[realIndex].FirstOrDefault();
 
-            if(analyze == null)
+            if(analyze != null)
             {
-                logger.LogWarning("Linked chain had no elements, adding faulty value to simulate 0 search");
-                return new List<long>() { long.MaxValue };
+                var type = analyze.GetType();
+                var properties = GetProperties(type); //type.GetProperties();
+                var property = properties.FirstOrDefault(x => x.Name.ToLower() == field.ToLower());
+
+                Func<IIdView, IEnumerable<long>> selector = null;
+
+                if (property != null)
+                {
+                    if (property.PropertyType == typeof(long))
+                        selector = x => new[] { (long)property.GetValue(x) };
+                    else if (property.PropertyType == typeof(List<long>)) //maybe need to get better about typing
+                        selector = x => (List<long>)property.GetValue(x);
+                }
+
+                if (selector == null)
+                    throw new BadRequestException($"Bad chain read field: {chain}");
+
+                //Addrange so that we keep that old maxvalue
+                ids.AddRange(existingChains[realIndex].SelectMany(selector));
             }
 
-            var type = analyze.GetType();
-            var properties = type.GetProperties();
-            var property = properties.FirstOrDefault(x => x.Name.ToLower() == field.ToLower());
+            //NOW, let's see about that field we'll be assigning to
+            var searchType = typeof(S);
+            var searchProperties = GetProperties(searchType);
+            var searchProperty = searchProperties.FirstOrDefault(x => x.Name.ToLower() == searchfield.ToLower());
 
-            Func<IIdView, IEnumerable<long>> selector = null;
+            if (searchProperty == null)
+                throw new BadRequestException($"Bad chain assign field: {chain}");
 
-            if (property != null)
-            {
-                if(property.PropertyType == typeof(long))
-                    selector = x => new [] { (long)property.GetValue(x) };
-                else if(property.PropertyType == typeof(List<long>)) //maybe need to get better about typing
-                    selector = x => (List<long>)property.GetValue(x);
-            } 
-
-            if(selector == null)
-                throw new BadRequestException($"Bad chain: {chain}");
-
-            return existingChains[realIndex].SelectMany(selector).ToList();
+            if(searchProperty.PropertyType != typeof(List<long>))
+                throw new BadRequestException($"Bad chain assign field type: {chain}");
+            
+            ((List<long>)searchProperty.GetValue(search)).AddRange(ids);
+            return ids;
         }
 
         public class ChainData
@@ -173,14 +195,16 @@ namespace contentapi.Controllers
             }
 
             var searchobject = JsonSerializer.Deserialize<S>(data.search, jsonOptions);
+            //var ids = new List<long>();
 
             //Parse the chains, get the ids
             foreach(var c in data.chains)
-                searchobject.Ids.AddRange(ParseChain(c, existingChains));
+                ChainIdSearch(c, existingChains, searchobject);
+                //searchobject.Ids.AddRange(ParseChain(c, existingChains));
             
             //Oops, we're searching for NOTHING... yeah, this bad design is STILL BITING ME AAAGHH
-            if(data.chains.Count() > 0 && searchobject.Ids.Count == 0)
-                return;
+            //if(data.chains.Count() > 0 && ids.Count == 0)
+            //    return;
 
             var myResults = await search(searchobject); //service.SearchAsync(searchobject, requester);
             existingChains.Add(myResults.Cast<IIdView>().ToList());
