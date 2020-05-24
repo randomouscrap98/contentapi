@@ -23,6 +23,10 @@ namespace contentapi.Services.Constants
         public const string SuperRelation = "rs";
         public const string WatchRelation = "rw";
 
+        public const string VoteRelation = "rv";
+        public const string UpvoteRelation = "rvu";
+        public const string DownvoteRelation = "rvd";
+
 
         //General Value keys
         public const string KeywordKey = "#";

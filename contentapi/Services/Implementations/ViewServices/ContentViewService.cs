@@ -11,10 +11,18 @@ using Randomous.EntitySystem.Extensions;
 
 namespace contentapi.Services.Implementations
 {
+    public enum ContentVote
+    {
+        None = 0,
+        Up = 1,
+        Down = -1
+    }
+
     public class ContentViewService : BasePermissionViewService<ContentView, ContentSearch>
     {
         protected CategoryViewSource categoryService;
         protected CommentViewSource commentSource;
+        protected ContentViewSource contentSource;
         protected WatchViewSource watchSource;
         
         protected Dictionary<long, List<long>> cachedSupers = null;
@@ -27,6 +35,7 @@ namespace contentapi.Services.Implementations
             this.categoryService = categoryService;
             this.commentSource = commentSource;
             this.watchSource = watchSource;
+            this.contentSource = converter;
         }
 
         public override string EntityType => Keys.ContentType;
@@ -108,9 +117,42 @@ namespace contentapi.Services.Implementations
                     x.watches = watches[-x.id];
                 if(comments.ContainsKey(x.id))
                     x.comments = comments[x.id];
+
+                VoteData myVote; 
+                
+                //the only public vote is ourselves
+                if(x.votes.@public.TryGetValue(requester.userId.ToString(), out myVote))
+                    x.votes.@public = new Dictionary<string, VoteData>() { { requester.userId.ToString(), myVote }};
+                else
+                    x.votes.@public.Clear();
             });
 
             return baseResult;
+        }
+
+        public async Task Vote(long contentId, ContentVote vote, Requester requester)
+        {
+            //FIRST, go get the content and make sure it's valid!
+            var content = await FindByIdAsync(contentId, requester);
+
+            if(content == null)
+                throw new NotFoundException("No content with that ID!");
+            
+            var oldVotes = await contentSource.GetUserVotes(requester.userId, contentId);
+
+            //Then, find the old vote and D E L E T E  I T
+            if(oldVotes.Count > 0)
+            {
+                logger.LogDebug($"deleting old votes {string.Join(",", oldVotes.Select(x => x.type))} on {contentId} for user {requester.userId}");
+                await provider.DeleteAsync(oldVotes.ToArray());
+            }
+
+            //NOTE: I don't care if something bad happens between deletion and voting. 
+            //Voting isn't that important... probably.
+            if(vote == ContentVote.Up)
+                await provider.WriteAsync(contentSource.CreateUpVote(requester.userId, contentId));
+            else if(vote == ContentVote.Down)
+                await provider.WriteAsync(contentSource.CreateDownVote(requester.userId, contentId));
         }
     }
 }

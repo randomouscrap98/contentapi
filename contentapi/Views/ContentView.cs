@@ -5,6 +5,24 @@ using System.Linq;
 
 namespace contentapi.Views
 {
+    public class VoteData
+    {
+        public int vote {get;set;}
+        public DateTime? date {get;set;}
+    }
+
+    public class AggregateVoteData
+    {
+        public int up {get;set;}
+        public int down {get;set;}
+        public Dictionary<string, VoteData> @public {get;set;}
+    }
+
+    //public class ContentViewFull : ContentView
+    //{
+    //    public List<VoteData> rawVotes {get;set;}
+    //}
+
     public class ContentView : StandardView
     {
         [Required]
@@ -27,5 +45,7 @@ namespace contentapi.Views
 
         public SimpleAggregateData comments {get;set;} = new SimpleAggregateData();
         public SimpleAggregateData watches {get;set;} = new SimpleAggregateData();
+
+        public AggregateVoteData votes {get;set;} = new AggregateVoteData(); //Always have at least an empty vote data
     }
 }

@@ -34,10 +34,12 @@ namespace contentapi.Controllers
         protected ILanguageService docService;
         protected ChainServices services;
 
+        //These should all be... settings?
         protected Regex requestRegex = new Regex(@"^(?<endpoint>[a-z]+)(\.(?<chain>\d+[a-z]+(?:\$[a-z]+)?))*(-(?<search>.+))?$", 
             RegexOptions.Compiled | RegexOptions.IgnoreCase);
         protected Regex chainRegex = new Regex(@"^(?<index>\d+)(?<field>[a-z]+)(\$(?<searchfield>[a-z]+))?$", 
             RegexOptions.Compiled | RegexOptions.IgnoreCase);
+        protected TimeSpan completionWaitUp = TimeSpan.FromMilliseconds(10);
         protected JsonSerializerOptions jsonOptions = new JsonSerializerOptions()
         {
             PropertyNameCaseInsensitive = true
@@ -76,7 +78,7 @@ namespace contentapi.Controllers
             if(analyze != null)
             {
                 var type = analyze.GetType();
-                var properties = GetProperties(type); //type.GetProperties();
+                var properties = GetProperties(type);
                 var property = properties.FirstOrDefault(x => x.Name.ToLower() == field.ToLower());
 
                 Func<IIdView, IEnumerable<long>> selector = null;
@@ -175,8 +177,10 @@ namespace contentapi.Controllers
 
             Type type = typeof(V);
 
+            //My poor design has led to this...
             if(type == typeof(UserViewFull))
                 type = typeof(UserViewBasic);
+            //if(type == typeof(ContentViewFull))
 
             var baseProperties = GetProperties(type);
 
@@ -194,19 +198,23 @@ namespace contentapi.Controllers
                     throw new BadRequestException($"Unknown fields in list: {string.Join(",", fields)}");
             }
 
-            var searchobject = JsonSerializer.Deserialize<S>(data.search, jsonOptions);
-            //var ids = new List<long>();
+            S searchobject;
+
+            try
+            {
+                searchobject = JsonSerializer.Deserialize<S>(data.search, jsonOptions);
+            }
+            catch(Exception ex)
+            {
+                //I don't care too much about json deseralize errors, just the message. I don't even log it.
+                throw new BadRequestException(ex.Message + " (CHAIN REMINDER: json search comes last AFTER all . chaining in a request)");
+            }
 
             //Parse the chains, get the ids
             foreach(var c in data.chains)
                 ChainIdSearch(c, existingChains, searchobject);
-                //searchobject.Ids.AddRange(ParseChain(c, existingChains));
             
-            //Oops, we're searching for NOTHING... yeah, this bad design is STILL BITING ME AAAGHH
-            //if(data.chains.Count() > 0 && ids.Count == 0)
-            //    return;
-
-            var myResults = await search(searchobject); //service.SearchAsync(searchobject, requester);
+            var myResults = await search(searchobject);
             existingChains.Add(myResults.Cast<IIdView>().ToList());
 
             //Only add ones that aren't in the list
@@ -363,23 +371,26 @@ namespace contentapi.Controllers
                 {
                     try
                     {
-                        //Only run the listeners that the user asked for
-                        if (listenerObject?.parentIdsLast != null)
-                        {
-                            listenWait = services.comment.GetListenersAsync(listenerObject.parentIdsLast.ToDictionary(x => long.Parse(x.Key), y => y.Value), requester, linkedCts.Token);
-                            waiters.Add(listenWait);
-                        }
-
                         if (commentObject?.parentIds != null)
                         {
                             commentWait = services.comment.ListenAsync(commentObject, requester, linkedCts.Token);
                             waiters.Add(commentWait);
                         }
 
+                        //Only run the listeners that the user asked for
+                        if (listenerObject?.parentIdsLast != null)
+                        {
+                            //We wait a LITTLE BIT so that if comments don't complete, we will show up in the listener list.
+                            await Task.Delay(5);
+                            listenWait = services.comment.GetListenersAsync(listenerObject.parentIdsLast.ToDictionary(x => long.Parse(x.Key), y => y.Value), requester, linkedCts.Token);
+                            waiters.Add(listenWait);
+                        }
+
                         if (waiters.Count == 0)
                             throw new BadRequestException("No listeners registered");
 
                         await Task.WhenAny(waiters.ToArray());
+                        await Task.Delay(completionWaitUp); //To allow some others to catch up if they're ALMOST done
 
                         //Fill in data based on who is finished
                         if (commentWait != null && commentWait.IsCompleted)

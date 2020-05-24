@@ -1,5 +1,7 @@
 using System;
+using System.Collections.Generic;
 using System.Linq;
+using System.Threading.Tasks;
 using AutoMapper;
 using contentapi.Services.Constants;
 using contentapi.Views;
@@ -65,6 +67,13 @@ namespace contentapi.Services.Implementations
             foreach(var keyword in package.Values.Where(x => x.key == Keys.KeywordKey))
                 view.keywords.Add(keyword.value);
             
+            //votes are special: they can only be read
+            view.votes.@public = package.Relations.Where(x => x.type.StartsWith(Keys.VoteRelation))
+                .ToDictionary(x => x.entityId1.ToString(), y => new VoteData() { vote = y.type == Keys.UpvoteRelation ? 1 : -1, date = y.createDateProper() });
+
+            view.votes.up = view.votes.@public.Count(x => x.Value.vote > 0);
+            view.votes.down = view.votes.@public.Count(x => x.Value.vote < 0);
+
             return view;
         }
 
@@ -83,6 +92,41 @@ namespace contentapi.Services.Implementations
                 query = LimitByValue(query, Keys.KeywordKey, search.Keyword);
             
             return query;
+        }
+
+
+        public Task<List<EntityRelation>> GetUserVotes(long userId, long contentId)
+        {
+            var oldSearch = new EntityRelationSearch();
+            oldSearch.EntityIds1.Add(userId);
+            oldSearch.EntityIds2.Add(contentId);
+            oldSearch.TypeLike = Keys.VoteRelation + "%";
+
+            return provider.GetEntityRelationsAsync(oldSearch);
+        }
+
+        public EntityRelation CreateBaseVote(long userId, long contentId)
+        {
+            return new EntityRelation()
+            {
+                entityId1 = userId,
+                entityId2 = contentId,
+                createDate = DateTime.UtcNow,
+            };
+        }
+
+        public EntityRelation CreateDownVote(long userId, long contentId)
+        {
+            var vote = CreateBaseVote(userId, contentId);
+            vote.type = Keys.DownvoteRelation;
+            return vote;
+        }
+
+        public EntityRelation CreateUpVote(long userId, long contentId)
+        {
+            var vote = CreateBaseVote(userId, contentId);
+            vote.type = Keys.UpvoteRelation;
+            return vote;
         }
     }
 }

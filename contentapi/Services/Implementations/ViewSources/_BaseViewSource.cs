@@ -107,6 +107,16 @@ namespace contentapi.Services.Implementations
                     }
                 })
             );
+
+            pureList.ForEach(x =>
+            {
+                var kind = DateTime.Now.Kind;
+
+                if(x.aggregate.lastDate != null)
+                    x.aggregate.lastDate = new DateTime(((DateTime)x.aggregate.lastDate).Ticks, kind);
+                if(x.aggregate.firstDate != null)
+                    x.aggregate.firstDate = new DateTime(((DateTime)x.aggregate.firstDate).Ticks, kind);
+            });
             
             return pureList.ToDictionary(x => x.key, y => y.aggregate);
         }
