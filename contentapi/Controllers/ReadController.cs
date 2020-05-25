@@ -26,6 +26,7 @@ namespace contentapi.Controllers
         public CommentViewService comment {get;set;}
         public ActivityViewService activity {get;set;}
         public WatchViewService watch {get;set;}
+        public VoteViewService vote {get;set;}
     }
 
     public class ReadController : BaseSimpleController
@@ -180,7 +181,6 @@ namespace contentapi.Controllers
             //My poor design has led to this...
             if(type == typeof(UserViewFull))
                 type = typeof(UserViewBasic);
-            //if(type == typeof(ContentViewFull))
 
             var baseProperties = GetProperties(type);
 
@@ -264,6 +264,8 @@ namespace contentapi.Controllers
                 await ChainAsync(data, services.activity, requester, chainResults, r, f);
             else if (data.endpoint == "watch")
                 await ChainAsync(data, services.watch, requester, chainResults, r, f);
+            else if (data.endpoint == "vote")
+                await ChainAsync(data, services.vote, requester, chainResults, r, f);
         }
 
         protected Dictionary<string, List<string>> FixFields(Dictionary<string, List<string>> fields)

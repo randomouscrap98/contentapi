@@ -78,7 +78,8 @@ namespace contentapi
                 category = p.GetService<CategoryViewService>(),
                 comment = p.GetService<CommentViewService>(),
                 activity = p.GetService<ActivityViewService>(),
-                watch = p.GetService<WatchViewService>()
+                watch = p.GetService<WatchViewService>(),
+                vote = p.GetService<VoteViewService>()
             });
 
             //A special case for websockets: we determine what the websockets will handle right here and now

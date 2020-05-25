@@ -24,8 +24,12 @@ namespace contentapi.Services.Constants
         public const string WatchRelation = "rw";
 
         public const string VoteRelation = "rv";
-        public const string UpvoteRelation = "rvu";
-        public const string DownvoteRelation = "rvd";
+        //public const string VoteBadRelation = "rvb";
+        //public const string VoteOkRelation = "rvo";
+        //public const string VoteGreatRelation = "rvg";
+
+        //public const string UpvoteRelation = "rvu";
+        //public const string DownvoteRelation = "rvd";
 
 
         //General Value keys

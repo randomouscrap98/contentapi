@@ -5,17 +5,10 @@ using System.Linq;
 
 namespace contentapi.Views
 {
-    public class VoteData
-    {
-        public int vote {get;set;}
-        public DateTime? date {get;set;}
-    }
-
     public class AggregateVoteData
     {
-        public int up {get;set;}
-        public int down {get;set;}
-        public Dictionary<string, VoteData> @public {get;set;}
+        public Dictionary<string, int> all {get;set;}
+        public List<VoteView> @public {get;set;}
     }
 
     //public class ContentViewFull : ContentView

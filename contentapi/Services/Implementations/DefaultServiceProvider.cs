@@ -42,6 +42,7 @@ namespace contentapi.Services.Implementations
             services.AddTransient<FileViewService>();
             services.AddTransient<UserViewService>();
             services.AddTransient<WatchViewService>();
+            services.AddTransient<VoteViewService>();
 
             services.AddTransient<ActivityViewSource>();
             services.AddTransient<CategoryViewSource>();
@@ -50,6 +51,7 @@ namespace contentapi.Services.Implementations
             services.AddTransient<FileViewSource>();
             services.AddTransient<UserViewSource>();
             services.AddTransient<WatchViewSource>();
+            services.AddTransient<VoteViewSource>();
 
             //We need automapper for our view services
             services.AddAutoMapper(GetType());

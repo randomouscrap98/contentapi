@@ -1,10 +1,12 @@
 using System;
 using System.Collections.Generic;
 using System.Linq;
+using System.Linq.Expressions;
 using System.Threading.Tasks;
 using AutoMapper;
 using contentapi.Services.Constants;
 using contentapi.Views;
+using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.Logging;
 using Randomous.EntitySystem;
 using Randomous.EntitySystem.Extensions;
@@ -31,8 +33,13 @@ namespace contentapi.Services.Implementations
     {
         public override string EntityType => Keys.ContentType;
 
-        public ContentViewSource(ILogger<ContentViewSource> logger, IMapper mapper, IEntityProvider provider) 
-            : base(logger, mapper, provider) { }
+        //protected VoteService voteService;
+
+        public ContentViewSource(ILogger<ContentViewSource> logger, IMapper mapper, IEntityProvider provider) //, VoteService voteService) 
+            : base(logger, mapper, provider) 
+        { 
+            //this.voteService = voteService;
+        }
 
         public override EntityPackage FromView(ContentView view)
         {
@@ -68,11 +75,11 @@ namespace contentapi.Services.Implementations
                 view.keywords.Add(keyword.value);
             
             //votes are special: they can only be read
-            view.votes.@public = package.Relations.Where(x => x.type.StartsWith(Keys.VoteRelation))
-                .ToDictionary(x => x.entityId1.ToString(), y => new VoteData() { vote = y.type == Keys.UpvoteRelation ? 1 : -1, date = y.createDateProper() });
+            //view.votes.@public = package.Relations.Where(x => x.type.StartsWith(Keys.VoteRelation))
+            //    .ToDictionary(x => x.entityId1.ToString(), y => new VoteData() { vote = y.type == Keys.UpvoteRelation ? 1 : -1, date = y.createDateProper() });
 
-            view.votes.up = view.votes.@public.Count(x => x.Value.vote > 0);
-            view.votes.down = view.votes.@public.Count(x => x.Value.vote < 0);
+            //view.votes.up = view.votes.@public.Count(x => x.Value.vote > 0);
+            //view.votes.down = view.votes.@public.Count(x => x.Value.vote < 0);
 
             return view;
         }
@@ -94,39 +101,47 @@ namespace contentapi.Services.Implementations
             return query;
         }
 
-
-        public Task<List<EntityRelation>> GetUserVotes(long userId, long contentId)
+        public override IQueryable<long> FinalizeQuery(IQueryable<EntityGroup> query, ContentSearch search)
         {
-            var oldSearch = new EntityRelationSearch();
-            oldSearch.EntityIds1.Add(userId);
-            oldSearch.EntityIds2.Add(contentId);
-            oldSearch.TypeLike = Keys.VoteRelation + "%";
+            var condense = query.GroupBy(MainIdSelector).Select(x => new ContinuousSort() { id = x.Key, sort = 0 });
+            bool includeVotes = false;
+            bool includeWatches = false;
 
-            return provider.GetEntityRelationsAsync(oldSearch);
-        }
-
-        public EntityRelation CreateBaseVote(long userId, long contentId)
-        {
-            return new EntityRelation()
+            if(search.Sort == "votes")
             {
-                entityId1 = userId,
-                entityId2 = contentId,
-                createDate = DateTime.UtcNow,
-            };
-        }
+                includeVotes = true;
+            }
+            else if (search.Sort == "watches")
+            {
+                includeWatches = true;
+            }
+            else if (search.Sort == "score")
+            {
+                includeVotes = true;
+                includeWatches = true;
+            }
 
-        public EntityRelation CreateDownVote(long userId, long contentId)
-        {
-            var vote = CreateBaseVote(userId, contentId);
-            vote.type = Keys.DownvoteRelation;
-            return vote;
-        }
+            if(includeVotes)
+            {
+                foreach(var voteWeight in Votes.VoteWeights)
+                    condense = ApplyAdditionalSort<EntityRelation>(condense, x => x.entityId2, x => x.type == Keys.VoteRelation && x.value == voteWeight.Key, voteWeight.Value);
+            }
+            if(includeWatches)
+            {
+                condense = ApplyAdditionalSort<EntityRelation>(condense, x => -x.entityId2, x => x.type == Keys.WatchRelation, 1);
+            }
 
-        public EntityRelation CreateUpVote(long userId, long contentId)
-        {
-            var vote = CreateBaseVote(userId, contentId);
-            vote.type = Keys.UpvoteRelation;
-            return vote;
+            if(includeVotes || includeWatches)
+            {
+                if(search.Reverse)
+                    condense = condense.OrderByDescending(x => x.sort);
+                else
+                    condense = condense.OrderBy(x => x.sort);
+                
+                return condense.Select(x => x.id);
+            }
+
+            return base.FinalizeQuery(query, search);
         }
     }
 }
