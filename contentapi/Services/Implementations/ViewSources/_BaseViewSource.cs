@@ -151,28 +151,28 @@ namespace contentapi.Services.Implementations
             return provider.ApplyFinal(husks, search).Select(x => x.id);
         }
 
-        public class ContinuousSort
-        {
-            public long id {get;set;}
-            public double sort {get;set;}
-        }
+        //public class ContinuousSort
+        //{
+        //    public long id {get;set;}
+        //    public double sort {get;set;}
+        //}
 
-        //This is SO inefficient, ESPECIALLY when it gets stacked! So many joins! But it's because there's no
-        //group by where count in ef core... I think. I tried and it didn't work: 5/25/2020
-        public IQueryable<ContinuousSort> ApplyAdditionalSort<R>(
-            IQueryable<ContinuousSort> query, 
-            Expression<Func<R, long>> join, 
-            Expression<Func<R, bool>> whereClause, 
-            double modifier) where R : EntityBase
-        {
-            var joined = query
-                .GroupJoin(Q<R>().Where(whereClause), x => x.id, join, (s,r) => new { s = s, r = r })
-                .SelectMany(x => x.r.DefaultIfEmpty(), (x,y) => new ContinuousSort() { id = x.s.id, sort = x.s.sort });
+        ////This is SO inefficient, ESPECIALLY when it gets stacked! So many joins! But it's because there's no
+        ////group by where count in ef core... I think. I tried and it didn't work: 5/25/2020
+        //public IQueryable<ContinuousSort> ApplyAdditionalSort<R>(
+        //    IQueryable<ContinuousSort> query, 
+        //    Expression<Func<R, long>> join, 
+        //    Expression<Func<R, bool>> whereClause, 
+        //    double modifier) where R : EntityBase
+        //{
+        //    var joined = query
+        //        .GroupJoin(Q<R>().Where(whereClause), x => x.id, join, (s,r) => new { s = s, r = r })
+        //        .SelectMany(x => x.r.DefaultIfEmpty(), (x,y) => new ContinuousSort() { id = x.s.id, sort = x.s.sort });
 
-            return  from j in joined
-                    group j by j.id into g
-                    select new ContinuousSort() { id = g.Key, sort = g.Max(x => x.sort) + modifier * g.Count() };
-        }
+        //    return  from j in joined
+        //            group j by j.id into g
+        //            select new ContinuousSort() { id = g.Key, sort = g.Max(x => x.sort) + modifier * g.Count() };
+        //}
 
     }
 }
