@@ -106,8 +106,14 @@ namespace contentapi.Services.Implementations
             var comments = await commentSource.GroupAsync<EntityRelation, long>(
                 commentSource.SearchIds(new CommentSearch() { ParentIds = baseIds }), x => x.entityId1);
             
-            //var votes = await voteService.GetVotes(baseIds, requester.userId);
-            
+            var votes = new Dictionary<string, Dictionary<long, SimpleAggregateData>>();
+
+            foreach(var voteWeight in Votes.VoteWeights)
+            {
+                votes.Add(voteWeight.Key, await voteSource.GroupAsync<EntityRelation, long>(
+                    voteSource.SearchIds(new VoteSearch() { ContentIds = baseIds, Vote = voteWeight.Key }), x => x.entityId2));
+            }
+
             baseResult.ForEach(x =>
             {
                 if(watches.ContainsKey(-x.id))
@@ -115,13 +121,13 @@ namespace contentapi.Services.Implementations
                 if(comments.ContainsKey(x.id))
                     x.comments = comments[x.id];
 
-                //VoteData myVote; 
-                
-                ////the only public vote is ourselves
-                //if(x.votes.@public.TryGetValue(requester.userId.ToString(), out myVote))
-                //    x.votes.@public = new Dictionary<string, VoteData>() { { requester.userId.ToString(), myVote }};
-                //else
-                //    x.votes.@public.Clear();
+                foreach(var voteWeight in Votes.VoteWeights)
+                {
+                    x.votes.Add(voteWeight.Key, new SimpleAggregateData());
+
+                    if(votes[voteWeight.Key].ContainsKey(-x.id))
+                        x.votes[voteWeight.Key] = votes[voteWeight.Key][-x.id];
+                }
             });
 
             return baseResult;

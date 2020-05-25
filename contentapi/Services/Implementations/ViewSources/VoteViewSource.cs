@@ -15,6 +15,7 @@ namespace contentapi.Services.Implementations
     {
         public List<long> UserIds {get;set;} = new List<long>();
         public List<long> ContentIds {get;set;} = new List<long>();
+        public string Vote {get;set;}
     }
 
     public class VoteViewSourceProfile : Profile 
@@ -41,8 +42,7 @@ namespace contentapi.Services.Implementations
         {
             var relation = new EntityRelation()
             {
-                type = EntityType,
-                value = view.vote,
+                type = EntityType + view.vote,
                 entityId1 = view.userId,
                 entityId2 = -view.contentId
             };
@@ -56,7 +56,7 @@ namespace contentapi.Services.Implementations
         {
             var view = new VoteView()
             {
-                vote = basic.value,
+                vote = basic.type.Substring(Keys.VoteRelation.Length),
                 userId = basic.entityId1,
                 contentId = -basic.entityId2
             };
@@ -64,6 +64,13 @@ namespace contentapi.Services.Implementations
             this.ApplyToBaseView(basic, view);
 
             return view;
+        }
+
+        public override EntityRelationSearch CreateSearch(VoteSearch search)
+        {
+            var eSearch = base.CreateSearch(search);
+            eSearch.TypeLike += (search.Vote?.ToLower() ?? "%");
+            return eSearch;
         }
 
         //We have this simple code everywhere because we may NOT return the same thing every time

@@ -5,11 +5,11 @@ using System.Linq;
 
 namespace contentapi.Views
 {
-    public class AggregateVoteData
-    {
-        public Dictionary<string, int> all {get;set;}
-        public List<VoteView> @public {get;set;}
-    }
+    //public class AggregateVoteData
+    //{
+    //    public Dictionary<string, int> all {get;set;}
+    //    public List<VoteView> @public {get;set;}
+    //}
 
     //public class ContentViewFull : ContentView
     //{
@@ -38,7 +38,8 @@ namespace contentapi.Views
 
         public SimpleAggregateData comments {get;set;} = new SimpleAggregateData();
         public SimpleAggregateData watches {get;set;} = new SimpleAggregateData();
+        public Dictionary<string, SimpleAggregateData> votes {get;set;} = new Dictionary<string, SimpleAggregateData>();
 
-        public AggregateVoteData votes {get;set;} = new AggregateVoteData(); //Always have at least an empty vote data
+        //public AggregateVoteData votes {get;set;} = new AggregateVoteData(); //Always have at least an empty vote data
     }
 }

@@ -93,10 +93,10 @@ namespace contentapi.Services.Implementations
             return query.GroupBy(MainIdSelector).Select(x => x.Key);
         }
 
-        public async Task<Dictionary<X, SimpleAggregateData>> GroupAsync<R,X>(IQueryable<long> ids, Expression<Func<R,X>> keySelector) where R : EntityBase
+        private async Task<Dictionary<X, SimpleAggregateData>> GroupAsync<R,X>(IQueryable<long> ids, IQueryable<R> join, Expression<Func<R,X>> keySelector) where R : EntityBase
         {
             var pureList = await provider.GetListAsync(
-                ids.Join(Q<R>(), x => x, r => r.id, (x, r) => r).GroupBy(keySelector).Select(g => new 
+                ids.Join(join, x => x, r => r.id, (x, r) => r).GroupBy(keySelector).Select(g => new 
                 { 
                     key = g.Key, 
                     aggregate = new SimpleAggregateData()
@@ -119,6 +119,11 @@ namespace contentapi.Services.Implementations
             });
             
             return pureList.ToDictionary(x => x.key, y => y.aggregate);
+        }
+
+        public Task<Dictionary<X, SimpleAggregateData>> GroupAsync<R,X>(IQueryable<long> ids, Expression<Func<R,X>> keySelector) where R : EntityBase
+        {
+            return GroupAsync(ids, Q<R>(), keySelector);
         }
 
         public abstract IQueryable<E> GetBaseQuery(S search);

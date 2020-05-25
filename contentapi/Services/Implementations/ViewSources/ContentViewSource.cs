@@ -74,13 +74,6 @@ namespace contentapi.Services.Implementations
             foreach(var keyword in package.Values.Where(x => x.key == Keys.KeywordKey))
                 view.keywords.Add(keyword.value);
             
-            //votes are special: they can only be read
-            //view.votes.@public = package.Relations.Where(x => x.type.StartsWith(Keys.VoteRelation))
-            //    .ToDictionary(x => x.entityId1.ToString(), y => new VoteData() { vote = y.type == Keys.UpvoteRelation ? 1 : -1, date = y.createDateProper() });
-
-            //view.votes.up = view.votes.@public.Count(x => x.Value.vote > 0);
-            //view.votes.down = view.votes.@public.Count(x => x.Value.vote < 0);
-
             return view;
         }
 
