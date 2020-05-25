@@ -94,89 +94,33 @@ namespace contentapi.Services.Implementations
             return query;
         }
 
-        public class ContinuousSort<R>
-        {
-            public long id {get;set;}
-            public double sum {get;set;}
-            public R passthrough {get;set;}
-        }
-
-        public IQueryable<ContinuousSort<R>> ApplyAdditionalSort<R>(
-            IQueryable<ContinuousSort<R>> query, 
-            Expression<Func<R, long>> join, 
-            Expression<Func<R, bool>> whereClause, 
-            double modifier) where R : EntityBase
-        {
-            var joined = query
-                .GroupJoin(Q<R>().Where(whereClause), x => x.id, join, (s,r) => new { s = s, r = r })
-                .SelectMany(x => x.r.DefaultIfEmpty(), (x,y) => new ContinuousSort<R>() { id = x.s.id, sum = x.s.sum, passthrough = y});
-
-            return  from j in joined
-                    group j by j.id into g
-                    select new ContinuousSort<R>() { id = g.Key, sum = g.Max(x => x.sum) + g.Sum(x => x.passthrough.id > 0 ? modifier : 0) };//modifier * g.Select(x => x.r).Distinct().Count() };
-        }
-
-        public class ContinuousSortCarrier<R> where R : EntityBase
-        {
-            public R r {get;set;}
-            public double modifier {get;set;}
-        }
-
-        ////This is SO inefficient, ESPECIALLY when it gets stacked! So many joins! But it's because there's no
-        ////group by where count in ef core... I think. I tried and it didn't work: 5/25/2020
-        //public IQueryable<ContinuousSort> ApplyAdditionalSort<R>(
-        //    IQueryable<ContinuousSort> query, 
-        //    //Expression<Func<R, long>> join, 
-        //    Expression<Func<ContinuousSortCarrier<R>, long>> join, 
-        //    Expression<Func<R, bool>> whereClause, 
-        //    double modifier) where R : EntityBase
-        //{
-        //    //var joined = query
-        //    //    .GroupJoin(Q<R>().Where(whereClause), x => x.id, join, (s,r) => new { s = s, r = r, m = modifier })
-        //    //    .SelectMany(x => x.r.DefaultIfEmpty(), (x,y) => new ContinuousSort() { id = x.s.id, sort = x.s.sort, modifier = y.id * modifier });
-
-        //    //return  from j in joined
-        //    //        group j by j.id into g
-        //    //        select new ContinuousSort() { id = g.Key, sort = g.Max(x => x.sort) + g.Sum(x => x.modifier) };//modifier * g.Select(x => x.r).Distinct().Count() };
-
-        //    var joined = query
-        //        .GroupJoin(Q<R>().Where(whereClause).Select(x => new ContinuousSortCarrier<R>() { r = x, modifier = modifier}), x => x.id, join, (s,r) => new { s = s, r = r })
-        //        .SelectMany(x => x.r.DefaultIfEmpty(), (x,y) => new ContinuousSort() { id = x.s.id, sum = x.s.sum, modifier = y.modifier });
-
-        //    return  from j in joined
-        //            group j by j.id into g
-        //            select new ContinuousSort() { id = g.Key, sum = g.Max(x => x.sum) + g.Sum(x => x.modifier) };//modifier * g.Select(x => x.r).Distinct().Count() };
-        //}
-
         public override IQueryable<long> FinalizeQuery(IQueryable<EntityGroup> query, ContentSearch search)
         {
-            var condense = query.GroupBy(MainIdSelector).Select(x => x.Key); //new ContinuousSort<EntityRelation>() { id = x.Key, sum = 0 });
+            var condense = query.GroupBy(MainIdSelector).Select(x => x.Key);
 
-            //All this function stuff is heavy, be careful.
             Dictionary<string, double> weights = new Dictionary<string, double>();
-            Action<double> defaultVoteWeights = (m) => 
-            {
-                foreach(var voteWeight in Votes.VoteWeights)
-                    weights.Add(Keys.VoteRelation + voteWeight.Key, m * voteWeight.Value);
-            };
-            Action<double> defaultWatchWeights = (m) => weights.Add(Keys.WatchRelation, 1);
+
+            double globalVoteWeight= 0;
+            double globalWatchWeight = 0;
 
             //Just in case you want different weights
-            if(search.Sort == "votes")
-            {
-                defaultVoteWeights(1);
-                defaultWatchWeights(0);
+            if(search.Sort == "votes") {
+                globalVoteWeight = 1;
             }
-            else if (search.Sort == "watches")
-            {
-                defaultVoteWeights(0);
-                defaultWatchWeights(1);
+            else if (search.Sort == "watches") {
+                globalWatchWeight = 1;
             }
-            else if (search.Sort == "score")
-            {
-                defaultVoteWeights(1);
-                defaultWatchWeights(1);
+            else if (search.Sort == "score") {
+                globalVoteWeight = 1;
+                globalWatchWeight = 1;
             }
+
+            //ALL keys have to be present in the dictionary! We don't discriminate! And the SQL parameter 
+            //list gets built with all keys regardless of if we use them!
+            foreach (var voteWeight in Votes.VoteWeights)
+                weights.Add(Keys.VoteRelation + voteWeight.Key, globalVoteWeight * voteWeight.Value);
+
+            weights.Add(Keys.WatchRelation, globalWatchWeight);
 
             if(weights.Any(x => x.Value != 0))
             {
@@ -184,24 +128,16 @@ namespace contentapi.Services.Implementations
                 var joined = condense 
                     .GroupJoin(Q<EntityRelation>().Where(x => weights.Keys.Contains(x.type)), s => s, r => -r.entityId2, (s, r) => new { s = s, r = r })
                     .SelectMany(x => x.r.DefaultIfEmpty(), (x, y) => new { id = x.s, passthrough = y });
-                    //.SelectMany(x => x.r.DefaultIfEmpty(), (x, y) => new ContinuousSort<EntityRelation>() { id = x.s, passthrough = y });
 
                 var grouped = 
                     from j in joined
                     group j by j.id into g
-                    select new { id = g.Key, sum = 
-                        g.Sum(x => x.passthrough.type == Keys.WatchRelation ? weights[Keys.WatchRelation] : 0) +
-                        g.Sum(x => x.passthrough.type == Keys.VoteRelation + "b" ? weights[Keys.VoteRelation + "b"] : 0) +
-                        g.Sum(x => x.passthrough.type == Keys.VoteRelation + "o" ? weights[Keys.VoteRelation + "o"] : 0) +
-                        g.Sum(x => x.passthrough.type == Keys.VoteRelation + "g" ? weights[Keys.VoteRelation + "g"] : 0)
+                    select new { id = g.Key, sum = g.Sum(x =>
+                        x.passthrough.type == Keys.WatchRelation ? weights[Keys.WatchRelation] : 
+                        x.passthrough.type == Keys.VoteRelation + "b" ? weights[Keys.VoteRelation + "b"] :
+                        x.passthrough.type == Keys.VoteRelation + "o" ? weights[Keys.VoteRelation + "o"] : 
+                        x.passthrough.type == Keys.VoteRelation + "g" ? weights[Keys.VoteRelation + "g"] : 0)
                     };
-                        //g.Sum(x => x.passthrough.type == Keys.WatchRelation ? weights[Keys.WatchRelation] : 0) +
-                        //g.Sum(x => x.passthrough.type == Keys.VoteRelation + "b" ? weights[Keys.VoteRelation + "b"] : 0) +
-                        //g.Sum(x => x.passthrough.type == Keys.VoteRelation + "o" ? weights[Keys.VoteRelation + "o"] : 0) +
-                        //g.Sum(x => x.passthrough.type == Keys.VoteRelation + "g" ? weights[Keys.VoteRelation + "g"] : 0)
-                //return from j in joined
-                //       group j by j.id into g
-                //       select new ContinuousSort<R>() { id = g.Key, sum = g.Max(x => x.sum) + g.Sum(x => x.passthrough.id > 0 ? modifier : 0) };//modifier * g.Select(x => x.r).Distinct().Count() };
 
                 if(search.Reverse)
                     grouped = grouped.OrderByDescending(x => x.sum);
@@ -210,25 +146,6 @@ namespace contentapi.Services.Implementations
                 
                 return grouped.Select(x => x.id);
             }
-
-            //if(includeVotes)
-            //{
-            //    foreach(var voteWeight in Votes.VoteWeights)
-            //        condense = ApplyAdditionalSort<EntityRelation>(condense, x => -x.entityId2, x => x.type == Keys.VoteRelation + voteWeight.Key, voteWeight.Value);
-            //}
-            //if(includeWatches)
-            //{
-            //    condense = ApplyAdditionalSort<EntityRelation>(condense, x => -x.entityId2, x => x.type == Keys.WatchRelation, 1);
-            //}
-
-            //if(includeVotes || includeWatches)
-            //{
-            //    var grouped = condense;
-            //        //from c in condense
-            //        //group c by c.id into g
-            //        //select new { id = g.Key, sort = g.Sum(x => x.modifier) };//modifier * g.Select(x => x.r).Distinct().Count() };
-
-            //}
 
             return base.FinalizeQuery(query, search);
         }
