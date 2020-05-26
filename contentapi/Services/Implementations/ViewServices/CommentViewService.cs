@@ -174,6 +174,7 @@ namespace contentapi.Services.Implementations
                 count = x.Sum(y => y.Value.count),
                 lastPost = x.Max(y => y.Value.lastDate),
                 firstPost = x.Min(y => y.Value.firstDate),
+                lastId = x.Max(y => y.Value.lastId),
                 userIds = x.Select(y => y.Key.userId).Distinct().ToList()
             }).ToList();
         }

@@ -6,6 +6,7 @@ namespace contentapi.Views
     {
         public DateTime? firstDate {get;set;}
         public DateTime? lastDate {get;set;}
+        public long lastId {get;set;}
         public int count {get;set;}
     }
 

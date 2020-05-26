@@ -11,17 +11,27 @@ using Microsoft.Extensions.Logging;
 namespace contentapi.Controllers
 {
     [Authorize]
-    public class VoteController : BaseSimpleController
+    public class VoteController : BaseDeletableController<VoteView>
     {
         protected VoteViewService service;
 
-        public VoteController(ILogger<BaseSimpleController> logger,
+        public VoteController(ILogger<VoteController> logger,
             VoteViewService service) : base(logger)
         {
             this.service = service;
         }
 
         protected override Task SetupAsync() { return service.SetupAsync(); }
+
+        protected override Task<ActionResult<VoteView>> DeleteAsync(long id)
+        {
+            var requester = GetRequesterNoFail();
+
+            return ThrowToAction(async () =>
+            {
+                return await service.DeleteAsync((await service.GetByContentId(id, requester)).id, requester);
+            });
+        }
 
         [HttpGet]
         public Task<ActionResult<List<VoteView>>> GetVotesAsync([FromQuery]VoteSearch search)
@@ -34,17 +44,6 @@ namespace contentapi.Controllers
         {
             var requester = GetRequesterNoFail();
             return ThrowToAction(() => service.WriteAsync(new VoteView() { userId = requester.userId, contentId = id, vote = vote }, requester));
-        }
-
-        [HttpDelete("{id}")]
-        public Task<ActionResult<VoteView>> DeleteVote([FromRoute]long id)
-        {
-            var requester = GetRequesterNoFail();
-
-            return ThrowToAction(async () =>
-            {
-                return await service.DeleteAsync((await service.GetByContentId(id, requester)).id, requester);
-            });
         }
     }
 }

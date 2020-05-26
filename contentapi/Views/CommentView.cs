@@ -28,6 +28,7 @@ namespace contentapi.Views
         public int count {get;set;}
         public DateTime? firstPost {get;set;}
         public DateTime? lastPost {get;set;}
+        public long lastId {get;set;}
         public List<long> userIds {get;set;}
     }
 }

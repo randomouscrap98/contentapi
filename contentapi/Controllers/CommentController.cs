@@ -10,11 +10,11 @@ using Microsoft.Extensions.Logging;
 
 namespace contentapi.Controllers
 {
-    public class CommentController : BaseSimpleController
+    public class CommentController : BaseDeletableController<CommentView> 
     {
         protected CommentViewService service;
 
-        public CommentController(ILogger<BaseSimpleController> logger, CommentViewService service) 
+        public CommentController(ILogger<CommentController> logger, CommentViewService service) 
             : base(logger)
         {
             this.service = service;
@@ -54,9 +54,7 @@ namespace contentapi.Controllers
             });
         }
 
-        [HttpDelete("{id}")]
-        [Authorize]
-        public Task<ActionResult<CommentView>> DeleteAsync([FromRoute] long id)
+        protected override Task<ActionResult<CommentView>> DeleteAsync([FromRoute] long id)
         {
             return ThrowToAction<CommentView>(() => service.DeleteAsync(id, GetRequesterNoFail()));
         }

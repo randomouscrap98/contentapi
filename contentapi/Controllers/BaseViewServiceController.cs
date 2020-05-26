@@ -9,12 +9,12 @@ using Microsoft.Extensions.Logging;
 
 namespace contentapi.Controllers
 {
-    public class BaseViewServiceController<T,V,S> : BaseSimpleController 
+    public class BaseViewServiceController<T,V,S> : BaseDeletableController<V>
         where T : IViewService<V,S> where V : BaseView where S : BaseSearch
     {
         protected T service;
 
-        public BaseViewServiceController(ILogger<BaseSimpleController> logger, T service) 
+        public BaseViewServiceController(ILogger<BaseDeletableController<V>> logger, T service) 
             : base(logger)
         {
             this.service = service;
@@ -42,9 +42,7 @@ namespace contentapi.Controllers
             return ThrowToAction(() => service.WriteAsync(view, GetRequesterNoFail()));
         }
 
-        [HttpDelete("{id}")]
-        [Authorize]
-        public Task<ActionResult<V>> DeleteAsync([FromRoute]long id)
+        protected override Task<ActionResult<V>> DeleteAsync([FromRoute]long id)
         {
             return ThrowToAction(() => service.DeleteAsync(id, GetRequesterNoFail()));
         }

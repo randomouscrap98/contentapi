@@ -103,7 +103,8 @@ namespace contentapi.Services.Implementations
                     {
                         count = g.Count(),
                         lastDate = g.Max(x => x.createDate),
-                        firstDate = g.Min(x => x.createDate)
+                        firstDate = g.Min(x => x.createDate),
+                        lastId = g.Max(x => x.id)
                     }
                 })
             );

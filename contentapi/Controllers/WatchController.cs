@@ -9,11 +9,11 @@ using Microsoft.Extensions.Logging;
 namespace contentapi.Controllers
 {
     [Authorize]
-    public class WatchController : BaseSimpleController
+    public class WatchController : BaseDeletableController<WatchView> 
     {
         protected WatchViewService service;
 
-        public WatchController(ILogger<BaseSimpleController> logger,
+        public WatchController(ILogger<WatchController> logger,
             WatchViewService service) : base(logger)
         {
             this.service = service;
@@ -47,8 +47,7 @@ namespace contentapi.Controllers
             });
         }
 
-        [HttpDelete("{id}")]
-        public Task<ActionResult<WatchView>> DeleteWatch([FromRoute]long id)
+        protected override Task<ActionResult<WatchView>> DeleteAsync(long id)
         {
             var requester = GetRequesterNoFail();
 
