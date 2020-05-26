@@ -34,5 +34,27 @@ namespace contentapi.Services.Implementations
                 .Join(Q<EntityRelation>(), PermIdSelector, r => r.entityId2, 
                 (r1, r2) => new E() { relation = r1, permission = r2});
         }
+
+
+        public IQueryable<long> SimpleMultiLimit(IQueryable<E> query, IEnumerable<IdLimit> limit, Func<EntityRelation, long> limitExpression)
+        {
+            //join query with watches, select query where id > watch id
+            var ids = query
+                .GroupBy(MainIdSelector).Select(x => new EntityRelation() { 
+                    id = x.Max(y => y.relation.id), 
+                    entityId1 = x.Max(y => y.relation.entityId1),
+                    entityId2 = x.Max(y => y.relation.entityId2)})
+                .AsEnumerable()
+                .Join(limit, limitExpression, l => l.id, (r, l) => new { r = r, l = l })
+                .Where(x => x.r.id > x.l.min)
+                .Select(x => x.r.id);
+                //join l in limit on q.limitId equals l.id
+                //where q.id > l.min
+                //select q;
+
+            //var ids = crap.Select(x => x.id);
+
+            return Q<EntityRelation>().Where(x => ids.Contains(x.id)).Select(x => x.id);
+        }
     }
 }

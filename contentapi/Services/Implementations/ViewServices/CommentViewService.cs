@@ -57,12 +57,14 @@ namespace contentapi.Services.Implementations
         protected TimeSpan listenerPollingInterval = TimeSpan.FromSeconds(2);
         protected SystemConfig config;
         protected CommentViewSource converter;
+        protected WatchViewSource watchSource;
 
         public CommentViewService(ViewServicePack services, ILogger<CommentViewService> logger, IDecayer<CommentListener> decayer,
-            SystemConfig config, CommentViewSource converter) : base(services, logger)
+            SystemConfig config, CommentViewSource converter, WatchViewSource watchSource) : base(services, logger)
         {
             this.config = config; 
             this.converter = converter;
+            this.watchSource = watchSource;
 
             lock(listenDecayLock)
             {
@@ -141,11 +143,13 @@ namespace contentapi.Services.Implementations
             return copy;
         }
 
-        public override Task<List<CommentView>> PreparedSearchAsync(CommentSearch search, Requester requester)
+        public override async Task<List<CommentView>> PreparedSearchAsync(CommentSearch search, Requester requester)
         {
             logger.LogTrace($"Comment GetAsync called by {requester}");
 
-            return converter.SimpleSearchAsync(search, q =>
+            await FixWatchLimits(watchSource, requester, search.ContentLimit);
+
+            return await converter.SimpleSearchAsync(search, q =>
                 services.permissions.PermissionWhere(q, requester, Keys.ReadAction));
         }
 
@@ -157,6 +161,9 @@ namespace contentapi.Services.Implementations
 
         public async Task<List<CommentAggregateView>> SearchAggregateAsync(CommentSearch search, Requester requester)
         {
+            //Repeat code, be careful
+            await FixWatchLimits(watchSource, requester, search.ContentLimit);
+
             var ids = converter.SearchIds(search, q => services.permissions.PermissionWhere(q, requester, Keys.ReadAction));
 
             var groups = await converter.GroupAsync<EntityRelation,TempGroup>(ids, x => new TempGroup(){ userId = -x.entityId2, contentId = x.entityId1});

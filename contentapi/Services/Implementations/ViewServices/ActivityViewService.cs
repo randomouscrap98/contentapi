@@ -12,17 +12,21 @@ namespace contentapi.Services.Implementations
     {
         protected ActivityViewSource activity;
         protected CommentViewSource comments;
+        protected WatchViewSource watchSource;
 
         public ActivityViewService(ViewServicePack services, ILogger<ActivityViewService> logger, 
-            ActivityViewSource activity, CommentViewSource comments) 
+            ActivityViewSource activity, CommentViewSource comments, WatchViewSource watchSource) 
             : base(services, logger) 
         { 
             this.activity = activity;
             this.comments = comments;
+            this.watchSource = watchSource;
         }
 
         public override async Task<List<ActivityView>> PreparedSearchAsync(ActivitySearch search, Requester requester)
         {
+            await FixWatchLimits(watchSource, requester, search.ContentLimit);
+
             var result = await activity.SimpleSearchAsync(search, (q) =>
                 services.permissions.PermissionWhere(
                     q.Where(x => x.relation.type != $"{Keys.ActivityKey}{Keys.FileType}"),  //This may change sometime

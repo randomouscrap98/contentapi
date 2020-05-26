@@ -34,4 +34,16 @@ namespace contentapi.Services.Implementations
                 .IncludeAllDerived();
         }
     }
+
+    public class IdLimit
+    {
+        public long id {get;set;}
+        public long min {get;set;}
+    }
+
+    public class IdLimiter
+    {
+        public bool Watches {get;set;}
+        public List<IdLimit> Limit {get;set;} = new List<IdLimit>();
+    }
 }

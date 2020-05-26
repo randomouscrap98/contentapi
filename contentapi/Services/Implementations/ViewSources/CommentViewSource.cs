@@ -14,6 +14,7 @@ namespace contentapi.Services.Implementations
     public class CommentSearch : BaseParentSearch
     {
         public List<long> UserIds {get;set;}
+        public IdLimiter ContentLimit {get;set;} = new IdLimiter();
     }
 
     public class CommentViewSourceProfile : Profile
@@ -105,6 +106,14 @@ namespace contentapi.Services.Implementations
         public override Task<List<EntityRelationPackage>> RetrieveAsync(IQueryable<long> ids)
         {
             return LinkAsync(GetByIds<EntityRelation>(ids));
+        }
+
+        public override IQueryable<long> FinalizeQuery(IQueryable<EntityGroup> query, CommentSearch search)  
+        {
+            if(search.ContentLimit.Limit.Count > 0)
+                return SimpleMultiLimit(query, search.ContentLimit.Limit, e => e.entityId1);
+
+            return base.FinalizeQuery(query, search);
         }
     }
 }

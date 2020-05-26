@@ -2,6 +2,7 @@ using System.Collections.Generic;
 using System.Linq;
 using System.Threading.Tasks;
 using AutoMapper;
+using contentapi.Services.Constants;
 using contentapi.Services.Extensions;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.Logging;
@@ -97,5 +98,24 @@ namespace contentapi.Services.Implementations
             if(!services.permissions.IsSuper(requester))
                 throw new AuthorizationException("Must be super user to perform this action!");
         }
+
+        public async Task FixWatchLimits(WatchViewSource watchSource, Requester requester, IdLimiter limiter)
+        {
+            if(limiter.Watches)
+            {
+                var watchSearch = new WatchSearch();
+                watchSearch.UserIds.Add(requester.userId);
+                watchSearch.Reverse = true;
+
+                limiter.Limit = (await watchSource.SimpleSearchAsync(watchSearch, q =>
+                        services.permissions.PermissionWhere(q, requester, Keys.ReadAction)))
+                    .Select(x => new IdLimit() { id = x.contentId, min = x.lastNotificationId }).ToList();
+
+                // Just a silly thing to ensure "0" elements still means "no search" (although I hate that old
+                // dicision... even though this one could easily be changed, consistency is better)
+                limiter.Limit.Add(new IdLimit() { id = long.MaxValue }); 
+            }
+        }
+
     }
 }
