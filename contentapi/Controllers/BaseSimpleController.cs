@@ -26,6 +26,8 @@ namespace contentapi.Controllers
             this.logger = logger;
         }
 
+        protected virtual Task SetupAsync() { return Task.CompletedTask; } 
+
         protected long GetRequesterUid()
         {
             //Look for the UID from the JWT 
@@ -54,6 +56,8 @@ namespace contentapi.Controllers
             {
                 try
                 {
+                    await SetupAsync();
+
                     //Go find the parent. If it's not content, BAD BAD BAD
                     return await action();
                 }

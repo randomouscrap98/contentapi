@@ -20,46 +20,33 @@ namespace contentapi.Controllers
             this.service = service;
         }
 
-        protected virtual Task SetupAsync()
-        {
-            return Task.CompletedTask;
-        }
-
         [HttpGet]
-        public async Task<ActionResult<List<V>>> GetAsync([FromQuery]S search)
+        public Task<ActionResult<List<V>>> GetAsync([FromQuery]S search)
         {
-            //logger.LogInformation($"GetAsync called, {typeof(V)}");
-            await SetupAsync();
-            return await ThrowToAction(() => service.SearchAsync(search, GetRequesterNoFail()));
+            return ThrowToAction(() => service.SearchAsync(search, GetRequesterNoFail()));
         }
 
         [HttpPost]
         [Authorize]
-        public async Task<ActionResult<V>> PostAsync([FromBody]V view)
+        public Task<ActionResult<V>> PostAsync([FromBody]V view)
         {
-            //logger.LogInformation($"PostAsync called, {typeof(V)}");
             view.id = 0;
-            await SetupAsync();
-            return await ThrowToAction(() => service.WriteAsync(view, GetRequesterNoFail()));
+            return ThrowToAction(() => service.WriteAsync(view, GetRequesterNoFail()));
         }
 
         [HttpPut("{id}")]
         [Authorize]
-        public async Task<ActionResult<V>> PutAsync([FromRoute] long id, [FromBody]V view)
+        public Task<ActionResult<V>> PutAsync([FromRoute] long id, [FromBody]V view)
         {
-            //logger.LogInformation($"PutAsync called, {typeof(V)}({view.id})");
             view.id = id;
-            await SetupAsync();
-            return await ThrowToAction(() => service.WriteAsync(view, GetRequesterNoFail()));
+            return ThrowToAction(() => service.WriteAsync(view, GetRequesterNoFail()));
         }
 
         [HttpDelete("{id}")]
         [Authorize]
-        public async Task<ActionResult<V>> DeleteAsync([FromRoute]long id)
+        public Task<ActionResult<V>> DeleteAsync([FromRoute]long id)
         {
-            //logger.LogInformation($"DeleteAsync called, {typeof(V)}({id})");
-            await SetupAsync();
-            return await ThrowToAction(() => service.DeleteAsync(id, GetRequesterNoFail()));
+            return ThrowToAction(() => service.DeleteAsync(id, GetRequesterNoFail()));
         }
     }
 }

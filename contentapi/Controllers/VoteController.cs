@@ -5,6 +5,7 @@ using contentapi.Services.Implementations;
 using contentapi.Views;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
+using Microsoft.AspNetCore.Mvc.Filters;
 using Microsoft.Extensions.Logging;
 
 namespace contentapi.Controllers
@@ -19,6 +20,8 @@ namespace contentapi.Controllers
         {
             this.service = service;
         }
+
+        protected override Task SetupAsync() { return service.SetupAsync(); }
 
         [HttpGet]
         public Task<ActionResult<List<VoteView>>> GetVotesAsync([FromQuery]VoteSearch search)

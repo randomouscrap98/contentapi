@@ -54,6 +54,8 @@ namespace contentapi.Controllers
             this.services = services;
         }
 
+        protected override Task SetupAsync() { return services.content.SetupAsync(); }
+
         protected List<long> ChainIdSearch<S>(string chain, List<List<IIdView>> existingChains, S search) where S : IIdSearcher
         {
             var match = chainRegex.Match(chain);

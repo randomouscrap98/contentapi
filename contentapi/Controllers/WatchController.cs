@@ -19,6 +19,8 @@ namespace contentapi.Controllers
             this.service = service;
         }
 
+        protected override Task SetupAsync() { return service.SetupAsync(); }
+
         [HttpGet]
         public Task<ActionResult<List<WatchView>>> GetWatchesAsync([FromQuery]WatchSearch search)
         {

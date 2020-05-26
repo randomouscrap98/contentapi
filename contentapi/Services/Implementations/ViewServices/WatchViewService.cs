@@ -24,6 +24,8 @@ namespace contentapi.Services.Implementations
             this.contentService = contentService;
         }
 
+        public Task SetupAsync() { return contentService.SetupAsync(); }
+
         public async Task<WatchView> DeleteAsync(long id, Requester requester)
         {
             var item = await converter.FindByIdRawAsync(id);
