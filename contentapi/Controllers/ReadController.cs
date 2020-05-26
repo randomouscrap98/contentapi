@@ -262,6 +262,8 @@ namespace contentapi.Controllers
                 await ChainAsync<CommentSearch, CommentAggregateView>(data, (s) => services.comment.SearchAggregateAsync(s, requester), chainResults, r, f);
             else if (data.endpoint == "activity")
                 await ChainAsync(data, services.activity, requester, chainResults, r, f);
+            else if (data.endpoint == "activityaggregate")
+                await ChainAsync<ActivitySearch, ActivityAggregateView>(data, (s) => services.activity.SearchAggregateAsync(s, requester), chainResults, r, f);
             else if (data.endpoint == "watch")
                 await ChainAsync(data, services.watch, requester, chainResults, r, f);
             else if (data.endpoint == "vote")

@@ -22,5 +22,11 @@ namespace contentapi.Controllers
         {
             return ThrowToAction(() => service.SearchAsync(search, GetRequesterNoFail()));
         }
+
+        [HttpGet("aggregate")]
+        public Task<ActionResult<List<ActivityAggregateView>>> GetAggregateAsync([FromQuery]ActivitySearch search)
+        {
+            return ThrowToAction(() => service.SearchAggregateAsync(search, GetRequesterNoFail()));
+        }
     }
 }

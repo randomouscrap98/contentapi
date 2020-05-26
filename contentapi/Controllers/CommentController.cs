@@ -29,22 +29,8 @@ namespace contentapi.Controllers
         [HttpGet("aggregate")]
         public Task<ActionResult<List<CommentAggregateView>>> GetAggregateAsync([FromQuery]CommentSearch search)
         {
-            //return ThrowToAction(async () => (await service.SearchAggregateAsync(search, GetRequesterNoFail())).Values.ToList());
             return ThrowToAction(() => service.SearchAggregateAsync(search, GetRequesterNoFail()));
         }
-
-        //[HttpGet("listen/{parentId}/listeners")]
-        //public Task<ActionResult<List<CommentListener>>> GetListenersAsync([FromRoute]long parentId, [FromQuery]List<long> lastListeners, CancellationToken token)
-        //{
-        //    return ThrowToAction(() => service.GetListenersAsync(parentId, lastListeners, GetRequesterNoFail(), token));
-        //}
-
-        //[HttpGet("listen/{parentId}")]
-        //[Authorize]
-        //public Task<ActionResult<List<CommentView>>> ListenAsync([FromRoute]long parentId, [FromQuery]long lastId, [FromQuery]long firstId, CancellationToken token)
-        //{
-        //    return ThrowToAction(() => service.ListenAsync(parentId, lastId, firstId, GetRequesterNoFail(), token));
-        //}
 
         [HttpPost]
         [Authorize]
