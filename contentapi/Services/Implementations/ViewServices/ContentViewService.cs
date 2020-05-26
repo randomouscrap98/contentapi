@@ -108,6 +108,17 @@ namespace contentapi.Services.Implementations
             
             var votes = new Dictionary<string, Dictionary<long, SimpleAggregateData>>();
 
+            var watchSearch = new WatchSearch();
+            watchSearch.UserIds.Add(requester.userId);
+            watchSearch.ContentIds.AddRange(baseIds);
+            var userWatching = await watchSource.SimpleSearchAsync(watchSearch);
+
+            //THIS could be an intensive query! Make sure you check the CPU usage!
+            var voteSearch = new VoteSearch();
+            voteSearch.UserIds.Add(requester.userId);
+            voteSearch.ContentIds.AddRange(baseIds);
+            var userVotes = await voteSource.SimpleSearchAsync(voteSearch);
+
             foreach(var voteWeight in Votes.VoteWeights)
             {
                 votes.Add(voteWeight.Key, await voteSource.GroupAsync<EntityRelation, long>(
@@ -117,16 +128,19 @@ namespace contentapi.Services.Implementations
             baseResult.ForEach(x =>
             {
                 if(watches.ContainsKey(-x.id))
-                    x.watches = watches[-x.id];
+                    x.about.watches = watches[-x.id];
                 if(comments.ContainsKey(x.id))
-                    x.comments = comments[x.id];
+                    x.about.comments = comments[x.id];
+                
+                x.about.watching = userWatching.Any(y => y.contentId == x.id);
+                x.about.myVote = userVotes.FirstOrDefault(y => y.contentId == x.id)?.vote;
 
                 foreach(var voteWeight in Votes.VoteWeights)
                 {
-                    x.votes.Add(voteWeight.Key, new SimpleAggregateData());
+                    x.about.votes.Add(voteWeight.Key, new SimpleAggregateData());
 
                     if(votes[voteWeight.Key].ContainsKey(-x.id))
-                        x.votes[voteWeight.Key] = votes[voteWeight.Key][-x.id];
+                        x.about.votes[voteWeight.Key] = votes[voteWeight.Key][-x.id];
                 }
             });
 

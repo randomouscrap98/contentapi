@@ -16,6 +16,16 @@ namespace contentapi.Views
     //    public List<VoteData> rawVotes {get;set;}
     //}
 
+    public class AboutView
+    {
+        public SimpleAggregateData comments {get;set;} = new SimpleAggregateData();
+        public SimpleAggregateData watches {get;set;} = new SimpleAggregateData();
+        public Dictionary<string, SimpleAggregateData> votes {get;set;} = new Dictionary<string, SimpleAggregateData>();
+
+        public bool watching {get;set;}
+        public string myVote {get;set;}
+    }
+
     public class ContentView : StandardView
     {
         [Required]
@@ -36,10 +46,7 @@ namespace contentapi.Views
             return base.EqualsSelf(obj) && o.keywords.OrderBy(x => x).SequenceEqual(keywords.OrderBy(x => x));
         }
 
-        public SimpleAggregateData comments {get;set;} = new SimpleAggregateData();
-        public SimpleAggregateData watches {get;set;} = new SimpleAggregateData();
-        public Dictionary<string, SimpleAggregateData> votes {get;set;} = new Dictionary<string, SimpleAggregateData>();
-
+        public AboutView about {get;set;} = new AboutView();
         //public AggregateVoteData votes {get;set;} = new AggregateVoteData(); //Always have at least an empty vote data
     }
 }
