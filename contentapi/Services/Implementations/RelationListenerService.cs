@@ -5,28 +5,21 @@ using System.Threading;
 using System.Threading.Tasks;
 using contentapi.Services.Constants;
 using contentapi.Services.Extensions;
+using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.Logging;
 using Randomous.EntitySystem;
 
 namespace contentapi.Services.Implementations
 {
-    //public class RelationListenStatus
-    //{
-    //    public long contentId {get;set;}
-    //    public 
-    //}
-
     public class RelationListenConfig
     {
-        //public int limit {get;set;}
-        //public long firstId {get;set;}
         public long lastId {get;set;} = -1;
 
         /// <summary>
         /// What your "status" should be in each room (arbitrary string yes)
         /// </summary>
         /// <value></value>
-        public Dictionary<long, string> listenStatuses {get;set;}
+        public Dictionary<long, string> statuses {get;set;}
     }
 
     public class RelationListener
@@ -44,7 +37,7 @@ namespace contentapi.Services.Implementations
 
                 //WARN: A listener is "equal" to another (in terms of the DECAYER)
                 //when it simply has the same user id! this is NOT PROPER EQUALS!
-                return listener.userId == userId; // && listenStatuses.RealEqual(listener.listenStatuses);
+                return listener.userId == userId;
             }
 
             return false;
@@ -64,33 +57,31 @@ namespace contentapi.Services.Implementations
     //When registering this, make it a singleton
     public class RelationListenerService
     {
-        protected IDecayer<RelationListener> listenDecayer = null;
-        protected readonly object listenDecayLock = new object();
+        protected static IDecayer<RelationListener> listenDecayer = null;
+        protected static readonly object listenDecayLock = new object();
         protected IEntityProvider provider;
         protected SystemConfig config;
         protected ILogger logger;
 
         protected TimeSpan listenerPollingInterval = TimeSpan.FromSeconds(2);
 
-        //Configurable maybe?
-        //public List<string> RelationListens = 
-
         public RelationListenerService(ILogger<RelationListenerService> logger, IDecayer<RelationListener> decayer,
             IEntityProvider provider, SystemConfig config)
         {
             this.logger = logger;
-            this.listenDecayer = decayer;
             this.provider = provider;
             this.config = config;
+
+            lock(listenDecayLock)
+            {
+                if (listenDecayer == null)
+                    listenDecayer = decayer;
+            }
         }
 
         public async Task<Dictionary<long, Dictionary<long, string>>> GetListenersAsync(Dictionary<long, Dictionary<long, string>> lastListeners, Requester requester, CancellationToken token)
         {
             DateTime start = DateTime.Now;
-
-            //The "lastListeners" is a different dictionary than the relationlistener: the inner dictionary maps
-            //USER ids to statuses, the outer dictionary is for contentIDs
-            //var listenSet = lastListeners.ToDictionary(x => x.Key, y => y.Value.ToHashSet());
 
             //Creates a dictionary with pre-initialized keys. The keys won't change, we can keep redoing them.
             var result = lastListeners.ToDictionary(x => x.Key, y => new Dictionary<long, string>());
@@ -104,7 +95,7 @@ namespace contentapi.Services.Implementations
                 foreach(var parentKey in result.Keys.ToList())
                     result[parentKey] = listenDecayer.DecayList(config.ListenGracePeriod).Where(x => x.listenStatuses.ContainsKey(parentKey)).ToDictionary(x => x.userId, y => y.listenStatuses[parentKey]);
 
-                if (result.Any(x => !x.Value.RealEqual(lastListeners[x.Key]))) //Select(y => y.UserId).ToHashSet().SetEquals(listenSet[x.Key])))
+                if (result.Any(x => !x.Value.RealEqual(lastListeners[x.Key])))
                     return result;
 
                 await Task.Delay(listenerPollingInterval, token);
@@ -129,38 +120,17 @@ namespace contentapi.Services.Implementations
             var listenId = new RelationListener() 
             { 
                 userId = requester.userId,
-                listenStatuses = listenConfig.listenStatuses
+                listenStatuses = listenConfig.statuses
             } ;
 
-            //var stringParents = listenConfig.parentIds.Select(x => x.ToString());
+            if(listenConfig.lastId < 0)
+                listenConfig.lastId = await provider.GetQueryable<EntityRelation>().MaxAsync(x => x.id);
 
             var results = await provider.ListenAsync<EntityRelation>(listenId, 
                 (q) => q.Where(x => types.Contains(x.type) && x.id > listenConfig.lastId), 
                 config.ListenTimeout, token);
 
-            //var aFunc = activitySource.PermIdSelector.Compile();
-            //var cFunc = commentSource.PermIdSelector.Compile();
-
             return results; 
-            //.Select(x => 
-            //{
-            //    var view = new GeneralRelationView() { id = x.id };
-            //    if(x.type == activitySource.EntityType)
-            //    {
-            //        view.type = "activity";
-            //        view.contentId = aFunc(x);
-            //    }
-            //    else if(x.type == commentSource.EntityType)
-            //    {
-            //        view.type = "comment";
-            //        view.contentId = cFunc(x);
-            //    }
-            //    else
-            //    {
-            //        throw new InvalidOperationException($"Somehow got an unexpected entity type: {x.type}");
-            //    }
-            //    return view;
-            //}).ToList();
         }
     }
 }
