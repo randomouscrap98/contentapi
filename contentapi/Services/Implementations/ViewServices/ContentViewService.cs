@@ -34,7 +34,8 @@ namespace contentapi.Services.Implementations
         }
 
         public override string EntityType => Keys.ContentType;
-        public override string ParentType => null;
+        public override string ParentType => Keys.CategoryType; //null;
+        public override bool AllowOrphanPosts => true;
 
         public List<long> BuildSupersForId(long id, Dictionary<long, List<long>> existing, IList<CategoryView> categories)
         {

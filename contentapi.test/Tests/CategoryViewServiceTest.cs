@@ -1,3 +1,4 @@
+using System;
 using contentapi.Services.Implementations;
 using contentapi.Views;
 using Xunit;
@@ -10,10 +11,19 @@ namespace contentapi.test
     {
         public CategoryViewServiceTest() : base() { }
 
+        public override long SetupParent(Action<BasePermissionView> modify = null)
+        {
+            var view = new CategoryView() { };
+            if(modify != null)
+                modify(view);
+            view = service.WriteAsync(view, new Requester(){system = true}).Result; //This will result in a creator of 0
+            return view.id;
+        }
+
         //Get the boring stuff out of the way.
         [Fact] public override void SimpleEmptyCanUser() { base.SimpleEmptyCanUser(); }
         [Fact] public override void SimpleEmptyRead() { base.SimpleEmptyRead(); }
-        [Fact] public override void SimpleOwnerInsert() { base.SimpleOwnerInsert(); }
+        [Fact] public void MySimpleOwnerInsert() { base.SimpleOwnerInsert(); }
         [Fact] public override void SimpleOwnerMultiInsert() { base.SimpleOwnerMultiInsert(); }
         [Fact] public override void SimpleOwnerUpdate() { base.SimpleOwnerUpdate(); }
         [Fact] public override void SimpleOwnerDelete() 

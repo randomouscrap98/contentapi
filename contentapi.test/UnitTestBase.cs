@@ -128,5 +128,18 @@ namespace contentapi.test
             };
         }
 
+        protected void AssertAllowed<T>(Action action, bool allowed)
+        {
+            try
+            {
+                action();
+                Assert.True(allowed, "Should have thrown an exception!");
+            }
+            catch(Exception ex)
+            {
+                Assert.False(allowed);
+                Assert.True(ex is T || ex is AggregateException && ex.InnerException is T, $"Exception should've been {typeof(T)}, was: {ex}");
+            }
+        }
     }
 }

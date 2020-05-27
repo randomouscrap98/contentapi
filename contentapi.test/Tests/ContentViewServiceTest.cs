@@ -12,6 +12,8 @@ namespace contentapi.test
     //I suppose... or perhaps just more tests :)
     public class ContentViewServiceTest : PermissionServiceTestBase<ContentViewService, ContentView, ContentSearch>
     {
+        protected CategoryViewService cateogryService;
+
         protected void AssertSupersEqual(IEnumerable<long> one, IEnumerable<long> two)
         {
             Assert.Equal(new HashSet<long>(one), new HashSet<long>(two));
@@ -20,13 +22,24 @@ namespace contentapi.test
         public ContentViewServiceTest() : base()
         {
             service.SetupAsync().Wait();
+            cateogryService = CreateService<CategoryViewService>();
+        }
+
+
+        public override long SetupParent(Action<BasePermissionView> modify = null)
+        {
+            var view = new CategoryView() { };
+            if(modify != null)
+                modify(view);
+            view = cateogryService.WriteAsync(view, new Requester(){system = true}).Result; //This will result in a creator of 0
+            return view.id;
         }
 
 
         //Get the boring stuff out of the way.
         [Fact] public override void SimpleEmptyCanUser() { base.SimpleEmptyCanUser(); }
         [Fact] public override void SimpleEmptyRead() { base.SimpleEmptyRead(); }
-        [Fact] public override void SimpleOwnerInsert() { base.SimpleOwnerInsert(); }
+        [Fact] public void MySimpleOwnerInsert() { base.SimpleOwnerInsert(); }
         [Fact] public override void SimpleOwnerMultiInsert() { base.SimpleOwnerMultiInsert(); }
         [Fact] public override void SimpleOwnerUpdate() { base.SimpleOwnerUpdate(); }
         [Fact] public override void SimpleOwnerDelete() { base.SimpleOwnerDelete(); }

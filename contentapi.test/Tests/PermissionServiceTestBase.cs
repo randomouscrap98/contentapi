@@ -10,22 +10,22 @@ using Xunit;
 
 namespace contentapi.test
 {
-    public class PermissionServiceTestBase<T, V, S> : ServiceConfigTestBase<T, SystemConfig> where T : BasePermissionViewService<V, S> where V : StandardView, new() where S : BaseContentSearch, new()
+    public abstract class PermissionServiceTestBase<T, V, S> : ServiceConfigTestBase<T, SystemConfig> where T : BasePermissionViewService<V, S> where V : StandardView, new() where S : BaseContentSearch, new()
     {
         protected SystemConfig sysConfig = new SystemConfig();
 
         protected override SystemConfig config => sysConfig;
 
         //Assume most things can have a parent that is of the same type (this is mostly true...)
-        public virtual long SetupParent(Action<BasePermissionView> modify = null) //BAD DEPENDENCIES TEST BREAK AGGHH
-        {
-            var view = new V() { };
-            if(modify != null)
-                modify(view);
-            //view.permissions.Add("0", defaultPerms);
-            view = service.WriteAsync(view, new Requester(){system = true}).Result; //This will result in a creator of 0
-            return view.id;
-        }
+        public abstract long SetupParent(Action<BasePermissionView> modify = null); //BAD DEPENDENCIES TEST BREAK AGGHH
+        //{
+        //    var view = new V() { };
+        //    if(modify != null)
+        //        modify(view);
+        //    //view.permissions.Add("0", defaultPerms);
+        //    view = service.WriteAsync(view, new Requester(){system = true}).Result; //This will result in a creator of 0
+        //    return view.id;
+        //}
 
         public virtual async Task<V> BasicInsertAsync(Requester requester, Action<V> modify = null, bool insertThrows = false, Action<BasePermissionView> parentModify = null)//string parentDefaultPerms = "C")
         {
@@ -80,8 +80,8 @@ namespace contentapi.test
 
         //Now insert a single thing and make sure we can read it. Also make sure various fields are OK.
         //This is also the test that ensures the data is written relatively properly.
-        public virtual void SimpleOwnerInsert() { SimpleOwnerInsertId(1); }
-        public virtual void SimpleOwnerInsertId(long userId)
+        public virtual long SimpleOwnerInsert() { return SimpleOwnerInsertId(1); }
+        public virtual long SimpleOwnerInsertId(long userId)
         {
             var start = DateTime.Now;
             var requester = new Requester() {userId = userId};
@@ -97,6 +97,7 @@ namespace contentapi.test
             AssertViewsEqual(readView, writeView);
 
             //I don't assume what edit date/user will be on create.
+            return readView.id;
         }
 
         public virtual void SimpleOwnerMultiInsert()
@@ -104,8 +105,8 @@ namespace contentapi.test
             var search = new S();
             for(var i = 1; i <= 10; i++)
             {
-                SimpleOwnerInsertId(i);
-                search.Ids.Add(i);
+                search.Ids.Add(SimpleOwnerInsertId(i));
+                //search.Ids.Add(i);
                 var result = service.SearchAsync(search, new Requester() {system = true}).Result;  //Get them ALL
                 Assert.Equal(i, result.Count);
             }

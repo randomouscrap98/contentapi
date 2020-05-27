@@ -12,65 +12,19 @@ using Randomous.EntitySystem;
 
 namespace contentapi.Services.Implementations
 {
-    //public class CommentListenConfig
-    //{
-    //    public int limit {get;set;}
-    //    public long firstId {get;set;}
-    //    public long lastId {get;set;}
-    //    public List<long> parentIds {get;set;}
-    //    public Dictionary<string, string> parentIdStatus {get;set;}
-    //}
-
-    //public class CommentListener
-    //{
-    //    public long UserId {get;set;}
-    //    //public long ContentListenId {get;set;}
-    //    public List<long> CommentListenParents {get;set;}
-
-    //    public override bool Equals(object obj)
-    //    {
-    //        if(obj != null && obj is CommentListener)
-    //        {
-    //            var listener = (CommentListener)obj;
-    //            return listener.UserId == UserId && listener.CommentListenParents.OrderBy(x => x).SequenceEqual(CommentListenParents.OrderBy(x => x)); //ContentListenId == ContentListenId;
-    //        }
-
-    //        return false;
-    //    }
-
-    //    public override int GetHashCode()
-    //    {
-    //        return UserId.GetHashCode();
-    //    }
-
-    //    public override string ToString()
-    //    {
-    //        return $"u{UserId}-c{string.Join(",", CommentListenParents)}";
-    //    }
-    //}
-
     public class CommentViewService : BaseViewServices<CommentView, CommentSearch>, IViewRevisionService<CommentView, CommentSearch>
     {
-        //public static IDecayer<CommentListener> listenDecayer = null;
-        //public static readonly object listenDecayLock = new object();
 
         protected SystemConfig config;
         protected CommentViewSource converter;
         protected WatchViewSource watchSource;
 
-        public CommentViewService(ViewServicePack services, ILogger<CommentViewService> logger, //, IDecayer<CommentListener> decayer,
+        public CommentViewService(ViewServicePack services, ILogger<CommentViewService> logger,
             SystemConfig config, CommentViewSource converter, WatchViewSource watchSource) : base(services, logger)
         {
             this.config = config; 
             this.converter = converter;
             this.watchSource = watchSource;
-
-            //lock(listenDecayLock)
-            //{
-            //    //Use a SINGLE decayer
-            //    if(listenDecayer == null)
-            //        listenDecayer = decayer;
-            //}
         }
 
         protected async Task<EntityPackage> BasicParentCheckAsync(long parentId)
@@ -79,7 +33,7 @@ namespace contentapi.Services.Implementations
 
             //Parent must be content
             if (parent == null || !parent.Entity.type.StartsWith(Keys.ContentType))
-                throw new InvalidOperationException("Parent is not content!");
+                throw new NotFoundException("Parent couldn't be found!");
 
             return parent;
         }
@@ -104,20 +58,20 @@ namespace contentapi.Services.Implementations
 
             //Create is full-on parent permission inheritance
             if (!services.permissions.CanUser(requester, action, parent))
-                throw new UnauthorizedAccessException($"Cannot perform this action in content {parent.Entity.id}");
+                throw new NotFoundException("Comment or content not found"); //$"Cannot perform this action in content {parent.Entity.id}");
             
             return parent;
         }
 
-        protected async Task<Dictionary<long, EntityPackage>> FullParentCheckAsync(List<long> parentIds, string action, Requester requester)
-        {
-            var result = new Dictionary<long, EntityPackage>();
+        //protected async Task<Dictionary<long, EntityPackage>> FullParentCheckAsync(List<long> parentIds, string action, Requester requester)
+        //{
+        //    var result = new Dictionary<long, EntityPackage>();
 
-            foreach(var id in parentIds)
-                result.Add(id, await FullParentCheckAsync(id, action, requester));
+        //    foreach(var id in parentIds)
+        //        result.Add(id, await FullParentCheckAsync(id, action, requester));
 
-            return result;
-        }
+        //    return result;
+        //}
 
         protected async Task<EntityRelation> ExistingCheckAsync(long id)
         {
@@ -125,7 +79,7 @@ namespace contentapi.Services.Implementations
             var existing = await provider.FindRelationByIdAsync(id);
 
             if (existing == null || !existing.type.StartsWith(Keys.CommentHack) || existing.entityId2 == 0)
-                throw new BadRequestException($"Couldn't find comment with id {id}");
+                throw new NotFoundException($"Couldn't find comment with id {id}");
 
             return existing;
         }
@@ -177,58 +131,6 @@ namespace contentapi.Services.Implementations
                 userIds = x.Select(y => y.Key.userId).Distinct().ToList()
             }).ToList();
         }
-
-
-        //public async Task<List<CommentView>> ListenAsync(CommentListenConfig listenConfig, Requester requester, CancellationToken token)
-        //{
-        //    if(listenConfig.limit <= 0 || listenConfig.limit > 1000)
-        //        listenConfig.limit = 1000;
-
-        //    //Ensure we can read all the parents they're asking for. We will also show up in every room you're listening to.
-        //    var parents = await FullParentCheckAsync(listenConfig.parentIds, Keys.ReadAction, requester);
-        //    var listenId = new CommentListener() { UserId = requester.userId, CommentListenParents = listenConfig.parentIds };
-
-        //    var stringParents = listenConfig.parentIds.Select(x => x.ToString());
-
-        //    int entrances = 0;
-
-        //    var comments = await services.provider.ListenAsync<EntityRelation>(listenId, (q) =>
-        //    {
-        //        entrances++;
-
-        //        var result = q.Where(x =>
-        //            //The new messages!
-        //            (listenConfig.parentIds.Contains(x.entityId1) && (EF.Functions.Like(x.type, $"{Keys.CommentHack}%") && x.id > listenConfig.lastId)) ||
-        //            //Edits to old ones (will be filtered out special later, EFCore can't do too much, which is first pass)
-        //            (EF.Functions.Like(x.type, $"{Keys.CommentDeleteHack}%") || EF.Functions.Like(x.type, $"{Keys.CommentHistoryHack}%")) && -x.entityId1 >= listenConfig.firstId);
-        //        
-        //        if(entrances <= 1)
-        //        {
-        //            //Ignore anything other than new comments on the first pass. The query is too complex
-        //            //to do in efcore
-        //            result = result.Where(x => EF.Functions.Like(x.type, $"{Keys.CommentHack}%"));
-        //        }
-        //        else
-        //        {
-        //            //This can be a more complex query, since it's not using efcore. This is awful programming, but it's
-        //            //how EntitySystem listening is designed and I'm not going to redesign it all right now. This works...
-        //            result = result.Where(x => EF.Functions.Like(x.type, $"{Keys.CommentHack}%") || 
-        //                stringParents.Contains(x.type.Substring(Keys.CommentHistoryHack.Length)));
-        //        }
-
-        //        return result.OrderByDescending(x => x.id).Take(listenConfig.limit);
-        //    },
-        //    config.ListenTimeout, token);
-
-        //    //"Good" comments are ones that can be used "as-is". Bad comments are ones that need to be modified.
-        //    var goodComments = comments.Where(x => x.type.StartsWith(Keys.CommentHack)).ToList(); //new List<EntityRelation>();
-        //    var badComments = comments.Except(goodComments);
-
-        //    if (badComments.Any())
-        //        goodComments.AddRange(await provider.GetEntityRelationsAsync(new EntityRelationSearch() { Ids = badComments.Select(x => -x.entityId1).ToList() }));
-
-        //    return (await converter.LinkAsync(goodComments)).Select(x => converter.ToView(x)).OrderBy(x => x.id).ToList();
-        //}
 
         public Task<CommentView> WriteAsync(CommentView view, Requester requester)
         {
