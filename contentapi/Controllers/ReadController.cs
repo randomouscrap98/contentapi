@@ -386,7 +386,6 @@ namespace contentapi.Controllers
             {
                 var result = new ListenResult();
                 var requester = GetRequesterNoFail();
-                IEnumerable<string> relationTypes = new[] { Keys.ActivityKey, Keys.CommentHack, Keys.CommentDeleteHack, Keys.CommentHistoryHack };
                 fields = FixFields(fields);
 
                 var chainResults = new Dictionary<string, List<ChainResult>>();
@@ -423,9 +422,9 @@ namespace contentapi.Controllers
 
                             waiters.Add(Task.Run(() =>
                             {
-                                while(true)
+                                while(true) //I'm RELYING on the fact that OTHER tasks SHOULD have the proper long-polling timeout
                                 {
-                                    var result = relationService.ListenAsync(rConfig, requester, relationTypes, linkedCts.Token).Result;
+                                    var result = relationService.ListenAsync(rConfig, requester, linkedCts.Token).Result;
                                     chainer(actionObject.chain, result.Select(x => new EntityRelationView(x))).Wait();
                                     if(chainResults.Sum(x => x.Value.Count()) > 0)
                                         break;
@@ -456,15 +455,6 @@ namespace contentapi.Controllers
 
                         await Task.WhenAny(waiters.ToArray());
                         await Task.Delay(completionWaitUp); //To allow some others to catch up if they're ALMOST done
-
-                        //Fill in data based on who is finished
-                        //if (actionWait != null && actionWait.IsCompleted)
-                        //{
-                        //    await chainer(actionObject.chain, actionWait.Result.Select(x => new EntityRelationView(x)));
-                        //}
-                        //if (listenWait != null && listenWait.IsCompleted)
-                        //{
-                        //}
                     }
                     finally
                     {
@@ -472,6 +462,8 @@ namespace contentapi.Controllers
 
                         try
                         {
+                            //If people are still chaining, this should allow them to finish. But if they were still listening,
+                            //they SHOULD'VE been cancelled and this will complete fast
                             await Task.WhenAll(waiters.ToArray());
                         }
                         catch (OperationCanceledException)

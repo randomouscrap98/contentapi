@@ -65,6 +65,9 @@ namespace contentapi.Services.Implementations
 
         protected TimeSpan listenerPollingInterval = TimeSpan.FromSeconds(2);
 
+        //Don't know what to do with this yet...
+        protected IEnumerable<string> relationTypes = new[] { Keys.CommentHack, Keys.CommentDeleteHack, Keys.CommentHistoryHack };
+
         public RelationListenerService(ILogger<RelationListenerService> logger, IDecayer<RelationListener> decayer,
             IEntityProvider provider, SystemConfig config)
         {
@@ -115,7 +118,7 @@ namespace contentapi.Services.Implementations
             return realListeners.ToList();
         }
 
-        public async Task<List<EntityRelation>> ListenAsync(RelationListenConfig listenConfig, Requester requester, IEnumerable<string> types, CancellationToken token)
+        public async Task<List<EntityRelation>> ListenAsync(RelationListenConfig listenConfig, Requester requester, CancellationToken token)
         {
             var listenId = new RelationListener() 
             { 
@@ -127,7 +130,7 @@ namespace contentapi.Services.Implementations
                 listenConfig.lastId = await provider.GetQueryable<EntityRelation>().MaxAsync(x => x.id);
 
             var results = await provider.ListenAsync<EntityRelation>(listenId, 
-                (q) => q.Where(x => types.Contains(x.type) && x.id > listenConfig.lastId), 
+                (q) => q.Where(x => (EF.Functions.Like(x.type, $"{Keys.ActivityKey}%") || relationTypes.Contains(x.type)) && x.id > listenConfig.lastId), 
                 config.ListenTimeout, token);
 
             return results; 
