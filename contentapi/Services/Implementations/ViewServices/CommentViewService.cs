@@ -12,66 +12,65 @@ using Randomous.EntitySystem;
 
 namespace contentapi.Services.Implementations
 {
-    public class CommentListenConfig
-    {
-        public int limit {get;set;}
-        public long firstId {get;set;}
-        public long lastId {get;set;}
-        public List<long> parentIds {get;set;}
-    }
+    //public class CommentListenConfig
+    //{
+    //    public int limit {get;set;}
+    //    public long firstId {get;set;}
+    //    public long lastId {get;set;}
+    //    public List<long> parentIds {get;set;}
+    //    public Dictionary<string, string> parentIdStatus {get;set;}
+    //}
 
-    public class CommentListener
-    {
-        public long UserId {get;set;}
-        //public long ContentListenId {get;set;}
-        public List<long> CommentListenParents {get;set;}
+    //public class CommentListener
+    //{
+    //    public long UserId {get;set;}
+    //    //public long ContentListenId {get;set;}
+    //    public List<long> CommentListenParents {get;set;}
 
-        public override bool Equals(object obj)
-        {
-            if(obj != null && obj is CommentListener)
-            {
-                var listener = (CommentListener)obj;
-                return listener.UserId == UserId && listener.CommentListenParents.OrderBy(x => x).SequenceEqual(CommentListenParents.OrderBy(x => x)); //ContentListenId == ContentListenId;
-            }
+    //    public override bool Equals(object obj)
+    //    {
+    //        if(obj != null && obj is CommentListener)
+    //        {
+    //            var listener = (CommentListener)obj;
+    //            return listener.UserId == UserId && listener.CommentListenParents.OrderBy(x => x).SequenceEqual(CommentListenParents.OrderBy(x => x)); //ContentListenId == ContentListenId;
+    //        }
 
-            return false;
-        }
+    //        return false;
+    //    }
 
-        public override int GetHashCode()
-        {
-            return UserId.GetHashCode();
-        }
+    //    public override int GetHashCode()
+    //    {
+    //        return UserId.GetHashCode();
+    //    }
 
-        public override string ToString()
-        {
-            return $"u{UserId}-c{string.Join(",", CommentListenParents)}";
-        }
-
-    }
+    //    public override string ToString()
+    //    {
+    //        return $"u{UserId}-c{string.Join(",", CommentListenParents)}";
+    //    }
+    //}
 
     public class CommentViewService : BaseViewServices<CommentView, CommentSearch>, IViewRevisionService<CommentView, CommentSearch>
     {
-        public static IDecayer<CommentListener> listenDecayer = null;
-        public static readonly object listenDecayLock = new object();
+        //public static IDecayer<CommentListener> listenDecayer = null;
+        //public static readonly object listenDecayLock = new object();
 
-        protected TimeSpan listenerPollingInterval = TimeSpan.FromSeconds(2);
         protected SystemConfig config;
         protected CommentViewSource converter;
         protected WatchViewSource watchSource;
 
-        public CommentViewService(ViewServicePack services, ILogger<CommentViewService> logger, IDecayer<CommentListener> decayer,
+        public CommentViewService(ViewServicePack services, ILogger<CommentViewService> logger, //, IDecayer<CommentListener> decayer,
             SystemConfig config, CommentViewSource converter, WatchViewSource watchSource) : base(services, logger)
         {
             this.config = config; 
             this.converter = converter;
             this.watchSource = watchSource;
 
-            lock(listenDecayLock)
-            {
-                //Use a SINGLE decayer
-                if(listenDecayer == null)
-                    listenDecayer = decayer;
-            }
+            //lock(listenDecayLock)
+            //{
+            //    //Use a SINGLE decayer
+            //    if(listenDecayer == null)
+            //        listenDecayer = decayer;
+            //}
         }
 
         protected async Task<EntityPackage> BasicParentCheckAsync(long parentId)
@@ -179,95 +178,57 @@ namespace contentapi.Services.Implementations
             }).ToList();
         }
 
-        public async Task<Dictionary<long, List<CommentListener>>> GetListenersAsync(Dictionary<long, List<long>> lastListeners, Requester requester, CancellationToken token)
-        {
-            //Need to see if user has perms to read ANY of the parents
-            var parents = await FullParentCheckAsync(lastListeners.Keys.ToList(), Keys.ReadAction, requester);
 
-            DateTime start = DateTime.Now;
-            var listenSet = lastListeners.ToDictionary(x => x.Key, y => y.Value.ToHashSet());
+        //public async Task<List<CommentView>> ListenAsync(CommentListenConfig listenConfig, Requester requester, CancellationToken token)
+        //{
+        //    if(listenConfig.limit <= 0 || listenConfig.limit > 1000)
+        //        listenConfig.limit = 1000;
 
-            //Creates a dictionary with pre-initialized keys. The keys won't change, we can keep redoing them.
-            var result = lastListeners.ToDictionary(x => x.Key, y => new List<CommentListener>());
+        //    //Ensure we can read all the parents they're asking for. We will also show up in every room you're listening to.
+        //    var parents = await FullParentCheckAsync(listenConfig.parentIds, Keys.ReadAction, requester);
+        //    var listenId = new CommentListener() { UserId = requester.userId, CommentListenParents = listenConfig.parentIds };
 
-            while (DateTime.Now - start < config.ListenTimeout)
-            {
-                listenDecayer.UpdateList(GetListeners());
+        //    var stringParents = listenConfig.parentIds.Select(x => x.ToString());
 
-                //This list won't change as we're polling, so it's safe to keep writing over the old stuff.
-                foreach(var parentKey in lastListeners)
-                    result[parentKey.Key] = listenDecayer.DecayList(config.ListenGracePeriod).Where(x => x.CommentListenParents.Contains(parentKey.Key)).ToList();
+        //    int entrances = 0;
 
-                if (result.Any(x => !x.Value.Select(y => y.UserId).ToHashSet().SetEquals(listenSet[x.Key])))
-                    return result;
+        //    var comments = await services.provider.ListenAsync<EntityRelation>(listenId, (q) =>
+        //    {
+        //        entrances++;
 
-                await Task.Delay(listenerPollingInterval, token);
-                token.ThrowIfCancellationRequested();
-            }
+        //        var result = q.Where(x =>
+        //            //The new messages!
+        //            (listenConfig.parentIds.Contains(x.entityId1) && (EF.Functions.Like(x.type, $"{Keys.CommentHack}%") && x.id > listenConfig.lastId)) ||
+        //            //Edits to old ones (will be filtered out special later, EFCore can't do too much, which is first pass)
+        //            (EF.Functions.Like(x.type, $"{Keys.CommentDeleteHack}%") || EF.Functions.Like(x.type, $"{Keys.CommentHistoryHack}%")) && -x.entityId1 >= listenConfig.firstId);
+        //        
+        //        if(entrances <= 1)
+        //        {
+        //            //Ignore anything other than new comments on the first pass. The query is too complex
+        //            //to do in efcore
+        //            result = result.Where(x => EF.Functions.Like(x.type, $"{Keys.CommentHack}%"));
+        //        }
+        //        else
+        //        {
+        //            //This can be a more complex query, since it's not using efcore. This is awful programming, but it's
+        //            //how EntitySystem listening is designed and I'm not going to redesign it all right now. This works...
+        //            result = result.Where(x => EF.Functions.Like(x.type, $"{Keys.CommentHack}%") || 
+        //                stringParents.Contains(x.type.Substring(Keys.CommentHistoryHack.Length)));
+        //        }
 
-            throw new TimeoutException("Ran out of time waiting for listeners");
-        }
+        //        return result.OrderByDescending(x => x.id).Take(listenConfig.limit);
+        //    },
+        //    config.ListenTimeout, token);
 
-        protected List<CommentListener> GetListeners(long parentId = -1)
-        {
-            var realListeners = provider.Listeners.Where(x => x.ListenerId is CommentListener).Select(x => (CommentListener)x.ListenerId);
-            
-            if(parentId > 0)
-                realListeners = realListeners.Where(x => x.CommentListenParents.Contains(parentId));
-                
-            return realListeners.ToList();
-        }
+        //    //"Good" comments are ones that can be used "as-is". Bad comments are ones that need to be modified.
+        //    var goodComments = comments.Where(x => x.type.StartsWith(Keys.CommentHack)).ToList(); //new List<EntityRelation>();
+        //    var badComments = comments.Except(goodComments);
 
-        public async Task<List<CommentView>> ListenAsync(CommentListenConfig listenConfig, Requester requester, CancellationToken token)
-        {
-            if(listenConfig.limit <= 0 || listenConfig.limit > 1000)
-                listenConfig.limit = 1000;
+        //    if (badComments.Any())
+        //        goodComments.AddRange(await provider.GetEntityRelationsAsync(new EntityRelationSearch() { Ids = badComments.Select(x => -x.entityId1).ToList() }));
 
-            //Ensure we can read all the parents they're asking for. We will also show up in every room you're listening to.
-            var parents = await FullParentCheckAsync(listenConfig.parentIds, Keys.ReadAction, requester);
-            var listenId = new CommentListener() { UserId = requester.userId, CommentListenParents = listenConfig.parentIds };
-
-            var stringParents = listenConfig.parentIds.Select(x => x.ToString());
-
-            int entrances = 0;
-
-            var comments = await services.provider.ListenAsync<EntityRelation>(listenId, (q) =>
-            {
-                entrances++;
-
-                var result = q.Where(x =>
-                    //The new messages!
-                    (listenConfig.parentIds.Contains(x.entityId1) && (EF.Functions.Like(x.type, $"{Keys.CommentHack}%") && x.id > listenConfig.lastId)) ||
-                    //Edits to old ones (will be filtered out special later, EFCore can't do too much, which is first pass)
-                    (EF.Functions.Like(x.type, $"{Keys.CommentDeleteHack}%") || EF.Functions.Like(x.type, $"{Keys.CommentHistoryHack}%")) && -x.entityId1 >= listenConfig.firstId);
-                
-                if(entrances <= 1)
-                {
-                    //Ignore anything other than new comments on the first pass. The query is too complex
-                    //to do in efcore
-                    result = result.Where(x => EF.Functions.Like(x.type, $"{Keys.CommentHack}%"));
-                }
-                else
-                {
-                    //This can be a more complex query, since it's not using efcore. This is awful programming, but it's
-                    //how EntitySystem listening is designed and I'm not going to redesign it all right now. This works...
-                    result = result.Where(x => EF.Functions.Like(x.type, $"{Keys.CommentHack}%") || 
-                        stringParents.Contains(x.type.Substring(Keys.CommentHistoryHack.Length)));
-                }
-
-                return result.OrderByDescending(x => x.id).Take(listenConfig.limit);
-            },
-            config.ListenTimeout, token);
-
-            //"Good" comments are ones that can be used "as-is". Bad comments are ones that need to be modified.
-            var goodComments = comments.Where(x => x.type.StartsWith(Keys.CommentHack)).ToList(); //new List<EntityRelation>();
-            var badComments = comments.Except(goodComments);
-
-            if (badComments.Any())
-                goodComments.AddRange(await provider.GetEntityRelationsAsync(new EntityRelationSearch() { Ids = badComments.Select(x => -x.entityId1).ToList() }));
-
-            return (await converter.LinkAsync(goodComments)).Select(x => converter.ToView(x)).OrderBy(x => x.id).ToList();
-        }
+        //    return (await converter.LinkAsync(goodComments)).Select(x => converter.ToView(x)).OrderBy(x => x.id).ToList();
+        //}
 
         public Task<CommentView> WriteAsync(CommentView view, Requester requester)
         {

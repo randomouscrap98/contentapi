@@ -9,11 +9,13 @@ using System.Threading;
 using System.Threading.Tasks;
 using AutoMapper;
 using contentapi.Services;
+using contentapi.Services.Constants;
 using contentapi.Services.Implementations;
 using contentapi.Views;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.Extensions.Logging;
+using Randomous.EntitySystem;
 
 namespace contentapi.Controllers
 {
@@ -34,6 +36,7 @@ namespace contentapi.Controllers
         protected IMapper mapper;
         protected ILanguageService docService;
         protected ChainServices services;
+        protected RelationListenerService relationService;
 
         //These should all be... settings?
         protected Regex requestRegex = new Regex(@"^(?<endpoint>[a-z]+)(\.(?<chain>\d+[a-z]+(?:\$[a-z]+)?))*(-(?<search>.+))?$", 
@@ -47,11 +50,13 @@ namespace contentapi.Controllers
         };
 
         public ReadController(ILogger<BaseSimpleController> logger, IMapper mapper, ILanguageService docService,
-            ChainServices services) : base(logger)
+            ChainServices services, RelationListenerService relationService)
+            : base(logger)
         {
             this.mapper = mapper;
             this.docService = docService;
             this.services = services;
+            this.relationService = relationService;
         }
 
         protected override Task SetupAsync() { return services.content.SetupAsync(); }
@@ -324,34 +329,41 @@ namespace contentapi.Controllers
             return ThrowToAction(() => Task.FromResult(docService.GetString("read.chain", "en")));
         }
 
-        public class CommentListenQuery : CommentListenConfig 
+        public class RelationListenQuery : RelationListenConfig
         { 
             public List<string> chain {get;set;}
         }
 
         public class ListenerQuery
         {
-            public Dictionary<string, List<long>> parentIdsLast {get;set;}
+            public Dictionary<string, Dictionary<string, string>> lastListeners {get;set;}
             public List<string> chain {get;set;}
         }
 
+        //public class ActivityListenQuery : ActivityListenConfig
+        //{
+        //    public List<string> chain {get;set;}
+        //}
+
         public class ListenResult
         {
-            public List<CommentView> comments {get;set;}
-            public Dictionary<string, List<long>> listeners {get;set;}
+            //public List<CommentView> comments {get;set;}
+            //public List<ActivityView> activity {get;set;}
+            public Dictionary<string, Dictionary<string, string>> listeners {get;set;}
             public Dictionary<string, List<ExpandoObject>> chain {get;set;}
         }
 
         public class PhonyListenerList : IIdView
         {
             public long id {get;set;}
-            public List<long> listeners {get;set;}
+            public Dictionary<long, string> listeners {get;set;}
         }
 
 
         [HttpGet("listen")]
         [Authorize]
-        public Task<ActionResult<ListenResult>> ListenAsync([FromQuery]Dictionary<string, List<string>> fields, [FromQuery]string comment, [FromQuery]string listener, CancellationToken cancelToken)
+        //public Task<ActionResult<ListenResult>> ListenAsync([FromQuery]Dictionary<string, List<string>> fields, [FromQuery]string comment, [FromQuery]string listener, [FromQuery]string activity, CancellationToken cancelToken)
+        public Task<ActionResult<ListenResult>> ListenAsync([FromQuery]Dictionary<string, List<string>> fields, [FromQuery]string listeners, [FromQuery]string actions, CancellationToken cancelToken)
         {
             return ThrowToAction(async () =>
             {
@@ -362,83 +374,100 @@ namespace contentapi.Controllers
                 var chainResults = new Dictionary<string, List<ChainResult>>();
 
                 //All the 
-                Task<Dictionary<long, List<CommentListener>>> listenWait = null;
-                Task<List<CommentView>> commentWait = null;
+                Task<Dictionary<long, Dictionary<long, string>>> listenWait = null;
+                Task<List<EntityRelation>> actionWait = null;
+                //Task<List<CommentView>> commentWait = null;
+                //Task<List<ActivityView>> activityWait = null;
                 List<Task> waiters = new List<Task>();
 
-                var listenerObject = JsonSerializer.Deserialize<ListenerQuery>(listener ?? "{}", jsonOptions);
-                var commentObject = JsonSerializer.Deserialize<CommentListenQuery>(comment ?? "{}", jsonOptions);
+                var listenerObject = JsonSerializer.Deserialize<ListenerQuery>(listeners ?? "null", jsonOptions);
+                var actionObject = JsonSerializer.Deserialize<RelationListenQuery>(actions ?? "null", jsonOptions);
+                //var activityObject = JsonSerializer.Deserialize<ActivityListenQuery>(activity ?? "null", jsonOptions);
 
                 CheckChainLimit(listenerObject?.chain?.Count);
-                CheckChainLimit(commentObject?.chain?.Count);
+                CheckChainLimit(actionObject?.chain?.Count);
+                //CheckChainLimit(activityObject?.chain?.Count);
 
                 //Create a new cancel source FROM the original token so that either us or the client can cancel
                 using (CancellationTokenSource linkedCts = CancellationTokenSource.CreateLinkedTokenSource(cancelToken))
                 {
-                    try
+                    while(true)
                     {
-                        if (commentObject?.parentIds != null)
-                        {
-                            commentWait = services.comment.ListenAsync(commentObject, requester, linkedCts.Token);
-                            waiters.Add(commentWait);
-                        }
-
-                        //Only run the listeners that the user asked for
-                        if (listenerObject?.parentIdsLast != null)
-                        {
-                            //We wait a LITTLE BIT so that if comments don't complete, we will show up in the listener list.
-                            await Task.Delay(5);
-                            listenWait = services.comment.GetListenersAsync(listenerObject.parentIdsLast.ToDictionary(x => long.Parse(x.Key), y => y.Value), requester, linkedCts.Token);
-                            waiters.Add(listenWait);
-                        }
-
-                        if (waiters.Count == 0)
-                            throw new BadRequestException("No listeners registered");
-
-                        await Task.WhenAny(waiters.ToArray());
-                        await Task.Delay(completionWaitUp); //To allow some others to catch up if they're ALMOST done
-
-                        //Fill in data based on who is finished
-                        if (commentWait != null && commentWait.IsCompleted)
-                        {
-                            result.comments = commentWait.Result;
-
-                            if(commentObject.chain != null)
-                            {
-                                //First result is the comments we got
-                                var tempViewResults = new List<List<IIdView>>() { result.comments.Cast<IIdView>().ToList() };
-
-                                foreach(var chain in commentObject.chain)
-                                    await ChainAsync(chain, requester, chainResults, tempViewResults, fields);
-                            }
-                        }
-                        if (listenWait != null && listenWait.IsCompleted)
-                        {
-                            result.listeners = listenWait.Result.ToDictionary(x => x.Key.ToString(), x => x.Value.Select(x => x.UserId).ToList());
-
-                            if(listenerObject.chain != null)
-                            {
-                                //First result is the comments we got
-                                var tempViewResults = new List<List<IIdView>>() { 
-                                    result.listeners.Select(x => new PhonyListenerList() {id = long.Parse(x.Key), listeners = x.Value })
-                                .Cast<IIdView>().ToList() };
-
-                                foreach(var chain in listenerObject.chain)
-                                    await ChainAsync(chain, requester, chainResults, tempViewResults, fields);
-                            }
-                        }
-                    }
-                    finally
-                    {
-                        linkedCts.Cancel();
-
                         try
                         {
-                            await Task.WhenAll(waiters.ToArray());
+                            if (actionObject != null)
+                            {
+                                actionWait = relationService.ListenAsync(actionObject, requester,
+                                    new[] { Keys.ActivityKey, Keys.CommentHack, Keys.CommentDeleteHack, Keys.CommentHistoryHack },
+                                    linkedCts.Token);
+                                waiters.Add(actionWait);
+                            }
+
+                            //Only run the listeners that the user asked for
+                            if (listenerObject != null)
+                            {
+                                //We wait a LITTLE BIT so that if comments don't complete, we will show up in the listener list.
+                                await Task.Delay(5);
+                                listenWait = relationService.GetListenersAsync(listenerObject.lastListeners.ToDictionary(
+                                        x => long.Parse(x.Key),
+                                        y => y.Value.ToDictionary(k => long.Parse(k.Key), v => v.Value)),
+                                    requester, linkedCts.Token);
+                                waiters.Add(listenWait);
+                            }
+
+                            //if (activityObject != null)
+                            //{
+                            //    activityWait= services.activity.ListenAsync(activityObject, requester, linkedCts.Token);
+                            //    waiters.Add(activityWait);
+                            //}
+
+                            if (waiters.Count == 0)
+                                throw new BadRequestException("No listeners registered");
+
+                            await Task.WhenAny(waiters.ToArray());
+                            await Task.Delay(completionWaitUp); //To allow some others to catch up if they're ALMOST done
+
+                            Func<List<string>, IEnumerable<IIdView>, Task> chainer = async (l, i) =>
+                            {
+                                if (l != null)
+                                {
+                                //First result is the comments we got
+                                var tempViewResults = new List<List<IIdView>>() { i.ToList() };
+
+                                    foreach (var chain in l)
+                                        await ChainAsync(chain, requester, chainResults, tempViewResults, fields);
+                                }
+                            };
+
+                            //Fill in data based on who is finished
+                            if (commentWait != null && commentWait.IsCompleted)
+                            {
+                                result.comments = commentWait.Result;
+                                await chainer(commentObject.chain, result.comments);
+                            }
+                            if (activityWait != null && activityWait.IsCompleted)
+                            {
+                                result.activity = activityWait.Result;
+                                await chainer(activityObject.chain, result.activity);
+                            }
+                            if (listenWait != null && listenWait.IsCompleted)
+                            {
+                                result.listeners = listenWait.Result.ToDictionary(x => x.Key.ToString(), x => x.Value.Select(x => x.UserId).ToList());
+                                await chainer(listenerObject.chain, result.listeners.Select(x => new PhonyListenerList() { id = long.Parse(x.Key), listeners = x.Value }));
+                            }
                         }
-                        catch(OperationCanceledException)
+                        finally
                         {
-                            logger.LogDebug("One or more listener tasks cancelled on page completion (normal)");
+                            linkedCts.Cancel();
+
+                            try
+                            {
+                                await Task.WhenAll(waiters.ToArray());
+                            }
+                            catch (OperationCanceledException)
+                            {
+                                logger.LogDebug("One or more listener tasks cancelled on page completion (normal)");
+                            }
                         }
                     }
                 }

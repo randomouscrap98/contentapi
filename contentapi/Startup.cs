@@ -69,6 +69,7 @@ namespace contentapi
 
             //Also a singleton for the token system which we'll use for websockets
             services.AddSingleton<ITempTokenService<long>, TempTokenService<long>>();
+            services.AddSingleton<RelationListenerService>(); //ONLY WANT ONE LISTENER because of the decayer / etc
 
             services.AddTransient((p) => new ChainServices()
             {

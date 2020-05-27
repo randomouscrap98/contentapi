@@ -44,6 +44,8 @@ namespace contentapi.Services.Implementations
             services.AddTransient<WatchViewService>();
             services.AddTransient<VoteViewService>();
 
+            services.AddTransient<RelationListenerService>();
+
             services.AddTransient<ActivityViewSource>();
             services.AddTransient<CategoryViewSource>();
             services.AddTransient<CommentViewSource>();

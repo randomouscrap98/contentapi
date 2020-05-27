@@ -50,7 +50,7 @@ namespace contentapi.Services.Implementations
                 search.Sort = search.Sort.ToLower().Trim();
 
             //This is the same, trust me (or it better be!). IDs are much faster
-            if(search.Sort.ToLower() == "createdate")
+            if(search.Sort == "createdate")
                 search.Sort = "id";
         }
 

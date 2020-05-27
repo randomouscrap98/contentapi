@@ -16,10 +16,11 @@ namespace contentapi.Services.Implementations
                 //First, boost the decays.
                 foreach(var item in items)
                 {
+                    //FULLY refresh the item by REMOVING IT (just in case!)
                     if(decayingList.ContainsKey(item))
-                        decayingList[item] = DateTime.Now;
-                    else
-                        decayingList.Add(item, DateTime.Now);
+                        decayingList.Remove(item);
+
+                    decayingList.Add(item, DateTime.Now);
                 }
             }
         }
