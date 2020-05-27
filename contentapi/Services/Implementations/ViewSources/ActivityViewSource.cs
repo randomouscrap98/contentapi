@@ -50,6 +50,7 @@ namespace contentapi.Services.Implementations
         /// <returns></returns>
         public EntityRelation MakeActivity(Entity entity, long user, string action, string extra = null)
         {
+            var trimmedType = entity.type.TrimStart(Keys.HistoryKey.ToCharArray()); //.Substring(0, TypeLength);
             return FromView(new ActivityView()
             {
                 id = 0,
@@ -57,8 +58,8 @@ namespace contentapi.Services.Implementations
                 contentId = entity.id,
                 action = action,
                 extra = extra,
-                type = entity.type.Substring(0, TypeLength), //Assume all types are same length!
-                contentType = entity.type.Substring(TypeLength),
+                type = trimmedType, //Assume all types are same length!
+                contentType = trimmedType.Substring(TypeLength),
                 date = DateTime.Now
             });
         }
@@ -73,7 +74,7 @@ namespace contentapi.Services.Implementations
             view.contentId = -relation.entityId2;
             view.type = relation.type.Substring(Keys.ActivityKey.Length, TypeLength);
             view.contentType = relation.type.Substring(Keys.ActivityKey.Length + TypeLength); //Skip the actual activity type, it starts the type field
-            view.action = relation.value.Substring(1, 1); //Assume it's 1 character, but skip first
+            view.action = relation.value.Substring(0, 2); //Assume it's 1 character, but skip first
             view.extra = relation.value.Substring(2);
 
             return view;

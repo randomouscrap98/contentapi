@@ -158,7 +158,7 @@ namespace contentapi.test
                 contentType = "pansu",
                 date = DateTime.Now,
                 extra = "yeah yeah ok",
-                action = "u"
+                action = "!u"
             };
 
             var temp = service.FromView(view);
@@ -166,6 +166,22 @@ namespace contentapi.test
 
             Assert.Equal(view, view2);
         }
+
+        //[Fact]
+        //public void TextActivityRegression()
+        //{
+        //    var entity = new Entity()
+        //    {
+        //        id = 5,
+        //        type = "tc@page.resource"
+        //    };
+
+        //    //Nobody is supposed to create activity views directly
+        //    var relation = service.MakeActivity(entity, 55, Keys.UpdateAction, "something");
+            //Assert.Equal(view.type, "tc");
+
+        //}
+
 
         [Fact]
         public void TestWatchConvert()

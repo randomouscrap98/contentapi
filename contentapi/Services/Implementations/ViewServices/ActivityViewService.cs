@@ -54,6 +54,8 @@ namespace contentapi.Services.Implementations
 
             result.ForEach(x => 
             {
+                x.action = x.action.Substring(1);
+
                 if(x.type == Keys.ContentType)
                     x.type = "content";
                 else if(x.type == Keys.CategoryType)

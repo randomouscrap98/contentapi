@@ -46,6 +46,7 @@ namespace contentapi.Views
             return base.EqualsSelf(obj) && o.keywords.OrderBy(x => x).SequenceEqual(keywords.OrderBy(x => x));
         }
 
+        [IgnoreCompare]
         public AboutView about {get;set;} = new AboutView();
         //public AggregateVoteData votes {get;set;} = new AggregateVoteData(); //Always have at least an empty vote data
     }
