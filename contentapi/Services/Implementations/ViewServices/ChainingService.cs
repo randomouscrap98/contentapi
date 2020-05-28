@@ -497,9 +497,6 @@ namespace contentapi.Services.Implementations
             var chainResults = new Dictionary<string, List<TaggedChainResult>>();
             List<Task> waiters = new List<Task>();
 
-            //var listenerObject = JsonSerializer.Deserialize<ListenerQuery>(listeners ?? "null", jsonOptions);
-            //var actionObject = JsonSerializer.Deserialize<RelationListenQuery>(actions ?? "null", jsonOptions);
-
             CheckChainLimit(listeners?.chain?.Count);
             CheckChainLimit(actions?.chain?.Count);
 
@@ -522,9 +519,6 @@ namespace contentapi.Services.Implementations
                 {
                     if (actions != null)
                     {
-                        //var rConfig = new RelationListenConfig() { lastId = actions.lastId };
-                        //rConfig.statuses = actionObject.statuses.ToDictionary(x => long.Parse(x.Key), y => y.Value);
-
                         waiters.Add(Task.Run(() =>
                         {
                             while (true) //I'm RELYING on the fact that OTHER tasks SHOULD have the proper long-polling timeout
@@ -544,12 +538,9 @@ namespace contentapi.Services.Implementations
                         await Task.Delay(5);
                         waiters.Add(
                             relationService.GetListenersAsync(listeners.lastListeners, requester, linkedCts.Token)
-                                //listenerObject.lastListeners.ToDictionary(
-                                //    x => long.Parse(x.Key),
-                                //    y => y.Value.ToDictionary(k => long.Parse(k.Key), v => v.Value)),
                             .ContinueWith(t =>
                             {
-                                result.listeners = t.Result; //.ToDictionary(x => x.Key.ToString(), x => x.Value.ToDictionary(k => k.ToString(), v => v.Value));
+                                result.listeners = t.Result;
                                 return chainer(listeners.chain, t.Result.Select(x => new PhonyListenerList() { id = x.Key, listeners = x.Value.Keys.ToList() }));
                             })
                         );
