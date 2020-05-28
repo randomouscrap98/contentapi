@@ -1,6 +1,5 @@
 using System.Collections.Generic;
 using System.Text;
-using AutoMapper;
 using contentapi.Configs;
 using contentapi.Controllers;
 using contentapi.Middleware;
@@ -12,7 +11,6 @@ using Microsoft.AspNetCore.Hosting;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.DependencyInjection;
-using Microsoft.Extensions.Options;
 using Microsoft.IdentityModel.Tokens;
 using Microsoft.OpenApi.Models;
 using Randomous.EntitySystem;
@@ -69,19 +67,6 @@ namespace contentapi
 
             //Also a singleton for the token system which we'll use for websockets
             services.AddSingleton<ITempTokenService<long>, TempTokenService<long>>();
-            //services.AddSingleton<>(); //ONLY WANT ONE LISTENER because of the decayer / etc
-
-            services.AddTransient((p) => new ChainServices()
-            {
-                file = p.GetService<FileViewService>(),
-                user = p.GetService<UserViewService>(),
-                content = p.GetService<ContentViewService>(),
-                category = p.GetService<CategoryViewService>(),
-                comment = p.GetService<CommentViewService>(),
-                activity = p.GetService<ActivityViewService>(),
-                watch = p.GetService<WatchViewService>(),
-                vote = p.GetService<VoteViewService>()
-            });
 
             //A special case for websockets: we determine what the websockets will handle right here and now
             services.AddSingleton<WebSocketMiddlewareConfig>((p) =>

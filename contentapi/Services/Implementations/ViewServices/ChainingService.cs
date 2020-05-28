@@ -61,11 +61,8 @@ namespace contentapi.Services.Implementations
         public long id {get;set;}
     }
 
-
     public class ChainService
     {
-        protected IMapper mapper;
-        protected ILanguageService docService;
         protected ChainServices services;
         protected RelationListenerService relationService;
         protected ILogger logger;
@@ -81,12 +78,9 @@ namespace contentapi.Services.Implementations
             PropertyNameCaseInsensitive = true
         };
 
-        public ChainService(ILogger<ChainService> logger, IMapper mapper, ILanguageService docService,
-            ChainServices services, RelationListenerService relationService)
+        public ChainService(ILogger<ChainService> logger, ChainServices services, RelationListenerService relationService)
         {
             this.logger = logger;
-            this.mapper = mapper;
-            this.docService = docService;
             this.services = services;
             this.relationService = relationService;
         }

@@ -46,6 +46,7 @@ namespace contentapi.Services.Implementations
             services.AddTransient<VoteViewService>();
 
             services.AddTransient<RelationListenerService>();
+            services.AddTransient<ChainService>();
 
             services.AddTransient<ActivityViewSource>();
             services.AddTransient<CategoryViewSource>();
@@ -55,6 +56,18 @@ namespace contentapi.Services.Implementations
             services.AddTransient<UserViewSource>();
             services.AddTransient<WatchViewSource>();
             services.AddTransient<VoteViewSource>();
+
+            services.AddTransient((p) => new ChainServices()
+            {
+                file = p.GetService<FileViewService>(),
+                user = p.GetService<UserViewService>(),
+                content = p.GetService<ContentViewService>(),
+                category = p.GetService<CategoryViewService>(),
+                comment = p.GetService<CommentViewService>(),
+                activity = p.GetService<ActivityViewService>(),
+                watch = p.GetService<WatchViewService>(),
+                vote = p.GetService<VoteViewService>()
+            });
 
             //We need automapper for our view services
             services.AddAutoMapper(GetType());
