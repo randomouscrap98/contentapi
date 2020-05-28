@@ -48,6 +48,17 @@ namespace contentapi.Services.Implementations
         public List<TaggedChainResult> mergeList {get;set;}     // Where to put the results!
         public List<string> fields {get;set;}                   // Which fields you want in the results
         public IEnumerable<Chaining> chains {get;set;}          // Description of what you want linked into search
+
+        public ChainRequestBase() {}
+
+        //This SHOULD be done with the mapper but I don't want the dependency
+        public ChainRequestBase(ChainRequestBase copy)
+        {
+            mergeLock = copy.mergeLock; //Is this safe? Is it the "same" object?
+            mergeList = copy.mergeList;
+            fields = copy.fields;
+            chains = copy.chains;
+        }
     }
 
     /// <summary>
@@ -60,6 +71,9 @@ namespace contentapi.Services.Implementations
     {
         public S baseSearch {get;set;}                          // The search BEFORE adding chaining ids
         public Func<S, Task<List<V>>> retriever {get;set;}      // How you want us to get the results
+
+        public ChainRequest() {}
+        public ChainRequest(ChainRequestBase copy) : base(copy) {}
     }
 
     /// <summary>
@@ -334,7 +348,7 @@ namespace contentapi.Services.Implementations
         protected Task ChainStringAsync<S,V>(ChainRequestString chainDataString, Func<S, Task<List<V>>> search, List<List<IIdView>> previousChains)
             where S : IConstrainedSearcher where V : IIdView
         {
-            var chainData = new ChainRequest<S,V>() { retriever = search };
+            var chainData = new ChainRequest<S,V>(chainDataString) { retriever = search };
 
             try
             {
@@ -464,7 +478,7 @@ namespace contentapi.Services.Implementations
             var results = new Dictionary<string, List<TaggedChainResult>>();
 
             //Only do something if there's something to do
-            if (requests != null && requests.Count == 0)
+            if (requests != null && requests.Count > 0)
             {
                 fields = FixFields(fields);
                 CheckChainLimit(requests.Count);

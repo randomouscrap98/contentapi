@@ -63,7 +63,7 @@ namespace contentapi.test
             var content = services.content.WriteAsync(new ContentView() { name = "simplecontent" }, new Requester() {userId = user.id}).Result;
 
             //Create another user to ensure the chaining only gets the first one
-            var NOTUSER = services.user.WriteAsync(new UserViewFull() { username = "simpleuser" }, requester).Result;
+            var NOTUSER = services.user.WriteAsync(new UserViewFull() { username = "simpleuser2" }, requester).Result;
 
             //Same old user chaining, BUT chain to content
             var chain = BasicChainRequest(requester);
@@ -84,9 +84,45 @@ namespace contentapi.test
 
             //Try another chain but this time remove the chaining. You should get two
             chain.chains = new List<Chaining>();
+            chain.baseSearch = new UserSearch(); //Need to reset the search because ugh
             service.ChainAsync(chain, new List<List<IIdView>>() { new List<IIdView>() {content}}).Wait();
 
-            Assert.True(chain.mergeList.Count == 2);
+            Assert.True(chain.mergeList.Count == 2, "There should be two users when searching all!");
+        }
+
+        [Fact]
+        public void EmptyTest()
+        {
+            var requester = new Requester() { system = true };
+            var result = service.ChainAsync(new List<string>() , new Dictionary<string, List<string>>(), requester).Result;
+
+            Assert.Empty(result);
+        }
+
+        [Fact]
+        public void EmptyWithThingsTest()
+        {
+            var requester = new Requester() { system = true };
+            var user = services.user.WriteAsync(new UserViewFull() { username = "simple" }, requester).Result;
+
+            //Request nothing even though there are things
+            var result = service.ChainAsync(new List<string>() , new Dictionary<string, List<string>>(), requester).Result;
+
+            Assert.Empty(result);
+        }
+
+        [Fact]
+        public void StringSingleTest()
+        {
+            //Just a SIMPLE little chain!
+            var requester = new Requester() { system = true };
+            var user = services.user.WriteAsync(new UserViewFull() { username = "simple" }, requester).Result;
+
+            var result = service.ChainAsync(new List<string>() {"user"}, new Dictionary<string, List<string>>(), requester).Result;
+
+            Assert.Contains("user", result.Keys);
+            Assert.Single(result["user"]);
+            Assert.Equal(user.id, ((dynamic)result["user"].First()).id);
         }
     }
 }
