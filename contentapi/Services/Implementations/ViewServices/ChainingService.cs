@@ -9,8 +9,6 @@ using System.Threading;
 using System.Threading.Tasks;
 using AutoMapper;
 using contentapi.Views;
-using Microsoft.AspNetCore.Authorization;
-using Microsoft.AspNetCore.Mvc;
 using Microsoft.Extensions.Logging;
 using Randomous.EntitySystem;
 
@@ -107,20 +105,12 @@ namespace contentapi.Services.Implementations
 
         protected List<long> ChainIdSearch<S>(Chaining chain, List<List<IIdView>> existingChains, S search) where S : IIdSearcher
         {
-            //var match = chainRegex.Match(chain);
-            //var index = match.Groups["index"].Value;
-            //var field = match.Groups["field"].Value;
-            //var searchfield = match.Groups["searchfield"].Value;
-
-            if(string.IsNullOrEmpty(chain.searchField))//searchfield))
+            if(string.IsNullOrEmpty(chain.searchField))
                 chain.searchField = "Ids";
             
             //We "pre-add" some faulty value (which yes, increases processing for all requests)
             //to ensure that we're never searching "all" during a chain
             var ids = new List<long>() { long.MaxValue };
-
-            //Parse the easy stuff before we get to reflection.
-            //int realIndex;
 
             if (chain.index < 0 || chain.getField == null || existingChains.Count <= chain.index)
                 throw new BadRequestException($"Bad chain index or missing field: {chain}");
@@ -189,16 +179,13 @@ namespace contentapi.Services.Implementations
             return result;
         }
 
-
-        //public Task<> ChainAsync(string request)
+        //The major "string request" based chaining endpoint
         public Task ChainAsync(string request, Requester requester, 
             Dictionary<string, List<TaggedChainResult>> results, 
             List<List<IIdView>> chainResults,
             Dictionary<string, List<string>> fields)
-        //ChainBaggage baggage)
-            //List<List<IIdView>> existingChains, List<ChainResult> r, List<string> f)
         {
-            var data = ParseChainDataRaw(request); //requestRegex.Match(request);
+            var data = ParseChainDataRaw(request);
 
             lock(results)
             {
@@ -213,55 +200,39 @@ namespace contentapi.Services.Implementations
                 fields = fields.ContainsKey(data.endpoint) ? fields[data.endpoint] : null
             };
 
-            //var r = results[data.endpoint];
-            //var f = fields.ContainsKey(data.endpoint) ? fields[data.endpoint] : null;
-
             if (data.endpoint == "file")
-                return ChainRawAsync(data, services.file, requester, baggage); //existingChains, r, f);
+                return ChainRawAsync(data, services.file, requester, baggage);
             else if (data.endpoint == "user")
-                return ChainRawAsync(data, services.user, requester, baggage); //existingChains, r, f);
+                return ChainRawAsync(data, services.user, requester, baggage);
             else if (data.endpoint == "content")
-                return ChainRawAsync(data, services.content, requester, baggage); //existingChains, r, f);
+                return ChainRawAsync(data, services.content, requester, baggage);
             else if (data.endpoint == "category")
-                return ChainRawAsync(data, services.category, requester, baggage); //existingChains, r, f);
+                return ChainRawAsync(data, services.category, requester, baggage);
             else if (data.endpoint == "comment")
-                return ChainRawAsync(data, services.comment, requester, baggage); //existingChains, r, f);
+                return ChainRawAsync(data, services.comment, requester, baggage);
             else if (data.endpoint == "commentaggregate")
-                return ChainRawAsync<CommentSearch, CommentAggregateView>(data, (s) => services.comment.SearchAggregateAsync(s, requester), baggage); //existingChains, r, f);
+                return ChainRawAsync<CommentSearch, CommentAggregateView>(data, (s) => services.comment.SearchAggregateAsync(s, requester), baggage);
             else if (data.endpoint == "activity")
-                return ChainRawAsync(data, services.activity, requester, baggage); //existingChains, r, f);
+                return ChainRawAsync(data, services.activity, requester, baggage);
             else if (data.endpoint == "activityaggregate")
-                return ChainRawAsync<ActivitySearch, ActivityAggregateView>(data, (s) => services.activity.SearchAggregateAsync(s, requester), baggage); //existingChains, r, f);
+                return ChainRawAsync<ActivitySearch, ActivityAggregateView>(data, (s) => services.activity.SearchAggregateAsync(s, requester), baggage);
             else if (data.endpoint == "watch")
-                return ChainRawAsync(data, services.watch, requester, baggage); //existingChains, r, f);
+                return ChainRawAsync(data, services.watch, requester, baggage);
             else if (data.endpoint == "vote")
-                return ChainRawAsync(data, services.vote, requester, baggage); //existingChains, r, f);
+                return ChainRawAsync(data, services.vote, requester, baggage);
             else
                 throw new BadRequestException($"Unknown request: {data.endpoint}");
         }
 
-        protected Task ChainRawAsync<S,V>(
-            ChainDataRaw chainData,
-            IViewReadService<V,S> service, 
-            Requester requester, 
-            ChainBaggage baggage)
-            //List<List<IIdView>> existingChains, 
-            //List<ChainResult> results,
-            //List<string> fields) 
+        //"Raw" chaining is a kind of staging area before going to the real, properly set up chaining.
+        protected Task ChainRawAsync<S,V>(ChainDataRaw chainData, IViewReadService<V,S> service, Requester requester, ChainBaggage baggage) 
             where S : IConstrainedSearcher where V : IIdView
         {
-            return ChainRawAsync<S,V>(chainData, (s) => service.SearchAsync(s, requester), baggage); //existingChains, results, fields);
+            return ChainRawAsync<S,V>(chainData, (s) => service.SearchAsync(s, requester), baggage);
         }
 
-        //Just a quick stopping point before the REAL chaining endpoint!
-        protected Task ChainRawAsync<S,V>(
-            ChainDataRaw chainDataRaw,
-            Func<S, Task<List<V>>> search,
-            ChainBaggage baggage
-            //List<List<IIdView>> existingChains, 
-            //List<ChainResult> results,
-            //List<string> fields
-            ) where S : IConstrainedSearcher where V : IIdView
+        protected Task ChainRawAsync<S,V>(ChainDataRaw chainDataRaw, Func<S, Task<List<V>>> search, ChainBaggage baggage) 
+            where S : IConstrainedSearcher where V : IIdView
         {
             var chainData = new ChainRequest<S,V>() { retriever = search };
 
@@ -297,26 +268,16 @@ namespace contentapi.Services.Implementations
             return ChainAsync(chainData, baggage);
         }
 
-        //protected Task ChainAsync<S,V>(
-        //    ChainRequest<S,V> data, 
-        //    IViewReadService<V,S> service, 
-        //    Requester requester, 
-        //    List<List<IIdView>> existingChains, 
-        //    List<ChainResult> results,
-        //    List<string> fields
-        //) where V : IIdView where S : IConstrainedSearcher
-        //{
-        //    return ChainAsync<S,V>(data, (s) => service.SearchAsync(s, requester), existingChains, results, fields);
-        //}
-
-        protected async Task ChainAsync<S,V>(
-            ChainRequest<S,V> data, 
-            //Func<S, Task<List<V>>> search, 
-            ChainBaggage baggage
-            //List<List<IIdView>> existingChains, 
-            //List<ChainResult> results,
-            //List<string> fields
-        ) where V : IIdView where S : IConstrainedSearcher
+        /// <summary>
+        /// THE REAL PROPER CHAINING ENDPOINT! Will perform ONE chain request (after linking with previous chains)
+        /// </summary>
+        /// <param name="data"></param>
+        /// <param name="baggage"></param>
+        /// <typeparam name="S"></typeparam>
+        /// <typeparam name="V"></typeparam>
+        /// <returns></returns>
+        public async Task ChainAsync<S,V>(ChainRequest<S,V> data, ChainBaggage baggage) 
+            where V : IIdView where S : IConstrainedSearcher
         {
             Dictionary<string, PropertyInfo> properties = null;
 
@@ -342,21 +303,9 @@ namespace contentapi.Services.Implementations
                     throw new BadRequestException($"Unknown fields in list: {string.Join(",", baggage.fields)}");
             }
 
-            //S searchobject;
-
-            //try
-            //{
-            //    searchobject = JsonSerializer.Deserialize<S>(data.search, jsonOptions);
-            //}
-            //catch(Exception ex)
-            //{
-            //    //I don't care too much about json deseralize errors, just the message. I don't even log it.
-            //    throw new BadRequestException(ex.Message + " (CHAIN REMINDER: json search comes last AFTER all . chaining in a request)");
-            //}
-
             //Parse the chains, get the ids. WARN: THIS IS DESTRUCTIVE TO DATA.BASESEARCH!!!
             foreach(var c in data.chains)
-                ChainIdSearch(c, baggage.previousChains, data.baseSearch);//existingChains, searchobject);
+                ChainIdSearch(c, baggage.previousChains, data.baseSearch);
             
             var myResults = await data.retriever(data.baseSearch);
             baggage.previousChains.Add(myResults.Cast<IIdView>().ToList());
@@ -381,49 +330,6 @@ namespace contentapi.Services.Implementations
             }
         }
 
-        //protected async Task ChainAsync(
-        //    string request,
-        //    Requester requester,
-        //    Dictionary<string, List<TaggedChainResult>> results, 
-        //    List<List<IIdView>> chainResults,
-        //    Dictionary<string, List<string>> fields)
-        //{
-        //    //var data = ParseChainData(request);
-
-        //    //Again, BE CAREFUL with locking on objects like this! I know the results object most likely won't
-        //    //get reassigned but you never know!!
-        //    lock(results)
-        //    {
-        //        if (!results.ContainsKey(data.endpoint))
-        //            results.Add(data.endpoint, new List<ChainResult>());
-        //    }
-
-        //    var r = results[data.endpoint];
-        //    var f = fields.ContainsKey(data.endpoint) ? fields[data.endpoint] : null;
-
-        //    //Go find the endpoint
-        //    if (data.endpoint == "file")
-        //        await ChainAsync(data, services.file, requester, chainResults, r, f);
-        //    else if (data.endpoint == "user")
-        //        await ChainAsync(data, services.user, requester, chainResults, r, f);
-        //    else if (data.endpoint == "content")
-        //        await ChainAsync(data, services.content, requester, chainResults, r, f);
-        //    else if (data.endpoint == "category")
-        //        await ChainAsync(data, services.category, requester, chainResults, r, f);
-        //    else if (data.endpoint == "comment")
-        //        await ChainAsync(data, services.comment, requester, chainResults, r, f);
-        //    else if (data.endpoint == "commentaggregate")
-        //        await ChainAsync<CommentSearch, CommentAggregateView>(data, (s) => services.comment.SearchAggregateAsync(s, requester), chainResults, r, f);
-        //    else if (data.endpoint == "activity")
-        //        await ChainAsync(data, services.activity, requester, chainResults, r, f);
-        //    else if (data.endpoint == "activityaggregate")
-        //        await ChainAsync<ActivitySearch, ActivityAggregateView>(data, (s) => services.activity.SearchAggregateAsync(s, requester), chainResults, r, f);
-        //    else if (data.endpoint == "watch")
-        //        await ChainAsync(data, services.watch, requester, chainResults, r, f);
-        //    else if (data.endpoint == "vote")
-        //        await ChainAsync(data, services.vote, requester, chainResults, r, f);
-        //}
-
         //You don't want to call this repeatedly, so only call it on the request LISTS
         protected Dictionary<string, List<string>> FixFields(Dictionary<string, List<string>> fields)
         {
@@ -444,7 +350,7 @@ namespace contentapi.Services.Implementations
                 throw new BadRequestException("Can't chain deeper than 5");
         }
 
-        public async Task<ActionResult<Dictionary<string, List<ExpandoObject>>>> ChainAsync(List<string> requests, Dictionary<string, List<string>> fields, Requester requester)
+        public async Task<Dictionary<string, List<ExpandoObject>>> ChainAsync(List<string> requests, Dictionary<string, List<string>> fields, Requester requester)
         {
             if (requests == null)
                 requests = new List<string>();
@@ -491,7 +397,7 @@ namespace contentapi.Services.Implementations
             public EntityRelationView(EntityRelation copy) : base(copy) {}
         }
 
-        public async Task<ActionResult<ListenResult>> ListenAsync(Dictionary<string, List<string>> fields, string listeners, string actions, Requester requester, CancellationToken cancelToken)
+        public async Task<ListenResult> ListenAsync(Dictionary<string, List<string>> fields, string listeners, string actions, Requester requester, CancellationToken cancelToken)
         {
             var result = new ListenResult();
             fields = FixFields(fields);
