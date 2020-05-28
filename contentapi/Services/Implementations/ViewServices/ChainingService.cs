@@ -89,13 +89,33 @@ namespace contentapi.Services.Implementations
         }
     }
 
-    ///// <summary>
-    ///// The "baggage" carried between inner chain requests, used for a SINGLE request
-    ///// </summary>
-    //public class ChainBaggage
-    //{
-    //    public List<List<IIdView>> previousChains {get;set;}
-    //}
+    /// <summary>
+    /// User-supplied config for relation listening in the chaining service
+    /// </summary>
+    public class RelationListenChainConfig : RelationListenConfig
+    { 
+        //public long lastId {get;set;} = -1;
+        //public Dictionary<long, string> statuses {get;set;} = new Dictionary<long, string>();
+        public List<string> chain {get;set;}
+    }
+
+    /// <summary>
+    /// User-supplied config for listener... listening in the chaining service
+    /// </summary>
+    public class ListenerChainConfig
+    {
+        public Dictionary<long, Dictionary<long, string>> lastListeners {get;set;} = new Dictionary<long, Dictionary<long, string>>();
+        public List<string> chain {get;set;}
+    }
+
+    /// <summary>
+    /// The results from listening in the chaining service
+    /// </summary>
+    public class ListenResult
+    {
+        public Dictionary<long, Dictionary<long, string>> listeners {get;set;}
+        public Dictionary<string, List<ExpandoObject>> chain {get;set;}
+    }
 
     /// <summary>
     /// A service for chaining together separate requests. You can use the output of one request as the input 
@@ -458,50 +478,30 @@ namespace contentapi.Services.Implementations
             return ChainResultToReturn(results);
         }
 
-        public class RelationListenQuery 
-        { 
-            public long lastId {get;set;} = -1;
-            public Dictionary<string, string> statuses {get;set;} = new Dictionary<string, string>();
-            public List<string> chain {get;set;}
-        }
-
-        public class ListenerQuery
-        {
-            public Dictionary<string, Dictionary<string, string>> lastListeners {get;set;} = new Dictionary<string, Dictionary<string, string>>();
-            public List<string> chain {get;set;}
-        }
-
-        public class ListenResult
-        {
-            public Dictionary<string, Dictionary<string, string>> listeners {get;set;}
-            public Dictionary<string, List<ExpandoObject>> chain {get;set;}
-        }
-
-        public class PhonyListenerList : IIdView
+        protected class PhonyListenerList : IIdView
         {
             public long id {get;set;}
             public List<long> listeners {get;set;}
         }
 
-        public class EntityRelationView : EntityRelation, IIdView
+        protected class EntityRelationView : EntityRelation, IIdView
         {
             public EntityRelationView(EntityRelation copy) : base(copy) {}
         }
 
-        public async Task<ListenResult> ListenAsync(Dictionary<string, List<string>> fields, string listeners, string actions, Requester requester, CancellationToken cancelToken)
+        public async Task<ListenResult> ListenAsync(Dictionary<string, List<string>> fields, ListenerChainConfig listeners, RelationListenChainConfig actions, Requester requester, CancellationToken cancelToken)
         {
             var result = new ListenResult();
             fields = FixFields(fields);
 
             var chainResults = new Dictionary<string, List<TaggedChainResult>>();
-
             List<Task> waiters = new List<Task>();
 
-            var listenerObject = JsonSerializer.Deserialize<ListenerQuery>(listeners ?? "null", jsonOptions);
-            var actionObject = JsonSerializer.Deserialize<RelationListenQuery>(actions ?? "null", jsonOptions);
+            //var listenerObject = JsonSerializer.Deserialize<ListenerQuery>(listeners ?? "null", jsonOptions);
+            //var actionObject = JsonSerializer.Deserialize<RelationListenQuery>(actions ?? "null", jsonOptions);
 
-            CheckChainLimit(listenerObject?.chain?.Count);
-            CheckChainLimit(actionObject?.chain?.Count);
+            CheckChainLimit(listeners?.chain?.Count);
+            CheckChainLimit(actions?.chain?.Count);
 
             Func<List<string>, IEnumerable<IIdView>, Task> chainer = async (l, i) =>
             {
@@ -520,17 +520,17 @@ namespace contentapi.Services.Implementations
             {
                 try
                 {
-                    if (actionObject != null)
+                    if (actions != null)
                     {
-                        var rConfig = new RelationListenConfig() { lastId = actionObject.lastId };
-                        rConfig.statuses = actionObject.statuses.ToDictionary(x => long.Parse(x.Key), y => y.Value);
+                        //var rConfig = new RelationListenConfig() { lastId = actions.lastId };
+                        //rConfig.statuses = actionObject.statuses.ToDictionary(x => long.Parse(x.Key), y => y.Value);
 
                         waiters.Add(Task.Run(() =>
                         {
                             while (true) //I'm RELYING on the fact that OTHER tasks SHOULD have the proper long-polling timeout
-                                {
-                                var result = relationService.ListenAsync(rConfig, requester, linkedCts.Token).Result;
-                                chainer(actionObject.chain, result.Select(x => new EntityRelationView(x))).Wait();
+                            {
+                                var result = relationService.ListenAsync(actions, requester, linkedCts.Token).Result;
+                                chainer(actions.chain, result.Select(x => new EntityRelationView(x))).Wait();
                                 if (chainResults.Sum(x => x.Value.Count()) > 0)
                                     break;
                             }
@@ -538,19 +538,19 @@ namespace contentapi.Services.Implementations
                     }
 
                     //Only run the listeners that the user asked for
-                    if (listenerObject != null)
+                    if (listeners != null)
                     {
                         //We wait a LITTLE BIT so that if comments don't complete, we will show up in the listener list.
                         await Task.Delay(5);
                         waiters.Add(
-                            relationService.GetListenersAsync(listenerObject.lastListeners.ToDictionary(
-                                    x => long.Parse(x.Key),
-                                    y => y.Value.ToDictionary(k => long.Parse(k.Key), v => v.Value)),
-                                requester, linkedCts.Token)
+                            relationService.GetListenersAsync(listeners.lastListeners, requester, linkedCts.Token)
+                                //listenerObject.lastListeners.ToDictionary(
+                                //    x => long.Parse(x.Key),
+                                //    y => y.Value.ToDictionary(k => long.Parse(k.Key), v => v.Value)),
                             .ContinueWith(t =>
                             {
-                                result.listeners = t.Result.ToDictionary(x => x.Key.ToString(), x => x.Value.ToDictionary(k => k.ToString(), v => v.Value));
-                                return chainer(listenerObject.chain, t.Result.Select(x => new PhonyListenerList() { id = x.Key, listeners = x.Value.Keys.ToList() }));
+                                result.listeners = t.Result; //.ToDictionary(x => x.Key.ToString(), x => x.Value.ToDictionary(k => k.ToString(), v => v.Value));
+                                return chainer(listeners.chain, t.Result.Select(x => new PhonyListenerList() { id = x.Key, listeners = x.Value.Keys.ToList() }));
                             })
                         );
                     }
