@@ -1,4 +1,5 @@
 using AutoMapper;
+using contentapi.Configs;
 using contentapi.Services.Constants;
 using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.DependencyInjection;

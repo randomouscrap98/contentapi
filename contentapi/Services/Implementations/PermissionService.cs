@@ -1,6 +1,7 @@
 using System;
 using System.Collections.Generic;
 using System.Linq;
+using contentapi.Configs;
 using contentapi.Services.Constants;
 using Microsoft.Extensions.Logging;
 using Randomous.EntitySystem;

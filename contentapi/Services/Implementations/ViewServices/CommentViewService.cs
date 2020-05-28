@@ -3,6 +3,7 @@ using System.Collections.Generic;
 using System.Linq;
 using System.Threading;
 using System.Threading.Tasks;
+using contentapi.Configs;
 using contentapi.Services.Constants;
 using contentapi.Services.Extensions;
 using contentapi.Views;
@@ -14,15 +15,14 @@ namespace contentapi.Services.Implementations
 {
     public class CommentViewService : BaseViewServices<CommentView, CommentSearch>, IViewRevisionService<CommentView, CommentSearch>
     {
-
-        protected SystemConfig config;
+        //protected SystemConfig config;
         protected CommentViewSource converter;
         protected WatchViewSource watchSource;
 
         public CommentViewService(ViewServicePack services, ILogger<CommentViewService> logger,
-            SystemConfig config, CommentViewSource converter, WatchViewSource watchSource) : base(services, logger)
+            /*SystemConfig config,*/ CommentViewSource converter, WatchViewSource watchSource) : base(services, logger)
         {
-            this.config = config; 
+            //this.config = config; 
             this.converter = converter;
             this.watchSource = watchSource;
         }

@@ -9,36 +9,18 @@ using Randomous.EntitySystem;
 
 namespace contentapi.Services.Implementations
 {
-    //public class ActivityListenConfig
-    //{
-    //    public int limit {get;set;}
-    //    public long firstId {get;set;}
-    //    public long lastId {get;set;}
-    //    public List<long> parentIds {get;set;}
-    //}
-
-    //public class ActivityListener
-    //{
-    //    public long userId {get;set;}
-
-    //    public override string ToString()
-    //    {
-    //        return $"u{userId}";
-    //    }
-    //}
-
     public class ActivityViewService : BaseViewServices<ActivityView, ActivitySearch>, IViewReadService<ActivityView, ActivitySearch>
     {
         protected ActivityViewSource activity;
-        protected CommentViewSource comments;
+        //protected CommentViewSource comments;
         protected WatchViewSource watchSource;
 
         public ActivityViewService(ViewServicePack services, ILogger<ActivityViewService> logger, 
-            ActivityViewSource activity, CommentViewSource comments, WatchViewSource watchSource) 
+            ActivityViewSource activity, /*CommentViewSource comments,*/ WatchViewSource watchSource) 
             : base(services, logger) 
         { 
             this.activity = activity;
-            this.comments = comments;
+            //this.comments = comments;
             this.watchSource = watchSource;
         }
 
