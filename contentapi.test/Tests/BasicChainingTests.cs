@@ -25,14 +25,9 @@ namespace contentapi.test
             services = CreateService<ChainServices>();
         }
 
-        [Fact]
-        public void BasicSingleTest() //Does the LOW level thing work?
+        protected ChainRequest<UserSearch, UserViewFull> BasicChainRequest(Requester requester)
         {
-            //Just a SIMPLE little chain!
-            var requester = new Requester() { system = true };
-            var user = services.user.WriteAsync(new UserViewFull() { username = "simple" }, requester).Result;
-
-            var chain = new ChainRequest<UserSearch, UserViewFull>()
+            return new ChainRequest<UserSearch, UserViewFull>()
             {
                 baseSearch = new UserSearch(),
                 retriever = (s) => services.user.SearchAsync(s, requester),
@@ -40,11 +35,58 @@ namespace contentapi.test
                 mergeLock = new object(),
                 mergeList = new List<TaggedChainResult>()
             };
+        }
+
+        [Fact]
+        public void BasicSingleTest() //Does the LOW level (actual chaining) thing work?
+        {
+            //Just a SIMPLE little chain!
+            var requester = new Requester() { system = true };
+            var user = services.user.WriteAsync(new UserViewFull() { username = "simple" }, requester).Result;
+
+            var chain = BasicChainRequest(requester);
 
             service.ChainAsync(chain, new List<List<IIdView>>()).Wait();
             Assert.Single(chain.mergeList);
             Assert.Equal(user.id, chain.mergeList.First().id);
             Assert.Equal(user.id, ((dynamic)chain.mergeList.First().result).id);
+        }
+
+        [Fact]
+        public void BasicChainTest() //Does the LOW level (actual chaining) thing work?
+        {
+            //Need a user first
+            var requester = new Requester() { system = true };
+            var user = services.user.WriteAsync(new UserViewFull() { username = "simpleuser" }, requester).Result;
+
+            //Now create some content as user
+            var content = services.content.WriteAsync(new ContentView() { name = "simplecontent" }, new Requester() {userId = user.id}).Result;
+
+            //Create another user to ensure the chaining only gets the first one
+            var NOTUSER = services.user.WriteAsync(new UserViewFull() { username = "simpleuser" }, requester).Result;
+
+            //Same old user chaining, BUT chain to content
+            var chain = BasicChainRequest(requester);
+            chain.chains = new[] { new Chaining() { 
+                viewableIdentifier = "0.createUserId",
+                index = 0,
+                getField = "createUserId",
+                searchField = "Ids"
+            }};
+
+            //This time, have some previous results to chain to
+            service.ChainAsync(chain, new List<List<IIdView>>() { new List<IIdView>() {content}}).Wait();
+
+            //Now, make sure that chained user is the only one returned!
+            Assert.Single(chain.mergeList);
+            Assert.Equal(user.id, chain.mergeList.First().id);
+            Assert.Equal(user.id, ((dynamic)chain.mergeList.First().result).id);
+
+            //Try another chain but this time remove the chaining. You should get two
+            chain.chains = new List<Chaining>();
+            service.ChainAsync(chain, new List<List<IIdView>>() { new List<IIdView>() {content}}).Wait();
+
+            Assert.True(chain.mergeList.Count == 2);
         }
     }
 }
