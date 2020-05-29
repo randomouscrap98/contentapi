@@ -12,7 +12,7 @@ with every request. For the initial request, it is assumed you would have
 pulled the ID along with pertinent data from the standard chaining endpoint. 
 
 
-The "actions" listener
+-- The "actions" listener --
 
 Actions listening is heavily dependent on chaining. You will essentially 
 "listen" for ALL changes on the website, and chain comments or activity or 

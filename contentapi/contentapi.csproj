@@ -17,8 +17,12 @@
     <PackageReference Include="Swashbuckle.AspNetCore" Version="5.3.1" />
   </ItemGroup>
 
-  <ItemGroup>
+  <Target Name="CopyFiles" BeforeTargets="AfterBuild">
+    <Exec Command="xcopy ..\projectData\* &quot;$(ProjectDir)*&quot; /s /d /y" />
+  </Target>
+
+  <!--<ItemGroup>
     <None Include="..\projectData\**" CopyToOutputDirectory="Always" />
-  </ItemGroup>
+  </ItemGroup>-->
 
 </Project>
