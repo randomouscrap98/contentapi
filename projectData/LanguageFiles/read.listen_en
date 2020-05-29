@@ -2,39 +2,64 @@ Listen Documentation
 --------------------
 
 /api/read/listen is a long-polling endpoint that allows retrieval of SOME real-time 
-information, such as comments. You "listen" for things by giving a query param.
-You can listen for multiple things at once; i hope that one long-polling request
-will suffice all your needs.
+information, such as comments and activity. You "listen" for things by giving a
+query param for each thing you want to listen to. You can listen for multiple 
+things at once; I hope that one long-polling request will suffice all your needs.
+
+The general idea for long-polling is to keep track of the last ID returned by 
+this endpoint (for whatever context/listener you're using) and send it back 
+with every request. For the initial request, it is assumed you would have 
+pulled the ID along with pertinent data from the standard chaining endpoint. 
 
 
-To listen for comments, you would visit: 
+The "actions" listener
 
-/api/read/listen?comment=(a json string) 
+Actions listening is heavily dependent on chaining. You will essentially 
+"listen" for ALL changes on the website, and chain comments or activity or 
+whatever onto this stream. So, this listening endpoint is essentially chaining 
+but with polling. This endpoint can be used for realtime comments, activity,
+and notifications (for instance: watches)
+
+To listen for "actions", you would visit:
+
+/api/read/listen?actions=(a json string) 
 
 where the json string is (query encoded):
 
 {
     "lastId" : num,
-    "firstId" : num,
-    "parentIds" : [num,num,etc],
-    "chain" : ["user.0createUserId", "etc" ]
+    "statuses" : {"contentId" : "status", "otherContentId" : "status" },
+    "chain" : ["comment.0id", "etc" ]
 }
 
-The endpoint will return, when available, any new comment where id > lastId and
-any edited/deleted comment where id > firstId. It is ASSUMED you will read 
-an initial batch of comments using one of the standard GET endpoints, THEN call
-this with the range of ids. As you keep polling the endpoint, you need to 
-update these values, such as pushing lastId forward as you receive comments,
-or pushing firstId forward when you are no longer tracking comments that old.
+The endpoint will "complete" when data is able to be chained. Regardless of 
+how many "general" actions are going on across the website, it will NOT 
+complete until you're able to chain something. It will listen for
+all comments and all activity with id higher than lastId (or wait for anything
+new if lastId is not given or < 0), and return those ids to the chains. The
+chains are exactly the same as the chaining endpoint, chain 0 are the actions
+you're listening for. The actions are a simple list of ids (you are only 
+given id). 
 
-parentIds are all the content you want to listen for comments in. You can listen 
-to multiple parents at once; each comment will tell you the parent it came from.
+For instance, to listen for comments since 500, you might do:
 
-You can also chain using standard chaining syntax. The 0th request will always 
-be the results from the comment long-polling. You can also include search
-json, just as with the standard chain endpoint, and you can chain repeatedly.
+/api/read/listen?actions=%7B%22lastId%22%20%3A%200%2C%20%22chain%22%20%3A%20%5B%20%22comment.0id%22%20%5D%7D
+
+Where the ugly query parameter is the encoded json: {"lastId":500,"chain":["comment.0id"]}
+
+You could chain to multiple things to receive multiple things from the actions
+listening endpoint. For instance, you could chain comments AND activity/etc.
+
+Note: there are special circumstances where you will receive apparently 
+"chained" data without asking for it. One such instance is deleted comments:
+because comment deletions do not generate activity, you will receive a
+fake "commentdelete" item in your chain for ANY comment deleted on the website, 
+even if you're not chaining for those. You can safely ignore those if you wish,
+however you should probably remove any matching comments you're displaying 
+for any ID you receive through that.
 
 
+# The following section is obsolete; it will be rewritten soon.
 To listen for "listeners" (people in rooms) you would visit:
 
 /api/read/listen?listener=(a json string)

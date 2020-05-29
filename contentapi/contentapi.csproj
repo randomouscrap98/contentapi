@@ -17,15 +17,8 @@
     <PackageReference Include="Swashbuckle.AspNetCore" Version="5.3.1" />
   </ItemGroup>
 
-  <Target Name="CopyFiles" BeforeTargets="AfterBuild">
-    <Exec Command="xcopy ..\projectData\* &quot;$(ProjectDir)*&quot; /s /d /y" />
-  </Target>
-  <!--<ItemGroup>
-    <None Include="..\projectData\content.db" CopyToOutputDirectory="PreserveNewest" />
-  </ItemGroup>-->
-
-  <!--<Target Name="CopyFiles">
-      <Copy SourceFiles="..\projectData\content.db" DestinationFolder="c:\MyProject\Destination" />
-  </Target>-->
+  <ItemGroup>
+    <None Include="..\projectData\**" CopyToOutputDirectory="Always" />
+  </ItemGroup>
 
 </Project>
