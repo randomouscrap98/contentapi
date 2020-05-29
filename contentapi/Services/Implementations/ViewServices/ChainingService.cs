@@ -533,16 +533,24 @@ namespace contentapi.Services.Implementations
                 {
                     if (actions != null)
                     {
-                        waiters.Add(Task.Run(() =>
+                        //An ABSOLUTELY SILLY HACK because I don't actually know how to write this pattern using C#. I want an asynchronous... "task",
+                        //and ugh maybe this IS how you do it? I mean that I want a section of code to run asynchronously with "await" and stuff,
+                        //and get the "task" that represents this async code. Actually... maybe this IS how you do it.
+                        Func<Task> run = async () =>
                         {
                             while (true) //I'm RELYING on the fact that OTHER tasks SHOULD have the proper long-polling timeout
                             {
-                                var result = relationService.ListenAsync(actions, requester, linkedCts.Token).Result;
-                                chainer(actions.chain, result.Select(x => new EntityRelationView(x))).Wait();
+                                var result = await relationService.ListenAsync(actions, requester, linkedCts.Token);
+                                await chainer(actions.chain, result.Select(x => new EntityRelationView(x)));
                                 if (chainResults.Sum(x => x.Value.Count()) > 0)
                                     break;
+                                else
+                                    actions.lastId = result.Max(x => x.id); 
+                                //the "else" makes it so we don't loop indefinitely getting the same instant completion 
+                                //when nothing was chained, but is this OK logic?
                             }
-                        }, linkedCts.Token));
+                        }; 
+                        waiters.Add(run());
                     }
 
                     //Only run the listeners that the user asked for
@@ -563,7 +571,10 @@ namespace contentapi.Services.Implementations
                     if (waiters.Count == 0)
                         throw new BadRequestException("No listeners registered");
 
-                    await Task.WhenAny(waiters.ToArray());
+                    var completed = await Task.WhenAny(waiters.ToArray());
+
+                    //This is funny: we want the completed task to throw its exception (wehnany doesn't do that)
+                    await completed; //When done, this will just finish. When exceptioned, it will throw
                     await Task.Delay(completionWaitUp); //To allow some others to catch up if they're ALMOST done
                 }
                 finally

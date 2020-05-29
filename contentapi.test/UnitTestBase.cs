@@ -16,36 +16,35 @@ namespace contentapi.test
 {
     public class UnitTestBase : IDisposable
     {
-        public List<SqliteConnection> connections = new List<SqliteConnection>();
-        public string SqliteConnectionString = "Data Source=:memory:;";
-
-        protected contentapi.Services.Implementations.DefaultServiceProvider contentApiProvider;
+        protected SqliteConnection connection;
+        protected List<IServiceScope> scopes;
 
         public UnitTestBase()
         {
-            //serviceProvider = new DefaultServiceProvider();
-            contentApiProvider = new contentapi.Services.Implementations.DefaultServiceProvider();
+            //Hmmm, use only one connection per test. This is because each new connection to an in-memory
+            //database... is a new database lol.
+            connection = new SqliteConnection("Data Source=:memory:;");
+            connection.Open();
+            scopes = new List<IServiceScope>();
         }
 
         public void Dispose()
         {
-            foreach(var con in connections)
+            connection.Close();
+
+            foreach(var s in scopes)
             {
-                try { con.Close(); }
-                catch(Exception) { }
+                try { s.Dispose(); }
+                catch { /* do nothing */ }
             }
         }
 
         public virtual IServiceCollection CreateServices()
         {
-            //Whhyyyy am I doing it like this.
-            var connection = new SqliteConnection(SqliteConnectionString);
-            connection.Open();
-            connections.Append(connection);
-
             var services = new ServiceCollection();
+            var csp = new contentapi.Services.Implementations.DefaultServiceProvider();
             var dsp = new Randomous.EntitySystem.Implementations.DefaultServiceProvider();
-            services.AddLogging(configure => configure.AddDebug());//configure.AddSerilog(new LoggerConfiguration().WriteTo.File($"{GetType()}.txt").CreateLogger()));
+            services.AddLogging(configure => configure.AddDebug());
             dsp.AddDefaultServices(
                 services, 
                 options => options.UseSqlite(connection).EnableSensitiveDataLogging(true),
@@ -56,17 +55,17 @@ namespace contentapi.test
                 //.AddJsonFile("appsettings.Development.json", true, true)
                 .Build();
 
-            contentApiProvider.AddDefaultServices(services);
-            contentApiProvider.AddServiceConfigurations(services, config);
-            services.AddSingleton<IEntityProvider, EntityProvider>();   //We want everyone to share data, even in tests. That's because all my tests are bad
+            csp.AddDefaultServices(services);
+            csp.AddServiceConfigurations(services, config);
 
             return services;
         }
 
         protected IServiceProvider serviceProvider = null;
+        protected IServiceScopeFactory scopeFactory = null;
         protected readonly object providerLock = new object();
 
-        public T CreateService<T>()
+        public T CreateService<T>(bool newScope = false)
         {
             lock(providerLock)
             {
@@ -74,10 +73,20 @@ namespace contentapi.test
                 {
                     var services = CreateServices();
                     serviceProvider = services.BuildServiceProvider();
+                    scopeFactory = serviceProvider.GetRequiredService<IServiceScopeFactory>();
                 }
             }
 
-            return (T)ActivatorUtilities.GetServiceOrCreateInstance(serviceProvider, typeof(T));
+            var sp = serviceProvider;
+
+            if(newScope)
+            {
+                var scope = scopeFactory.CreateScope();
+                sp = scope.ServiceProvider;
+                scopes.Add(scope);
+            }
+
+            return (T)ActivatorUtilities.GetServiceOrCreateInstance(sp, typeof(T));
         }
 
         public void AssertThrows<T>(Action a) where T : Exception
@@ -95,13 +104,26 @@ namespace contentapi.test
 
         public T AssertWait<T>(Task<T> task)
         {
-            Assert.True(task.Wait(2000));    //We should've gotten signaled. Give the test plenty of time to get the memo
+            Assert.True(task.Wait(2000), $"The task returning {typeof(T)} was supposed to complete!");    //We should've gotten signaled. Give the test plenty of time to get the memo
             return task.Result;    //This won't wait at all if the previous came through
+        }
+
+        public void AssertWaitThrows<T>(Task task)
+        {
+            try
+            {
+                var complete = task.Wait(2000);
+                Assert.False(true, $"The task didn't throw! Complete: {complete}");
+            }
+            catch(Exception ex)
+            {
+                Assert.True(ex is T || ex is AggregateException && ex.InnerException is T, $"Task exception should've been {typeof(T)}, was: {ex}");
+            }
         }
 
         public void AssertNotWait(Task task)
         {
-            Assert.False(task.Wait(1));
+            Assert.False(task.Wait(100));
             Assert.False(task.IsCompleted);
         }
 

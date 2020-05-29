@@ -20,7 +20,7 @@ namespace contentapi.Services.Implementations
         /// What your "status" should be in each room (arbitrary string yes)
         /// </summary>
         /// <value></value>
-        public Dictionary<long, string> statuses {get;set;}
+        public Dictionary<long, string> statuses {get;set;} = new Dictionary<long, string>();
     }
 
     public class RelationListener
@@ -28,7 +28,7 @@ namespace contentapi.Services.Implementations
         public long userId {get;set;}
 
         //this is a mapping of contentId to personal status in content
-        public Dictionary<long, string> listenStatuses {get;set;} 
+        public Dictionary<long, string> listenStatuses {get;set;} = new Dictionary<long, string>();
 
         public override bool Equals(object obj)
         {

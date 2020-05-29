@@ -45,3 +45,4 @@ secrets.json
 appsettings.json
 appsettings.Development.json
 uploads
+.vscode_old
