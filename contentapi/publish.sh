@@ -58,6 +58,10 @@ dotnet publish -r $mtype -c Release # -p:PublishSingleFile=true
 # You need these, and they're likely to be the same all the time on every system
 cp -r LanguageFiles "$lpfolder"
 
+# I ACCIDENTALLY MADE A MISTAKE ONE TIME AND A BLANK CONTENT.DB GOT INTO
+# THE PUBLISH! I DON'T EVER WANT THAT TO HAPPEN AGAIN, this is safety
+rm -f "$lpfolder/content.db"
+
 # Now put the stuff on the server! A simple direct copy
 hostrsync "$lpfolder" "$pfolder"
 
