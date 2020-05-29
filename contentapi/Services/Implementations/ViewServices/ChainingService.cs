@@ -498,10 +498,10 @@ namespace contentapi.Services.Implementations
             public List<long> listeners {get;set;}
         }
 
-        protected class EntityRelationView : EntityRelation, IIdView
-        {
-            public EntityRelationView(EntityRelation copy) : base(copy) {}
-        }
+        //protected class EntityRelationView : EntityRelation, IIdView
+        //{
+        //    public EntityRelationView(EntityRelation copy) : base(copy) {}
+        //}
 
         public async Task<ListenResult> ListenAsync(Dictionary<string, List<string>> fields, ListenerChainConfig listeners, RelationListenChainConfig actions, Requester requester, CancellationToken cancelToken)
         {
@@ -541,7 +541,7 @@ namespace contentapi.Services.Implementations
                             while (true) //I'm RELYING on the fact that OTHER tasks SHOULD have the proper long-polling timeout
                             {
                                 var result = await relationService.ListenAsync(actions, requester, linkedCts.Token);
-                                await chainer(actions.chain, result.Select(x => new EntityRelationView(x)));
+                                await chainer(actions.chain, result.Select(x => new BaseView() {id = x.id}));
                                 if (chainResults.Sum(x => x.Value.Count()) > 0)
                                     break;
                                 else
