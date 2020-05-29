@@ -114,5 +114,20 @@ namespace contentapi.test
             cancelSource.Cancel();
             AssertWaitThrows<OperationCanceledException>(listen);
         }
+
+        [Fact]
+        public void SimpleInstantEmptyListen()
+        {
+            var listen = BasicListen(new ListenerChainConfig() { lastListeners = new Dictionary<long, Dictionary<long, string>>() 
+                {{ 1, new Dictionary<long, string>() {{0, ""}} }} }, null, unit.commonUser.id);
+
+            //it should instantly complete since there aren't actually listeners
+            var complete = AssertWait(listen);
+
+            //ALL the parents we give should be returned and ONLY those
+            Assert.Single(complete.listeners);
+            Assert.True(complete.listeners.ContainsKey(1));
+            Assert.Empty(complete.listeners[1]);
+        }
     }
 }
