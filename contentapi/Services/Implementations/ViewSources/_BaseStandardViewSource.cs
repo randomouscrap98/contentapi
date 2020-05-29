@@ -19,7 +19,21 @@ namespace contentapi.Services.Implementations
             query = base.ModifySearch(query, search);
 
             if(search.ParentIds.Count > 0)
-                query = LimitByParents(query, search.ParentIds);
+            {
+                var limited = LimitByParents(query, search.ParentIds);
+
+                if(search.ParentIds.Contains(0))
+                {
+                    if(search.ParentIds.Count == 1)
+                        query = GetOrphans(query);
+                    else
+                        query = limited.Union(GetOrphans(query));
+                }
+                else
+                {
+                    query = limited;
+                }
+            }
             
             if(!string.IsNullOrEmpty(search.AssociatedKey) || !string.IsNullOrEmpty(search.AssociatedValue))
                 query = LimitByValue(query, (Keys.AssociatedValueKey + search.AssociatedKey ?? "%"), search.AssociatedValue ?? "%");

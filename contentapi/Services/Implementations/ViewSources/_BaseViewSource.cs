@@ -48,6 +48,19 @@ namespace contentapi.Services.Implementations
                     select q;
         }
 
+        public IQueryable<E> GetOrphans(IQueryable<E> query)
+        {
+            return query.Where(q => !(Q<EntityRelation>().Where(x => x.type == Keys.ParentRelation).Select(x => x.entityId2)).Contains(q.entity.id));
+        }
+
+        //public IQueryable<E> IncludeOrphans(IQueryable<E> query)
+        //{
+        //    return query.Union(
+        //        query.Where(q => 
+        //            !(Q<EntityRelation>().Where(x => x.type == Keys.ParentRelation).Select(x => x.id)
+        //        ).Contains(q.entity.id)));
+        //}
+
         /// <summary>
         /// Modify the given query such that only those with matching values are returned
         /// </summary>
