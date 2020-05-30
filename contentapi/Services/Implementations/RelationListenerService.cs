@@ -67,7 +67,7 @@ namespace contentapi.Services.Implementations
         protected TimeSpan listenerPollingInterval = TimeSpan.FromSeconds(2);
 
         //Don't know what to do with this yet...
-        protected IEnumerable<string> relationTypes = new[] { Keys.CommentHack, Keys.CommentDeleteHack, Keys.CommentHistoryHack };
+        //protected IEnumerable<string> relationTypes = new[] { Keys.CommentHack, Keys.CommentDeleteHack, Keys.CommentHistoryHack };
 
         public RelationListenerService(ILogger<RelationListenerService> logger, IDecayer<RelationListener> decayer,
             IEntityProvider provider, SystemConfig config)
@@ -131,7 +131,12 @@ namespace contentapi.Services.Implementations
                 listenConfig.lastId = await provider.GetQueryable<EntityRelation>().MaxAsync(x => x.id);
 
             var results = await provider.ListenAsync<EntityRelation>(listenId, 
-                (q) => q.Where(x => (EF.Functions.Like(x.type, $"{Keys.ActivityKey}%") || relationTypes.Contains(x.type)) && x.id > listenConfig.lastId), 
+                (q) => q.Where(x => 
+                    (x.type == Keys.CommentHack || 
+                     EF.Functions.Like(x.type, $"{Keys.ActivityKey}%") || 
+                     EF.Functions.Like(x.type, $"{Keys.CommentDeleteHack}%") ||
+                     EF.Functions.Like(x.type, $"{Keys.CommentHistoryHack}%")) && 
+                    x.id > listenConfig.lastId), 
                 config.ListenTimeout, token);
 
             return results; 

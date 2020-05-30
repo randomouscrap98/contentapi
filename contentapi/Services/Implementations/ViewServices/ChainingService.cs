@@ -8,6 +8,7 @@ using System.Text.RegularExpressions;
 using System.Threading;
 using System.Threading.Tasks;
 using AutoMapper;
+using contentapi.Services.Constants;
 using contentapi.Views;
 using Microsoft.Extensions.Logging;
 using Randomous.EntitySystem;
@@ -541,7 +542,43 @@ namespace contentapi.Services.Implementations
                             while (true) //I'm RELYING on the fact that OTHER tasks SHOULD have the proper long-polling timeout
                             {
                                 var result = await relationService.ListenAsync(actions, requester, linkedCts.Token);
-                                await chainer(actions.chain, result.Select(x => new BaseView() {id = x.id}));
+
+                                //We can't use the results as-is. Some relations are actually SPECIAL; consider using services for this 
+                                //later in case the meaning of the fields change!!
+                                var baseViews = new List<BaseView>();
+
+                                foreach(var r in result)
+                                {
+                                    BaseView v = null;
+
+                                    if(r.type.StartsWith(Keys.CommentHistoryHack))
+                                    {
+                                        //The real comment is something else: they want the real comment (it's just an edit so... they'll
+                                        //get the comment again)
+                                        v = new BaseView() { id = -r.entityId1 };
+                                    }
+                                    else if (r.type.StartsWith(Keys.CommentDeleteHack))
+                                    {
+                                        //Oops, this isn't even something we want to return. Generate a special thingy in the chainer
+                                        dynamic deleted = new ExpandoObject();
+                                        deleted.id = -r.entityId1;
+
+                                        if(!chainResults.ContainsKey(Keys.ChainCommentDelete))
+                                            chainResults.Add(Keys.ChainCommentDelete, new List<TaggedChainResult>());
+
+                                        if(!chainResults[Keys.ChainCommentDelete].Any(x => x.id == deleted.id))
+                                            chainResults[Keys.ChainCommentDelete].Add(new TaggedChainResult() { id = deleted.id, result = deleted });
+                                    }
+                                    else
+                                    {
+                                        v = new BaseView() { id = r.id };
+                                    }
+
+                                    if(v != null)
+                                        baseViews.Add(v);
+                                }
+
+                                await chainer(actions.chain, baseViews); //result.Select(x => new BaseView() {id = x.id}));
                                 if (chainResults.Sum(x => x.Value.Count()) > 0)
                                     break;
                                 else
@@ -556,16 +593,28 @@ namespace contentapi.Services.Implementations
                     //Only run the listeners that the user asked for
                     if (listeners != null)
                     {
+                        if(listeners.lastListeners.Count > 0)
+                        {
+                            var allowedContent = await services.content.SearchAsync(new ContentSearch() { Ids = listeners.lastListeners.Keys.ToList() }, requester);
+
+                            foreach(var l in listeners.lastListeners.Keys.ToList())
+                                if(!allowedContent.Any(x => x.id == l))
+                                    listeners.lastListeners.Remove(l);
+                        }
+
+                        if(listeners.lastListeners.Count == 0)
+                            throw new BadRequestException("There were no valid contentIds in your listeners group");
+
                         //We wait a LITTLE BIT so that if comments don't complete, we will show up in the listener list.
                         await Task.Delay(5);
-                        waiters.Add(
-                            relationService.GetListenersAsync(listeners.lastListeners, requester, linkedCts.Token)
-                            .ContinueWith(t =>
-                            {
-                                result.listeners = t.Result;
-                                return chainer(listeners.chain, t.Result.Select(x => new PhonyListenerList() { id = x.Key, listeners = x.Value.Keys.ToList() }));
-                            })
-                        );
+
+                        Func<Task> run = async () =>
+                        {
+                            result.listeners = await relationService.GetListenersAsync(listeners.lastListeners, requester, linkedCts.Token);
+                            await chainer(listeners.chain, result.listeners.Select(x => new PhonyListenerList() { id = x.Key, listeners = x.Value.Keys.ToList() }));
+                        };
+
+                        waiters.Add(run());
                     }
 
                     if (waiters.Count == 0)

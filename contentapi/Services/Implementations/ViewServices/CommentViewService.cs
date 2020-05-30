@@ -63,16 +63,6 @@ namespace contentapi.Services.Implementations
             return parent;
         }
 
-        //protected async Task<Dictionary<long, EntityPackage>> FullParentCheckAsync(List<long> parentIds, string action, Requester requester)
-        //{
-        //    var result = new Dictionary<long, EntityPackage>();
-
-        //    foreach(var id in parentIds)
-        //        result.Add(id, await FullParentCheckAsync(id, action, requester));
-
-        //    return result;
-        //}
-
         protected async Task<EntityRelation> ExistingCheckAsync(long id)
         {
             //Have to go find existing.

@@ -66,6 +66,10 @@ namespace contentapi.Services.Constants
         public const string CommentDeleteHack ="Zcd";
 
 
+        //Chaining?
+        public const string ChainCommentDelete = "commentdelete";
+
+
         public static void EnsureAllUnique()
         {
             var type = typeof(Keys);
