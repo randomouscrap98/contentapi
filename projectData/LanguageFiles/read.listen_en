@@ -59,33 +59,46 @@ however you should probably remove any matching comments you're displaying
 for any ID you receive through that.
 
 
-# The following section is obsolete; it will be rewritten soon.
+-- The "listeners" listener --
+
+When requesting from the actions endpoint, you can specify the "statuses" you
+want to show up as in various contents. They don't have to line up with what
+you're chaining. This allows you to "appear" to be active in a set of rooms
+while still receiving data from many more. This endpoint gives you everyone's
+reported statuses. The statuses are arbitrary strings. Like the actions
+endpoint, you are expected to send the "last" data you retrieved in order
+for the long polling to work.
+
 To listen for "listeners" (people in rooms) you would visit:
 
-/api/read/listen?listener=(a json string)
+/api/read/listen?listeners=(a json string)
 
 where the json string is (query encoded):
 
 {
-    "parentIdsLast" : { "num" : [userlist], "num" : [userlist] },
+    "lastListeners" : { "contentId" : { "user" : "status", "user2": "status" }, "contentId" : {etc.} },
     "chain" : [ "user.0listeners", "etc" ]
 }
 
-The endpoint will return, when DIFFERENT from the userlists given, the list of
-user ids for users in the given parents. If you wish to simply know who is in
-each room, you could pass, for instance, [ 0 ] as the userlist, since user 0
-will never be in any room and thus even empty lists will return instantly.
-As with comments, you should send back what you think the userlists are for
-each parent, so it can poll for changes to those. 
+The endpoint will return, when DIFFERENT from the lastListeners given, 
+the list of user ids and their statuses for users in the given parents
+(content IDs). You MUST pass all the contentIds you want to listen for,
+passing an empty lastListeners will result in an error. You can only see
+listeners in content you have read access on. 
 
-As with comments, you can chain with listeners. However, unlike comments 
-which have defined fields you can chain to, listeners is a dictionary with
-no names. As such, the only "field" you can chain to is "listeners". just
-like comments, the list of listeners is always the 0th request.
+If you wish to simply know who is in each room, you could pass, for 
+instance, { "0" : "" } as the user status list for each content, since 
+user 0 will never be in any room and thus even empty lists will return 
+instantly. As stated before, you should send back the userlists you got, 
+so it can poll for changes to those. 
+
+As with actions, you can chain with listeners. The userID field to chain
+to is "listeners", so you might do a chain like "user.0listeners".
+
 
 
 You can of course combine any combination of listeners. Any listener parameter
 given activates that listener, and the first one to complete will return its 
-data. For instance, if you listen for both listeners and comments, you may 
-receive a list of comments without users or a list of users without comments,
-whichever completes first.
+data. For instance, if you listen for both listeners and actions, you may 
+receive the actions without listeners or a list of listeners without action
+data, whichever completes first.
