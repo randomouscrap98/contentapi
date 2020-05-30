@@ -1,5 +1,6 @@
 using System;
 using System.Collections.Generic;
+using System.Linq;
 using System.Threading.Tasks;
 using contentapi.Services;
 using contentapi.Services.Implementations;
@@ -12,7 +13,8 @@ namespace contentapi.test
     //I suppose... or perhaps just more tests :)
     public class ContentViewServiceTest : PermissionServiceTestBase<ContentViewService, ContentView, ContentSearch>
     {
-        protected CategoryViewService cateogryService;
+        protected CategoryViewService categoryService;
+        protected UserViewService userService;
 
         protected void AssertSupersEqual(IEnumerable<long> one, IEnumerable<long> two)
         {
@@ -22,7 +24,8 @@ namespace contentapi.test
         public ContentViewServiceTest() : base()
         {
             service.SetupAsync().Wait();
-            cateogryService = CreateService<CategoryViewService>();
+            categoryService = CreateService<CategoryViewService>();
+            userService = CreateService<UserViewService>();
         }
 
 
@@ -31,7 +34,7 @@ namespace contentapi.test
             var view = new CategoryView() { };
             if(modify != null)
                 modify(view);
-            view = cateogryService.WriteAsync(view, new Requester(){system = true}).Result; //This will result in a creator of 0
+            view = categoryService.WriteAsync(view, new Requester(){system = true}).Result; //This will result in a creator of 0
             return view.id;
         }
 
@@ -250,6 +253,33 @@ namespace contentapi.test
             AssertSupersEqual(new[] {5L, 6, 7, 8L,9}, supers[2]); //2 should inherit from 1
             AssertSupersEqual(new[] {1L,2}, supers[3]);
             AssertSupersEqual(new[] {5L, 6, 7, 8L,9,10}, supers[4]); //2 should inherit from 1
+        }
+
+        [Theory]
+        [InlineData("0", false, true)]
+        [InlineData("1", true, false)]
+        [InlineData("0,1", true, true)]
+        public void Regression_0Parent(string parents, bool hasIn, bool hasOut)
+        {
+            //Hope system won't change the outcome of this!
+            var requester = new Requester() { system = true } ;//userId = user.Id };
+
+            //Make at least ONE category
+            var category = categoryService.WriteAsync(new CategoryView() { name = "A category" }, requester).Result;
+
+            //insert two contents: one in and one OUT of the category
+            var inContent = service.WriteAsync(new ContentView() { name = "inContent", parentId = category.id }, requester).Result;
+            var outContent = service.WriteAsync(new ContentView() { name = "inContent", parentId = 0 }, requester).Result;
+
+            //Now do some special searches. 
+            var search = new ContentSearch() { ParentIds = parents.Split(",".ToCharArray()).Select(x => x == "1" ? category.id : 0).ToList() };
+            var results = service.SearchAsync(search, requester).Result;
+
+            var count = (hasIn ? 1 : 0) + (hasOut ? 1 : 0);
+            Assert.Equal(count, results.Count); //, "Wrong result count!");
+
+            if(hasIn) Assert.Contains(inContent.id, results.Select(x => x.id));
+            if(hasOut) Assert.Contains(outContent.id, results.Select(x => x.id));
         }
     }
 }
