@@ -60,6 +60,14 @@ namespace contentapi.Services.Implementations
             return view;
         }
 
+        public async Task<WatchView> ClearAsync(WatchView view, Requester requester)
+        {
+            //Go get the last relation ID
+            var lastRelationId = await Q<EntityRelation>().MaxAsync(x => x.id);
+            view.lastNotificationId = lastRelationId;
+            return await WriteAsync(view, requester);
+        }
+
         public async Task<WatchView> WriteAsync(WatchView view, Requester requester)
         {
             if(view.id != 0)

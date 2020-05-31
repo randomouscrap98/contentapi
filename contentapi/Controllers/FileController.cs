@@ -2,6 +2,7 @@ using System;
 using System.Collections.Generic;
 using System.IO;
 using System.Threading.Tasks;
+using contentapi.Services;
 using contentapi.Services.Implementations;
 using contentapi.Views;
 using Microsoft.AspNetCore.Authorization;
@@ -25,13 +26,15 @@ namespace contentapi.Controllers
     {
         protected FileControllerConfig config;
         protected FileViewService service;
+        protected ILanguageService docService;
 
         public FileController(ILogger<BaseSimpleController> logger, FileControllerConfig config,
-            FileViewService service) 
+            FileViewService service, ILanguageService languageService) 
             : base(logger)
         {
             this.config = config;
             this.service = service;
+            this.docService = languageService;
         }
 
         protected string GetPath(long id, GetFileModify modify = null)//int size = 0)
@@ -44,7 +47,7 @@ namespace contentapi.Controllers
 
                 if(modify.size > 0)
                     extraFolder += $"{modify.size}";
-                if(modify.square)
+                if(modify.crop)
                     extraFolder += "a";
 
                 return Path.Join(config.Location, extraFolder, name);
@@ -126,7 +129,7 @@ namespace contentapi.Controllers
         public class GetFileModify
         {
             public int size {get;set;}
-            public bool square {get;set;}
+            public bool crop {get;set;}
         }
 
         [HttpGet("raw/{id}")]
@@ -169,7 +172,7 @@ namespace contentapi.Controllers
                         var minDim = Math.Min(image.Width, image.Height);
 
                         //Square ALWAYS happens, it can happen before other things.
-                        if(modify.square)
+                        if(modify.crop)
                             image.Mutate(x => x.Crop(new Rectangle((image.Width - minDim)/2, (image.Height - minDim)/2, minDim, minDim)));
 
                         if(modify.size > 0 && !(format.DefaultMimeType == "image/gif" && (modify.size > image.Width || modify.size > image.Height)))
@@ -202,6 +205,12 @@ namespace contentapi.Controllers
         public Task<ActionResult<List<FileView>>> GetAsync([FromQuery]FileSearch search)
         {
             return ThrowToAction(() => service.SearchAsync(search, GetRequesterNoFail()));
+        }
+
+        [HttpGet("docs")]
+        public Task<ActionResult<string>> DocsAsync()
+        {
+            return ThrowToAction(() => Task.FromResult(docService.GetString("doc.file", "en")));
         }
     }
 }

@@ -47,7 +47,7 @@ namespace contentapi.Controllers
         [HttpGet("chain/docs")]
         public Task<ActionResult<string>> ChainDocsAsync()
         {
-            return ThrowToAction(() => Task.FromResult(docService.GetString("read.chain", "en")));
+            return ThrowToAction(() => Task.FromResult(docService.GetString("doc.read.chain", "en")));
         }
 
         public class RelationListenQuery 
@@ -109,7 +109,7 @@ namespace contentapi.Controllers
         [HttpGet("listen/docs")]
         public Task<ActionResult<string>> ListenDocsAsync()
         {
-            return ThrowToAction(() => Task.FromResult(docService.GetString("read.listen", "en")));
+            return ThrowToAction(() => Task.FromResult(docService.GetString("doc.read.listen", "en")));
         }
     }
 }

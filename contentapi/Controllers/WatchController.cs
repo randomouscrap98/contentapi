@@ -34,6 +34,17 @@ namespace contentapi.Controllers
             return ThrowToAction(() => service.WriteAsync(view, GetRequesterNoFail())); //service.SearchAsync(search, GetRequesterNoFail()));
         }
 
+        [HttpPost("{id}/clear")]
+        public Task<ActionResult<WatchView>> PostClear([FromRoute]long id)
+        {
+            var requester = GetRequesterNoFail();
+            return ThrowToAction(async () => 
+            {
+                var view = await service.GetByContentId(id, requester);
+                return await service.ClearAsync(view, requester);
+            }); //service.SearchAsync(search, GetRequesterNoFail()));
+        }
+
         [HttpPut("{id}/{newLast}")]
         public Task<ActionResult<WatchView>> PutWatch([FromRoute]long id, [FromRoute]long newLast)
         {
