@@ -115,8 +115,8 @@ namespace contentapi.Services.Implementations
             {
                 id = x.Key,
                 count = x.Sum(y => y.Value.count),
-                lastPost = x.Max(y => y.Value.lastDate),
-                firstPost = x.Min(y => y.Value.firstDate),
+                lastDate = x.Max(y => y.Value.lastDate),
+                firstDate = x.Min(y => y.Value.firstDate),
                 lastId = x.Max(y => y.Value.lastId),
                 userIds = x.Select(y => y.Key.userId).Distinct().ToList()
             }).ToList();

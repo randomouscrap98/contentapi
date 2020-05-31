@@ -26,8 +26,8 @@ namespace contentapi.Views
     {
         public long id {get;set;} //This is PARENT id
         public int count {get;set;}
-        public DateTime? firstPost {get;set;}
-        public DateTime? lastPost {get;set;}
+        public DateTime? firstDate {get;set;}
+        public DateTime? lastDate {get;set;}
         public long lastId {get;set;}
         public List<long> userIds {get;set;}
     }
