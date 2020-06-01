@@ -13,16 +13,20 @@ using Randomous.EntitySystem;
 
 namespace contentapi.Services.Implementations
 {
+    public class CommentRethread
+    {
+        public List<long> commentIds {get;set;} = new List<long>();
+        public long newParent {get;set;}
+    }
+
     public class CommentViewService : BaseViewServices<CommentView, CommentSearch>, IViewRevisionService<CommentView, CommentSearch>
     {
-        //protected SystemConfig config;
         protected CommentViewSource converter;
         protected WatchViewSource watchSource;
 
         public CommentViewService(ViewServicePack services, ILogger<CommentViewService> logger,
-            /*SystemConfig config,*/ CommentViewSource converter, WatchViewSource watchSource) : base(services, logger)
+            CommentViewSource converter, WatchViewSource watchSource) : base(services, logger)
         {
-            //this.config = config; 
             this.converter = converter;
             this.watchSource = watchSource;
         }

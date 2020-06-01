@@ -54,6 +54,17 @@ namespace contentapi.Controllers
             });
         }
 
+        //[HttpPost("rethread")]
+        //[Authorize]
+        //public Task<ActionResult<List<CommentView>>> PutRethreadAsync([FromBody]CommentRethread rethread)
+        //{
+        //    return ThrowToAction<CommentView>(() =>
+        //    {
+        //        view.id = id;
+        //        return service.WriteAsync(view, GetRequesterNoFail());
+        //    });
+        //}
+
         protected override Task<ActionResult<CommentView>> DeleteAsync([FromRoute] long id)
         {
             return ThrowToAction<CommentView>(() => service.DeleteAsync(id, GetRequesterNoFail()));
