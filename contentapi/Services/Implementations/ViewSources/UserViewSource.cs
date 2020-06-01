@@ -53,6 +53,8 @@ namespace contentapi.Services.Implementations
                 result.avatar = long.Parse(user.GetValue(Keys.AvatarKey).value);
             if(user.HasValue(Keys.RegistrationCodeKey))
                 result.registrationKey = user.GetValue(Keys.RegistrationCodeKey).value;
+            
+            result.registered = string.IsNullOrWhiteSpace(result.registrationKey);
 
             return result;
         }

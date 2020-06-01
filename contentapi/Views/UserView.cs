@@ -12,6 +12,10 @@ namespace contentapi.Views
         public long avatar {get;set;}
         public DateTime createDate { get; set; }
         public string special {get;set;}
+
+        //This is actually GET only, don't use it during compare.
+        public bool super { get;set; }
+        public bool registered { get;set; }
     }
 
     /// <summary>
@@ -24,9 +28,6 @@ namespace contentapi.Views
         public long editUserId { get;set;}
 
         public string email { get; set; } //This field SHOULDN'T be set unless the user is ourselves.
-
-        //This is actually GET only, don't use it during compare.
-        public bool super { get;set; }
 
         protected override bool EqualsSelf(object obj)
         {
