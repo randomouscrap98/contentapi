@@ -71,15 +71,12 @@ namespace contentapi.Controllers
 
         [HttpPost]
         [Authorize]
-        public Task<ActionResult<FileView>> UploadFile(IFormFile file)
+        public Task<ActionResult<FileView>> UploadFile(IFormFile file, [FromQuery]bool tryresize = true)
         {
             return ThrowToAction(async ()=>
             {
                 if(file.Length == 0)
                     throw new BadRequestException("No data uploaded!");
-                
-                if(file.Length > config.MaxSize)
-                    throw new BadRequestException("File too large!");
                 
                 var requester = GetRequesterNoFail();
                 
@@ -87,11 +84,40 @@ namespace contentapi.Controllers
                 newView.permissions["0"] = "R";
 
                 IImageFormat format = null;
+                long imageByteCount = file.Length;
+                Stream imageStream = file.OpenReadStream();
 
                 //This will throw an exception if it's not an image (most likely)
-                using(var image = Image.Load(file.OpenReadStream(), out format))
+                using(var image = Image.Load(imageStream, out format))
                 {
                     newView.fileType = format.DefaultMimeType;
+
+                    double sizeFactor = 0.8;
+                    int width = image.Width;
+                    int height = image.Height;
+
+                    while(tryresize && imageByteCount > config.MaxSize && sizeFactor > 0)
+                    {
+                        double resize = 1 / Math.Sqrt(imageByteCount / (config.MaxSize * sizeFactor));
+                        logger.LogWarning($"User image too large ({imageByteCount}), trying ONE resize by {resize}");
+                        width = (int)(width * resize);
+                        height = (int)(height * resize);
+                        image.Mutate(x => x.Resize(width, height));
+
+                        imageStream = new MemoryStream();
+                        image.Save(imageStream, format);
+                        imageByteCount = imageStream.Length;
+                        imageStream.Seek(0, SeekOrigin.Begin);
+                        logger.LogDebug($"New image size: {imageByteCount}");
+
+                        //Keep targeting an EVEN more harsh error margin (even if it's incorrect because
+                        //it stacks with previous resizes), also this makes the loop guaranteed to end
+                        sizeFactor -= 0.2;
+                    }
+
+                    //If the image is still too big, bad ok bye
+                    if(imageByteCount > config.MaxSize)
+                        throw new BadRequestException("File too large!");
                 }
 
                 //We HAVE to write now to reserve an ID (and we found the mime type)
@@ -103,7 +129,7 @@ namespace contentapi.Controllers
                     //Now just copy to the filesystem?
                     using (var stream = System.IO.File.Create(finalLocation))
                     {
-                        await file.CopyToAsync(stream);
+                        await imageStream.CopyToAsync(stream);
                     }
                 }
                 catch
@@ -130,6 +156,7 @@ namespace contentapi.Controllers
         {
             public int size {get;set;}
             public bool crop {get;set;}
+            //public bool noGrow {get;set;}
         }
 
         [HttpGet("raw/{id}")]
@@ -175,7 +202,7 @@ namespace contentapi.Controllers
                         if(modify.crop)
                             image.Mutate(x => x.Crop(new Rectangle((image.Width - minDim)/2, (image.Height - minDim)/2, minDim, minDim)));
 
-                        if(modify.size > 0 && !(format.DefaultMimeType == "image/gif" && (modify.size > image.Width || modify.size > image.Height)))
+                        if(modify.size > 0 && !((format.DefaultMimeType == "image/gif" /*|| modify.noGrow*/) && (modify.size > image.Width || modify.size > image.Height)))
                         {
                             var width = 0;
                             var height = 0;
