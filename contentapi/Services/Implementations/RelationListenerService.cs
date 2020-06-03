@@ -128,7 +128,7 @@ namespace contentapi.Services.Implementations
                 if (result.Any(x => !x.Value.RealEqual(lastListeners[x.Key])))
                     return result;
                 
-                throw new InvalidOperationException($"SOMEHOW IT'S NOT WORKING!!! VALUES: {FormatListeners(result)} GIVEN: {FormatListeners(lastListeners)}"); //{string.Join(",", result.ToList().Select(x => $"{x.Key}:{x.v"))}");
+                //throw new InvalidOperationException($"SOMEHOW IT'S NOT WORKING!!! VALUES: {FormatListeners(result)} GIVEN: {FormatListeners(lastListeners)}"); //{string.Join(",", result.ToList().Select(x => $"{x.Key}:{x.v"))}");
 
                 await Task.Delay(config.ListenerPollingInterval, token);
                 token.ThrowIfCancellationRequested();

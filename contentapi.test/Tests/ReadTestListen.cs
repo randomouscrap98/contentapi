@@ -12,6 +12,7 @@ using Xunit;
 
 namespace contentapi.test
 {
+    [Collection("ASYNC")]
     public class ReadTestListen : ReadTestBaseExtra
     {
         protected ChainService chainer;

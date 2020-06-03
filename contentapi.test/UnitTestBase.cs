@@ -12,8 +12,13 @@ using Randomous.EntitySystem;
 using Randomous.EntitySystem.Implementations;
 using Xunit;
 
+//[assembly: CollectionBehavior(MaxParallelThreads = 1)]
+//[assembly: CollectionBehavior(DisableTestParallelization = true)]
+
+
 namespace contentapi.test
 {
+    [CollectionDefinition("ASYNC", DisableParallelization = true)]
     public class UnitTestBase : IDisposable
     {
         protected SqliteConnection connection;
@@ -105,7 +110,8 @@ namespace contentapi.test
 
         public T AssertWait<T>(Task<T> task)
         {
-            Assert.True(task.Wait(2000), $"The task returning {typeof(T)} was supposed to complete!");    //We should've gotten signaled. Give the test plenty of time to get the memo
+            Assert.True(task.Wait(500), $"The task returning {typeof(T)} was supposed to complete! Status: {task.Status}, Exception: {task.Exception}");    //We should've gotten signaled. Give the test plenty of time to get the memo
+            //Assert.True(task.Wait(2000), $"The task returning {typeof(T)} was supposed to complete!");    //We should've gotten signaled. Give the test plenty of time to get the memo
             return task.Result;    //This won't wait at all if the previous came through
         }
 
@@ -113,7 +119,7 @@ namespace contentapi.test
         {
             try
             {
-                var complete = task.Wait(2000);
+                var complete = task.Wait(500);
                 Assert.False(true, $"The task didn't throw! Complete: {complete}");
             }
             catch(Exception ex)

@@ -8,6 +8,7 @@ using Xunit;
 
 namespace contentapi.test
 {
+    [Collection("ASYNC")]
     public class RelationListenerTests : ReadTestBaseExtra //ServiceConfigTestBase<RelationListener, SystemConfig>
     {
         protected RelationListenerService listener;
