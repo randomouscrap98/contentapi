@@ -12,32 +12,13 @@ using Xunit;
 
 namespace contentapi.test
 {
-    public class ReadTestListen : ReadTestBase
+    public class ReadTestListen : ReadTestBaseExtra
     {
-        protected ReadTestUnit unit;
-        protected CancellationTokenSource cancelSource;
-        protected CancellationToken cancelToken;
         protected ChainService chainer;
-
-        protected SystemConfig config = new SystemConfig()
-        { 
-            ListenTimeout = TimeSpan.FromSeconds(60),
-            ListenGracePeriod = TimeSpan.FromSeconds(10)
-        };
 
         public ReadTestListen() : base()
         {
-            unit = CreateUnitAsync().Result;
-            cancelSource = new CancellationTokenSource();
-            cancelToken = cancelSource.Token;
             chainer = CreateService<ChainService>(true);
-        }
-
-        public override IServiceCollection CreateServices()
-        {
-            var services = base.CreateServices();
-            services.AddSingleton(config);
-            return services;
         }
 
         public Task<ListenResult> BasicListen(ListenerChainConfig lConfig, RelationListenChainConfig rConfig, long requesterId)
@@ -86,7 +67,7 @@ namespace contentapi.test
                 //Now simply call both actions
                 actions.Item1();
                 actions.Item2(listen);
-            });
+            }).Wait();
         }
 
         [Fact]
@@ -168,6 +149,9 @@ namespace contentapi.test
         [Fact]
         public void SimpleInstantEmptyListener()
         {
+            //FORCE the NON-INSTANT to be SO LONG that it will certainly fail if it skips it
+            relationConfig.ListenerPollingInterval = TimeSpan.FromMinutes(10);
+
             var listen = BasicListen(BasicListenConfig(), null, unit.commonUser.id);
 
             //it should instantly complete since there aren't actually listeners
@@ -223,5 +207,6 @@ namespace contentapi.test
 
             AssertWaitThrows<BadRequestException>(listen);
         }
+
     }
 }

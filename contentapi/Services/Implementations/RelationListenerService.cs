@@ -1,6 +1,8 @@
 using System;
 using System.Collections.Generic;
 using System.Linq;
+using System.Text;
+using System.Text.Json;
 using System.Threading;
 using System.Threading.Tasks;
 using contentapi.Configs;
@@ -55,32 +57,53 @@ namespace contentapi.Services.Implementations
         }
     }
 
+    public class RelationListenerServiceConfig
+    {
+        public TimeSpan ListenerPollingInterval = TimeSpan.FromSeconds(2);
+    }
+
     //When registering this, make it a singleton
     public class RelationListenerService
     {
-        protected static IDecayer<RelationListener> listenDecayer = null;
-        protected static readonly object listenDecayLock = new object();
+        protected IDecayer<RelationListener> listenDecayer = null;
+        //protected static readonly object listenDecayLock = new object();
         protected IEntityProvider provider;
-        protected SystemConfig config;
+        protected SystemConfig systemConfig;
+        protected RelationListenerServiceConfig config;
         protected ILogger logger;
 
-        protected TimeSpan listenerPollingInterval = TimeSpan.FromSeconds(2);
 
         //Don't know what to do with this yet...
         //protected IEnumerable<string> relationTypes = new[] { Keys.CommentHack, Keys.CommentDeleteHack, Keys.CommentHistoryHack };
 
         public RelationListenerService(ILogger<RelationListenerService> logger, IDecayer<RelationListener> decayer,
-            IEntityProvider provider, SystemConfig config)
+            IEntityProvider provider, SystemConfig systemConfig, RelationListenerServiceConfig config)
         {
             this.logger = logger;
             this.provider = provider;
+            this.systemConfig = systemConfig;
             this.config = config;
 
-            lock(listenDecayLock)
-            {
-                if (listenDecayer == null)
-                    listenDecayer = decayer;
-            }
+            //lock(listenDecayLock)
+            //{
+                //if (listenDecayer == null)
+            this.listenDecayer = decayer;
+            //}
+        }
+
+        public string FormatListeners(Dictionary<long,Dictionary<long,string>> listeners)
+        {
+            return JsonSerializer.Serialize(listeners.ToDictionary(x => x.Key.ToString(), y => y.Value.ToDictionary(y => y.Key.ToString(), y => y.Value)));
+            //return string.Join(",", listeners.ToList().Select(x => x.Key + ": " + 
+            //    string.Join("x.Value.Select(y => )));
+            //var builder = new StringBuilder();
+
+            //foreach(var kv in listeners)
+            //{
+            //    builder.Append($"{kv.Key}:");
+            //}
+
+            //return builder.ToString();
         }
 
         public async Task<Dictionary<long, Dictionary<long, string>>> GetListenersAsync(Dictionary<long, Dictionary<long, string>> lastListeners, Requester requester, CancellationToken token)
@@ -90,19 +113,24 @@ namespace contentapi.Services.Implementations
             //Creates a dictionary with pre-initialized keys. The keys won't change, we can keep redoing them.
             var result = lastListeners.ToDictionary(x => x.Key, y => new Dictionary<long, string>());
 
-            while (DateTime.Now - start < config.ListenTimeout)
+            while (DateTime.Now - start < systemConfig.ListenTimeout)
             {
                 //Update listeners every IDK, some small time (every time we check).
+                //var listeners = GetListeners();
+
+                //if(listeners.Any)
                 listenDecayer.UpdateList(GetListeners());
 
                 //This list won't change as we're polling, so it's safe to keep writing over the old stuff.
                 foreach(var parentKey in result.Keys.ToList())
-                    result[parentKey] = listenDecayer.DecayList(config.ListenGracePeriod).Where(x => x.listenStatuses.ContainsKey(parentKey)).ToDictionary(x => x.userId, y => y.listenStatuses[parentKey]);
+                    result[parentKey] = listenDecayer.DecayList(systemConfig.ListenGracePeriod).Where(x => x.listenStatuses.ContainsKey(parentKey)).ToDictionary(x => x.userId, y => y.listenStatuses[parentKey]);
 
                 if (result.Any(x => !x.Value.RealEqual(lastListeners[x.Key])))
                     return result;
+                
+                throw new InvalidOperationException($"SOMEHOW IT'S NOT WORKING!!! VALUES: {FormatListeners(result)} GIVEN: {FormatListeners(lastListeners)}"); //{string.Join(",", result.ToList().Select(x => $"{x.Key}:{x.v"))}");
 
-                await Task.Delay(listenerPollingInterval, token);
+                await Task.Delay(config.ListenerPollingInterval, token);
                 token.ThrowIfCancellationRequested();
             }
 
@@ -130,14 +158,25 @@ namespace contentapi.Services.Implementations
             if(listenConfig.lastId < 0)
                 listenConfig.lastId = await provider.GetQueryable<EntityRelation>().MaxAsync(x => x.id);
 
-            var results = await provider.ListenAsync<EntityRelation>(listenId, 
-                (q) => q.Where(x => 
+            var entrances = 0;
+
+            var results = await provider.ListenAsync<EntityRelation>(listenId, (q) => 
+            {
+                entrances++;
+
+                var query = q.Where(x => 
+                    //Watches are special: we should get new ones and changes no matter WHAT the last id was! 
+                    //(so long as it's the second runthrough)
+                    (x.type == Keys.WatchRelation && x.entityId1 == requester.userId && entrances > 1) ||
                     (x.type == Keys.CommentHack || 
-                     EF.Functions.Like(x.type, $"{Keys.ActivityKey}%") || 
-                     EF.Functions.Like(x.type, $"{Keys.CommentDeleteHack}%") ||
-                     EF.Functions.Like(x.type, $"{Keys.CommentHistoryHack}%")) && 
-                    x.id > listenConfig.lastId), 
-                config.ListenTimeout, token);
+                        EF.Functions.Like(x.type, $"{Keys.ActivityKey}%") || 
+                        EF.Functions.Like(x.type, $"{Keys.CommentDeleteHack}%") ||
+                        EF.Functions.Like(x.type, $"{Keys.CommentHistoryHack}%")) && 
+                       x.id > listenConfig.lastId);
+
+                return query;
+            }, 
+            systemConfig.ListenTimeout, token);
 
             return results; 
         }

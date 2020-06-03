@@ -33,7 +33,7 @@ namespace contentapi.Services.Implementations
             services.AddTransient<IHashService, HashService>();
             services.AddTransient<IPermissionService, PermissionService>();
             services.AddTransient<IHistoryService, HistoryService>();
-            services.AddTransient(typeof(IDecayer<>), typeof(Decayer<>));
+            services.AddSingleton(typeof(IDecayer<>), typeof(Decayer<>)); //Is it safe to make ALL decayers singletons? I don't know... I suppose that's what it's for?
             services.AddTransient(typeof(ITempTokenService<>), typeof(TempTokenService<>));
 
             services.AddTransient<ActivityViewService>();
@@ -93,6 +93,7 @@ namespace contentapi.Services.Implementations
             AddConfiguration<TokenServiceConfig>(services, config);
             //AddConfiguration<DocumentationConfig>(services, config);
             services.AddSingleton<HashConfig>();
+            services.AddSingleton<RelationListenerServiceConfig>();
         }
     }
 }
