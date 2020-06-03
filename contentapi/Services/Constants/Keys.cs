@@ -22,14 +22,11 @@ namespace contentapi.Services.Constants
         public const string HistoryRelation = "rh";
         public const string SuperRelation = "rs";
         public const string WatchRelation = "rw";
-
         public const string VoteRelation = "rv";
-        //public const string VoteBadRelation = "rvb";
-        //public const string VoteOkRelation = "rvo";
-        //public const string VoteGreatRelation = "rvg";
 
-        //public const string UpvoteRelation = "rvu";
-        //public const string DownvoteRelation = "rvd";
+        //I don't know what these are
+        public const string WatchDelete = "uwd";
+        public const string WatchEdit = "uwu";  //owo
 
 
         //General Value keys

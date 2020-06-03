@@ -61,7 +61,7 @@ namespace contentapi.test
 
             csp.AddDefaultServices(services);
             csp.AddServiceConfigurations(services, config);
-            services.AddSingleton<ISignaler<EntityBase>, SignalSystem<EntityBase>>(); //Why must I do this every time?
+            //services.AddSingleton<ISignaler<EntityBase>, SignalSystem<EntityBase>>(); //Why must I do this every time?
 
             return services;
         }

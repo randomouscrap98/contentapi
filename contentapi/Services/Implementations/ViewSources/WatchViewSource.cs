@@ -37,6 +37,16 @@ namespace contentapi.Services.Implementations
         public override string EntityType => Keys.WatchRelation;
         public override Expression<Func<EntityRelation, long>> PermIdSelector => x => -x.entityId2;
 
+        public EntityRelation HistoricCopy(EntityRelation relation, string type = null)
+        {
+            var history = new EntityRelation(relation);
+            history.id = 0;
+            history.createDate = DateTime.UtcNow;
+            history.entityId1 = relation.id; //Link back! LINK BAKC!!!
+            if(type != null) history.type = type;
+            return history;
+        }
+
         public override EntityRelation FromView(WatchView view)
         {
             var relation = new EntityRelation()

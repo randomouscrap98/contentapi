@@ -19,7 +19,7 @@ namespace contentapi.test
         }
 
         [Fact]
-        public void WatchNeverInstant()
+        public void WatchNeverInstant() //This test is a little useless now with the new explicit relations but whatever
         {
             var requester = new Requester() { userId = unit.commonUser.id };
             var watch = watchService.WriteAsync(new WatchView() { contentId = unit.commonContent.id }, requester).Result;
@@ -82,7 +82,7 @@ namespace contentapi.test
                 var result = AssertWait(listen);
 
                 Assert.Single(result);
-                Assert.Equal(watch.id, result.First().id);
+                Assert.Equal(watch.id, result.First().entityId1); //INTIMATE KNOWLEDGE OF INNER WORKINGS~! oh well
             }).Wait();
         }
     }

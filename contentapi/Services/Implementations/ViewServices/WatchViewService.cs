@@ -33,6 +33,8 @@ namespace contentapi.Services.Implementations
             if(item == null)
                 throw new BadRequestException($"Can't find watch with id {id}");
 
+            //Don't really care if this fails afterwards, it's whatever. It's only a log essentially
+            await provider.WriteAsync(converter.HistoricCopy(item, Keys.WatchDelete));
             await provider.DeleteAsync(item);
             return converter.ToView(item);
         }
@@ -82,6 +84,8 @@ namespace contentapi.Services.Implementations
                 //When updating, we ONLY (ONLY) allow the last id to be updated.
                 existing.lastNotificationId = view.lastNotificationId;
                 view = existing;
+
+                await provider.WriteAsync(converter.HistoricCopy(converter.FromView(view), Keys.WatchEdit));
             }
             else
             {

@@ -56,7 +56,7 @@ namespace contentapi
             });
 
             //Fix some entity system stuff. We need singletons but the default is transient
-            services.AddSingleton<ISignaler<EntityBase>, SignalSystem<EntityBase>>();
+            //services.AddSingleton<ISignaler<EntityBase>, SignalSystem<EntityBase>>();
 
             //Add our own services from contentapi
             var contentApiDefaultProvider = new Services.Implementations.DefaultServiceProvider();

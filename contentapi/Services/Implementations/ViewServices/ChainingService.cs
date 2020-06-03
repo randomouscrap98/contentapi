@@ -527,6 +527,19 @@ namespace contentapi.Services.Implementations
                 }
             };
 
+            Action<string, long> addSignal = (key, id) =>
+            {
+                dynamic deleted = new ExpandoObject();
+                deleted.id = id;
+
+                if (!chainResults.ContainsKey(key))
+                    chainResults.Add(key, new List<TaggedChainResult>());
+
+                if (!chainResults[key].Any(x => x.id == deleted.id))
+                    chainResults[key].Add(new TaggedChainResult() { id = deleted.id, result = deleted });
+            };
+            
+
             //Create a new cancel source FROM the original token so that either us or the client can cancel
             using (CancellationTokenSource linkedCts = CancellationTokenSource.CreateLinkedTokenSource(cancelToken))
             {
@@ -560,14 +573,7 @@ namespace contentapi.Services.Implementations
                                     else if (r.type.StartsWith(Keys.CommentDeleteHack))
                                     {
                                         //Oops, this isn't even something we want to return. Generate a special thingy in the chainer
-                                        dynamic deleted = new ExpandoObject();
-                                        deleted.id = -r.entityId1;
-
-                                        if(!chainResults.ContainsKey(Keys.ChainCommentDelete))
-                                            chainResults.Add(Keys.ChainCommentDelete, new List<TaggedChainResult>());
-
-                                        if(!chainResults[Keys.ChainCommentDelete].Any(x => x.id == deleted.id))
-                                            chainResults[Keys.ChainCommentDelete].Add(new TaggedChainResult() { id = deleted.id, result = deleted });
+                                        addSignal(Keys.ChainCommentDelete, -r.entityId1);
                                     }
                                     else
                                     {

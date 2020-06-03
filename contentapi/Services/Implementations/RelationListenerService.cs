@@ -158,24 +158,27 @@ namespace contentapi.Services.Implementations
             if(listenConfig.lastId < 0)
                 listenConfig.lastId = await provider.GetQueryable<EntityRelation>().MaxAsync(x => x.id);
 
-            var entrances = 0;
+            //var entrances = 0;
 
             var results = await provider.ListenAsync<EntityRelation>(listenId, (q) => 
-            {
-                entrances++;
+            //{
+                //entrances++;
 
-                var query = q.Where(x => 
+                q.Where(x => 
                     //Watches are special: we should get new ones and changes no matter WHAT the last id was! 
                     //(so long as it's the second runthrough)
-                    (x.type == Keys.WatchRelation && x.entityId1 == requester.userId && entrances > 1) ||
+                    //(x.type == Keys.WatchRelation && x.entityId1 == requester.userId && entrances > 1) ||
                     (x.type == Keys.CommentHack || 
+                        x.type == Keys.WatchRelation ||
+                        x.type == Keys.WatchEdit ||
+                        x.type == Keys.WatchDelete ||
                         EF.Functions.Like(x.type, $"{Keys.ActivityKey}%") || 
                         EF.Functions.Like(x.type, $"{Keys.CommentDeleteHack}%") ||
                         EF.Functions.Like(x.type, $"{Keys.CommentHistoryHack}%")) && 
-                       x.id > listenConfig.lastId);
+                       x.id > listenConfig.lastId),
 
-                return query;
-            }, 
+                //return query;
+            //}, 
             systemConfig.ListenTimeout, token);
 
             return results; 
