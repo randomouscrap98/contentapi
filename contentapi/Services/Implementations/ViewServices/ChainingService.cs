@@ -564,21 +564,19 @@ namespace contentapi.Services.Implementations
                                 {
                                     BaseView v = null;
 
+                                    //The real comment is something else: they want the real comment (it's just an edit so... they'll get the comment again)
                                     if(r.type.StartsWith(Keys.CommentHistoryHack))
-                                    {
-                                        //The real comment is something else: they want the real comment (it's just an edit so... they'll
-                                        //get the comment again)
                                         v = new BaseView() { id = -r.entityId1 };
-                                    }
+                                    //Oops, this stuff isn't even something we want to return. Generate a special thingy in the chainer
                                     else if (r.type.StartsWith(Keys.CommentDeleteHack))
-                                    {
-                                        //Oops, this isn't even something we want to return. Generate a special thingy in the chainer
                                         addSignal(Keys.ChainCommentDelete, -r.entityId1);
-                                    }
+                                    else if (r.type == Keys.WatchUpdate)
+                                        addSignal(Keys.ChainWatchUpdate, r.entityId1);
+                                    else if (r.type == Keys.WatchDelete)
+                                        addSignal(Keys.ChainWatchDelete, r.entityId1);
+                                    //Oh just something probably normal I guess...
                                     else
-                                    {
                                         v = new BaseView() { id = r.id };
-                                    }
 
                                     if(v != null)
                                         baseViews.Add(v);

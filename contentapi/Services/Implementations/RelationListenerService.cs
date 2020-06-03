@@ -170,7 +170,7 @@ namespace contentapi.Services.Implementations
                     //(x.type == Keys.WatchRelation && x.entityId1 == requester.userId && entrances > 1) ||
                     (x.type == Keys.CommentHack || 
                         x.type == Keys.WatchRelation ||
-                        x.type == Keys.WatchEdit ||
+                        x.type == Keys.WatchUpdate ||
                         x.type == Keys.WatchDelete ||
                         EF.Functions.Like(x.type, $"{Keys.ActivityKey}%") || 
                         EF.Functions.Like(x.type, $"{Keys.CommentDeleteHack}%") ||

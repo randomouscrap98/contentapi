@@ -26,7 +26,7 @@ namespace contentapi.Services.Constants
 
         //I don't know what these are
         public const string WatchDelete = "uwd";
-        public const string WatchEdit = "uwu";  //owo
+        public const string WatchUpdate = "uwu";  //owo
 
 
         //General Value keys
@@ -65,6 +65,8 @@ namespace contentapi.Services.Constants
 
         //Chaining?
         public const string ChainCommentDelete = "commentdelete";
+        public const string ChainWatchUpdate = "watchupdate";
+        public const string ChainWatchDelete = "watchdelete";
 
 
         public static void EnsureAllUnique()

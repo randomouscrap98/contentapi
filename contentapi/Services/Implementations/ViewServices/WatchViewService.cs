@@ -85,7 +85,7 @@ namespace contentapi.Services.Implementations
                 existing.lastNotificationId = view.lastNotificationId;
                 view = existing;
 
-                await provider.WriteAsync(converter.HistoricCopy(converter.FromView(view), Keys.WatchEdit));
+                await provider.WriteAsync(converter.HistoricCopy(converter.FromView(view), Keys.WatchUpdate));
             }
             else
             {
