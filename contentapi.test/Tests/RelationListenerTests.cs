@@ -9,7 +9,7 @@ using Xunit;
 namespace contentapi.test
 {
     [Collection("ASYNC")]
-    public class RelationListenerTests : ReadTestBaseExtra //ServiceConfigTestBase<RelationListener, SystemConfig>
+    public class RelationListenerTests : ReadTestBaseExtra
     {
         protected RelationListenerService listener;
 
@@ -44,7 +44,7 @@ namespace contentapi.test
 
             var listen = listener.ListenAsync(new RelationListenConfig(), requester, cancelToken);
 
-            Task.Delay(100).ContinueWith((t)  => 
+            Task.Delay(50).ContinueWith((t)  => 
             {
                 var watch = watchService.WriteAsync(new WatchView() { contentId = unit.commonContent.id }, requester).Result;
                 var result = AssertWait(listen);
@@ -67,7 +67,7 @@ namespace contentapi.test
 
             //OK NOW it should complete. Still must do the stupid delay because HEY the watches MUST be through
             //signal ONLY and perhaps the delete goes through BEFORE we get to the secondary listener part.
-            Task.Delay(300).ContinueWith((t) =>
+            Task.Delay(50).ContinueWith((t) =>
             {
                 if (delete)
                 {

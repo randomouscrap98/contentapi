@@ -61,7 +61,7 @@ namespace contentapi.test
             //There is an acceptable nuance to listening: since we are just saving the task and continuing, there is a window 
             //of time where neither the initial query (for instant complete) nor the actual listening will find a comment/etc written
             //during that window. Thus, wait enough time for the initial query to complete (let's HOPE it's enough time!!!)
-            Task.Delay(100).ContinueWith((t) =>
+            Task.Delay(50).ContinueWith((t) =>
             {
                 var actions = GenSimpleCommentThroughput();
 
