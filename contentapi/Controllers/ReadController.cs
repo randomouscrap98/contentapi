@@ -54,19 +54,19 @@ namespace contentapi.Controllers
         { 
             public long lastId {get;set;} = -1;
             public Dictionary<string, string> statuses {get;set;} = new Dictionary<string, string>();
-            public List<string> chain {get;set;}
+            public List<string> chains {get;set;}
         }
 
         public class ListenerQuery
         {
             public Dictionary<string, Dictionary<string, string>> lastListeners {get;set;} = new Dictionary<string, Dictionary<string, string>>();
-            public List<string> chain {get;set;}
+            public List<string> chains {get;set;}
         }
 
         public class ListenEndpointResult
         {
             public Dictionary<string, Dictionary<string, string>> listeners {get;set;}
-            public Dictionary<string, List<ExpandoObject>> chain {get;set;}
+            public Dictionary<string, List<ExpandoObject>> chains {get;set;}
         }
 
 
@@ -84,13 +84,13 @@ namespace contentapi.Controllers
 
                 if (actionObject != null)
                 {
-                    rConfig = new RelationListenChainConfig() { lastId = actionObject.lastId, chain = actionObject.chain };
+                    rConfig = new RelationListenChainConfig() { lastId = actionObject.lastId, chain = actionObject.chains };
                     rConfig.statuses = actionObject.statuses.ToDictionary(x => long.Parse(x.Key), y => y.Value);
                 }
 
                 if(listenerObject != null)
                 {
-                    lConfig = new ListenerChainConfig() { chain = listenerObject.chain };
+                    lConfig = new ListenerChainConfig() { chain = listenerObject.chains };
                     lConfig.lastListeners = listenerObject.lastListeners.ToDictionary(
                         x => long.Parse(x.Key),
                         y => y.Value.ToDictionary(k => long.Parse(k.Key), v => v.Value));
@@ -100,7 +100,7 @@ namespace contentapi.Controllers
 
                 return new ListenEndpointResult() 
                 { 
-                    chain = result.chain,
+                    chains = result.chain,
                     listeners = result.listeners?.ToDictionary(x => x.Key.ToString(), x => x.Value.ToDictionary(k => k.ToString(), v => v.Value))
                 };
             });
