@@ -155,8 +155,12 @@ namespace contentapi.Services.Implementations
                 listenStatuses = listenConfig.statuses
             } ;
 
+            var maxId = await provider.GetQueryable<EntityRelation>().MaxAsync(x => x.id);
+
             if(listenConfig.lastId < 0)
-                listenConfig.lastId = await provider.GetQueryable<EntityRelation>().MaxAsync(x => x.id);
+                listenConfig.lastId = maxId;
+            else if(maxId - listenConfig.lastId > 1000)
+                throw new BadRequestException("LastID too far back! Perhaps restart your listener!");
 
             //var entrances = 0;
 

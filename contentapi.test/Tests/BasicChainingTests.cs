@@ -124,5 +124,38 @@ namespace contentapi.test
             Assert.Single(result["user"]);
             Assert.Equal(user.id, ((dynamic)result["user"].First()).id);
         }
+
+        [Fact]
+        public void StringRenameChainTest()
+        {
+            //Just a SIMPLE little chain!
+            var requester = new Requester() { system = true };
+            var user = services.user.WriteAsync(new UserViewFull() { username = "simple" }, requester).Result;
+
+            var result = service.ChainAsync(new List<string>() {"user~omnom"}, new Dictionary<string, List<string>>(), requester).Result;
+
+            Assert.Contains("omnom", result.Keys);
+            Assert.Single(result["omnom"]);
+            Assert.Equal(user.id, ((dynamic)result["omnom"].First()).id);
+        }
+
+        [Fact]
+        public void ComplexStringChain()
+        {
+            //Just a SIMPLE little chain!
+            var requester = new Requester() { system = true };
+            var user = services.user.WriteAsync(new UserViewFull() { username = "simple" }, requester).Result;
+            requester.userId = user.id;
+            var content = services.content.WriteAsync(new ContentView() { content = "contedf"}, requester).Result;
+
+            var result = service.ChainAsync(new List<string>() {"content~mycontent-{\"Ids\":["+content.id+"]}", "user.0createuserId~myuser"}, new Dictionary<string, List<string>>(), requester).Result;
+
+            Assert.Contains("mycontent", result.Keys);
+            Assert.Single(result["mycontent"]);
+            Assert.Equal(content.id, ((dynamic)result["mycontent"].First()).id);
+            Assert.Contains("myuser", result.Keys);
+            Assert.Single(result["myuser"]);
+            Assert.Equal(user.id, ((dynamic)result["myuser"].First()).id);
+        }
     }
 }

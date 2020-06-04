@@ -49,6 +49,7 @@ namespace contentapi.Services.Implementations
         public List<TaggedChainResult> mergeList {get;set;}     // Where to put the results!
         public List<string> fields {get;set;}                   // Which fields you want in the results
         public IEnumerable<Chaining> chains {get;set;}          // Description of what you want linked into search
+        public string name {get;set;}                           // A special name to place this thing
 
         public ChainRequestBase() {}
 
@@ -143,7 +144,7 @@ namespace contentapi.Services.Implementations
         protected ILogger logger;
 
         //These should all be... settings?
-        protected Regex requestRegex = new Regex(@"^(?<endpoint>[a-z]+)(\.(?<chain>\d+[a-z]+(?:\$[a-z]+)?))*(-(?<search>.+))?$", 
+        protected Regex requestRegex = new Regex(@"^(?<endpoint>[a-z]+)(\.(?<chain>\d+[a-z]+(?:\$[a-z]+)?))*(~(?<name>[^\-]+))?(-(?<search>.+))?$", 
             RegexOptions.Compiled | RegexOptions.IgnoreCase);
         protected Regex chainRegex = new Regex(@"^(?<index>\d+)(?<field>[a-z]+)(\$(?<searchfield>[a-z]+))?$", 
             RegexOptions.Compiled | RegexOptions.IgnoreCase);
@@ -255,6 +256,7 @@ namespace contentapi.Services.Implementations
             {
                 search = match.Groups["search"].Value,
                 endpoint = match.Groups["endpoint"].Value,
+                name = match.Groups["name"].Value
             };
 
             //Convert chaining strings into proper chaining objects.
@@ -438,9 +440,9 @@ namespace contentapi.Services.Implementations
             return results.ToDictionary(x => x.Key, y => y.Value.Select(x => x.result).ToList());
         }
 
-        protected void CheckChainLimit(int? count)
+        protected void CheckChainLimit(int? count, double modifier = 1)
         {
-            if(count != null && count > 5)
+            if(count != null && count > 5 * modifier)
                 throw new BadRequestException("Can't chain deeper than 5");
         }
 
@@ -452,17 +454,20 @@ namespace contentapi.Services.Implementations
         {
             var data = ParseInitialChainString(request);
             data.mergeLock = results; //We can assume results won't change
+            
+            if(string.IsNullOrWhiteSpace(data.name))
+                data.name = data.endpoint;
 
             //Yes, we lock ON the results themselves. It is spooky, but we assume the results object 
             //given won't change between calls
             lock (results)
             {
-                if (!results.ContainsKey(data.endpoint))
-                    results.Add(data.endpoint, new List<TaggedChainResult>());
+                if (!results.ContainsKey(data.name))
+                    results.Add(data.name, new List<TaggedChainResult>());
             }
 
-            data.mergeList = results[data.endpoint];
-            data.fields = fields.ContainsKey(data.endpoint) ? fields[data.endpoint] : null;
+            data.mergeList = results[data.name];
+            data.fields = fields.ContainsKey(data.name) ? fields[data.name] : null;
 
             return data;
         }
@@ -513,7 +518,7 @@ namespace contentapi.Services.Implementations
             List<Task> waiters = new List<Task>();
 
             CheckChainLimit(listeners?.chain?.Count);
-            CheckChainLimit(actions?.chain?.Count);
+            CheckChainLimit(actions?.chain?.Count,2);
 
             Func<List<string>, IEnumerable<IIdView>, Task> chainer = async (l, i) =>
             {

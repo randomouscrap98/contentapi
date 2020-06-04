@@ -50,7 +50,8 @@ namespace contentapi.Controllers
                 if(modify.crop)
                     extraFolder += "a";
 
-                return Path.Join(config.Location, extraFolder, name);
+                if(extraFolder != "_")
+                    return Path.Join(config.Location, extraFolder, name);
             }
 
             return Path.Join(config.Location, name);
@@ -107,8 +108,6 @@ namespace contentapi.Controllers
                         imageStream = new MemoryStream();
                         image.Save(imageStream, format);
                         imageByteCount = imageStream.Length;
-                        imageStream.Seek(0, SeekOrigin.Begin);
-                        logger.LogDebug($"New image size: {imageByteCount}");
 
                         //Keep targeting an EVEN more harsh error margin (even if it's incorrect because
                         //it stacks with previous resizes), also this makes the loop guaranteed to end
@@ -119,6 +118,9 @@ namespace contentapi.Controllers
                     if(imageByteCount > config.MaxSize)
                         throw new BadRequestException("File too large!");
                 }
+
+                imageStream.Seek(0, SeekOrigin.Begin);
+                logger.LogDebug($"New image size: {imageByteCount}");
 
                 //We HAVE to write now to reserve an ID (and we found the mime type)
                 newView = await service.WriteAsync(newView, requester);

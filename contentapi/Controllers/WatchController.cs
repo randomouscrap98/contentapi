@@ -45,18 +45,18 @@ namespace contentapi.Controllers
             }); //service.SearchAsync(search, GetRequesterNoFail()));
         }
 
-        [HttpPut("{id}/{newLast}")]
-        public Task<ActionResult<WatchView>> PutWatch([FromRoute]long id, [FromRoute]long newLast)
-        {
-            var requester = GetRequesterNoFail();
+        //[HttpPut("{id}/{newLast}")]
+        //public Task<ActionResult<WatchView>> PutWatch([FromRoute]long id, [FromRoute]long newLast)
+        //{
+        //    var requester = GetRequesterNoFail();
 
-            return ThrowToAction(async () => 
-            {
-                var view = await service.GetByContentId(id, requester);
-                view.lastNotificationId = newLast;
-                return await service.WriteAsync(view, requester);
-            });
-        }
+        //    return ThrowToAction(async () => 
+        //    {
+        //        var view = await service.GetByContentId(id, requester);
+        //        view.lastNotificationId = newLast;
+        //        return await service.WriteAsync(view, requester);
+        //    });
+        //}
 
         protected override Task<ActionResult<WatchView>> DeleteAsync(long id)
         {
