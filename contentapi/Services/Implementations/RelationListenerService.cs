@@ -23,6 +23,7 @@ namespace contentapi.Services.Implementations
         /// </summary>
         /// <value></value>
         public Dictionary<long, string> statuses {get;set;} = new Dictionary<long, string>();
+        public List<long> autoNotificationClears {get;set;} = new List<long>();
     }
 
     public class RelationListener

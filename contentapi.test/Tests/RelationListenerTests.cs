@@ -54,9 +54,10 @@ namespace contentapi.test
         }
 
         [Theory]
-        [InlineData(false)]
-        [InlineData(true)]
-        public void WatchEditDeleteComplete(bool delete)
+        [InlineData("delete")]
+        [InlineData("edit")]
+        [InlineData("clear")]
+        public void WatchEditDeleteComplete(string action)
         {
             var requester = new Requester() { userId = unit.commonUser.id };
             var watch = watchService.WriteAsync(new WatchView() { contentId = unit.commonContent.id }, requester).Result;
@@ -69,11 +70,15 @@ namespace contentapi.test
             //signal ONLY and perhaps the delete goes through BEFORE we get to the secondary listener part.
             Task.Delay(50).ContinueWith((t) =>
             {
-                if (delete)
+                if (action=="delete")
                 {
                     watch = watchService.DeleteAsync(watch.id, requester).Result;
                 }
-                else
+                else if (action=="clear")
+                {
+                    watch = watchService.ClearAsync(watch, requester).Result;
+                }
+                else if (action=="edit")
                 {
                     watch.lastNotificationId = 999; //IDK, something that could never be a number at this point
                     watch = watchService.WriteAsync(watch, requester).Result;

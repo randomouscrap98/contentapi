@@ -54,6 +54,7 @@ namespace contentapi.Controllers
         { 
             public long lastId {get;set;} = -1;
             public Dictionary<string, string> statuses {get;set;} = new Dictionary<string, string>();
+            public List<long> autoNotificationClears {get;set;} = new List<long>();
             public List<string> chains {get;set;}
         }
 
@@ -84,7 +85,11 @@ namespace contentapi.Controllers
 
                 if (actionObject != null)
                 {
-                    rConfig = new RelationListenChainConfig() { lastId = actionObject.lastId, chain = actionObject.chains };
+                    rConfig = new RelationListenChainConfig() { 
+                        lastId = actionObject.lastId, 
+                        chain = actionObject.chains, 
+                        autoNotificationClears = actionObject.autoNotificationClears 
+                    };
                     rConfig.statuses = actionObject.statuses.ToDictionary(x => long.Parse(x.Key), y => y.Value);
                 }
 

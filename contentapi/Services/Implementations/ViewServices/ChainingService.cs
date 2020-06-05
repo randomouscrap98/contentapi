@@ -564,6 +564,7 @@ namespace contentapi.Services.Implementations
                                 //We can't use the results as-is. Some relations are actually SPECIAL; consider using services for this 
                                 //later in case the meaning of the fields change!!
                                 var baseViews = new List<BaseView>();
+                                var clearContents = new List<long>();
 
                                 foreach(var r in result)
                                 {
@@ -581,11 +582,22 @@ namespace contentapi.Services.Implementations
                                         addSignal(Keys.ChainWatchDelete, r.entityId1);
                                     //Oh just something probably normal I guess...
                                     else
+                                    {
                                         v = new BaseView() { id = r.id };
+
+                                        if(r.type == Keys.ActivityKey)
+                                            clearContents.Add(-r.entityId2);
+                                        else if(r.type == Keys.CommentHack)
+                                            clearContents.Add(r.entityId1);
+                                    }
 
                                     if(v != null)
                                         baseViews.Add(v);
                                 }
+
+                                //Inefficient, but I NEED to clear the notifications BEFORE chaining. This MIGHT be called WAY TOO OFTEN so...
+                                //hopefully tracking the contents make it better
+                                await services.watch.ClearAsyncFast(requester, actions.autoNotificationClears.Intersect(clearContents).ToArray());
 
                                 await chainer(actions.chain, baseViews); //result.Select(x => new BaseView() {id = x.id}));
                                 if (chainResults.Sum(x => x.Value.Count()) > 0)

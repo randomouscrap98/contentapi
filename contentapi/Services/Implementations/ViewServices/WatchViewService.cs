@@ -62,15 +62,31 @@ namespace contentapi.Services.Implementations
             return view;
         }
 
-        public async Task<WatchView> ClearAsync(WatchView view, Requester requester)
+        public async Task<WatchView> ClearAsync(WatchView view, Requester requester, bool trackChanges = true)
         {
             //Go get the last relation ID
             var lastRelationId = await Q<EntityRelation>().MaxAsync(x => x.id);
             view.lastNotificationId = lastRelationId;
-            return await WriteAsync(view, requester);
+            return await WriteAsync(view, requester, trackChanges);
         }
 
-        public async Task<WatchView> WriteAsync(WatchView view, Requester requester)
+        public async Task ClearAsyncFast(Requester requester, params long[] contentIds)
+        {
+            //Oops, don't even bother.
+            if(contentIds.Length == 0)
+                return;
+
+            //Find the relations for requester by ids
+            var relations = await provider.GetListAsync((Q<EntityRelation>().Where(x => x.entityId1 == requester.userId && x.type == converter.EntityType && contentIds.Contains(-x.entityId2))));
+            var lastRelationId = await Q<EntityRelation>().MaxAsync(x => x.id);
+            var lastRelationString = lastRelationId.ToString();
+
+            //Update them all and write them back
+            relations.ForEach(x => x.value = lastRelationString);
+            await provider.WriteAsync(relations.ToArray());
+        }
+
+        public async Task<WatchView> WriteAsync(WatchView view, Requester requester, bool trackChanges)
         {
             if(view.id != 0)
             {
@@ -85,7 +101,8 @@ namespace contentapi.Services.Implementations
                 existing.lastNotificationId = view.lastNotificationId;
                 view = existing;
 
-                await provider.WriteAsync(converter.HistoricCopy(converter.FromView(view), Keys.WatchUpdate));
+                if(trackChanges)
+                    await provider.WriteAsync(converter.HistoricCopy(converter.FromView(view), Keys.WatchUpdate));
             }
             else
             {
@@ -124,6 +141,12 @@ namespace contentapi.Services.Implementations
             var rel = converter.FromView(view);
             await provider.WriteAsync(rel);
             return converter.ToView(rel);
+
+        }
+
+        public Task<WatchView> WriteAsync(WatchView view, Requester requester)
+        {
+            return WriteAsync(view, requester, true);
         }
     }
 }
