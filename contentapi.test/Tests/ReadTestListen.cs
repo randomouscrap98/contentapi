@@ -209,5 +209,47 @@ namespace contentapi.test
             AssertWaitThrows<BadRequestException>(listen);
         }
 
+        [Fact]
+        public void InstantWatchChaining()
+        {
+            //Make user watch ugh
+            var requester = new Requester() { userId = unit.commonUser.id };
+            var watch = watchService.WriteAsync(new WatchView() { contentId = unit.commonContent.id }, requester).Result;
+
+            //The endpoint SHOULD return watches!
+            var listen = BasicListen(null, new RelationListenChainConfig() { lastId = 0, chain = new List<string>() { "watch.0id" } }, unit.commonUser.id);
+
+            var complete = AssertWait(listen);
+            Assert.Contains("watch", complete.chain.Keys);
+            Assert.Single(complete.chain["watch"]);
+            Assert.Equal(watch.id, ((dynamic)complete.chain["watch"].First()).id);
+            Assert.Equal(watch.contentId, ((dynamic)complete.chain["watch"].First()).contentId);
+        }
+
+        [Fact]
+        public void InstantWatchEdit()
+        {
+            //Make user watch ugh
+            var requester = new Requester() { userId = unit.commonUser.id };
+            var watch = watchService.WriteAsync(new WatchView() { contentId = unit.commonContent.id }, requester).Result;
+
+            //This should NOT complete AND the later stuff should NOT give the watch that was cleared! ONLY THE CHAIN SIGNAL!
+            var listen = BasicListen(null, new RelationListenChainConfig() { lastId = watch.id, chain = new List<string>() { "watch.0id" } }, unit.commonUser.id);
+
+            AssertNotWait(listen);
+
+            Task.Delay(50).ContinueWith((t) =>
+            {
+                //now clear notifications I suppose (after creating a comment)
+                var comment = commentService.WriteAsync(new CommentView() { content = "hello", parentId = unit.commonContent.id }, requester).Result;
+                watch = watchService.ClearAsync(watch, requester).Result;
+
+                var complete = AssertWait(listen);
+                Assert.False(complete.chain.ContainsKey("watch") && complete.chain["watch"].Count > 0, "There are watches!");
+                Assert.Contains(Keys.ChainWatchUpdate, complete.chain.Keys);
+                Assert.Single(complete.chain[Keys.ChainWatchUpdate]);
+                Assert.Equal(watch.id, ((dynamic)complete.chain[Keys.ChainWatchUpdate].First()).id);
+            }).Wait();
+        }
     }
 }
