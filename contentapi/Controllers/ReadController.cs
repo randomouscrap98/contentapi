@@ -88,7 +88,7 @@ namespace contentapi.Controllers
                     rConfig = new RelationListenChainConfig() { 
                         lastId = actionObject.lastId, 
                         chain = actionObject.chains, 
-                        autoNotificationClears = actionObject.autoNotificationClears 
+                        clearNotifications = actionObject.autoNotificationClears 
                     };
                     rConfig.statuses = actionObject.statuses.ToDictionary(x => long.Parse(x.Key), y => y.Value);
                 }

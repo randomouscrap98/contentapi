@@ -263,7 +263,7 @@ namespace contentapi.test
             var listen = BasicListen(null, new RelationListenChainConfig() { 
                 lastId = watch.id, 
                 chain = new List<string>() { "comment.0id" }, 
-                autoNotificationClears = new List<long>() { unit.commonContent.id } 
+                clearNotifications = new List<long>() { unit.commonContent.id } 
             }, unit.commonUser.id);
 
             AssertNotWait(listen);

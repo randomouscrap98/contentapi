@@ -597,7 +597,7 @@ namespace contentapi.Services.Implementations
 
                                 //Inefficient, but I NEED to clear the notifications BEFORE chaining. This MIGHT be called WAY TOO OFTEN so...
                                 //hopefully tracking the contents make it better
-                                await services.watch.ClearAsyncFast(requester, actions.autoNotificationClears.Intersect(clearContents).ToArray());
+                                await services.watch.ClearAsyncFast(requester, actions.clearNotifications.Intersect(clearContents).ToArray());
 
                                 await chainer(actions.chain, baseViews); //result.Select(x => new BaseView() {id = x.id}));
                                 if (chainResults.Sum(x => x.Value.Count()) > 0)
