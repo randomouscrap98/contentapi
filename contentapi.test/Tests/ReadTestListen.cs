@@ -5,6 +5,7 @@ using System.Threading;
 using System.Threading.Tasks;
 using contentapi.Configs;
 using contentapi.Services.Constants;
+using contentapi.Services.Extensions;
 using contentapi.Services.Implementations;
 using contentapi.Views;
 using Microsoft.Extensions.DependencyInjection;
@@ -249,6 +250,38 @@ namespace contentapi.test
                 Assert.Contains(Keys.ChainWatchUpdate, complete.chain.Keys);
                 Assert.Single(complete.chain[Keys.ChainWatchUpdate]);
                 Assert.Equal(watch.id, ((dynamic)complete.chain[Keys.ChainWatchUpdate].First()).id);
+            }).Wait();
+        }
+
+        [Fact]
+        public void WatchAutoClear()
+        {
+            //Make user watch ugh
+            var requester = new Requester() { userId = unit.commonUser.id };
+            var watch = watchService.WriteAsync(new WatchView() { contentId = unit.commonContent.id }, requester).Result;
+
+            var listen = BasicListen(null, new RelationListenChainConfig() { 
+                lastId = watch.id, 
+                chain = new List<string>() { "comment.0id" }, 
+                autoNotificationClears = new List<long>() { unit.commonContent.id } 
+            }, unit.commonUser.id);
+
+            AssertNotWait(listen);
+
+            Task.Delay(50).ContinueWith((t) =>
+            {
+                var comment = commentService.WriteAsync(new CommentView() { content = "hello", parentId = unit.commonContent.id }, requester).Result;
+                Assert.True(comment.id > watch.lastNotificationId, "Comment should have higher id than notification!");
+
+                //The COMPLETION of the lsitener should clear my notifications! (along with give me a comment)
+                var complete = AssertWait(listen);
+                Assert.Contains("comment", complete.chain.Keys);
+                Assert.Single(complete.chain["comment"]);
+                Assert.Equal(comment.id, ((dynamic)complete.chain["comment"].First()).id);
+                Assert.Equal(comment.content, ((dynamic)complete.chain["comment"].First()).content);
+
+                watch = watchService.GetByContentId(watch.contentId, requester).Result;
+                Assert.Equal(comment.id, watch.lastNotificationId); //It was cleared
             }).Wait();
         }
     }
