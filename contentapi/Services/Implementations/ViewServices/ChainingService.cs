@@ -532,16 +532,18 @@ namespace contentapi.Services.Implementations
                 }
             };
 
-            Action<string, long> addSignal = (key, id) =>
+            Func<string, long, ExpandoObject> addSignal = (key, id) =>
             {
-                dynamic deleted = new ExpandoObject();
-                deleted.id = id;
+                dynamic signal = new ExpandoObject();
+                signal.id = id;
 
                 if (!chainResults.ContainsKey(key))
                     chainResults.Add(key, new List<TaggedChainResult>());
 
-                if (!chainResults[key].Any(x => x.id == deleted.id))
-                    chainResults[key].Add(new TaggedChainResult() { id = deleted.id, result = deleted });
+                if (!chainResults[key].Any(x => x.id == signal.id))
+                    chainResults[key].Add(new TaggedChainResult() { id = signal.id, result = signal });
+                
+                return signal;
             };
             
 
@@ -577,9 +579,9 @@ namespace contentapi.Services.Implementations
                                     else if (r.type.StartsWith(Keys.CommentDeleteHack))
                                         addSignal(Keys.ChainCommentDelete, -r.entityId1);
                                     else if (r.type == Keys.WatchUpdate)
-                                        addSignal(Keys.ChainWatchUpdate, r.entityId1);
+                                        ((dynamic)addSignal(Keys.ChainWatchUpdate, r.entityId1)).contentId = -r.entityId2;
                                     else if (r.type == Keys.WatchDelete)
-                                        addSignal(Keys.ChainWatchDelete, r.entityId1);
+                                        ((dynamic)addSignal(Keys.ChainWatchDelete, r.entityId1)).contentId = -r.entityId2;
                                     //Oh just something probably normal I guess...
                                     else
                                     {
