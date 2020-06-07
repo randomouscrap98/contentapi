@@ -1,4 +1,5 @@
 using System;
+using System.Collections.Generic;
 using System.Linq;
 using AutoMapper;
 using contentapi.Services.Constants;
@@ -11,14 +12,17 @@ namespace contentapi.Services.Implementations
 {
     public class UserSearch : BaseHistorySearch
     {
-        public string Username {get;set;}
+        public string UsernameLike {get;set;}
+        public List<string> Usernames {get;set;} = new List<string>();
     }
 
     public class UserViewSourceProfile : Profile
     {
         public UserViewSourceProfile()
         {
-            CreateMap<UserSearch, EntitySearch>().ForMember(x => x.NameLike, o => o.MapFrom(s => s.Username));
+            CreateMap<UserSearch, EntitySearch>()
+                .ForMember(x => x.NameLike, o => o.MapFrom(s => s.UsernameLike))
+                .ForMember(x => x.Names, o => o.MapFrom(s => s.Usernames));
         }
     }
 

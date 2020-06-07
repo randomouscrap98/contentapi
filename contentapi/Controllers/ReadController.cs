@@ -68,6 +68,7 @@ namespace contentapi.Controllers
         {
             public Dictionary<string, Dictionary<string, string>> listeners {get;set;}
             public Dictionary<string, List<ExpandoObject>> chains {get;set;}
+            public long lastId {get;set;}
         }
 
 
@@ -106,7 +107,8 @@ namespace contentapi.Controllers
                 return new ListenEndpointResult() 
                 { 
                     chains = result.chain,
-                    listeners = result.listeners?.ToDictionary(x => x.Key.ToString(), x => x.Value.ToDictionary(k => k.ToString(), v => v.Value))
+                    listeners = result.listeners?.ToDictionary(x => x.Key.ToString(), x => x.Value.ToDictionary(k => k.ToString(), v => v.Value)),
+                    lastId = result.lastId
                 };
             });
         }

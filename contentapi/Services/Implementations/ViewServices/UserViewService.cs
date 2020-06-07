@@ -68,7 +68,7 @@ namespace contentapi.Services.Implementations
         {
             return (await SearchAsync(new UserSearch()
             {
-                Username = username
+                Usernames = new List<string>() { username }
             }, requester)).OnlySingle();
         }
 

@@ -11,9 +11,10 @@ using Randomous.EntitySystem;
 
 namespace contentapi.Services.Implementations
 {
-    public class CommentSearch : BaseParentSearch
+    public class CommentSearch : BaseSearch //BaseParentSearch
     {
-        public List<long> UserIds {get;set;}
+        public List<long> ParentIds {get;set;} = new List<long>();
+        public List<long> UserIds {get;set;} = new List<long>();
         public IdLimiter ContentLimit {get;set;} = new IdLimiter();
     }
 

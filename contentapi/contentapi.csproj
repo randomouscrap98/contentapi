@@ -11,7 +11,7 @@
     <PackageReference Include="Microsoft.IdentityModel.Tokens" Version="6.5.0" />
     <PackageReference Include="Moonsharp" Version="2.0.0.0" />
     <PackageReference Include="Pomelo.EntityFrameworkCore.Mysql" Version="3.1.1" />
-    <PackageReference Include="Randomous.EntitySystem" Version="2.3.12" />
+    <PackageReference Include="Randomous.EntitySystem" Version="2.4.0" />
     <PackageReference Include="Serilog.AspNetCore" Version="3.2.0" />
     <PackageReference Include="SixLabors.ImageSharp" Version="1.0.0-beta0007" />
     <PackageReference Include="Swashbuckle.AspNetCore" Version="5.3.1" />

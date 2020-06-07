@@ -20,7 +20,8 @@ namespace contentapi.Services.Implementations
 
     public class BaseContentSearch : BaseParentSearch
     {
-        public string Name {get;set;}
+        public string NameLike {get;set;}
+        public List<string> Names {get;set;} = new List<string>();
         public string AssociatedKey {get;set;}
         public string AssociatedValue {get;set;}
     }
@@ -30,7 +31,9 @@ namespace contentapi.Services.Implementations
     {
         public BaseSearchProfile()
         {
-            CreateMap<BaseContentSearch, EntitySearch>().ForMember(x => x.NameLike, o => o.MapFrom(s => s.Name))
+            CreateMap<BaseContentSearch, EntitySearch>()
+                .ForMember(x => x.NameLike, o => o.MapFrom(s => s.NameLike))
+                .ForMember(x => x.Names, o => o.MapFrom(s => s.Names))
                 .IncludeAllDerived();
         }
     }

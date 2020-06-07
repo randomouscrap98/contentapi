@@ -131,6 +131,7 @@ namespace contentapi.Services.Implementations
     {
         public Dictionary<long, Dictionary<long, string>> listeners {get;set;}
         public Dictionary<string, List<ExpandoObject>> chain {get;set;}
+        public long lastId {get;set;}
     }
 
     /// <summary>
@@ -512,6 +513,7 @@ namespace contentapi.Services.Implementations
         public async Task<ListenResult> ListenAsync(Dictionary<string, List<string>> fields, ListenerChainConfig listeners, RelationListenChainConfig actions, Requester requester, CancellationToken cancelToken)
         {
             var result = new ListenResult();
+            result.lastId = actions.lastId; //Assume nothing changed in the result (it may just be a listener update), and better to send the same than to send nothing.
             fields = FixFields(fields);
 
             var chainResults = new Dictionary<string, List<TaggedChainResult>>();
@@ -561,14 +563,14 @@ namespace contentapi.Services.Implementations
                         {
                             while (true) //I'm RELYING on the fact that OTHER tasks SHOULD have the proper long-polling timeout
                             {
-                                var result = await relationService.ListenAsync(actions, requester, linkedCts.Token);
+                                var relations = await relationService.ListenAsync(actions, requester, linkedCts.Token);
 
                                 //We can't use the results as-is. Some relations are actually SPECIAL; consider using services for this 
                                 //later in case the meaning of the fields change!!
                                 var baseViews = new List<BaseView>();
                                 var clearContents = new List<long>();
 
-                                foreach(var r in result)
+                                foreach(var r in relations)
                                 {
                                     BaseView v = null;
 
@@ -600,12 +602,13 @@ namespace contentapi.Services.Implementations
                                 //Inefficient, but I NEED to clear the notifications BEFORE chaining. This MIGHT be called WAY TOO OFTEN so...
                                 //hopefully tracking the contents make it better
                                 await services.watch.ClearAsyncFast(requester, actions.clearNotifications.Intersect(clearContents).ToArray());
+                                result.lastId = relations.Max(x => x.id);
 
                                 await chainer(actions.chain, baseViews); //result.Select(x => new BaseView() {id = x.id}));
                                 if (chainResults.Sum(x => x.Value.Count()) > 0)
                                     break;
                                 else
-                                    actions.lastId = result.Max(x => x.id); 
+                                    actions.lastId = result.lastId;
                                 //the "else" makes it so we don't loop indefinitely getting the same instant completion 
                                 //when nothing was chained, but is this OK logic?
                             }
