@@ -156,17 +156,16 @@ namespace contentapi
         // This method gets called by the runtime. Use this method to configure the HTTP request pipeline.
         public void Configure(IApplicationBuilder app, IWebHostEnvironment env)
         {
-            app.UseIpRateLimiting();
-
             if(Configuration.GetValue<bool>("ShowExceptions"))
                 app.UseDeveloperExceptionPage();
             else
                 app.UseExceptionHandler("/error");
             
-            app.UseSerilogRequestLogging();
-
             //Wide open for now, this might need to be changed later.
             app.UseCors(x => x.AllowAnyOrigin().AllowAnyMethod().AllowAnyHeader());
+
+            app.UseIpRateLimiting();
+            app.UseSerilogRequestLogging();
 
             //app.UseHttpsRedirection();
 

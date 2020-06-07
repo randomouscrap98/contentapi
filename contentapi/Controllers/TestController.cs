@@ -1,6 +1,7 @@
 using System;
 using System.Collections.Generic;
 using System.Dynamic;
+using System.Linq;
 using System.Threading.Tasks;
 using AutoMapper;
 using contentapi.Configs;
@@ -68,6 +69,12 @@ namespace contentapi.Controllers
                 one,
                 two
             };
+        }
+
+        [HttpGet("headers")]
+        public ActionResult<Dictionary<string, string>> GetHeaders()
+        {
+            return this.Request.Headers.ToDictionary(x => x.Key, x => x.Value.ToString());
         }
         
         public class SystemData
