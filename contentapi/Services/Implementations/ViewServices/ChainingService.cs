@@ -513,7 +513,11 @@ namespace contentapi.Services.Implementations
         public async Task<ListenResult> ListenAsync(Dictionary<string, List<string>> fields, ListenerChainConfig listeners, RelationListenChainConfig actions, Requester requester, CancellationToken cancelToken)
         {
             var result = new ListenResult();
-            result.lastId = actions.lastId; //Assume nothing changed in the result (it may just be a listener update), and better to send the same than to send nothing.
+
+            //Assume nothing changed in the result (it may just be a listener update), and better to send the same than to send nothing.
+            if(actions != null)
+                result.lastId = actions.lastId; 
+
             fields = FixFields(fields);
 
             var chainResults = new Dictionary<string, List<TaggedChainResult>>();

@@ -1,5 +1,6 @@
 using System.Collections.Generic;
 using System.Text;
+using AspNetCoreRateLimit;
 using contentapi.Configs;
 using contentapi.Controllers;
 using contentapi.Middleware;
@@ -8,6 +9,7 @@ using contentapi.Services.Implementations;
 using Microsoft.AspNetCore.Authentication.JwtBearer;
 using Microsoft.AspNetCore.Builder;
 using Microsoft.AspNetCore.Hosting;
+using Microsoft.AspNetCore.Http;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.DependencyInjection;
@@ -77,9 +79,21 @@ namespace contentapi
                 return websocketConfig;
             });
 
+            //The rest is http stuff I think
+
+            //Rate limiting, hope this works!
+            services.AddMemoryCache();
+            services.Configure<IpRateLimitOptions>(Configuration.GetSection("IpRateLimiting"));
+            services.AddSingleton<IIpPolicyStore, MemoryCacheIpPolicyStore>();
+            services.AddSingleton<IRateLimitCounterStore, MemoryCacheRateLimitCounterStore>();
+
             services.AddCors();
             services.AddControllers()
                     .AddJsonOptions(options=> options.JsonSerializerOptions.Converters.Add(new TimeSpanToStringConverter()));
+
+            //other rate limiting stuff
+            services.AddSingleton<IHttpContextAccessor, HttpContextAccessor>();
+            services.AddSingleton<IRateLimitConfiguration, RateLimitConfiguration>();
 
             //Added automapper here before
 
@@ -142,6 +156,8 @@ namespace contentapi
         // This method gets called by the runtime. Use this method to configure the HTTP request pipeline.
         public void Configure(IApplicationBuilder app, IWebHostEnvironment env)
         {
+            app.UseIpRateLimiting();
+
             if(Configuration.GetValue<bool>("ShowExceptions"))
                 app.UseDeveloperExceptionPage();
             else
