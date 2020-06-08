@@ -39,9 +39,10 @@ namespace contentapi.Services.Implementations
             {
                 var listener = (RelationListener)obj;
 
-                //WARN: A listener is "equal" to another (in terms of the DECAYER)
-                //when it simply has the same user id! this is NOT PROPER EQUALS!
-                return listener.userId == userId;
+                //This COULD get too computationally... bad! With LOTS of listeners all trying to update the list
+                //every two seconds and if the list has hundreds of relations, this is a LOT of RealEqual calls, 
+                //which is a lot of sorting and such!
+                return listener.userId == userId && listenStatuses.RealEqual(listener.listenStatuses);
             }
 
             return false;
@@ -67,15 +68,11 @@ namespace contentapi.Services.Implementations
     public class RelationListenerService
     {
         protected IDecayer<RelationListener> listenDecayer = null;
-        //protected static readonly object listenDecayLock = new object();
         protected IEntityProvider provider;
         protected SystemConfig systemConfig;
         protected RelationListenerServiceConfig config;
         protected ILogger logger;
 
-
-        //Don't know what to do with this yet...
-        //protected IEnumerable<string> relationTypes = new[] { Keys.CommentHack, Keys.CommentDeleteHack, Keys.CommentHistoryHack };
 
         public RelationListenerService(ILogger<RelationListenerService> logger, IDecayer<RelationListener> decayer,
             IEntityProvider provider, SystemConfig systemConfig, RelationListenerServiceConfig config)
@@ -85,26 +82,12 @@ namespace contentapi.Services.Implementations
             this.systemConfig = systemConfig;
             this.config = config;
 
-            //lock(listenDecayLock)
-            //{
-                //if (listenDecayer == null)
             this.listenDecayer = decayer;
-            //}
         }
 
         public string FormatListeners(Dictionary<long,Dictionary<long,string>> listeners)
         {
             return JsonSerializer.Serialize(listeners.ToDictionary(x => x.Key.ToString(), y => y.Value.ToDictionary(y => y.Key.ToString(), y => y.Value)));
-            //return string.Join(",", listeners.ToList().Select(x => x.Key + ": " + 
-            //    string.Join("x.Value.Select(y => )));
-            //var builder = new StringBuilder();
-
-            //foreach(var kv in listeners)
-            //{
-            //    builder.Append($"{kv.Key}:");
-            //}
-
-            //return builder.ToString();
         }
 
         public async Task<Dictionary<long, Dictionary<long, string>>> GetListenersAsync(Dictionary<long, Dictionary<long, string>> lastListeners, Requester requester, CancellationToken token)
@@ -116,20 +99,20 @@ namespace contentapi.Services.Implementations
 
             while (DateTime.Now - start < systemConfig.ListenTimeout)
             {
-                //Update listeners every IDK, some small time (every time we check).
-                //var listeners = GetListeners();
+                //It seems strange to update the decayer with the WHOLE LIST but remember: this whole list is the EXACT SNAPSHOT of who's listening 
+                //RIGHT NOW! because it's "instant", it's ok to continuously update the decayer, when someone leaves, they will appear gone in 
+                //EVERYONE'S listener list connection
+                listenDecayer.UpdateList(provider.Listeners.Where(x => x.ListenerId is RelationListener).Select(x => (RelationListener)x.ListenerId));
 
-                //if(listeners.Any)
-                listenDecayer.UpdateList(GetListeners());
+                //Decay the list only once, get the new list of listeners
+                var listenersNow = listenDecayer.DecayList(systemConfig.ListenGracePeriod);
 
                 //This list won't change as we're polling, so it's safe to keep writing over the old stuff.
                 foreach(var parentKey in result.Keys.ToList())
-                    result[parentKey] = listenDecayer.DecayList(systemConfig.ListenGracePeriod).Where(x => x.listenStatuses.ContainsKey(parentKey)).ToDictionary(x => x.userId, y => y.listenStatuses[parentKey]);
+                    result[parentKey] = listenersNow.Where(x => x.listenStatuses.ContainsKey(parentKey)).ToDictionary(x => x.userId, y => y.listenStatuses[parentKey]);
 
                 if (result.Any(x => !x.Value.RealEqual(lastListeners[x.Key])))
                     return result;
-                
-                //throw new InvalidOperationException($"SOMEHOW IT'S NOT WORKING!!! VALUES: {FormatListeners(result)} GIVEN: {FormatListeners(lastListeners)}"); //{string.Join(",", result.ToList().Select(x => $"{x.Key}:{x.v"))}");
 
                 await Task.Delay(config.ListenerPollingInterval, token);
                 token.ThrowIfCancellationRequested();
@@ -138,15 +121,15 @@ namespace contentapi.Services.Implementations
             throw new TimeoutException("Ran out of time waiting for listeners");
         }
 
-        protected List<RelationListener> GetListeners(long parentId = -1)
-        {
-            var realListeners = provider.Listeners.Where(x => x.ListenerId is RelationListener).Select(x => (RelationListener)x.ListenerId);
-            
-            if(parentId > 0)
-                realListeners = realListeners.Where(x => x.listenStatuses.ContainsKey(parentId));
-                
-            return realListeners.ToList();
-        }
+        //protected List<RelationListener> GetListeners(long parentId = -1)
+        //{
+        //    var realListeners = provider.Listeners.Where(x => x.ListenerId is RelationListener).Select(x => (RelationListener)x.ListenerId);
+        //    
+        //    if(parentId > 0)
+        //        realListeners = realListeners.Where(x => x.listenStatuses.ContainsKey(parentId));
+        //        
+        //    return realListeners.ToList();
+        //}
 
         public async Task<List<EntityRelation>> ListenAsync(RelationListenConfig listenConfig, Requester requester, CancellationToken token)
         {

@@ -107,7 +107,7 @@ namespace contentapi.Controllers
                 return new ListenEndpointResult() 
                 { 
                     chains = result.chain,
-                    listeners = result.listeners?.ToDictionary(x => x.Key.ToString(), x => x.Value.ToDictionary(k => k.ToString(), v => v.Value)),
+                    listeners = result.listeners?.ToDictionary(x => x.Key.ToString(), x => x.Value.ToDictionary(k => k.Key.ToString(), v => v.Value)),
                     lastId = result.lastId
                 };
             });
