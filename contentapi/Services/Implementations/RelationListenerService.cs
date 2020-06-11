@@ -94,9 +94,6 @@ namespace contentapi.Services.Implementations
         {
             DateTime start = DateTime.Now;
 
-            //Creates a dictionary with pre-initialized keys. The keys won't change, we can keep redoing them.
-            var result = lastListeners.ToDictionary(x => x.Key, y => new Dictionary<long, string>());
-
             while (DateTime.Now - start < systemConfig.ListenTimeout)
             {
                 //It seems strange to update the decayer with the WHOLE LIST but remember: this whole list is the EXACT SNAPSHOT of who's listening 
@@ -107,9 +104,18 @@ namespace contentapi.Services.Implementations
                 //Decay the list only once, get the new list of listeners
                 var listenersNow = listenDecayer.DecayList(systemConfig.ListenGracePeriod);
 
-                //This list won't change as we're polling, so it's safe to keep writing over the old stuff.
-                foreach(var parentKey in result.Keys.ToList())
-                    result[parentKey] = listenersNow.Where(x => x.listenStatuses.ContainsKey(parentKey)).ToDictionary(x => x.userId, y => y.listenStatuses[parentKey]);
+                //Creates a dictionary with pre-initialized keys. The keys won't change, we can keep redoing them.
+                //This should be OK, considering we'll be creating new dictionaries every time anyway. As always, watch the CPU
+                var result = lastListeners.ToDictionary(x => x.Key, y => new Dictionary<long, string>());
+
+                //Assume the new listeners are appended to the end, which means they should be the newest and their statuses should override earlier ones... we hope.
+                foreach(var listener in listenersNow)
+                {
+                    //Look over all PERTINENT statuses (only the ones that will end up in result)
+                    foreach(var statusPair in listener.listenStatuses.Where(x => result.ContainsKey(x.Key)))
+                        result[statusPair.Key][listener.userId] = statusPair.Value;
+                        //if(!result[statusPair.Key].TryAdd(listener.userId, statusPair.Value))
+                }
 
                 if (result.Any(x => !x.Value.RealEqual(lastListeners[x.Key])))
                     return result;
@@ -120,16 +126,6 @@ namespace contentapi.Services.Implementations
 
             throw new TimeoutException("Ran out of time waiting for listeners");
         }
-
-        //protected List<RelationListener> GetListeners(long parentId = -1)
-        //{
-        //    var realListeners = provider.Listeners.Where(x => x.ListenerId is RelationListener).Select(x => (RelationListener)x.ListenerId);
-        //    
-        //    if(parentId > 0)
-        //        realListeners = realListeners.Where(x => x.listenStatuses.ContainsKey(parentId));
-        //        
-        //    return realListeners.ToList();
-        //}
 
         public async Task<List<EntityRelation>> ListenAsync(RelationListenConfig listenConfig, Requester requester, CancellationToken token)
         {
@@ -149,13 +145,9 @@ namespace contentapi.Services.Implementations
             //var entrances = 0;
 
             var results = await provider.ListenAsync<EntityRelation>(listenId, (q) => 
-            //{
-                //entrances++;
-
                 q.Where(x => 
                     //Watches are special: we should get new ones and changes no matter WHAT the last id was! 
                     //(so long as it's the second runthrough)
-                    //(x.type == Keys.WatchRelation && x.entityId1 == requester.userId && entrances > 1) ||
                     (x.type == Keys.CommentHack || 
                         x.type == Keys.WatchRelation ||
                         x.type == Keys.WatchUpdate ||
@@ -164,9 +156,6 @@ namespace contentapi.Services.Implementations
                         EF.Functions.Like(x.type, $"{Keys.CommentDeleteHack}%") ||
                         EF.Functions.Like(x.type, $"{Keys.CommentHistoryHack}%")) && 
                        x.id > listenConfig.lastId),
-
-                //return query;
-            //}, 
             systemConfig.ListenTimeout, token);
 
             return results; 
