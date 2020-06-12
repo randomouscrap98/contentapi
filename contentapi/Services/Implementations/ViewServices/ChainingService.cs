@@ -654,29 +654,6 @@ namespace contentapi.Services.Implementations
 
                     if (waiters.Count == 0)
                         throw new BadRequestException("No listeners registered");
-                    
-                    //Func<Task> run2 = async () =>
-                    ////var run2 = Task.Run(() =>
-                    //{
-                    //    while(true)
-                    //    {
-                    //        if(cancelToken.IsCancellationRequested)
-                    //        {
-                    //            logger.LogInformation($"PAGE CANCELLED, YES! {requester.userId}");
-                    //            break;
-                    //        }
-                    //        else if (linkedCts.Token.IsCancellationRequested)
-                    //        {
-                    //            //Don't even care
-                    //            logger.LogInformation($"Other cancel, whatever {requester.userId}");
-                    //            break;
-                    //        }
-                    //        logger.LogInformation($"Not cancelled: {requester.userId}");
-                    //        await Task.Delay(2000); //, linkedCts.Token);
-                    //    }
-                    //};
-
-                    //waiters.Add(run2());
 
                     var completed = await Task.WhenAny(waiters.ToArray());
 
