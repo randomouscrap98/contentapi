@@ -23,17 +23,19 @@ namespace contentapi.Controllers
     {
         protected ILanguageService docService;
         protected ChainService service;
+        protected RelationListenerService relationListenerService;
 
         protected JsonSerializerOptions jsonOptions = new JsonSerializerOptions()
         {
             PropertyNameCaseInsensitive = true
         };
 
-        public ReadController(ILogger<BaseSimpleController> logger, ILanguageService docService, ChainService service)
+        public ReadController(ILogger<BaseSimpleController> logger, ILanguageService docService, ChainService service, RelationListenerService relationListenerService)
             : base(logger)
         {
             this.docService = docService;
             this.service = service;
+            this.relationListenerService = relationListenerService;
         }
 
         protected override Task SetupAsync() { return service.SetupAsync(); }
@@ -71,11 +73,17 @@ namespace contentapi.Controllers
             public long lastId {get;set;}
         }
 
+        protected Dictionary<string, Dictionary<string, string>> ConvertListeners(Dictionary<long, Dictionary<long, string>> listeners)
+        {
+            return listeners?.ToDictionary(x => x.Key.ToString(), x => x.Value.ToDictionary(k => k.Key.ToString(), v => v.Value));
+        }
+
 
         [HttpGet("listen")]
         [Authorize]
         public Task<ActionResult<ListenEndpointResult>> ListenAsync([FromQuery]Dictionary<string, List<string>> fields, [FromQuery]string listeners, [FromQuery]string actions, CancellationToken cancelToken)
         {
+            //HttpContext.
             return ThrowToAction(async () =>
             {
                 var listenerObject = JsonSerializer.Deserialize<ListenerQuery>(listeners ?? "null", jsonOptions);
@@ -107,7 +115,7 @@ namespace contentapi.Controllers
                 return new ListenEndpointResult() 
                 { 
                     chains = result.chain,
-                    listeners = result.listeners?.ToDictionary(x => x.Key.ToString(), x => x.Value.ToDictionary(k => k.Key.ToString(), v => v.Value)),
+                    listeners = ConvertListeners(result.listeners), //?.ToDictionary(x => x.Key.ToString(), x => x.Value.ToDictionary(k => k.Key.ToString(), v => v.Value)),
                     lastId = result.lastId
                 };
             });
@@ -117,6 +125,12 @@ namespace contentapi.Controllers
         public Task<ActionResult<string>> ListenDocsAsync()
         {
             return ThrowToAction(() => Task.FromResult(docService.GetString("doc.read.listen", "en")));
+        }
+
+        [HttpGet("listenersnow")]
+        public Task<ActionResult<Dictionary<string, Dictionary<string, string>>>> InstantListen([FromQuery]List<long> parentIds)
+        {
+            return ThrowToAction(() => Task.FromResult(ConvertListeners(relationListenerService.GetListenersAsDictionary(relationListenerService.GetInstantListeners(parentIds), parentIds))));
         }
     }
 }

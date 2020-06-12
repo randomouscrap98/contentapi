@@ -90,32 +90,50 @@ namespace contentapi.Services.Implementations
             return JsonSerializer.Serialize(listeners.ToDictionary(x => x.Key.ToString(), y => y.Value.ToDictionary(y => y.Key.ToString(), y => y.Value)));
         }
 
+        public IEnumerable<RelationListener> GetInstantListeners(IEnumerable<long> parentIds = null)
+        {
+            var allListeners = provider.Listeners.Where(x => x.ListenerId is RelationListener).Select(x => (RelationListener)x.ListenerId);
+
+            if(parentIds != null)
+                allListeners = allListeners.Where(x => x.listenStatuses.Any(y => parentIds.Contains(y.Key)));
+            
+            return allListeners;
+        }
+
+        public Dictionary<long, Dictionary<long, string>> GetListenersAsDictionary(IEnumerable<RelationListener> listeners, IEnumerable<long> parentIds)
+        {
+            var result = parentIds.ToDictionary(x => x, y => new Dictionary<long, string>());
+
+            //Assume the new listeners are appended to the end, which means they should be the newest and their statuses should override earlier ones... we hope.
+            foreach (var listener in listeners)
+            {
+                //Look over all PERTINENT statuses (only the ones that will end up in result)
+                foreach (var statusPair in listener.listenStatuses.Where(x => result.ContainsKey(x.Key)))
+                    result[statusPair.Key][listener.userId] = statusPair.Value;
+            }
+
+            return result;
+        }
+
         public async Task<Dictionary<long, Dictionary<long, string>>> GetListenersAsync(Dictionary<long, Dictionary<long, string>> lastListeners, Requester requester, CancellationToken token)
         {
             DateTime start = DateTime.Now;
 
             while (DateTime.Now - start < systemConfig.ListenTimeout)
             {
+                //logger.LogInformation($"Listen loop for {requester.userId}");
+
                 //It seems strange to update the decayer with the WHOLE LIST but remember: this whole list is the EXACT SNAPSHOT of who's listening 
                 //RIGHT NOW! because it's "instant", it's ok to continuously update the decayer, when someone leaves, they will appear gone in 
                 //EVERYONE'S listener list connection
-                listenDecayer.UpdateList(provider.Listeners.Where(x => x.ListenerId is RelationListener).Select(x => (RelationListener)x.ListenerId));
+                listenDecayer.UpdateList(GetInstantListeners());
 
                 //Decay the list only once, get the new list of listeners
                 var listenersNow = listenDecayer.DecayList(systemConfig.ListenGracePeriod);
 
                 //Creates a dictionary with pre-initialized keys. The keys won't change, we can keep redoing them.
                 //This should be OK, considering we'll be creating new dictionaries every time anyway. As always, watch the CPU
-                var result = lastListeners.ToDictionary(x => x.Key, y => new Dictionary<long, string>());
-
-                //Assume the new listeners are appended to the end, which means they should be the newest and their statuses should override earlier ones... we hope.
-                foreach(var listener in listenersNow)
-                {
-                    //Look over all PERTINENT statuses (only the ones that will end up in result)
-                    foreach(var statusPair in listener.listenStatuses.Where(x => result.ContainsKey(x.Key)))
-                        result[statusPair.Key][listener.userId] = statusPair.Value;
-                        //if(!result[statusPair.Key].TryAdd(listener.userId, statusPair.Value))
-                }
+                var result = GetListenersAsDictionary(listenersNow, lastListeners.Keys);
 
                 if (result.Any(x => !x.Value.RealEqual(lastListeners[x.Key])))
                     return result;
@@ -142,20 +160,16 @@ namespace contentapi.Services.Implementations
             else if(maxId - listenConfig.lastId > 1000)
                 throw new BadRequestException("LastID too far back! Perhaps restart your listener!");
 
-            //var entrances = 0;
-
             var results = await provider.ListenAsync<EntityRelation>(listenId, (q) => 
                 q.Where(x => 
-                    //Watches are special: we should get new ones and changes no matter WHAT the last id was! 
-                    //(so long as it's the second runthrough)
                     (x.type == Keys.CommentHack || 
-                        x.type == Keys.WatchRelation ||
-                        x.type == Keys.WatchUpdate ||
-                        x.type == Keys.WatchDelete ||
-                        EF.Functions.Like(x.type, $"{Keys.ActivityKey}%") || 
-                        EF.Functions.Like(x.type, $"{Keys.CommentDeleteHack}%") ||
-                        EF.Functions.Like(x.type, $"{Keys.CommentHistoryHack}%")) && 
-                       x.id > listenConfig.lastId),
+                     x.type == Keys.WatchRelation ||
+                     x.type == Keys.WatchUpdate ||
+                     x.type == Keys.WatchDelete ||
+                     EF.Functions.Like(x.type, $"{Keys.ActivityKey}%") || 
+                     EF.Functions.Like(x.type, $"{Keys.CommentDeleteHack}%") ||
+                     EF.Functions.Like(x.type, $"{Keys.CommentHistoryHack}%")) && 
+                    x.id > listenConfig.lastId),
             systemConfig.ListenTimeout, token);
 
             return results; 

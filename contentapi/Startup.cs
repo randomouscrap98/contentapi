@@ -167,8 +167,6 @@ namespace contentapi
             app.UseIpRateLimiting();
             app.UseSerilogRequestLogging();
 
-            //app.UseHttpsRedirection();
-
             app.UseRouting();
 
             //Apparently authentication has to come before authorization

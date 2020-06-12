@@ -510,6 +510,11 @@ namespace contentapi.Services.Implementations
         //    public EntityRelationView(EntityRelation copy) : base(copy) {}
         //}
 
+        //public Dictionary<long, Dictionary<long, string>> InstantListeners(IEnumerable<long> parentIds)
+        //{
+        //    var listeners = relationService.GetListenersInstant(parentIds);
+        //}
+
         public async Task<ListenResult> ListenAsync(Dictionary<string, List<string>> fields, ListenerChainConfig listeners, RelationListenChainConfig actions, Requester requester, CancellationToken cancelToken)
         {
             var result = new ListenResult();
@@ -649,6 +654,29 @@ namespace contentapi.Services.Implementations
 
                     if (waiters.Count == 0)
                         throw new BadRequestException("No listeners registered");
+                    
+                    //Func<Task> run2 = async () =>
+                    ////var run2 = Task.Run(() =>
+                    //{
+                    //    while(true)
+                    //    {
+                    //        if(cancelToken.IsCancellationRequested)
+                    //        {
+                    //            logger.LogInformation($"PAGE CANCELLED, YES! {requester.userId}");
+                    //            break;
+                    //        }
+                    //        else if (linkedCts.Token.IsCancellationRequested)
+                    //        {
+                    //            //Don't even care
+                    //            logger.LogInformation($"Other cancel, whatever {requester.userId}");
+                    //            break;
+                    //        }
+                    //        logger.LogInformation($"Not cancelled: {requester.userId}");
+                    //        await Task.Delay(2000); //, linkedCts.Token);
+                    //    }
+                    //};
+
+                    //waiters.Add(run2());
 
                     var completed = await Task.WhenAny(waiters.ToArray());
 
