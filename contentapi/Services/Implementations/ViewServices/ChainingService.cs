@@ -112,7 +112,7 @@ namespace contentapi.Services.Implementations
     { 
         //public long lastId {get;set;} = -1;
         //public Dictionary<long, string> statuses {get;set;} = new Dictionary<long, string>();
-        public List<string> chain {get;set;}
+        public List<string> chains {get;set;}
     }
 
     /// <summary>
@@ -121,7 +121,7 @@ namespace contentapi.Services.Implementations
     public class ListenerChainConfig
     {
         public Dictionary<long, Dictionary<long, string>> lastListeners {get;set;} = new Dictionary<long, Dictionary<long, string>>();
-        public List<string> chain {get;set;}
+        public List<string> chains {get;set;}
     }
 
     /// <summary>
@@ -130,8 +130,9 @@ namespace contentapi.Services.Implementations
     public class ListenResult
     {
         public Dictionary<long, Dictionary<long, string>> listeners {get;set;}
-        public Dictionary<string, List<ExpandoObject>> chain {get;set;}
+        public Dictionary<string, List<ExpandoObject>> chains {get;set;}
         public long lastId {get;set;}
+        public List<string> warnings {get;set;} = new List<string>();
     }
 
     /// <summary>
@@ -528,8 +529,8 @@ namespace contentapi.Services.Implementations
             var chainResults = new Dictionary<string, List<TaggedChainResult>>();
             List<Task> waiters = new List<Task>();
 
-            CheckChainLimit(listeners?.chain?.Count);
-            CheckChainLimit(actions?.chain?.Count,2);
+            CheckChainLimit(listeners?.chains?.Count);
+            CheckChainLimit(actions?.chains?.Count,2);
 
             Func<List<string>, IEnumerable<IIdView>, Task> chainer = async (l, i) =>
             {
@@ -613,7 +614,7 @@ namespace contentapi.Services.Implementations
                                 await services.watch.ClearAsyncFast(requester, actions.clearNotifications.Intersect(clearContents).ToArray());
                                 result.lastId = relations.Max(x => x.id);
 
-                                await chainer(actions.chain, baseViews); //result.Select(x => new BaseView() {id = x.id}));
+                                await chainer(actions.chains, baseViews); //result.Select(x => new BaseView() {id = x.id}));
                                 if (chainResults.Sum(x => x.Value.Count()) > 0)
                                     break;
                                 else
@@ -638,18 +639,22 @@ namespace contentapi.Services.Implementations
                         }
 
                         if(listeners.lastListeners.Count == 0)
-                            throw new BadRequestException("There were no valid contentIds in your listeners group");
-
-                        //We wait a LITTLE BIT so that if comments don't complete, we will show up in the listener list.
-                        await Task.Delay(5);
-
-                        Func<Task> run = async () =>
                         {
-                            result.listeners = await relationService.GetListenersAsync(listeners.lastListeners, requester, linkedCts.Token);
-                            await chainer(listeners.chain, result.listeners.Select(x => new PhonyListenerList() { id = x.Key, listeners = x.Value.Keys.ToList() }));
-                        };
+                            result.warnings.Add("There were no valid contentIds in your listeners group; not listening");
+                        }
+                        else
+                        {
+                            //We wait a LITTLE BIT so that if comments don't complete, we will show up in the listener list.
+                            await Task.Delay(5);
 
-                        waiters.Add(run());
+                            Func<Task> run = async () =>
+                            {
+                                result.listeners = await relationService.GetListenersAsync(listeners.lastListeners, requester, linkedCts.Token);
+                                await chainer(listeners.chains, result.listeners.Select(x => new PhonyListenerList() { id = x.Key, listeners = x.Value.Keys.ToList() }));
+                            };
+
+                            waiters.Add(run());
+                        }
                     }
 
                     if (waiters.Count == 0)
@@ -679,7 +684,7 @@ namespace contentapi.Services.Implementations
             }
 
             if (chainResults.Count > 0)
-                result.chain = ChainResultToReturn(chainResults);
+                result.chains = ChainResultToReturn(chainResults);
 
             return result;
         }

@@ -17,14 +17,24 @@ namespace contentapi.test
             Assert.True(relation.entityId2 != 0);
         }
 
-        //[Fact]
-        //public void SimplePassthrough()
-        //{
-        //    var relation = service.MakeActivity(NewEntity(99, "blegh"), 8, Keys.UpdateAction);
-        //    var view = service.ConvertToView(relation);
-        //    Assert.Equal(99, view.contentId);
-        //    Assert.Equal(8, view.userId);
-        //    Assert.Equal("blegh", view.contentType);
-        //}
+        [Fact]
+        public void Regression_DoubleType()
+        {
+            var relation = service.MakeActivity(NewEntity(5, Keys.ContentType + "@wow.yeah"), 8, Keys.CreateAction, "myextra");
+            var activity = service.ToView(relation);
+
+            Assert.Equal(Keys.ContentType, activity.type);
+            Assert.Equal("@wow.yeah", activity.contentType);
+        }
+
+        [Fact]
+        public void Regression_DoubleTypeEmpty()
+        {
+            var relation = service.MakeActivity(NewEntity(5, Keys.FileType), 8, Keys.CreateAction, "myextra");
+            var activity = service.ToView(relation);
+
+            Assert.Equal(Keys.FileType, activity.type);
+            Assert.True(string.IsNullOrWhiteSpace(activity.contentType));
+        }
     }
 }

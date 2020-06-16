@@ -58,7 +58,7 @@ namespace contentapi.Services.Implementations
                 contentId = entity.id,
                 action = action,
                 extra = extra,
-                type = trimmedType, //Assume all types are same length!
+                type = trimmedType.Substring(0, TypeLength), //Assume all types are same length!
                 contentType = trimmedType.Substring(TypeLength),
                 date = DateTime.Now
             });

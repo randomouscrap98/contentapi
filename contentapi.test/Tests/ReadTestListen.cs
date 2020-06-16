@@ -43,10 +43,10 @@ namespace contentapi.test
             {
                 //Ensure the other completed
                 var complete = AssertWait(listen);
-                Assert.Contains("comment", complete.chain.Keys);
-                Assert.Single(complete.chain["comment"]);
-                Assert.Equal(comment.id, ((dynamic)complete.chain["comment"].First()).id);
-                Assert.Equal(comment.content, ((dynamic)complete.chain["comment"].First()).content);
+                Assert.Contains("comment", complete.chains.Keys);
+                Assert.Single(complete.chains["comment"]);
+                Assert.Equal(comment.id, ((dynamic)complete.chains["comment"].First()).id);
+                Assert.Equal(comment.content, ((dynamic)complete.chains["comment"].First()).content);
             };
 
             return Tuple.Create(create, check);
@@ -57,7 +57,7 @@ namespace contentapi.test
         public void SimpleListen()
         {
             //First, start listening for any comment
-            var listen = BasicListen(null, new RelationListenChainConfig() { chain = BasicCommentChain() }, unit.commonUser.id);
+            var listen = BasicListen(null, new RelationListenChainConfig() { chains = BasicCommentChain() }, unit.commonUser.id);
 
             //There is an acceptable nuance to listening: since we are just saving the task and continuing, there is a window 
             //of time where neither the initial query (for instant complete) nor the actual listening will find a comment/etc written
@@ -81,7 +81,7 @@ namespace contentapi.test
             var comment = actions.Item1();
 
             //Listen for comment ids BEFORE the last comment so we complete instantly
-            var listen = BasicListen(null, new RelationListenChainConfig() { lastId = comment.id - 1, chain = BasicCommentChain() }, unit.commonUser.id);
+            var listen = BasicListen(null, new RelationListenChainConfig() { lastId = comment.id - 1, chains = BasicCommentChain() }, unit.commonUser.id);
 
             //Now just call item 2! Done!
             actions.Item2(listen);
@@ -94,7 +94,7 @@ namespace contentapi.test
             var comment = commentService.WriteAsync(new CommentView() { content = "hello", parentId = unit.specialContent.id }, new Requester() { userId = unit.specialUser.id}).Result;
 
             //Listen for comment ids BEFORE the last comment so we would "normally" complete instantly (but we shouldn't be able to read this comment)
-            var listen = BasicListen(null, new RelationListenChainConfig() { lastId = comment.id - 1, chain = BasicCommentChain() }, unit.commonUser.id);
+            var listen = BasicListen(null, new RelationListenChainConfig() { lastId = comment.id - 1, chains = BasicCommentChain() }, unit.commonUser.id);
 
             //You should not receive anything! It was a comment in a room you don't have access to, regardless of the "magic" mega listener!
             AssertNotWait(listen);
@@ -116,7 +116,7 @@ namespace contentapi.test
             comment.content = "oh it was edited!";
             var newComment = commentService.WriteAsync(comment, new Requester() {userId = unit.specialUser.id }).Result;
 
-            var listen = BasicListen(null, new RelationListenChainConfig() { lastId = comment.id , chain = BasicCommentChain() }, unit.commonUser.id);
+            var listen = BasicListen(null, new RelationListenChainConfig() { lastId = comment.id , chains = BasicCommentChain() }, unit.commonUser.id);
 
             //Now just call item 2! Done!
             actions.Item2(listen);
@@ -133,13 +133,13 @@ namespace contentapi.test
             //Now edit the comment to generate a new "event"
             var deletedComment = commentService.DeleteAsync(comment.id, new Requester() { userId = unit.specialUser.id }).Result;
 
-            var listen = BasicListen(null, new RelationListenChainConfig() { lastId = comment.id , chain = BasicCommentChain() }, unit.commonUser.id);
+            var listen = BasicListen(null, new RelationListenChainConfig() { lastId = comment.id , chains = BasicCommentChain() }, unit.commonUser.id);
 
             //OK, item 2 is useless this time. Make sure it completes
             var complete = AssertWait(listen);
-            Assert.Contains(Keys.ChainCommentDelete, complete.chain.Keys);
-            Assert.Single(complete.chain[Keys.ChainCommentDelete]);
-            Assert.Equal(comment.id, ((dynamic)complete.chain[Keys.ChainCommentDelete].First()).id);
+            Assert.Contains(Keys.ChainCommentDelete, complete.chains.Keys);
+            Assert.Single(complete.chains[Keys.ChainCommentDelete]);
+            Assert.Equal(comment.id, ((dynamic)complete.chains[Keys.ChainCommentDelete].First()).id);
         }
 
         public ListenerChainConfig BasicListenConfig(bool specialContent = false)
@@ -218,13 +218,13 @@ namespace contentapi.test
             var watch = watchService.WriteAsync(new WatchView() { contentId = unit.commonContent.id }, requester).Result;
 
             //The endpoint SHOULD return watches!
-            var listen = BasicListen(null, new RelationListenChainConfig() { lastId = 0, chain = new List<string>() { "watch.0id" } }, unit.commonUser.id);
+            var listen = BasicListen(null, new RelationListenChainConfig() { lastId = 0, chains = new List<string>() { "watch.0id" } }, unit.commonUser.id);
 
             var complete = AssertWait(listen);
-            Assert.Contains("watch", complete.chain.Keys);
-            Assert.Single(complete.chain["watch"]);
-            Assert.Equal(watch.id, ((dynamic)complete.chain["watch"].First()).id);
-            Assert.Equal(watch.contentId, ((dynamic)complete.chain["watch"].First()).contentId);
+            Assert.Contains("watch", complete.chains.Keys);
+            Assert.Single(complete.chains["watch"]);
+            Assert.Equal(watch.id, ((dynamic)complete.chains["watch"].First()).id);
+            Assert.Equal(watch.contentId, ((dynamic)complete.chains["watch"].First()).contentId);
         }
 
         [Fact]
@@ -235,7 +235,7 @@ namespace contentapi.test
             var watch = watchService.WriteAsync(new WatchView() { contentId = unit.commonContent.id }, requester).Result;
 
             //This should NOT complete AND the later stuff should NOT give the watch that was cleared! ONLY THE CHAIN SIGNAL!
-            var listen = BasicListen(null, new RelationListenChainConfig() { lastId = watch.id, chain = new List<string>() { "watch.0id" } }, unit.commonUser.id);
+            var listen = BasicListen(null, new RelationListenChainConfig() { lastId = watch.id, chains = new List<string>() { "watch.0id" } }, unit.commonUser.id);
 
             AssertNotWait(listen);
 
@@ -246,10 +246,10 @@ namespace contentapi.test
                 watch = watchService.ClearAsync(watch, requester).Result;
 
                 var complete = AssertWait(listen);
-                Assert.False(complete.chain.ContainsKey("watch") && complete.chain["watch"].Count > 0, "There are watches!");
-                Assert.Contains(Keys.ChainWatchUpdate, complete.chain.Keys);
-                Assert.Single(complete.chain[Keys.ChainWatchUpdate]);
-                Assert.Equal(watch.id, ((dynamic)complete.chain[Keys.ChainWatchUpdate].First()).id);
+                Assert.False(complete.chains.ContainsKey("watch") && complete.chains["watch"].Count > 0, "There are watches!");
+                Assert.Contains(Keys.ChainWatchUpdate, complete.chains.Keys);
+                Assert.Single(complete.chains[Keys.ChainWatchUpdate]);
+                Assert.Equal(watch.id, ((dynamic)complete.chains[Keys.ChainWatchUpdate].First()).id);
             }).Wait();
         }
 
@@ -262,7 +262,7 @@ namespace contentapi.test
 
             var listen = BasicListen(null, new RelationListenChainConfig() { 
                 lastId = watch.id, 
-                chain = new List<string>() { "comment.0id" }, 
+                chains = new List<string>() { "comment.0id" }, 
                 clearNotifications = new List<long>() { unit.commonContent.id } 
             }, unit.commonUser.id);
 
@@ -275,10 +275,10 @@ namespace contentapi.test
 
                 //The COMPLETION of the lsitener should clear my notifications! (along with give me a comment)
                 var complete = AssertWait(listen);
-                Assert.Contains("comment", complete.chain.Keys);
-                Assert.Single(complete.chain["comment"]);
-                Assert.Equal(comment.id, ((dynamic)complete.chain["comment"].First()).id);
-                Assert.Equal(comment.content, ((dynamic)complete.chain["comment"].First()).content);
+                Assert.Contains("comment", complete.chains.Keys);
+                Assert.Single(complete.chains["comment"]);
+                Assert.Equal(comment.id, ((dynamic)complete.chains["comment"].First()).id);
+                Assert.Equal(comment.content, ((dynamic)complete.chains["comment"].First()).content);
 
                 watch = watchService.GetByContentId(watch.contentId, requester).Result;
                 Assert.Equal(comment.id, watch.lastNotificationId); //It was cleared

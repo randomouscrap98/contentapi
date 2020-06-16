@@ -19,23 +19,39 @@ using Randomous.EntitySystem;
 
 namespace contentapi.Controllers
 {
+    public class ReadControllerProfile : Profile
+    {
+        public ReadControllerProfile()
+        {
+            //Input
+            CreateMap<ReadController.RelationListenQuery, RelationListenChainConfig>();
+            CreateMap<ReadController.ListenerQuery, ListenerChainConfig>();
+
+            //output
+            CreateMap<ListenResult, ReadController.ListenEndpointResult>();
+        }
+    }
+
     public class ReadController : BaseSimpleController
     {
         protected ILanguageService docService;
         protected ChainService service;
         protected RelationListenerService relationListenerService;
+        protected IMapper mapper;
 
         protected JsonSerializerOptions jsonOptions = new JsonSerializerOptions()
         {
             PropertyNameCaseInsensitive = true
         };
 
-        public ReadController(ILogger<BaseSimpleController> logger, ILanguageService docService, ChainService service, RelationListenerService relationListenerService)
+        public ReadController(ILogger<BaseSimpleController> logger, ILanguageService docService, ChainService service, 
+            RelationListenerService relationListenerService, IMapper mapper)
             : base(logger)
         {
             this.docService = docService;
             this.service = service;
             this.relationListenerService = relationListenerService;
+            this.mapper = mapper;
         }
 
         protected override Task SetupAsync() { return service.SetupAsync(); }
@@ -71,6 +87,7 @@ namespace contentapi.Controllers
             public Dictionary<string, Dictionary<string, string>> listeners {get;set;}
             public Dictionary<string, List<ExpandoObject>> chains {get;set;}
             public long lastId {get;set;}
+            public List<string> warnings {get;set;} = new List<string>();
         }
 
         protected Dictionary<string, Dictionary<string, string>> ConvertListeners(Dictionary<long, Dictionary<long, string>> listeners)
@@ -94,17 +111,18 @@ namespace contentapi.Controllers
 
                 if (actionObject != null)
                 {
-                    rConfig = new RelationListenChainConfig() { 
-                        lastId = actionObject.lastId, 
-                        chain = actionObject.chains, 
-                        clearNotifications = actionObject.clearNotifications 
-                    };
+                    rConfig = mapper.Map<RelationListenChainConfig>(actionObject); 
                     rConfig.statuses = actionObject.statuses.ToDictionary(x => long.Parse(x.Key), y => y.Value);
+                    //new RelationListenChainConfig() { 
+                    //    lastId = actionObject.lastId, 
+                    //    chain = actionObject.chains, 
+                    //    clearNotifications = actionObject.clearNotifications 
+                    //};
                 }
 
                 if(listenerObject != null)
                 {
-                    lConfig = new ListenerChainConfig() { chain = listenerObject.chains };
+                    lConfig = mapper.Map<ListenerChainConfig>(listenerObject); //new ListenerChainConfig() { chain = listenerObject.chains };
                     lConfig.lastListeners = listenerObject.lastListeners.ToDictionary(
                         x => long.Parse(x.Key),
                         y => y.Value.ToDictionary(k => long.Parse(k.Key), v => v.Value));
@@ -112,12 +130,16 @@ namespace contentapi.Controllers
 
                 var result = await service.ListenAsync(fields, lConfig, rConfig, GetRequesterNoFail(), cancelToken);
 
-                return new ListenEndpointResult() 
-                { 
-                    chains = result.chain,
-                    listeners = ConvertListeners(result.listeners), //?.ToDictionary(x => x.Key.ToString(), x => x.Value.ToDictionary(k => k.Key.ToString(), v => v.Value)),
-                    lastId = result.lastId
-                };
+                var returnResult = mapper.Map<ListenEndpointResult>(result);
+                returnResult.listeners = ConvertListeners(result.listeners);
+                return returnResult;
+                //return new ListenEndpointResult() 
+                //{ 
+                //    chains = result.chain,
+                //    listeners = ConvertListeners(result.listeners), //?.ToDictionary(x => x.Key.ToString(), x => x.Value.ToDictionary(k => k.Key.ToString(), v => v.Value)),
+                //    lastId = result.lastId,
+                //    warnings = result.warnings
+                //};
             });
         }
 
