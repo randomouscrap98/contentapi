@@ -520,6 +520,10 @@ namespace contentapi.Services.Implementations
         {
             var result = new ListenResult();
 
+            //Since all this stuff happens at the SAME TIME on the SAME dbcontext (which usually doesn't happen), we need a lock to ensure only one is 
+            //getting to it at a time.
+            var semaphore = new SemaphoreSlim(1, 1);
+
             //Assume nothing changed in the result (it may just be a listener update), and better to send the same than to send nothing.
             if(actions != null)
                 result.lastId = actions.lastId; 
@@ -532,18 +536,33 @@ namespace contentapi.Services.Implementations
             CheckChainLimit(listeners?.chains?.Count);
             CheckChainLimit(actions?.chains?.Count,2);
 
+            //A simple function-wide lock for asynchronous tasks. Should be safe... since it's all within the function.
+            Func<Func<Task>, Task> lockAsync = async(a) =>
+            {
+                await semaphore.WaitAsync();
+                try { await a(); }
+                finally { semaphore.Release(); }
+            };
+
+            //A simple function to apply the given list of chains to the given list of views
             Func<List<string>, IEnumerable<IIdView>, Task> chainer = async (l, i) =>
             {
                 if (l != null)
                 {
-                    //First result is the comments we got
+                    //First result is just... the list of ID views. There are no other chain results
                     var tempViewResults = new List<List<IIdView>>() { i.ToList() };
 
-                    foreach (var chain in l)
-                        await ChainAsync(SetupChainRequestString(chain, chainResults, fields), requester, tempViewResults);
+                    //ONLY allow SINGLE access the database 
+                    await lockAsync(async () =>
+                    {
+                        foreach (var chain in l)
+                            await ChainAsync(SetupChainRequestString(chain, chainResults, fields), requester, tempViewResults);
+                    });
                 }
             };
 
+            //Add a simple id as a signal on the chain result. Return the object representing the signal
+            //(in case you want to add more to it)
             Func<string, long, ExpandoObject> addSignal = (key, id) =>
             {
                 dynamic signal = new ExpandoObject();
@@ -585,15 +604,18 @@ namespace contentapi.Services.Implementations
                                     BaseView v = null;
 
                                     //The real comment is something else: they want the real comment (it's just an edit so... they'll get the comment again)
-                                    if(r.type.StartsWith(Keys.CommentHistoryHack))
+                                    if(r.type.StartsWith(Keys.CommentHistoryHack) || r.type.StartsWith(Keys.CommentDeleteHack))
+                                    {
                                         v = new BaseView() { id = -r.entityId1 };
-                                    //Oops, this stuff isn't even something we want to return. Generate a special thingy in the chainer
-                                    else if (r.type.StartsWith(Keys.CommentDeleteHack))
-                                        addSignal(Keys.ChainCommentDelete, -r.entityId1);
+                                    }
                                     else if (r.type == Keys.WatchUpdate)
+                                    {
                                         ((dynamic)addSignal(Keys.ChainWatchUpdate, r.entityId1)).contentId = -r.entityId2;
+                                    }
                                     else if (r.type == Keys.WatchDelete)
+                                    {
                                         ((dynamic)addSignal(Keys.ChainWatchDelete, r.entityId1)).contentId = -r.entityId2;
+                                    }
                                     //Oh just something probably normal I guess...
                                     else
                                     {
@@ -611,7 +633,7 @@ namespace contentapi.Services.Implementations
 
                                 //Inefficient, but I NEED to clear the notifications BEFORE chaining. This MIGHT be called WAY TOO OFTEN so...
                                 //hopefully tracking the contents make it better
-                                await services.watch.ClearAsyncFast(requester, actions.clearNotifications.Intersect(clearContents).ToArray());
+                                await lockAsync(() => services.watch.ClearAsyncFast(requester, actions.clearNotifications.Intersect(clearContents).ToArray()));
                                 result.lastId = relations.Max(x => x.id);
 
                                 await chainer(actions.chains, baseViews); //result.Select(x => new BaseView() {id = x.id}));
@@ -631,7 +653,10 @@ namespace contentapi.Services.Implementations
                     {
                         if(listeners.lastListeners.Count > 0)
                         {
-                            var allowedContent = await services.content.SearchAsync(new ContentSearch() { Ids = listeners.lastListeners.Keys.ToList() }, requester);
+                            List<ContentView> allowedContent = null;
+                            
+                            //This also accesses the database, must only allow single access!
+                            await lockAsync(async () => allowedContent = await services.content.SearchAsync(new ContentSearch() { Ids = listeners.lastListeners.Keys.ToList() }, requester));
 
                             foreach(var l in listeners.lastListeners.Keys.ToList())
                                 if(!allowedContent.Any(x => x.id == l))

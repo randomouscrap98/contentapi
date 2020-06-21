@@ -137,9 +137,9 @@ namespace contentapi.test
 
             //OK, item 2 is useless this time. Make sure it completes
             var complete = AssertWait(listen);
-            Assert.Contains(Keys.ChainCommentDelete, complete.chains.Keys);
-            Assert.Single(complete.chains[Keys.ChainCommentDelete]);
-            Assert.Equal(comment.id, ((dynamic)complete.chains[Keys.ChainCommentDelete].First()).id);
+            Assert.Contains("comment", complete.chains.Keys);
+            Assert.Single(complete.chains["comment"]);
+            Assert.Equal(comment.id, ((dynamic)complete.chains["comment"].First()).id);
         }
 
         public ListenerChainConfig BasicListenConfig(bool specialContent = false)

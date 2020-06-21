@@ -158,7 +158,11 @@ namespace contentapi.Services.Implementations
 
             var parent = await ModifyCheckAsync(existing, requester);
 
-            var relation = converter.FromViewSimple(view);
+            var originalUpdate = converter.FromViewSimple(view);
+            var relation = new EntityRelation(existing);
+
+            //We can ONLY update the content!
+            relation.value = originalUpdate.value;
 
             //Write a copy of the current comment as historic
             var copy = MakeHistoryCopy(existing, Keys.CommentHistoryHack, uid);

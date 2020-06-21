@@ -158,7 +158,7 @@ namespace contentapi.Services.Implementations
             if(listenConfig.lastId < 0)
                 listenConfig.lastId = maxId;
             else if(maxId - listenConfig.lastId > 1000)
-                throw new BadRequestException("LastID too far back! Perhaps restart your listener!");
+                throw new BadRequestException($"LastID too far back! Perhaps restart your listener! System current max: {maxId}");
 
             var results = await provider.ListenAsync<EntityRelation>(listenId, (q) => 
                 q.Where(x => 
