@@ -135,6 +135,19 @@ namespace contentapi.Services.Implementations
         public List<string> warnings {get;set;} = new List<string>();
     }
 
+    public class ChainServiceConfig
+    {
+        public int MaxChains {get;set;} = 5;
+        public TimeSpan CompletionWaitUp {get;set;} = TimeSpan.FromMilliseconds(10);
+        public string RequestRegex {get;set;} = @"^(?<endpoint>[a-z]+)(\.(?<chain>\d+[a-z]+(?:\$[a-z]+)?))*(~(?<name>[^\-]+))?(-(?<search>.+))?$";
+        public string ChainRegex {get;set;} = @"^(?<index>\d+)(?<field>[a-z]+)(\$(?<searchfield>[a-z]+))?$";
+
+        public JsonSerializerOptions JsonOptions {get;set;} = new JsonSerializerOptions()
+        {
+            PropertyNameCaseInsensitive = true
+        };
+    }
+
     /// <summary>
     /// A service for chaining together separate requests. You can use the output of one request as the input 
     /// for future requests.
@@ -144,23 +157,16 @@ namespace contentapi.Services.Implementations
         protected ChainServices services;
         protected RelationListenerService relationService;
         protected ILogger logger;
+        protected ChainServiceConfig config;
 
         //These should all be... settings?
-        protected Regex requestRegex = new Regex(@"^(?<endpoint>[a-z]+)(\.(?<chain>\d+[a-z]+(?:\$[a-z]+)?))*(~(?<name>[^\-]+))?(-(?<search>.+))?$", 
-            RegexOptions.Compiled | RegexOptions.IgnoreCase);
-        protected Regex chainRegex = new Regex(@"^(?<index>\d+)(?<field>[a-z]+)(\$(?<searchfield>[a-z]+))?$", 
-            RegexOptions.Compiled | RegexOptions.IgnoreCase);
-        protected TimeSpan completionWaitUp = TimeSpan.FromMilliseconds(10);
-        protected JsonSerializerOptions jsonOptions = new JsonSerializerOptions()
-        {
-            PropertyNameCaseInsensitive = true
-        };
 
-        public ChainService(ILogger<ChainService> logger, ChainServices services, RelationListenerService relationService)
+        public ChainService(ILogger<ChainService> logger, ChainServices services, RelationListenerService relationService, ChainServiceConfig config)
         {
             this.logger = logger;
             this.services = services;
             this.relationService = relationService;
+            this.config = config;
         }
 
         public async Task SetupAsync() 
@@ -252,7 +258,7 @@ namespace contentapi.Services.Implementations
         /// <returns></returns>
         public ChainRequestString ParseInitialChainString(string request)
         {
-            var match = requestRegex.Match(request);
+            var match = Regex.Match(request, config.RequestRegex, RegexOptions.IgnoreCase);
 
             var result = new ChainRequestString()
             {
@@ -265,7 +271,7 @@ namespace contentapi.Services.Implementations
             result.chains = match.Groups["chain"].Captures.Select(x => 
             {
                 var c = x.Value;
-                var match = chainRegex.Match(c);
+                var match = Regex.Match(c, config.ChainRegex, RegexOptions.IgnoreCase);
 
                 var chaining = new Chaining()
                 {
@@ -357,7 +363,7 @@ namespace contentapi.Services.Implementations
 
             try
             {
-                chainData.baseSearch = JsonSerializer.Deserialize<S>(chainDataString.search, jsonOptions);
+                chainData.baseSearch = JsonSerializer.Deserialize<S>(chainDataString.search, config.JsonOptions);
             }
             catch(Exception ex)
             {
@@ -442,10 +448,10 @@ namespace contentapi.Services.Implementations
             return results.ToDictionary(x => x.Key, y => y.Value.Select(x => x.result).ToList());
         }
 
-        protected void CheckChainLimit(int? count, double modifier = 1)
+        protected void CheckChainLimit(int? count)//, double modifier = 1)
         {
-            if(count != null && count > 5 * modifier)
-                throw new BadRequestException("Can't chain deeper than 5");
+            if(count != null && count > config.MaxChains)// * modifier)
+                throw new BadRequestException($"Can't chain deeper than {config.MaxChains}");
         }
 
         /// <summary>
@@ -534,7 +540,7 @@ namespace contentapi.Services.Implementations
             List<Task> waiters = new List<Task>();
 
             CheckChainLimit(listeners?.chains?.Count);
-            CheckChainLimit(actions?.chains?.Count,2);
+            CheckChainLimit(actions?.chains?.Count);//,2);
 
             //A simple function-wide lock for asynchronous tasks. Should be safe... since it's all within the function.
             Func<Func<Task>, Task> lockAsync = async(a) =>
@@ -689,7 +695,7 @@ namespace contentapi.Services.Implementations
 
                     //This is funny: we want the completed task to throw its exception (wehnany doesn't do that)
                     await completed; //When done, this will just finish. When exceptioned, it will throw
-                    await Task.Delay(completionWaitUp); //To allow some others to catch up if they're ALMOST done
+                    await Task.Delay(config.CompletionWaitUp); //To allow some others to catch up if they're ALMOST done
                 }
                 finally
                 {

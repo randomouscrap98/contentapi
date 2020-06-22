@@ -91,6 +91,7 @@ namespace contentapi.Services.Implementations
             AddConfiguration<SystemConfig>(services, config);
             AddConfiguration<TempTokenServiceConfig>(services, config);
             AddConfiguration<TokenServiceConfig>(services, config);
+            AddConfiguration<ChainServiceConfig>(services, config);
             //AddConfiguration<DocumentationConfig>(services, config);
             services.AddSingleton<HashConfig>();
             services.AddSingleton<RelationListenerServiceConfig>();
