@@ -665,7 +665,7 @@ namespace contentapi.Services.Implementations
                             await lockAsync(async () => allowedContent = await services.content.SearchAsync(new ContentSearch() { Ids = listeners.lastListeners.Keys.ToList() }, requester));
 
                             foreach(var l in listeners.lastListeners.Keys.ToList())
-                                if(!allowedContent.Any(x => x.id == l))
+                                if(l > 0 && !allowedContent.Any(x => x.id == l)) //This allows invalid range ids for fun debugging or feature stuff, but still gives privacy for private rooms
                                     listeners.lastListeners.Remove(l);
                         }
 

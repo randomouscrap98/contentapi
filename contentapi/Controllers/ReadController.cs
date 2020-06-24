@@ -133,13 +133,6 @@ namespace contentapi.Controllers
                 var returnResult = mapper.Map<ListenEndpointResult>(result);
                 returnResult.listeners = ConvertListeners(result.listeners);
                 return returnResult;
-                //return new ListenEndpointResult() 
-                //{ 
-                //    chains = result.chain,
-                //    listeners = ConvertListeners(result.listeners), //?.ToDictionary(x => x.Key.ToString(), x => x.Value.ToDictionary(k => k.Key.ToString(), v => v.Value)),
-                //    lastId = result.lastId,
-                //    warnings = result.warnings
-                //};
             });
         }
 
@@ -149,10 +142,11 @@ namespace contentapi.Controllers
             return ThrowToAction(() => Task.FromResult(docService.GetString("doc.read.listen", "en")));
         }
 
-        [HttpGet("listenersnow")]
-        public Task<ActionResult<Dictionary<string, Dictionary<string, string>>>> InstantListen([FromQuery]List<long> parentIds)
-        {
-            return ThrowToAction(() => Task.FromResult(ConvertListeners(relationListenerService.GetListenersAsDictionary(relationListenerService.GetInstantListeners(parentIds), parentIds))));
-        }
+        //Keep this around for debugging purposes
+        //[HttpGet("listenersnow")]
+        //public Task<ActionResult<Dictionary<string, Dictionary<string, string>>>> InstantListen([FromQuery]List<long> parentIds)
+        //{
+        //    return ThrowToAction(() => Task.FromResult(ConvertListeners(relationListenerService.GetListenersAsDictionary(relationListenerService.GetInstantListeners(parentIds), parentIds))));
+        //}
     }
 }

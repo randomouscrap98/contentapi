@@ -6,6 +6,7 @@ using System.Threading.Tasks;
 using AutoMapper;
 using contentapi.Services.Constants;
 using contentapi.Views;
+using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.Logging;
 using Randomous.EntitySystem;
 
@@ -16,6 +17,8 @@ namespace contentapi.Services.Implementations
         public List<long> ParentIds {get;set;} = new List<long>();
         public List<long> UserIds {get;set;} = new List<long>();
         public IdLimiter ContentLimit {get;set;} = new IdLimiter();
+
+        public string ContentLike {get;set;}
     }
 
     public class CommentViewSourceProfile : Profile
@@ -79,6 +82,16 @@ namespace contentapi.Services.Implementations
             view.deleted = last != null && last.type.StartsWith(Keys.CommentDeleteHack);
 
             return view;
+        }
+
+        public override IQueryable<EntityGroup> GetBaseQuery(CommentSearch search)
+        {
+            var baseQuery = base.GetBaseQuery(search);
+
+            if(!string.IsNullOrEmpty(search.ContentLike))
+                baseQuery = baseQuery.Where(x => EF.Functions.Like(x.relation.value, search.ContentLike));
+
+            return baseQuery;
         }
 
         public override EntityRelationPackage FromView(CommentView view)

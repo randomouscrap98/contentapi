@@ -28,6 +28,10 @@ namespace contentapi.Services.Implementations
 
     public class RelationListener
     {
+        private static long GlobalListenId = 0;
+
+        //Hopefully this is NICE AND FASTU
+        public long listenerId = Interlocked.Increment(ref GlobalListenId);
         public long userId {get;set;}
 
         //this is a mapping of contentId to personal status in content
@@ -35,22 +39,17 @@ namespace contentapi.Services.Implementations
 
         public override bool Equals(object obj)
         {
+            //This is essentially the same as object reference checking: two things are only equal if they
+            //refer to the SAME OBJECT! I'm only doing it like because ugh idk, just in case I need something else.
             if(obj != null && obj is RelationListener)
-            {
-                var listener = (RelationListener)obj;
-
-                //This COULD get too computationally... bad! With LOTS of listeners all trying to update the list
-                //every two seconds and if the list has hundreds of relations, this is a LOT of RealEqual calls, 
-                //which is a lot of sorting and such!
-                return listener.userId == userId && listenStatuses.RealEqual(listener.listenStatuses);
-            }
+                return ((RelationListener)obj).listenerId == listenerId;
 
             return false;
         }
 
         public override int GetHashCode()
         {
-            return userId.GetHashCode();
+            return listenerId.GetHashCode(); //userId.GetHashCode();
         }
 
         public override string ToString()
@@ -107,9 +106,13 @@ namespace contentapi.Services.Implementations
             //Assume the new listeners are appended to the end, which means they should be the newest and their statuses should override earlier ones... we hope.
             foreach (var listener in listeners)
             {
-                //Look over all PERTINENT statuses (only the ones that will end up in result)
+                //Look over all PERTINENT statuses (only the ones that will end up in result). PICK THE HIGHEST BY ALPHABETICAL ORDER!
                 foreach (var statusPair in listener.listenStatuses.Where(x => result.ContainsKey(x.Key)))
-                    result[statusPair.Key][listener.userId] = statusPair.Value;
+                {
+                    //Only add if it doesn't exist OR if the new value (statusPair.Value) comes AFTER the one we gave alphabetically
+                    if(!result[statusPair.Key].ContainsKey(listener.userId) || statusPair.Value.CompareTo(result[statusPair.Key][listener.userId]) > 0)
+                        result[statusPair.Key][listener.userId] = statusPair.Value;
+                }
             }
 
             return result;
