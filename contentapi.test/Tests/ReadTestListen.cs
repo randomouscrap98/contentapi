@@ -218,7 +218,7 @@ namespace contentapi.test
             var watch = watchService.WriteAsync(new WatchView() { contentId = unit.commonContent.id }, requester).Result;
 
             //The endpoint SHOULD return watches!
-            var listen = BasicListen(null, new RelationListenChainConfig() { lastId = 0, chains = new List<string>() { "watch.0id" } }, unit.commonUser.id);
+            var listen = BasicListen(null, new RelationListenChainConfig() { lastId = -100, chains = new List<string>() { "watch.0id" } }, unit.commonUser.id);
 
             var complete = AssertWait(listen);
             Assert.Contains("watch", complete.chains.Keys);

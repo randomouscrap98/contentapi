@@ -16,7 +16,7 @@ namespace contentapi.Services.Implementations
 {
     public class RelationListenConfig
     {
-        public long lastId {get;set;} = -1;
+        public long lastId {get;set;} = 0;
 
         /// <summary>
         /// What your "status" should be in each room (arbitrary string yes)
@@ -158,8 +158,8 @@ namespace contentapi.Services.Implementations
 
             var maxId = await provider.GetQueryable<EntityRelation>().MaxAsync(x => x.id);
 
-            if(listenConfig.lastId < 0)
-                listenConfig.lastId = maxId;
+            if(listenConfig.lastId <= 0)
+                listenConfig.lastId = maxId + listenConfig.lastId; //plus because negative
             else if(maxId - listenConfig.lastId > 1000)
                 throw new BadRequestException($"LastID too far back! Perhaps restart your listener! System current max: {maxId}");
 
