@@ -70,8 +70,8 @@ namespace contentapi.test
             chain.chains = new[] { new Chaining() { 
                 viewableIdentifier = "0.createUserId",
                 index = 0,
-                getField = "createUserId",
-                searchField = "Ids"
+                getFieldPath = new List<string> { "createUserId" } ,
+                searchFieldPath = new List<string> { "Ids" }
             }};
 
             //This time, have some previous results to chain to
@@ -157,5 +157,138 @@ namespace contentapi.test
             Assert.Single(result["myuser"]);
             Assert.Equal(user.id, ((dynamic)result["myuser"].First()).id);
         }
+
+        [Fact]
+        public void IntenseDictionaryStringChain()
+        {
+            //Just a SIMPLE little chain!
+            var requester = new Requester() { system = true };
+            var user = services.user.WriteAsync(new UserViewFull() { username = "simple" }, requester).Result;
+            requester.userId = user.id;
+            //Now create some content as user
+            var content = new ContentView() { name = "simplecontent" };
+            content.values["something"] = $"[{user.id}]";
+            content = services.content.WriteAsync(content, requester).Result;
+
+            var result = service.ChainAsync(new List<string>() {"content", "user.0values_something"}, new Dictionary<string, List<string>>(), requester).Result;
+
+            Assert.Contains("content", result.Keys);
+            Assert.Single(result["content"]);
+            Assert.Equal(content.id, ((dynamic)result["content"].First()).id);
+            Assert.Contains("user", result.Keys);
+            Assert.Single(result["user"]);
+            Assert.Equal(user.id, ((dynamic)result["user"].First()).id);
+        }
+
+        [Fact]
+        public void IntenseDictionaryStringChainNoBrackets()
+        {
+            //Just a SIMPLE little chain!
+            var requester = new Requester() { system = true };
+            var user = services.user.WriteAsync(new UserViewFull() { username = "simple" }, requester).Result;
+            requester.userId = user.id;
+            //Now create some content as user
+            var content = new ContentView() { name = "simplecontent" };
+            content.values["something"] = $"{user.id},99";
+            content = services.content.WriteAsync(content, requester).Result;
+
+            var result = service.ChainAsync(new List<string>() {"content", "user.0values_something"}, new Dictionary<string, List<string>>(), requester).Result;
+
+            Assert.Contains("content", result.Keys);
+            Assert.Single(result["content"]);
+            Assert.Equal(content.id, ((dynamic)result["content"].First()).id);
+            Assert.Contains("user", result.Keys);
+            Assert.Single(result["user"]);
+            Assert.Equal(user.id, ((dynamic)result["user"].First()).id);
+        }
+
+        [Fact]
+        public void IntenseDictionaryStringChainNoField()
+        {
+            //Just a SIMPLE little chain!
+            var requester = new Requester() { system = true };
+            var user = services.user.WriteAsync(new UserViewFull() { username = "simple" }, requester).Result;
+            requester.userId = user.id;
+            //Now create some content as user
+            var content = new ContentView() { name = "simplecontent" };
+            content.values["something"] = $"{user.id},99";
+            content = services.content.WriteAsync(content, requester).Result;
+
+            //This one DOESN'T have the field, it shouldn't make hte whole thing fail
+            var content2 = new ContentView() { name = "simplecontent2" };
+            content2 = services.content.WriteAsync(content2, requester).Result;
+
+            var result = service.ChainAsync(new List<string>() {"content", "user.0values_something"}, new Dictionary<string, List<string>>(), requester).Result;
+
+            Assert.Contains("content", result.Keys);
+            Assert.Equal(2, result["content"].Count);
+            Assert.Equal(content.id, ((dynamic)result["content"].First()).id);
+            Assert.Contains("user", result.Keys);
+            Assert.Single(result["user"]);
+            Assert.Equal(user.id, ((dynamic)result["user"].First()).id);
+        }
+
+        [Fact]
+        public void IntenseDictionaryStringChainBadField()
+        {
+            //Just a SIMPLE little chain!
+            var requester = new Requester() { system = true };
+            var user = services.user.WriteAsync(new UserViewFull() { username = "simple" }, requester).Result;
+            requester.userId = user.id;
+            //Now create some content as user
+            var content = new ContentView() { name = "simplecontent" };
+            content.values["something"] = $"{user.id},99";
+            content = services.content.WriteAsync(content, requester).Result;
+
+            //This one DOESN'T have the field, it shouldn't make hte whole thing fail
+            var content2 = new ContentView() { name = "simplecontent2" };
+            content2.values["something"] = "NOTPARSEABLE";
+            content2 = services.content.WriteAsync(content2, requester).Result;
+
+            var result = service.ChainAsync(new List<string>() {"content", "user.0values_something"}, new Dictionary<string, List<string>>(), requester).Result;
+
+            Assert.Contains("content", result.Keys);
+            Assert.Equal(2, result["content"].Count);
+            Assert.Equal(content.id, ((dynamic)result["content"].First()).id);
+            Assert.Contains("user", result.Keys);
+            Assert.Single(result["user"]);
+            Assert.Equal(user.id, ((dynamic)result["user"].First()).id);
+        }
+
+        //[Fact]
+        //public void IntenseDictionaryStringChain() //Does the LOW level (actual chaining) thing work?
+        //{
+        //    //Need a user first
+        //    var requester = new Requester() { system = true };
+        //    var user = services.user.WriteAsync(new UserViewFull() { username = "simpleuser" }, requester).Result;
+
+        //    //Now create some content as user
+        //    var content = new ContentView() { name = "simplecontent" };
+        //    content.values["something"] = $"[{user.id}]";
+        //    content = services.content.WriteAsync(content, new Requester() {userId = user.id}).Result;
+
+        //    //Same old user chaining, BUT chain to content
+        //    var chain = BasicChainRequest(requester);
+        //    chain.chains = new[] { new Chaining() { 
+        //        viewableIdentifier = "0.values_something",
+        //        index = 0,
+        //        getFieldPath = new List<string> { "values", "something" } ,
+        //        searchFieldPath = new List<string> { "Ids" }
+        //    }};
+
+        //    service.ChainAsync(chain, new List<List<IIdView>>() { new List<IIdView>() {content}}).Wait();
+
+        //    //Now, make sure that chained user is the only one returned!
+        //    Assert.Single(chain.mergeList);
+        //    Assert.Equal(user.id, chain.mergeList.First().id);
+        //    Assert.Equal(user.id, ((dynamic)chain.mergeList.First().result).id);
+
+        //    //Try another chain but this time remove the chaining. You should get two
+        //    chain.chains = new List<Chaining>();
+        //    chain.baseSearch = new UserSearch(); //Need to reset the search because ugh
+        //    service.ChainAsync(chain, new List<List<IIdView>>() { new List<IIdView>() {content}}).Wait();
+
+        //    Assert.True(chain.mergeList.Count == 2, "There should be two users when searching all!");
+        //}
     }
 }

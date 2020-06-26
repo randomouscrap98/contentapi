@@ -1,4 +1,5 @@
 using System;
+using System.Collections;
 using System.Collections.Generic;
 using System.Dynamic;
 using System.Linq;
@@ -96,8 +97,8 @@ namespace contentapi.Services.Implementations
         public string viewableIdentifier {get;set;}
 
         public int index {get;set;} = -1;
-        public string getField {get;set;}
-        public string searchField {get;set;}
+        public List<string> getFieldPath {get;set;} = new List<string>();
+        public List<string> searchFieldPath {get;set;} = new List<string>();
 
         public override string ToString()
         {
@@ -139,8 +140,8 @@ namespace contentapi.Services.Implementations
     {
         public int MaxChains {get;set;} = 5;
         public TimeSpan CompletionWaitUp {get;set;} = TimeSpan.FromMilliseconds(10);
-        public string RequestRegex {get;set;} = @"^(?<endpoint>[a-z]+)(\.(?<chain>\d+[a-z]+(?:\$[a-z]+)?))*(~(?<name>[^\-]+))?(-(?<search>.+))?$";
-        public string ChainRegex {get;set;} = @"^(?<index>\d+)(?<field>[a-z]+)(\$(?<searchfield>[a-z]+))?$";
+        public string RequestRegex {get;set;} = @"^(?<endpoint>[a-z]+)(\.(?<chain>\d+[a-z_]+(?:\$[a-z_]+)?))*(~(?<name>[^\-]+))?(-(?<search>.+))?$";
+        public string ChainRegex {get;set;} = @"^(?<index>\d+)(?<field>[a-z_]+)(\$(?<searchfield>[a-z_]+))?$";
 
         public JsonSerializerOptions JsonOptions {get;set;} = new JsonSerializerOptions()
         {
@@ -186,6 +187,68 @@ namespace contentapi.Services.Implementations
             return (new Type[] { type }).Concat(type.GetInterfaces()).SelectMany(i => i.GetProperties());
         }
 
+        protected IEnumerable<long> GetIdsFromFieldPath(object start, List<string> fieldPath, int offset = 0)
+        {
+            //In an effort to make this as simple as possible, don't check for or throw anything manually.
+            //We will try/catch in the big select many wherever it happens
+            //if(fieldPath.Count == 0)
+                //throw new BadRequestException("Bad/missing field in chain");
+
+            object readValue = null;
+
+            if(start is IDictionary)
+            {
+                readValue = ((IDictionary)start)[fieldPath[offset]];
+            }
+            else
+            {
+                var properties = GetProperties(start.GetType());
+                var property = properties.FirstOrDefault(x => x.Name.ToLower() == fieldPath[offset].ToLower());
+                readValue = property.GetValue(start);
+            }
+
+            if(fieldPath.Count - 1 == offset) //this is the end of the line
+            {
+                if (readValue is long)
+                {
+                    return new[] { (long)readValue};
+                }
+                else if (readValue is List<long>) //maybe need to get better about typing
+                {
+                    return (List<long>)readValue;
+                }
+                else if (readValue is string)
+                {
+                    var vlist = (string)readValue;
+
+                    if(!vlist.StartsWith("["))
+                        vlist = $"[{vlist}]";
+
+                    //Try to parse a list of longs out of the string... gosh this is bad
+                    try
+                    {
+                        return JsonSerializer.Deserialize<List<long>>(vlist, config.JsonOptions);
+                    }
+                    catch
+                    {
+                        //Don't worry if it's unparseable
+                        return new List<long>();
+                    }
+                }
+                else if(readValue is null)
+                {
+                    //HIGHLY unsafe but like... whatever
+                    return new List<long>();
+                }
+            }
+            else if(fieldPath.Count - 1 > offset)
+            {
+                return GetIdsFromFieldPath(readValue, fieldPath, offset + 1);
+            }
+
+            throw new InvalidOperationException("Got to end of fields without finding a value");
+        }
+
         /// <summary>
         /// Using the given chaining, link the appropriate field(s) from old chains into the current search.
         /// </summary>
@@ -194,61 +257,36 @@ namespace contentapi.Services.Implementations
         /// <param name="search"></param>
         /// <typeparam name="S"></typeparam>
         /// <returns></returns>
-        public List<long> LinkTosearch<S>(Chaining chain, List<List<IIdView>> existingChains, S search) where S : IIdSearcher
+        public List<long> LinkToSearch<S>(Chaining chain, List<List<IIdView>> existingChains, S search) where S : IIdSearcher
         {
-            if(string.IsNullOrEmpty(chain.searchField))
-                chain.searchField = "Ids";
+            if(chain.searchFieldPath.Count == 0) //string.IsNullOrEmpty(chain.searchField))
+                chain.searchFieldPath.Add("Ids");
             
             // Before going out and getting stuff, make sure ALL our fields are good. Reflection is expensive!
-            if (chain.index < 0 || chain.getField == null || existingChains.Count <= chain.index)
+            if (chain.index < 0 || chain.getFieldPath.Count == 0 || existingChains.Count <= chain.index)
                 throw new BadRequestException($"Bad chain index or missing field: {chain}");
 
-            var searchType = typeof(S);
-            var searchProperties = GetProperties(searchType);
-            var searchProperty = searchProperties.FirstOrDefault(x => x.Name.ToLower() == chain.searchField.ToLower());
+            //Uh-oh, assume it is list of long... even if it's not ogh
+            var searchIds = (List<long>)GetIdsFromFieldPath(search, chain.searchFieldPath);
 
-            if (searchProperty == null)
-                throw new BadRequestException($"Bad chain assign field: {chain}");
-
-            if(searchProperty.PropertyType != typeof(List<long>))
-                throw new BadRequestException($"Bad chain assign field type: {chain}");
-
-            var ids = new List<long>();
-            var analyze = existingChains[chain.index].FirstOrDefault();
-
-            if(analyze != null)
+            try
             {
-                var type = analyze.GetType();
-                var properties = GetProperties(type);
-                var property = properties.FirstOrDefault(x => x.Name.ToLower() == chain.getField.ToLower());
+                var ids = existingChains[chain.index].SelectMany(x => GetIdsFromFieldPath(x, chain.getFieldPath)).ToList(); //GetIdsFromFieldPath(existingChains[chain.index], chain.getFieldPath).ToList();
 
-                Func<IIdView, IEnumerable<long>> selector = null;
+                //Ensure a true "empty search" if there were no results. There is a CHANCE that later linkings
+                //will actually add values to this search field. This is OK; the max value will not break the search.
+                if(ids.Count() == 0)
+                    ids.Add(long.MaxValue);
 
-                if (property != null)
-                {
-                    if (property.PropertyType == typeof(long))
-                        selector = x => new[] { (long)property.GetValue(x) };
-                    else if (property.PropertyType == typeof(List<long>)) //maybe need to get better about typing
-                        selector = x => (List<long>)property.GetValue(x);
-                }
+                searchIds.AddRange(ids);
 
-                if (selector == null)
-                    throw new BadRequestException($"Bad chain read field: {chain}");
-
-                //Addrange so that we keep that old maxvalue
-                ids.AddRange(existingChains[chain.index].SelectMany(selector));
+                return ids;
             }
-            // There's no "else" here because it is OK if there's no item to analyze: our search will simply 
-            // be "empty". This does NOT mean "get all", it means "get none"
+            catch(Exception ex)
+            {
+                throw new BadRequestException($"Bad/missing chain field: {chain} ({ex.Message})");
+            }
 
-            //Ensure a true "empty search" if there were no results. There is a CHANCE that later linkings
-            //will actually add values to this search field. This is OK; the max value will not break the search.
-            if(ids.Count == 0)
-                ids.Add(long.MaxValue);
-
-            ((List<long>)searchProperty.GetValue(search)).AddRange(ids);
-
-            return ids;
         }
 
         /// <summary>
@@ -276,8 +314,8 @@ namespace contentapi.Services.Implementations
                 var chaining = new Chaining()
                 {
                     viewableIdentifier = c,
-                    getField = match.Groups["field"].Value,
-                    searchField = match.Groups["searchfield"].Value
+                    getFieldPath = match.Groups["field"].Value.Split("_".ToCharArray(), StringSplitOptions.RemoveEmptyEntries).ToList(),
+                    searchFieldPath = match.Groups["searchfield"].Value.Split("_".ToCharArray(), StringSplitOptions.RemoveEmptyEntries).ToList()
                 };
 
                 int tempIndex = 0;
@@ -411,7 +449,7 @@ namespace contentapi.Services.Implementations
 
             //Parse the chains, get the ids. WARN: THIS IS DESTRUCTIVE TO DATA.BASESEARCH!!!
             foreach(var c in data.chains)
-                LinkTosearch(c, previousChains, data.baseSearch);
+                LinkToSearch(c, previousChains, data.baseSearch);
             
             var myResults = await data.retriever(data.baseSearch);
             previousChains.Add(myResults.Cast<IIdView>().ToList());

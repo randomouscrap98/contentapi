@@ -63,3 +63,14 @@ users (such as user pages?):
 
 It's the same as before with .IDsomefield, but we add $searchfield to specify
 the field to search against. This defaults to "ids" when $ is not given.
+
+
+* Chain field path
+
+You can also go deep into objects using '_', and can chain against string fields 
+IF they appear to be a list of ids. For instance, categories have a "values" 
+dictionary, and you may have a list of pinned content. You could do:
+
+ /api/read/chain?requests=category&requests=content.0values_pinned
+
+where values_pinned means "chain against values[pinned]".

@@ -36,7 +36,7 @@ The endpoint will "complete" when data is able to be chained. Regardless of
 how many "general" actions are going on across the website, it will NOT 
 complete until you're able to chain something. It will listen for
 all comments and all activity with id higher than lastId (or wait for anything
-new if lastId is not given or < 0), and return those ids to the chains. The
+new if lastId is not given or == 0), and return those ids to the chains. The
 chains are exactly the same as the chaining endpoint, chain 0 are the actions
 you're listening for. The actions are a simple list of ids (you are only 
 given id). 
