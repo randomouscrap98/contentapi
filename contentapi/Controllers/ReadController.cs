@@ -95,6 +95,11 @@ namespace contentapi.Controllers
             return listeners?.ToDictionary(x => x.Key.ToString(), x => x.Value.ToDictionary(k => k.Key.ToString(), v => v.Value));
         }
 
+        protected Dictionary<long, Dictionary<long, string>> ConvertListeners(Dictionary<string, Dictionary<string, string>> listeners)
+        {
+            return listeners?.ToDictionary(x => long.Parse(x.Key), y => y.Value.ToDictionary(k => long.Parse(k.Key), v => v.Value));
+        }
+
 
         [HttpGet("listen")]
         [Authorize]
@@ -113,19 +118,12 @@ namespace contentapi.Controllers
                 {
                     rConfig = mapper.Map<RelationListenChainConfig>(actionObject); 
                     rConfig.statuses = actionObject.statuses.ToDictionary(x => long.Parse(x.Key), y => y.Value);
-                    //new RelationListenChainConfig() { 
-                    //    lastId = actionObject.lastId, 
-                    //    chain = actionObject.chains, 
-                    //    clearNotifications = actionObject.clearNotifications 
-                    //};
                 }
 
                 if(listenerObject != null)
                 {
                     lConfig = mapper.Map<ListenerChainConfig>(listenerObject); //new ListenerChainConfig() { chain = listenerObject.chains };
-                    lConfig.lastListeners = listenerObject.lastListeners.ToDictionary(
-                        x => long.Parse(x.Key),
-                        y => y.Value.ToDictionary(k => long.Parse(k.Key), v => v.Value));
+                    lConfig.lastListeners = ConvertListeners(listenerObject.lastListeners);
                 }
 
                 var result = await service.ListenAsync(fields, lConfig, rConfig, GetRequesterNoFail(), cancelToken);
