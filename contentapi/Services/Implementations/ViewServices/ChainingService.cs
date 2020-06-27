@@ -217,6 +217,14 @@ namespace contentapi.Services.Implementations
                 {
                     return (List<long>)readValue;
                 }
+                else if (readValue is Dictionary<long,string>)
+                {
+                    return ((Dictionary<long,string>)readValue).Keys;
+                }
+                else if (readValue is Dictionary<string,string>)
+                {
+                    return ((Dictionary<string,string>)readValue).Keys.Select(x => long.Parse(x));
+                }
                 else if (readValue is string)
                 {
                     var vlist = (string)readValue;
