@@ -11,6 +11,7 @@ using System.Threading.Tasks;
 using AutoMapper;
 using contentapi.Services.Constants;
 using contentapi.Views;
+using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.Logging;
 using Randomous.EntitySystem;
 
@@ -29,6 +30,8 @@ namespace contentapi.Services.Implementations
         public ActivityViewService activity {get;set;}
         public WatchViewService watch {get;set;}
         public VoteViewService vote {get;set;}
+
+        public IEntityProvider provider {get;set;}
     }
 
     /// <summary>
@@ -189,11 +192,6 @@ namespace contentapi.Services.Implementations
 
         protected IEnumerable<long> GetIdsFromFieldPath(object start, List<string> fieldPath, int offset = 0)
         {
-            //In an effort to make this as simple as possible, don't check for or throw anything manually.
-            //We will try/catch in the big select many wherever it happens
-            //if(fieldPath.Count == 0)
-                //throw new BadRequestException("Bad/missing field in chain");
-
             object readValue = null;
 
             if(start is IDictionary)
@@ -368,12 +366,41 @@ namespace contentapi.Services.Implementations
                 return ChainStringAsync(data, services.activity, requester, previousResults);
             else if (data.endpoint == "activityaggregate")
                 return ChainStringAsync<ActivitySearch, ActivityAggregateView>(data, (s) => services.activity.SearchAggregateAsync(s, requester), previousResults);
+            else if (data.endpoint == "systemaggregate")
+                return ChainStringAsync<BaseSearch, SystemAggregate>(data, (s) => GetSystemAggregate(s), previousResults);
             else if (data.endpoint == "watch")
                 return ChainStringAsync(data, services.watch, requester, previousResults);
             else if (data.endpoint == "vote")
                 return ChainStringAsync(data, services.vote, requester, previousResults);
             else
                 throw new BadRequestException($"Unknown request: {data.endpoint}");
+        }
+
+        public class SystemAggregate : IIdView
+        {
+            public long id { get;set; }
+            public string type {get;set;}
+        }
+
+        public async Task<List<SystemAggregate>> GetSystemAggregate(BaseSearch search)
+        {
+            var result = new List<SystemAggregate>();
+            result.Add(new SystemAggregate()
+            {
+                id = await services.provider.GetQueryable<EntityRelation>().Select(x => x.id).MaxAsync(),
+                type = "actionMax"
+            });
+            result.Add(new SystemAggregate()
+            {
+                id = await services.provider.GetQueryable<Entity>().Select(x => x.id).MaxAsync(),
+                type = "contentMax"
+            });
+            result.Add(new SystemAggregate()
+            {
+                id = await services.provider.GetQueryable<EntityValue>().Select(x => x.id).MaxAsync(),
+                type = "valueMax"
+            });
+            return result;
         }
 
         /// <summary>
@@ -557,16 +584,6 @@ namespace contentapi.Services.Implementations
             public long id {get;set;}
             public List<long> listeners {get;set;}
         }
-
-        //protected class EntityRelationView : EntityRelation, IIdView
-        //{
-        //    public EntityRelationView(EntityRelation copy) : base(copy) {}
-        //}
-
-        //public Dictionary<long, Dictionary<long, string>> InstantListeners(IEnumerable<long> parentIds)
-        //{
-        //    var listeners = relationService.GetListenersInstant(parentIds);
-        //}
 
         public async Task<ListenResult> ListenAsync(Dictionary<string, List<string>> fields, ListenerChainConfig listeners, RelationListenChainConfig actions, Requester requester, CancellationToken cancelToken)
         {

@@ -4,6 +4,7 @@ using contentapi.Services.Constants;
 using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Options;
+using Randomous.EntitySystem;
 
 namespace contentapi.Services.Implementations
 {
@@ -66,7 +67,8 @@ namespace contentapi.Services.Implementations
                 comment = p.GetService<CommentViewService>(),
                 activity = p.GetService<ActivityViewService>(),
                 watch = p.GetService<WatchViewService>(),
-                vote = p.GetService<VoteViewService>()
+                vote = p.GetService<VoteViewService>(),
+                provider = p.GetService<IEntityProvider>()
             });
 
             //We need automapper for our view services
