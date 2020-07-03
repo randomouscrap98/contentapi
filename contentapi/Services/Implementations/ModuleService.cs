@@ -1,4 +1,5 @@
 using System;
+using System.Collections.Concurrent;
 using System.Collections.Generic;
 using System.Linq;
 using System.Threading;
@@ -25,7 +26,7 @@ namespace contentapi.Services.Implementations
     public class LoadedModule
     {
         public Script script;
-        public readonly object scriptLock = new object();
+        //public readonly object scriptLock = new object();
 
         public SqliteConnection dataConnection = null;
     }
@@ -42,10 +43,11 @@ namespace contentapi.Services.Implementations
         protected ILogger logger;
         protected ModuleServiceConfig config;
 
-        protected Dictionary<string, LoadedModule> loadedModules = new Dictionary<string, LoadedModule>();
+        protected ConcurrentDictionary<string, object> moduleLocks = new ConcurrentDictionary<string, object>();
+        protected ConcurrentDictionary<string, LoadedModule> loadedModules = new ConcurrentDictionary<string, LoadedModule>();
         protected List<ModuleMessage> privateMessages = new List<ModuleMessage>();
         protected readonly object messageLock = new object();
-        protected readonly object moduleLock = new object();
+        //protected readonly object moduleLock = new object();
 
         public ModuleService(ILogger<ModuleService> logger, ISignaler<ModuleMessage> signaler, ModuleServiceConfig config)
         { 
@@ -92,20 +94,10 @@ namespace contentapi.Services.Implementations
         /// <param name="module"></param>
         protected void UpdateLoadedModule(string name, LoadedModule module)
         {
-            lock(moduleLock)
+            lock(moduleLocks.GetOrAdd(name, s => new object()))
             {
-                if(loadedModules.ContainsKey(name))
-                {
-                    //We don't want to update a script while some other command is currently running.
-                    lock(loadedModules[name].scriptLock)
-                    {
-                        loadedModules[name] = module;
-                    }
-                }
-                else
-                {
-                    loadedModules[name] = module;
-                }
+                //loadedModules is a concurrent dictionary and thus adding is thread-safe
+                loadedModules[name] = module;
             }
         }
 
@@ -187,16 +179,34 @@ namespace contentapi.Services.Implementations
 
         public bool RemoveModule(string name)
         {
-            lock(moduleLock)
+            LoadedModule removedModule = null;
+
+            //Don't want to remove a module out from under an executing command
+            lock(moduleLocks.GetOrAdd(name, s => new object()))
             {
-                if(loadedModules.ContainsKey(name))
+                return loadedModules.TryRemove(name, out removedModule);
+            }
+        }
+
+        public string RunCommand(string module, string command, string data, Requester requester)
+        {
+            LoadedModule mod = null;
+
+            if(!loadedModules.TryGetValue(module, out mod))
+                throw new BadRequestException($"No module with name {module}");
+            
+            var cmdfuncname = $"command_{command}";
+
+            lock(moduleLocks.GetOrAdd(module, s => new object()))
+            {
+                if(!mod.script.Globals.Keys.Any(x => x.String == cmdfuncname))
+                    throw new BadRequestException($"No command '{command}' in module {module}");
+
+                using(mod.dataConnection = new SqliteConnection(config.ModuleDataConnectionString))
                 {
-                    loadedModules.Remove(name);
-                    return true;
-                }
-                else
-                {
-                    return false;
+                    mod.dataConnection.Open();
+                    DynValue res = mod.script.Call(mod.script.Globals[cmdfuncname], requester.userId, data);
+                    return res.String;
                 }
             }
         }
