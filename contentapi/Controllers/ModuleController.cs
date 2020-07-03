@@ -24,17 +24,6 @@ namespace contentapi.Controllers
             public Dictionary<string, string> saveData = new Dictionary<string, string>();
         }
 
-        public class ModuleMessage
-        {
-            private static long GlobalId = 0;
-
-            public DateTime date {get;set;} = DateTime.Now;
-            public long id = Interlocked.Increment(ref GlobalId);
-            public string message {get;set;}
-            public string module {get;set;}
-            public long uid = -1;
-        }
-
         public static Dictionary<string, TempModule> modules = new Dictionary<string, TempModule>();
         public static List<ModuleMessage> moduleMessages = new List<ModuleMessage>();
 
@@ -86,7 +75,7 @@ namespace contentapi.Controllers
             {
                 moduleMessages.Add(new ModuleMessage()
                 {
-                    uid = uid,
+                    receiverUid = uid,
                     module = name,
                     message = message
                 });

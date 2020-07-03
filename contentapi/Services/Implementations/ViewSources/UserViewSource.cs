@@ -79,7 +79,7 @@ namespace contentapi.Services.Implementations
                 .Add(NewValue(Keys.EmailKey, user.email))
                 .Add(NewValue(Keys.PasswordSaltKey, user.salt))
                 .Add(NewValue(Keys.PasswordHashKey, user.password));
-            this.ApplyFromEditView(user, newUser, Keys.UserType);
+            this.ApplyFromEditView(user, newUser, EntityType);
             //Can't do anything about super
             
             if(!string.IsNullOrWhiteSpace(user.registrationKey))

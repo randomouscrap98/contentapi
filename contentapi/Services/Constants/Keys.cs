@@ -46,6 +46,7 @@ namespace contentapi.Services.Constants
         public const string CategoryType = "tc";
         public const string ContentType = "tp"; //p for page/post
         public const string FileType = "tf";
+        public const string ModuleType = "tm";
 
 
         //User stuff  (keys for entity values)

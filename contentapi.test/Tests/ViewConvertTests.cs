@@ -203,5 +203,31 @@ namespace contentapi.test
 
             Assert.Equal(view, view2);
         }
+
+        [Fact]
+        public void TestModuleConvert()
+        {
+            var service = CreateService<ModuleViewSource>();
+
+            //Just some standard content view
+            var view = new ModuleView()
+            {
+                id = 99,
+                name = "test",
+                code = "this is lua\nprobably",
+                createUserId = 4,
+                editUserId = 4,
+                createDate = DateTime.Now,
+                editDate = DateTime.Now.AddDays(1)
+            };
+
+            view.values["wow"] = "yes";
+            view.values["no"] = "come on";
+
+            var temp = service.FromView(view);
+            var view2 = service.ToView(temp);
+
+            Assert.Equal(view, view2);
+        }
     }
 }
