@@ -10,10 +10,10 @@ namespace contentapi.Services.Implementations
 {
     public class ModuleViewService : BaseEntityViewService<ModuleView, ModuleSearch>
     {
-        protected ModuleService service;
+        protected IModuleService service;
 
         public ModuleViewService(ILogger<ModuleViewService> logger, ViewServicePack services, ModuleViewSource converter,
-            ModuleService service) :base(services, logger, converter) 
+            IModuleService service) :base(services, logger, converter) 
         { 
             this.service = service;
         }

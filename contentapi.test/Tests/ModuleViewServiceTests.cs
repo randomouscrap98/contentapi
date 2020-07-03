@@ -1,6 +1,9 @@
 using contentapi.Configs;
+using contentapi.Services;
 using contentapi.Services.Implementations;
+using contentapi.test.Implementations;
 using contentapi.Views;
+using Microsoft.Extensions.DependencyInjection;
 using Xunit;
 
 namespace contentapi.test
@@ -17,6 +20,12 @@ namespace contentapi.test
 
         protected override SystemConfig config => sysConfig;
 
+        public override IServiceCollection CreateServices()
+        {
+            var result = base.CreateServices();
+            result.AddSingleton<IModuleService, FakeModuleService>();
+            return result;
+        }
 
         public ModuleViewServiceTests()
         {

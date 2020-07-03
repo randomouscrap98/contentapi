@@ -12,39 +12,25 @@ using Randomous.EntitySystem;
 
 namespace contentapi.Services.Implementations
 {
-    public class ModuleMessage
-    {
-        private static long GlobalId = 0;
-
-        public DateTime date {get;set;} = DateTime.Now;
-        public long id = Interlocked.Increment(ref GlobalId);
-        public string message {get;set;}
-        public string module {get;set;}
-        public long receiverUid = -1;
-    }
-
-    public class LoadedModule
-    {
-        public Script script;
-        //public readonly object scriptLock = new object();
-
-        public SqliteConnection dataConnection = null;
-    }
-
     public class ModuleServiceConfig
     {
         public TimeSpan CleanupAge {get;set;} = TimeSpan.FromDays(3);
-        public string ModuleDataConnectionString {get;set;} = "Data Source=:memory:;";
+        public string ModuleDataConnectionString {get;set;} = "Data Source=moduledata.db"; 
     }
 
-    public class ModuleService
+    public class SqliteLoadedModule : LoadedModule
+    {
+        public SqliteConnection dataConnection = null;
+    }
+
+    public class ModuleService : IModuleService
     {
         protected ISignaler<ModuleMessage> signaler;
         protected ILogger logger;
         protected ModuleServiceConfig config;
 
         protected ConcurrentDictionary<string, object> moduleLocks = new ConcurrentDictionary<string, object>();
-        protected ConcurrentDictionary<string, LoadedModule> loadedModules = new ConcurrentDictionary<string, LoadedModule>();
+        protected ConcurrentDictionary<string, SqliteLoadedModule> loadedModules = new ConcurrentDictionary<string, SqliteLoadedModule>();
         protected List<ModuleMessage> privateMessages = new List<ModuleMessage>();
         protected readonly object messageLock = new object();
         //protected readonly object moduleLock = new object();
@@ -92,7 +78,7 @@ namespace contentapi.Services.Implementations
         /// </summary>
         /// <param name="name"></param>
         /// <param name="module"></param>
-        protected void UpdateLoadedModule(string name, LoadedModule module)
+        protected void UpdateLoadedModule(string name, SqliteLoadedModule module)
         {
             lock(moduleLocks.GetOrAdd(name, s => new object()))
             {
@@ -124,7 +110,7 @@ namespace contentapi.Services.Implementations
             });
 
             //no matter if it's an update or whatever, have to just rebuild the module
-            var mod = new LoadedModule();
+            var mod = new SqliteLoadedModule();
             mod.script = new Script();
             mod.script.DoString(module.code);     //This could take a LONG time.
 
@@ -179,7 +165,7 @@ namespace contentapi.Services.Implementations
 
         public bool RemoveModule(string name)
         {
-            LoadedModule removedModule = null;
+            SqliteLoadedModule removedModule = null;
 
             //Don't want to remove a module out from under an executing command
             lock(moduleLocks.GetOrAdd(name, s => new object()))
@@ -190,7 +176,7 @@ namespace contentapi.Services.Implementations
 
         public string RunCommand(string module, string command, string data, Requester requester)
         {
-            LoadedModule mod = null;
+            SqliteLoadedModule mod = null;
 
             if(!loadedModules.TryGetValue(module, out mod))
                 throw new BadRequestException($"No module with name {module}");
