@@ -113,7 +113,7 @@ namespace contentapi.Services.Implementations
         /// </summary>
         /// <param name="entityId"></param>
         /// <returns></returns>
-        public async Task<V> DeleteAsync(long entityId, Requester requester)
+        public virtual async Task<V> DeleteAsync(long entityId, Requester requester)
         {
             var package = await DeleteCheckAsync(entityId, requester);
             var view = converter.ToView(package);

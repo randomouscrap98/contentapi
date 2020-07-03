@@ -47,8 +47,10 @@ namespace contentapi.Services.Implementations
             services.AddTransient<VoteViewService>();
             services.AddTransient<ModuleViewService>();
 
+            //Special services
             services.AddTransient<RelationListenerService>();
             services.AddTransient<ChainService>();
+            services.AddTransient<ModuleService>();
 
             services.AddTransient<ActivityViewSource>();
             services.AddTransient<CategoryViewSource>();
@@ -97,7 +99,7 @@ namespace contentapi.Services.Implementations
             AddConfiguration<TempTokenServiceConfig>(services, config);
             AddConfiguration<TokenServiceConfig>(services, config);
             AddConfiguration<ChainServiceConfig>(services, config);
-            AddConfiguration<ModuleViewServiceConfig>(services, config);
+            AddConfiguration<ModuleServiceConfig>(services, config);
             AddConfiguration<RelationListenerServiceConfig>(services, config);
             //AddConfiguration<DocumentationConfig>(services, config);
             services.AddSingleton<HashConfig>();

@@ -32,7 +32,7 @@ namespace contentapi.test
         [Fact]
         public void TestSuperWrite()
         {
-            var module = service.WriteAsync(new ModuleView() { name = "test", code = "wow"}, super).Result;
+            var module = service.WriteAsync(new ModuleView() { name = "test", code = "--wow"}, super).Result;
             Assert.True(module.id > 0);
             Assert.True(module.name == "test");
         }
@@ -40,23 +40,23 @@ namespace contentapi.test
         [Fact]
         public void TestBasicNonWrite()
         {
-            AssertThrows<AuthorizationException>(() => service.WriteAsync(new ModuleView() { name = "test", code = "wow"}, basic).Wait());
+            AssertThrows<AuthorizationException>(() => service.WriteAsync(new ModuleView() { name = "test", code = "--wow"}, basic).Wait());
         }
 
         [Fact]
         public void TestUpdate()
         {
-            var module = service.WriteAsync(new ModuleView() { name = "test", code = "wow"}, super).Result;
-            Assert.True(module.code == "wow");
-            module.code = "grnadfket";
+            var module = service.WriteAsync(new ModuleView() { name = "test", code = "--wow"}, super).Result;
+            Assert.True(module.code == "--wow");
+            module.code = "--grnadfket";
             var module2 = service.WriteAsync(module, super).Result; //This should NOT throw an exception, using the same id so update
-            Assert.True(module.code == "grnadfket");
+            Assert.True(module.code == "--grnadfket");
         }
 
         [Fact]
         public void TestUniqueName()
         {
-            var module = service.WriteAsync(new ModuleView() { name = "test", code = "wow"}, super).Result;
+            var module = service.WriteAsync(new ModuleView() { name = "test", code = "--wow"}, super).Result;
             Assert.True(module.name == "test");
             module.id = 0; //Make it a "new" module
             AssertThrows<BadRequestException>(() => service.WriteAsync(module, super).Wait()); //Oops, can't write the same name
@@ -65,9 +65,9 @@ namespace contentapi.test
         [Fact]
         public void TestDoubleInsert()
         {
-            var module = service.WriteAsync(new ModuleView() { name = "test", code = "wow"}, super).Result;
+            var module = service.WriteAsync(new ModuleView() { name = "test", code = "--wow"}, super).Result;
             Assert.True(module.name == "test");
-            var module2 = service.WriteAsync(new ModuleView() { name = "test2", code = "wow"}, super).Result;
+            var module2 = service.WriteAsync(new ModuleView() { name = "test2", code = "--wow"}, super).Result;
             Assert.True(module2.name == "test2");
 
             var results = service.SearchAsync(new ModuleSearch(), super).Result;
