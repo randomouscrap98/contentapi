@@ -29,6 +29,7 @@ namespace contentapi.Services.Implementations
     public class ModuleServiceConfig
     {
         public TimeSpan CleanupAge = TimeSpan.FromDays(3);
+        public string ModuleDataConnectionString = "Data Source=moduledata.db";
     }
 
     public class ModuleService
@@ -66,12 +67,29 @@ namespace contentapi.Services.Implementations
 
         public LoadedModule UpdateModule(ModuleView module)
         {
+            var getValue = new Func<string, string>((s) => 
+            {
+                if(module.values.ContainsKey(s)) 
+                    return module.values[s];
+                else
+                    return null;
+            });
+
+            var getValueNum = new Func<string, long>((s) =>
+            {
+                long result = 0;
+                long.TryParse(getValue(s), out result);
+                return result;
+            });
+
             //no matter if it's an update or whatever, have to just rebuild the module
             var mod = new LoadedModule();
             mod.script = new Script();
             mod.script.DoString(module.code);     //This could take a LONG time.
             mod.script.Globals["getdata"] = null; //modules[name].saveData;
             mod.script.Globals["setdata"] = null; //modules[name].saveData;
+            mod.script.Globals["getvalue"] = getValue;
+            mod.script.Globals["getvaluenum"] = getValueNum;
             mod.script.Globals["sendmessage"] = new Action<long, string>((uid, message) =>
             {
                 AddMessage(new ModuleMessage()

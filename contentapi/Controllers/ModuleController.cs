@@ -24,53 +24,22 @@ namespace contentapi.Controllers
             //this.permService = permissionService;
         }
 
-        //[HttpGet] 
-        //public ActionResult<List<string>> Get()
-        //{
-        //    return modules.Keys.ToList();
-        //}
+        [HttpPost("{name}")]
+        public Task<ActionResult<ModuleView>> PostByNameAsync([FromRoute]string name, [FromBody]ModuleView module)
+        {
+            return ThrowToAction(async () =>
+            {
+                //Go find by name first
+                var existing = await service.FindByNameAsync(name);
 
-        //[HttpGet("{name}")]
-        //public ActionResult<string> Get([FromRoute]string name)
-        //{
-        //    if(!modules.ContainsKey(name))
-        //        return NotFound();
-        //    
-        //    return modules[name].code;
-        //}
-
-        //private void AddMessage(long uid, string message)
-        //{
-        //    moduleMessages.Add
-        //}
-
-        //[HttpPost("{name}")]
-        //public ActionResult Post([FromRoute]string name, [FromBody]string code) //NOTE: CODE NOT ACTUALLY USED!!! JUST FOR DANG MUSTACHE!!
-        //{
-        //    if(!permService.IsSuper(GetRequesterNoFail()))
-        //        return Unauthorized("Not allowed to post code for modules");
-
-        //    if(!modules.ContainsKey(name))
-        //        modules.Add(name, new TempModule());
-
-        //    modules[name].code = code;
-
-        //    var script = new Script();
-        //    script.DoString(modules[name].code);          //This could take a LONG time.
-        //    script.Globals["data"] = modules[name].saveData;
-        //    script.Globals["sendmessage"] = new Action<long, string>((uid, message) =>
-        //    {
-        //        moduleMessages.Add(new ModuleMessage()
-        //        {
-        //            receiverUid = uid,
-        //            module = name,
-        //            message = message
-        //        });
-        //    });
-        //    modules[name].script = script;
-
-        //    return Ok();
-        //}
+                if(existing != null)
+                    module.id = existing.Entity.id;
+                else
+                    module.id = 0;
+                
+                return await service.WriteAsync(module, GetRequesterNoFail());
+            });
+        }
 
         //This is a TEST endpoint!!!
         //[HttpGet("allmessages")]

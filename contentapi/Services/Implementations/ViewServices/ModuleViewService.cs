@@ -4,9 +4,6 @@ using System.Collections.Generic;
 using Microsoft.Extensions.Logging;
 using contentapi.Services.Extensions;
 using contentapi.Services.Constants;
-using System;
-using System.Threading;
-using System.Linq;
 
 namespace contentapi.Services.Implementations
 {

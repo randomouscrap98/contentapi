@@ -50,7 +50,7 @@ namespace contentapi.Services.Implementations
             //Special services
             services.AddTransient<RelationListenerService>();
             services.AddTransient<ChainService>();
-            services.AddTransient<ModuleService>();
+            services.AddSingleton<ModuleService>(); //Because of the special nature of modules, everyone should use the same one.
 
             services.AddTransient<ActivityViewSource>();
             services.AddTransient<CategoryViewSource>();
