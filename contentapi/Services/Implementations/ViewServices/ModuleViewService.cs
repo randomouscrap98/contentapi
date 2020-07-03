@@ -4,6 +4,7 @@ using System.Collections.Generic;
 using Microsoft.Extensions.Logging;
 using contentapi.Services.Extensions;
 using contentapi.Services.Constants;
+using System.Text.RegularExpressions;
 
 namespace contentapi.Services.Implementations
 {
@@ -25,6 +26,9 @@ namespace contentapi.Services.Implementations
 
             if(!services.permissions.IsSuper(requester))
                 throw new AuthorizationException("Only supers can create modules!");
+
+            if(!Regex.IsMatch(view.name, "^[a-z0-9_]+$"))
+                throw new BadRequestException("Module name can only be lowercase letters, numbers, and _");
 
             var found = await FindByNameAsync(view.name);
 

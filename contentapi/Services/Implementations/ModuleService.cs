@@ -4,6 +4,7 @@ using System.Linq;
 using System.Threading;
 using System.Threading.Tasks;
 using contentapi.Views;
+using Microsoft.Data.Sqlite;
 using Microsoft.Extensions.Logging;
 using MoonSharp.Interpreter;
 using Randomous.EntitySystem;
@@ -24,12 +25,15 @@ namespace contentapi.Services.Implementations
     public class LoadedModule
     {
         public Script script;
+        public readonly object scriptLock = new object();
+
+        public SqliteConnection dataConnection = null;
     }
 
     public class ModuleServiceConfig
     {
-        public TimeSpan CleanupAge = TimeSpan.FromDays(3);
-        public string ModuleDataConnectionString = "Data Source=moduledata.db";
+        public TimeSpan CleanupAge {get;set;} = TimeSpan.FromDays(3);
+        public string ModuleDataConnectionString {get;set;} = "Data Source=:memory:;";
     }
 
     public class ModuleService
@@ -65,6 +69,51 @@ namespace contentapi.Services.Implementations
             }
         }
 
+        /// <summary>
+        /// Setup the DATA database for the given module
+        /// </summary>
+        /// <param name="module"></param>
+        protected void SetupDatabaseForModule(string module)
+        {
+            //For performance, need to create table now in case it doesn't exist
+            using(var con = new SqliteConnection(config.ModuleDataConnectionString))
+            {
+                con.Open();
+                var command = con.CreateCommand();
+                command.CommandText = $"CREATE TABLE IF NOT EXISTS {module} (key TEXT PRIMARY KEY, value TEXT)";
+                command.ExecuteNonQuery();
+            }
+        }
+
+        /// <summary>
+        /// Assuming we have an already-setup loaded module, update the in-memory cache
+        /// </summary>
+        /// <param name="name"></param>
+        /// <param name="module"></param>
+        protected void UpdateLoadedModule(string name, LoadedModule module)
+        {
+            lock(moduleLock)
+            {
+                if(loadedModules.ContainsKey(name))
+                {
+                    //We don't want to update a script while some other command is currently running.
+                    lock(loadedModules[name].scriptLock)
+                    {
+                        loadedModules[name] = module;
+                    }
+                }
+                else
+                {
+                    loadedModules[name] = module;
+                }
+            }
+        }
+
+        /// <summary>
+        /// Update our modules with the given module view (parses code, sets up data, etc.)
+        /// </summary>
+        /// <param name="module"></param>
+        /// <returns></returns>
         public LoadedModule UpdateModule(ModuleView module)
         {
             var getValue = new Func<string, string>((s) => 
@@ -86,8 +135,38 @@ namespace contentapi.Services.Implementations
             var mod = new LoadedModule();
             mod.script = new Script();
             mod.script.DoString(module.code);     //This could take a LONG time.
-            mod.script.Globals["getdata"] = null; //modules[name].saveData;
-            mod.script.Globals["setdata"] = null; //modules[name].saveData;
+
+            var getData = new Func<string, Dictionary<string, string>>((k) =>
+            {
+                var command = mod.dataConnection.CreateCommand();
+                command.CommandText = $"SELECT key, value FROM {module.name} WHERE key LIKE $key";
+                command.Parameters.AddWithValue("$key", k);
+                var result = new Dictionary<string, string>();
+                using (var reader = command.ExecuteReader())
+                {
+                    while (reader.Read())
+                        result[reader.GetString(0)] = reader.GetString(1);
+                }
+                return result;
+            });
+
+            mod.script.Globals["getdata"] = new Func<string, string>((k) =>
+            {
+                var result = getData(k);
+                if(result.ContainsKey(k))
+                    return result[k];
+                else
+                    return null;
+            });
+            mod.script.Globals["getalldata"] = getData;
+            mod.script.Globals["setdata"] = new Action<string, string>((k,v) =>
+            {
+                var command = mod.dataConnection.CreateCommand();
+                command.CommandText = $"INSERT OR REPLACE INTO {module.name} (key, value) values($key, $value)";
+                command.Parameters.AddWithValue("$key", k);
+                command.Parameters.AddWithValue("$value", v);
+                command.ExecuteNonQuery();
+            });
             mod.script.Globals["getvalue"] = getValue;
             mod.script.Globals["getvaluenum"] = getValueNum;
             mod.script.Globals["sendmessage"] = new Action<long, string>((uid, message) =>
@@ -100,10 +179,8 @@ namespace contentapi.Services.Implementations
                 });
             });
 
-            lock(moduleLock)
-            {
-                loadedModules[module.name] = mod;
-            }
+            SetupDatabaseForModule(module.name);
+            UpdateLoadedModule(module.name, mod);
 
             return mod;
         }
