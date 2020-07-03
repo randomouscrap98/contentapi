@@ -45,6 +45,7 @@ namespace contentapi.Services.Implementations
             services.AddTransient<UserViewService>();
             services.AddTransient<WatchViewService>();
             services.AddTransient<VoteViewService>();
+            services.AddTransient<ModuleViewService>();
 
             services.AddTransient<RelationListenerService>();
             services.AddTransient<ChainService>();
@@ -57,6 +58,7 @@ namespace contentapi.Services.Implementations
             services.AddTransient<UserViewSource>();
             services.AddTransient<WatchViewSource>();
             services.AddTransient<VoteViewSource>();
+            services.AddTransient<ModuleViewSource>();
 
             services.AddTransient((p) => new ChainServices()
             {
@@ -68,7 +70,8 @@ namespace contentapi.Services.Implementations
                 activity = p.GetService<ActivityViewService>(),
                 watch = p.GetService<WatchViewService>(),
                 vote = p.GetService<VoteViewService>(),
-                provider = p.GetService<IEntityProvider>()
+                provider = p.GetService<IEntityProvider>(),
+                module = p.GetService<ModuleViewService>()
             });
 
             //We need automapper for our view services

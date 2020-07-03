@@ -46,6 +46,8 @@ namespace contentapi.Services.Implementations
                     x.type = "user";
                 else if(x.type == Keys.FileType)
                     x.type = "file";
+                else if (x.type == Keys.ModuleType)
+                    x.type = "module";
             });
 
             return result;

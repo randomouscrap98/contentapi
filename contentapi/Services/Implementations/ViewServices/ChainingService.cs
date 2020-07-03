@@ -30,6 +30,7 @@ namespace contentapi.Services.Implementations
         public ActivityViewService activity {get;set;}
         public WatchViewService watch {get;set;}
         public VoteViewService vote {get;set;}
+        public ModuleViewService module {get;set;}
 
         public IEntityProvider provider {get;set;}
     }
@@ -358,6 +359,8 @@ namespace contentapi.Services.Implementations
                 return ChainStringAsync(data, services.content, requester, previousResults);
             else if (data.endpoint == "category")
                 return ChainStringAsync(data, services.category, requester, previousResults);
+            else if (data.endpoint == "module")
+                return ChainStringAsync(data, services.module, requester, previousResults);
             else if (data.endpoint == "comment")
                 return ChainStringAsync(data, services.comment, requester, previousResults);
             else if (data.endpoint == "commentaggregate")
