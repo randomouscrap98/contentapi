@@ -101,9 +101,9 @@ namespace contentapi.test
                 a();
                 Assert.True(false, "Action was supposed to throw an exception!");
             }
-            catch(T)
+            catch(Exception ex)
             {
-                //it's ok
+                Assert.True(ex is T || ex is AggregateException && ex.InnerException is T, $"Task exception should've been {typeof(T)}, was: {ex}");
             }
         }
 

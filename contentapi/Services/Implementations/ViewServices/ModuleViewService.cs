@@ -24,18 +24,25 @@ namespace contentapi.Services.Implementations
         public long receiverUid = -1;
     }
 
+    public class ModuleViewServiceConfig
+    {
+        public TimeSpan CleanupAge = TimeSpan.FromDays(3);
+    }
+
     public class ModuleViewService : BaseEntityViewService<ModuleView, ModuleSearch>
     {
         protected ISignaler<ModuleMessage> signaler;
+        protected ModuleViewServiceConfig config;
 
         //This is some in-memory mega list, just imagine it was persistent instead
         private static List<ModuleMessage> privateMessages = new List<ModuleMessage>();
         private static readonly object messageLock = new object();
 
         public ModuleViewService(ILogger<ModuleViewService> logger, ViewServicePack services, ModuleViewSource converter, 
-            ISignaler<ModuleMessage> signaler) :base(services, logger, converter) 
+            ISignaler<ModuleMessage> signaler, ModuleViewServiceConfig config) :base(services, logger, converter) 
         { 
             this.signaler = signaler;
+            this.config = config;
         }
 
         public override string EntityType => Keys.ModuleType;
@@ -43,8 +50,15 @@ namespace contentapi.Services.Implementations
         public override async Task<ModuleView> CleanViewGeneralAsync(ModuleView view, Requester requester)
         {
             view = await base.CleanViewGeneralAsync(view, requester);
+
             if(!services.permissions.IsSuper(requester))
                 throw new AuthorizationException("Only supers can create modules!");
+
+            var found = await FindByNameAsync(view.name);
+
+            if(found != null && found.Entity.id != view.id)
+                throw new BadRequestException($"A module with name '{view.name}' already exists!");
+
             return view;
         }
 
@@ -59,6 +73,13 @@ namespace contentapi.Services.Implementations
             lock(messageLock)
             {
                 privateMessages.Add(message);
+
+                var cutoff = DateTime.Today.Subtract(config.CleanupAge); //This will be the same value for an entire day
+                var index = privateMessages.FindIndex(0, privateMessages.Count, x => x.date > cutoff); //As such, this index will be 0 except ONE time during the day.
+
+                if(index > 0)
+                    privateMessages = privateMessages.Skip(index).ToList();
+
                 signaler.SignalItems(new[] { message });
             }
         }
