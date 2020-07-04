@@ -35,7 +35,7 @@ namespace contentapi.Views
     public interface IPermissionView : IBaseView
     {
         long parentId {get;set;}
-        Dictionary<string, string> permissions {get;set;}
+        Dictionary<long, string> permissions {get;set;}
         string myPerms {get;set;}
     }
 

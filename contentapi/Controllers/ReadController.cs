@@ -15,22 +15,23 @@ using contentapi.Views;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.Extensions.Logging;
+using Newtonsoft.Json;
 using Randomous.EntitySystem;
 
 namespace contentapi.Controllers
 {
-    public class ReadControllerProfile : Profile
-    {
-        public ReadControllerProfile()
-        {
-            //Input
-            CreateMap<ReadController.RelationListenQuery, RelationListenChainConfig>();
-            CreateMap<ReadController.ListenerQuery, ListenerChainConfig>();
+    //public class ReadControllerProfile : Profile
+    //{
+    //    public ReadControllerProfile()
+    //    {
+    //        //Input
+    //        CreateMap<ReadController.RelationListenQuery, RelationListenChainConfig>();
+    //        CreateMap<ReadController.ListenerQuery, ListenerChainConfig>();
 
-            //output
-            CreateMap<ListenResult, ReadController.ListenEndpointResult>();
-        }
-    }
+    //        //output
+    //        CreateMap<ListenResult, ReadController.ListenEndpointResult>();
+    //    }
+    //}
 
     public class ReadController : BaseSimpleController
     {
@@ -39,10 +40,10 @@ namespace contentapi.Controllers
         protected RelationListenerService relationListenerService;
         protected IMapper mapper;
 
-        protected JsonSerializerOptions jsonOptions = new JsonSerializerOptions()
-        {
-            PropertyNameCaseInsensitive = true
-        };
+        //protected JsonSerializerOptions jsonOptions = new JsonSerializerOptions()
+        //{
+        //    PropertyNameCaseInsensitive = true
+        //};
 
         public ReadController(ILogger<BaseSimpleController> logger, ILanguageService docService, ChainService service, 
             RelationListenerService relationListenerService, IMapper mapper)
@@ -68,73 +69,74 @@ namespace contentapi.Controllers
             return ThrowToAction(() => Task.FromResult(docService.GetString("doc.read.chain", "en")));
         }
 
-        public class RelationListenQuery 
-        { 
-            public long lastId {get;set;} = -1;
-            public Dictionary<string, string> statuses {get;set;} = new Dictionary<string, string>();
-            public List<long> clearNotifications {get;set;} = new List<long>();
-            public List<string> chains {get;set;}
-        }
+        //public class RelationListenQuery 
+        //{ 
+        //    public long lastId {get;set;} = -1;
+        //    public Dictionary<string, string> statuses {get;set;} = new Dictionary<string, string>();
+        //    public List<long> clearNotifications {get;set;} = new List<long>();
+        //    public List<string> chains {get;set;}
+        //}
 
-        public class ListenerQuery
-        {
-            public Dictionary<string, Dictionary<string, string>> lastListeners {get;set;} = new Dictionary<string, Dictionary<string, string>>();
-            public List<string> chains {get;set;}
-        }
+        //public class ListenerQuery
+        //{
+        //    public Dictionary<string, Dictionary<string, string>> lastListeners {get;set;} = new Dictionary<string, Dictionary<string, string>>();
+        //    public List<string> chains {get;set;}
+        //}
 
-        public class ListenEndpointResult
-        {
-            public Dictionary<string, Dictionary<string, string>> listeners {get;set;}
-            public Dictionary<string, List<ExpandoObject>> chains {get;set;}
-            public List<ModuleMessage> moduleMessages {get;set;}
-            public long lastId {get;set;}
-            public long lastModuleId {get;set;}
-            public List<string> warnings {get;set;} = new List<string>();
-        }
+        //public class ListenEndpointResult
+        //{
+        //    public Dictionary<string, Dictionary<string, string>> listeners {get;set;}
+        //    public Dictionary<string, List<ExpandoObject>> chains {get;set;}
+        //    public List<ModuleMessage> moduleMessages {get;set;}
+        //    public long lastId {get;set;}
+        //    public long lastModuleId {get;set;}
+        //    public List<string> warnings {get;set;} = new List<string>();
+        //}
 
-        protected Dictionary<string, Dictionary<string, string>> ConvertListeners(Dictionary<long, Dictionary<long, string>> listeners)
-        {
-            return listeners?.ToDictionary(x => x.Key.ToString(), x => x.Value.ToDictionary(k => k.Key.ToString(), v => v.Value));
-        }
+        //protected Dictionary<string, Dictionary<string, string>> ConvertListeners(Dictionary<long, Dictionary<long, string>> listeners)
+        //{
+        //    return listeners?.ToDictionary(x => x.Key.ToString(), x => x.Value.ToDictionary(k => k.Key.ToString(), v => v.Value));
+        //}
 
-        protected Dictionary<long, Dictionary<long, string>> ConvertListeners(Dictionary<string, Dictionary<string, string>> listeners)
-        {
-            return listeners?.ToDictionary(x => long.Parse(x.Key), y => y.Value.ToDictionary(k => long.Parse(k.Key), v => v.Value));
-        }
+        //protected Dictionary<long, Dictionary<long, string>> ConvertListeners(Dictionary<string, Dictionary<string, string>> listeners)
+        //{
+        //    return listeners?.ToDictionary(x => long.Parse(x.Key), y => y.Value.ToDictionary(k => long.Parse(k.Key), v => v.Value));
+        //}
 
 
         [HttpGet("listen")]
         [Authorize]
-        public Task<ActionResult<ListenEndpointResult>> ListenAsync([FromQuery]Dictionary<string, List<string>> fields, 
+        public Task<ActionResult<ListenResult>> ListenAsync([FromQuery]Dictionary<string, List<string>> fields, 
             [FromQuery]string listeners, [FromQuery]string actions, [FromQuery]string modules, CancellationToken cancelToken)
         {
             //HttpContext.
             return ThrowToAction(async () =>
             {
-                var listenerObject = JsonSerializer.Deserialize<ListenerQuery>(listeners ?? "null", jsonOptions);
-                var actionObject = JsonSerializer.Deserialize<RelationListenQuery>(actions ?? "null", jsonOptions);
 
-                RelationListenChainConfig rConfig = null;
-                ListenerChainConfig lConfig = null;
+                //RelationListenChainConfig rConfig = null;
+                //ListenerChainConfig lConfig = null;
 
-                if (actionObject != null)
-                {
-                    rConfig = mapper.Map<RelationListenChainConfig>(actionObject); 
-                    rConfig.statuses = actionObject.statuses.ToDictionary(x => long.Parse(x.Key), y => y.Value);
-                }
+                //if (actionObject != null)
+                //{
+                //    rConfig = mapper.Map<RelationListenChainConfig>(actionObject); 
+                //    rConfig.statuses = actionObject.statuses.ToDictionary(x => long.Parse(x.Key), y => y.Value);
+                //}
 
-                if(listenerObject != null)
-                {
-                    lConfig = mapper.Map<ListenerChainConfig>(listenerObject); //new ListenerChainConfig() { chain = listenerObject.chains };
-                    lConfig.lastListeners = ConvertListeners(listenerObject.lastListeners);
-                }
+                //if(listenerObject != null)
+                //{
+                //    lConfig = mapper.Map<ListenerChainConfig>(listenerObject); //new ListenerChainConfig() { chain = listenerObject.chains };
+                //    lConfig.lastListeners = ConvertListeners(listenerObject.lastListeners);
+                //}
 
-                var mConfig = JsonSerializer.Deserialize<ModuleChainConfig>(modules ?? "null", jsonOptions);
+            //Newtonsoft.Json.JsonConvert.DeserializeObject<List<Dictionary<string, object>>>(test);
+                var lConfig = JsonConvert.DeserializeObject<ListenerChainConfig>(listeners ?? "null"); //, jsonOptions);
+                var rConfig = JsonConvert.DeserializeObject<RelationListenChainConfig>(actions ?? "null"); //, jsonOptions);
+                var mConfig = JsonConvert.DeserializeObject<ModuleChainConfig>(modules ?? "null"); //, jsonOptions);
                 var result = await service.ListenAsync(fields, lConfig, rConfig, mConfig, GetRequesterNoFail(), cancelToken);
 
-                var returnResult = mapper.Map<ListenEndpointResult>(result);
-                returnResult.listeners = ConvertListeners(result.listeners);
-                return returnResult;
+                //var returnResult = mapper.Map<ListenEndpointResult>(result);
+                //returnResult.listeners = ConvertListeners(result.listeners);
+                return result;
             });
         }
 

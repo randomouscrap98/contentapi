@@ -32,7 +32,7 @@ namespace contentapi.test
         {
             //Assume you want to be able to create in the parent lol
             if(parentModify == null)
-                parentModify = (v) => v.permissions.Add("0", "C");
+                parentModify = (v) => v.permissions.Add(0, "C");
 
             var parentId = SetupParent(parentModify);
             var view = new V() { parentId = parentId };
@@ -124,7 +124,7 @@ namespace contentapi.test
             var writeView = BasicInsertAsync(requester).Result; //service.WriteAsync(view, requester).Result;
 
             //Owners should be able to SPECIFICALLY modify permissions
-            writeView.permissions.Add("0", "CR");
+            writeView.permissions.Add(0, "CR");
             var writeView2 = service.WriteAsync(writeView, requester).Result;
 
             Assert.NotEqual(writeView2.permissions, writeView.permissions);
@@ -141,8 +141,8 @@ namespace contentapi.test
             Assert.True(readView.editDate - start < TimeSpan.FromSeconds(60)); //Make sure the date is KINDA close
             Assert.NotEqual(readView.editDate, readView.createDate);
             Assert.True(readView.id > 0);
-            Assert.True(writeView2.permissions.ContainsKey("0"));
-            Assert.True(writeView2.permissions["0"].ToLower() == "cr" || writeView2.permissions["0"].ToLower() == "rc");
+            Assert.True(writeView2.permissions.ContainsKey(0));
+            Assert.True(writeView2.permissions[0].ToLower() == "cr" || writeView2.permissions[0].ToLower() == "rc");
 
             //I don't assume what edit date/user will be on create.
             AssertViewsEqual(readView, writeView2);
@@ -226,11 +226,11 @@ namespace contentapi.test
             if(isAction("c"))
             {
                 //This will throw on fail, so...
-                var view = BasicInsertAsync(requester, null, !allowed, (v) => v.permissions.Add(permUser.ToString(), permValue)).Result;
+                var view = BasicInsertAsync(requester, null, !allowed, (v) => v.permissions.Add(permUser, permValue)).Result;
             }
             else
             {
-                var view = BasicInsertAsync(creator, (v) => v.permissions.Add(permUser.ToString(), permValue)).Result;
+                var view = BasicInsertAsync(creator, (v) => v.permissions.Add(permUser, permValue)).Result;
                 //Don't set anything on the view for update, will this be an acceptable test?
                 var tryAction = new Action<Action>((a) =>
                 {

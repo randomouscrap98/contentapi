@@ -99,7 +99,7 @@ namespace contentapi.Services.Implementations
 
         //Permission  view applications
         
-        public List<EntityRelation> FromPerms(Dictionary<string, string> perms)
+        public List<EntityRelation> FromPerms(Dictionary<long, string> perms)
         {
             var result = new List<EntityRelation>();
             foreach(var perm in perms)
@@ -109,26 +109,26 @@ namespace contentapi.Services.Implementations
                     if(!Actions.ActionMap.ContainsKey(p))
                         throw new InvalidOperationException("Bad character in permission");
                     
-                    long userId = 0;
+                    //long userId = 0;
 
-                    if(!long.TryParse(perm.Key, out userId))
-                        throw new InvalidOperationException("Id not an integer!");
+                    //if(!long.TryParse(perm.Key, out userId))
+                    //    throw new InvalidOperationException("Id not an integer!");
 
-                    result.Add(NewRelation(userId, Actions.ActionMap[p]));
+                    result.Add(NewRelation(perm.Key, Actions.ActionMap[p]));
                 }
             }
             return result;
         }
 
-        public Dictionary<string, string> ToPerms(IEnumerable<EntityRelation> relations)
+        public Dictionary<long, string> ToPerms(IEnumerable<EntityRelation> relations)
         {
-            var result = new Dictionary<string, string>();
+            var result = new Dictionary<long, string>();
             foreach(var relation in relations)
             {
                 var perm = Actions.ActionMap.Where(x => x.Value == relation.type);
                 if(perm.Count() != 1)
                     continue;
-                var userKey = relation.entityId1.ToString();
+                var userKey = relation.entityId1; //.ToString();
                 if(!result.ContainsKey(userKey))
                     result.Add(userKey, "");
                 result[userKey] += (perm.First().Key);

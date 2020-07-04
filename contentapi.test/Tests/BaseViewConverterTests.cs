@@ -8,7 +8,7 @@ namespace contentapi.test
 {
     public class BaseViewConverterTests : ServiceTestBase<ViewSourceServices>
     {
-        protected void AssertPermsEqual(Dictionary<string, string> perms1, Dictionary<string, string> perms2)
+        protected void AssertPermsEqual(Dictionary<long, string> perms1, Dictionary<long, string> perms2)
         {
             Assert.Equal(
                 perms1.ToDictionary(x => x.Key, y => y.Value.ToUpper()), 
@@ -18,11 +18,11 @@ namespace contentapi.test
         [Fact]
         public void PermissionsTransient()
         {
-            var perms = new Dictionary<string, string>()
+            var perms = new Dictionary<long, string>()
             {
-                { "0", "CR" },
-                { "2", "CRUD" },
-                { "3", "CRU" }
+                { 0, "CR" },
+                { 2, "CRUD" },
+                { 3, "CRU" }
             };
 
             var relations = service.FromPerms(perms);

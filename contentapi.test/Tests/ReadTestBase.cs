@@ -44,8 +44,8 @@ namespace contentapi.test
             unit.commonUser = await userService.WriteAsync(new UserViewFull() { username = "commonUser" }, requester);
             unit.specialUser = await userService.WriteAsync(new UserViewFull() { username = "specialUser" }, requester);
 
-            unit.commonContent = await contentService.WriteAsync(new ContentView() { name = "commonContent", parentId = 0, permissions = new Dictionary<string, string>() {{"0" , "cr" }} }, requester);
-            unit.specialContent = await contentService.WriteAsync(new ContentView() { name = "specialContent", parentId = 0, permissions = new Dictionary<string, string>() {{unit.specialUser.id.ToString() , "cr" }} }, requester);
+            unit.commonContent = await contentService.WriteAsync(new ContentView() { name = "commonContent", parentId = 0, permissions = new Dictionary<long, string>() {{0 , "cr" }} }, requester);
+            unit.specialContent = await contentService.WriteAsync(new ContentView() { name = "specialContent", parentId = 0, permissions = new Dictionary<long, string>() {{unit.specialUser.id , "cr" }} }, requester);
 
             return unit;
         }

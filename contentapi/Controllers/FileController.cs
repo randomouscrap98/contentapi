@@ -82,7 +82,7 @@ namespace contentapi.Controllers
                 var requester = GetRequesterNoFail();
                 
                 var newView = new FileView();
-                newView.permissions["0"] = "R";
+                newView.permissions[0] = "R";
 
                 IImageFormat format = null;
                 long imageByteCount = file.Length;

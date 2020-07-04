@@ -29,8 +29,8 @@ namespace contentapi.test
             view.parentId = 7;
             view.values.Add("key1", "value1");
             view.values.Add("keetooo", "velkdu");
-            view.permissions.Add("0", "crud");
-            view.permissions.Add("2", "cr");
+            view.permissions.Add(0, "crud");
+            view.permissions.Add(2, "cr");
         }
 
         [Fact]

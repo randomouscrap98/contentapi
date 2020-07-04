@@ -65,7 +65,7 @@ namespace contentapi.Services.Implementations
         }
 
 
-        public void CheckPermissionValues(Dictionary<string, string> perms)
+        public void CheckPermissionValues(Dictionary<long, string> perms)
         {
             foreach(var perm in perms)
             {

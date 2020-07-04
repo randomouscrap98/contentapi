@@ -24,17 +24,17 @@ namespace contentapi.Services.Implementations
         public async Task CheckPermissionUsersAsync(V view)
         {
             //And now make sure every single user exists
-            var userIds = new List<long>();
+            var userIds = view.permissions.Keys.ToList();//new List<long>();
 
-            foreach(var perm in view.permissions)
-            {
-                long uid = 0;
+            //foreach(var perm in view.permissions)
+            //{
+            //    //long uid = 0;
 
-                if(!long.TryParse(perm.Key, out uid))
-                    throw new BadRequestException($"Cannot parse permission uid {perm.Key}");
-                
-                userIds.Add(uid);
-            }
+            //    //if(!long.TryParse(perm.Key, out uid))
+            //    //    throw new BadRequestException($"Cannot parse permission uid {perm.Key}");
+            //    
+            //    userIds.Add(uid);
+            //}
 
             userIds = userIds.Distinct().ToList();
             userIds.Remove(0); //Don't include the default

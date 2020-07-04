@@ -15,6 +15,7 @@ using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.IdentityModel.Tokens;
 using Microsoft.OpenApi.Models;
+using Microsoft.AspNetCore.Mvc.NewtonsoftJson;
 using Randomous.EntitySystem;
 using Randomous.EntitySystem.Implementations;
 using Serilog;
@@ -89,7 +90,8 @@ namespace contentapi
 
             services.AddCors();
             services.AddControllers()
-                    .AddJsonOptions(options=> options.JsonSerializerOptions.Converters.Add(new TimeSpanToStringConverter()));
+                    .AddJsonOptions(options=> options.JsonSerializerOptions.Converters.Add(new TimeSpanToStringConverter()))
+                    .AddNewtonsoftJson();
 
             //other rate limiting stuff
             services.AddSingleton<IHttpContextAccessor, HttpContextAccessor>();

@@ -264,7 +264,7 @@ namespace contentapi.test
             requester.userId = user.id;
             //Now create some content as user
             var content = new ContentView() { name = "simplecontent" };
-            content.permissions[$"{user.id}"] = "CRUD";
+            content.permissions[user.id] = "CRUD";
             //content.permissions["99"] = "CR"; // $"{user.id},99";
             content = services.content.WriteAsync(content, requester).Result;
 

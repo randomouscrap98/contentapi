@@ -23,7 +23,7 @@ namespace contentapi.Views
         /// <typeparam name="long"></typeparam>
         /// <typeparam name="string"></typeparam>
         /// <returns></returns>
-        public Dictionary<string, string> permissions {get;set;} = new Dictionary<string, string>();
+        public Dictionary<long, string> permissions {get;set;} = new Dictionary<long, string>();
 
         public Dictionary<string, string> values {get;set;} = new Dictionary<string, string>();
 
