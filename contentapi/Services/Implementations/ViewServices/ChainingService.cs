@@ -9,6 +9,7 @@ using System.Text.RegularExpressions;
 using System.Threading;
 using System.Threading.Tasks;
 using AutoMapper;
+using contentapi.Configs;
 using contentapi.Services.Constants;
 using contentapi.Views;
 using Microsoft.EntityFrameworkCore;
@@ -172,16 +173,19 @@ namespace contentapi.Services.Implementations
         protected IModuleService moduleService;
         protected ILogger logger;
         protected ChainServiceConfig config;
+        protected SystemConfig systemConfig;
 
         //These should all be... settings?
 
-        public ChainService(ILogger<ChainService> logger, ChainServices services, RelationListenerService relationService, ChainServiceConfig config, IModuleService moduleService)
+        public ChainService(ILogger<ChainService> logger, ChainServices services, RelationListenerService relationService, ChainServiceConfig config, IModuleService moduleService,
+            SystemConfig systemConfig)
         {
             this.logger = logger;
             this.services = services;
             this.relationService = relationService;
             this.config = config;
             this.moduleService = moduleService;
+            this.systemConfig = systemConfig;
         }
 
         public async Task SetupAsync() 
@@ -774,7 +778,7 @@ namespace contentapi.Services.Implementations
                     {
                         Func<Task> run = async () =>
                         {
-                            result.modulemessages = await moduleService.ListenAsync(modules.lastId, requester, TimeSpan.FromDays(5), linkedCts.Token);  //listeners.lastListeners, requester, linkedCts.Token);
+                            result.modulemessages = await moduleService.ListenAsync(modules.lastId, requester, systemConfig.ListenTimeout, linkedCts.Token);  //listeners.lastListeners, requester, linkedCts.Token);
                             result.lastModuleId = result.modulemessages.Max(x => x.id);
                             await chainer(modules.chains, result.modulemessages); //Select(x => new PhonyListenerList() { id = x.Key, listeners = x.Value.Keys.ToList() }));
                         };

@@ -5,6 +5,7 @@ using System.Linq;
 using System.Text.RegularExpressions;
 using System.Threading;
 using System.Threading.Tasks;
+using contentapi.Configs;
 using contentapi.Views;
 using Microsoft.Data.Sqlite;
 using Microsoft.Extensions.Logging;
@@ -30,15 +31,18 @@ namespace contentapi.Services.Implementations
         protected ISignaler<ModuleMessage> signaler;
         protected ILogger logger;
         protected ModuleServiceConfig config;
+        //protected SystemConfig systemConfig;
 
         protected ConcurrentDictionary<string, object> moduleLocks = new ConcurrentDictionary<string, object>();
         protected ConcurrentDictionary<string, SqliteLoadedModule> loadedModules = new ConcurrentDictionary<string, SqliteLoadedModule>();
         protected ConcurrentDictionary<long, List<ModuleMessage>> privateMessages = new ConcurrentDictionary<long, List<ModuleMessage>>();
 
         public ModuleService(ILogger<ModuleService> logger, ISignaler<ModuleMessage> signaler, ModuleServiceConfig config)
+                //SystemConfig systemConfig)
         { 
             this.signaler = signaler;
             this.config = config;
+            //this.systemConfig = systemConfig;
         }
 
         public void AddMessage(ModuleMessage message)

@@ -53,6 +53,24 @@ namespace contentapi.test
         }
 
         [Fact]
+        public void TestSuperDelete()
+        {
+            var module = service.WriteAsync(new ModuleView() { name = "test", code = "--wow"}, super).Result;
+            Assert.True(module.id > 0);
+            Assert.True(module.name == "test");
+            service.DeleteAsync(module.id, super ).Wait();
+        }
+
+        [Fact]
+        public void TestNonSuperDelete()
+        {
+            var module = service.WriteAsync(new ModuleView() { name = "test", code = "--wow"}, super).Result;
+            Assert.True(module.id > 0);
+            Assert.True(module.name == "test");
+            AssertThrows<AuthorizationException>(() => service.DeleteAsync(module.id, basic).Wait());
+        }
+
+        [Fact]
         public void TestUpdate()
         {
             var module = service.WriteAsync(new ModuleView() { name = "test", code = "--wow"}, super).Result;

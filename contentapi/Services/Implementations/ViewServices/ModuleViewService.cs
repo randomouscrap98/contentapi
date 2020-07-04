@@ -5,6 +5,7 @@ using Microsoft.Extensions.Logging;
 using contentapi.Services.Extensions;
 using contentapi.Services.Constants;
 using System.Text.RegularExpressions;
+using Randomous.EntitySystem;
 
 namespace contentapi.Services.Implementations
 {
@@ -43,6 +44,16 @@ namespace contentapi.Services.Implementations
                 throw new BadRequestException($"A module with name '{view.name}' already exists!");
 
             return view;
+        }
+
+        public override async Task<EntityPackage> DeleteCheckAsync(long entityId, Requester requester) 
+        {
+            var result = await base.DeleteCheckAsync(entityId, requester);
+
+            if(!services.permissions.IsSuper(requester))
+                throw new AuthorizationException("Only supers can delete modules!");
+            
+            return result;
         }
 
         public override async Task<ModuleView> WriteAsync(ModuleView view, Requester requester)
