@@ -66,11 +66,13 @@ namespace contentapi.Controllers
         [HttpPost("{name}/{command}")]
         public Task<ActionResult<string>> RunCommand([FromRoute]string name, [FromRoute]string command, [FromBody]string data)
         {
-            return ThrowToAction(() =>
+            return ThrowToAction(async () =>
             {
                 var requester = GetRequesterNoFail();
-                var result = moduleService.RunCommand(name, command, data, requester);
-                return Task.FromResult(result);
+                string result = null;
+                //RunCommand should be thread safe, so just... run it async!
+                await Task.Run(() => result = moduleService.RunCommand(name, command, data, requester));
+                return result;
             });
         }
     }
