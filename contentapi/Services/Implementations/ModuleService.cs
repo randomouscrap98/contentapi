@@ -211,10 +211,13 @@ namespace contentapi.Services.Implementations
             //I HAVE TO ensure the count will be static the whole time
             lock(myMessages)
             {
-                if(lastId == 0)
-                    lastId = myMessages.Max(x => x.id);
-                else if(lastId < 0 && myMessages.Count > 0)
-                    lastId = myMessages[(int)Math.Max(0, myMessages.Count + lastId)].id - 1; //Minus 1 because we WANT that last message
+                if(myMessages.Count > 0)
+                {
+                    if (lastId == 0)
+                        lastId = myMessages.Max(x => x.id);
+                    else if (lastId < 0)
+                        lastId = myMessages[(int)Math.Max(0, myMessages.Count + lastId)].id - 1; //Minus 1 because we WANT that last message
+                }
             }
 
             Func<ModuleMessage, bool> filter = m => m.id > lastId && m.receiverUid == requester.userId;

@@ -127,5 +127,25 @@ namespace contentapi.test
             Assert.Equal("test", messages.First().module);
             Assert.True(messages.First().id > lastId);
         }
+
+        [Fact]
+        public void ReadMessagesListen0()
+        {
+            var modview = new ModuleView() { name = "test", code = @"
+                function command_wow(uid, data)
+                    sendmessage(uid, ""hey"")
+                    sendmessage(uid + 1, ""hey NO"")
+                end" 
+            };
+            var requester = new Requester() { userId = 9 };
+            var mod = service.UpdateModule(modview);
+            var messageWait = service.ListenAsync(0, requester, TimeSpan.FromSeconds(1), CancellationToken.None);
+            AssertNotWait(messageWait);
+            var result = service.RunCommand("test", "wow", "whatever", requester);
+            var messages = AssertWait(messageWait);
+            Assert.Single(messages);
+            Assert.Equal("hey", messages.First().message);
+            Assert.Equal("test", messages.First().module);
+        }
     }
 }

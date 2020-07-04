@@ -18,6 +18,11 @@ namespace contentapi.Controllers
             this.moduleService = moduleService;
         }
 
+        protected override async Task SetupAsync()
+        {
+            await service.SetupAsync();
+        }
+
         [Authorize]
         [HttpPost("{name}")]
         public Task<ActionResult<ModuleView>> PostByNameAsync([FromRoute]string name, [FromBody]ModuleView module)
@@ -37,8 +42,8 @@ namespace contentapi.Controllers
         }
 
         [Authorize]
-        [HttpGet("{name}/{command}")]
-        public Task<ActionResult<string>> RunCommand([FromRoute]string name, [FromRoute]string command, [FromQuery]string data)
+        [HttpPost("{name}/{command}")]
+        public Task<ActionResult<string>> RunCommand([FromRoute]string name, [FromRoute]string command, [FromBody]string data)
         {
             return ThrowToAction(() =>
             {

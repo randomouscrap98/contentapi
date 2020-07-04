@@ -190,6 +190,7 @@ namespace contentapi.Services.Implementations
             await services.content.SetupAsync(); 
             await services.watch.SetupAsync();
             await services.vote.SetupAsync();
+            await services.module.SetupAsync();
         }
 
         //https://stackoverflow.com/a/26766221/1066474

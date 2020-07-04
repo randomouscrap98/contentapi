@@ -20,6 +20,13 @@ namespace contentapi.Services.Implementations
 
         public override string EntityType => Keys.ModuleType;
 
+        public async Task SetupAsync()
+        {
+            var modules = await SearchAsync(new ModuleSearch(), new Requester() { system = true });
+            foreach(var module in modules)
+                service.UpdateModule(module);
+        }
+
         public override async Task<ModuleView> CleanViewGeneralAsync(ModuleView view, Requester requester)
         {
             view = await base.CleanViewGeneralAsync(view, requester);

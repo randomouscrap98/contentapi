@@ -46,3 +46,4 @@ appsettings.json
 appsettings.Development.json
 uploads
 .vscode_old
+moduledata.db
