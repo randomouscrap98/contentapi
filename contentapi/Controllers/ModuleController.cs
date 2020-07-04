@@ -1,3 +1,5 @@
+using System.Collections.Generic;
+using System.Linq;
 using System.Threading.Tasks;
 using contentapi.Services;
 using contentapi.Services.Implementations;
@@ -11,16 +13,35 @@ namespace contentapi.Controllers
     public class ModuleController : BaseViewServiceController<ModuleViewService, ModuleView, ModuleSearch>
     {
         protected IModuleService moduleService;
+        protected IPermissionService permissionService;
 
-        public ModuleController(ILogger<ModuleController> logger, ModuleViewService service, IModuleService moduleService)//UserViewService service, IPermissionService permissionService) 
+        public ModuleController(ILogger<ModuleController> logger, ModuleViewService service, IModuleService moduleService,
+            IPermissionService permissionService)//UserViewService service, IPermissionService permissionService) 
             : base(logger, service) 
         {
             this.moduleService = moduleService;
+            this.permissionService = permissionService;
         }
 
         protected override async Task SetupAsync()
         {
             await service.SetupAsync();
+        }
+
+        [Authorize]
+        [HttpGet("debug/{name}")]
+        public Task<ActionResult<List<string>>> GetDebug([FromRoute]string name)
+        {
+            return ThrowToAction(() =>
+            {
+                var requester = GetRequesterNoFail();
+                if(!permissionService.IsSuper(requester))
+                    throw new AuthorizationException("Can't read debug information unless super!");
+                var modData = moduleService.GetModule(name);
+                if(modData == null)
+                    throw new NotFoundException($"No module with name {name}");
+                return Task.FromResult(modData.debug.ToList());
+            });
         }
 
         [Authorize]

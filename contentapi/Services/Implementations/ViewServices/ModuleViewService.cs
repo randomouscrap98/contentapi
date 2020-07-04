@@ -25,7 +25,7 @@ namespace contentapi.Services.Implementations
         {
             var modules = await SearchAsync(new ModuleSearch(), new Requester() { system = true });
             foreach(var module in modules)
-                service.UpdateModule(module);
+                service.UpdateModule(module, false);
         }
 
         public override async Task<ModuleView> CleanViewGeneralAsync(ModuleView view, Requester requester)

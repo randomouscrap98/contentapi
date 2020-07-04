@@ -16,12 +16,15 @@ namespace contentapi.Services.Implementations
 {
     public class ModuleServiceConfig
     {
+        public int MaxDebugSize {get;set;} = 1000;
         public TimeSpan CleanupAge {get;set;} = TimeSpan.FromDays(2);
         public string ModuleDataConnectionString {get;set;} = "Data Source=moduledata.db"; 
     }
 
     public class SqliteLoadedModule : LoadedModule
     {
+        public string currentCommand = "";
+        public string currentData = "";
         public long currentUser = 0;
         public SqliteConnection dataConnection = null;
     }
@@ -31,18 +34,25 @@ namespace contentapi.Services.Implementations
         protected ISignaler<ModuleMessage> signaler;
         protected ILogger logger;
         protected ModuleServiceConfig config;
-        //protected SystemConfig systemConfig;
+        //protected
 
         protected ConcurrentDictionary<string, object> moduleLocks = new ConcurrentDictionary<string, object>();
         protected ConcurrentDictionary<string, SqliteLoadedModule> loadedModules = new ConcurrentDictionary<string, SqliteLoadedModule>();
         protected ConcurrentDictionary<long, List<ModuleMessage>> privateMessages = new ConcurrentDictionary<long, List<ModuleMessage>>();
 
         public ModuleService(ILogger<ModuleService> logger, ISignaler<ModuleMessage> signaler, ModuleServiceConfig config)
-                //SystemConfig systemConfig)
+            //ModuleViewSource viewSource)
         { 
             this.signaler = signaler;
             this.config = config;
-            //this.systemConfig = systemConfig;
+        }
+
+        public LoadedModule GetModule(string name)
+        {
+            SqliteLoadedModule module = null;
+            if(!loadedModules.TryGetValue(name, out module))
+                return null;
+            return module;
         }
 
         public void AddMessage(ModuleMessage message)
@@ -99,8 +109,11 @@ namespace contentapi.Services.Implementations
         /// </summary>
         /// <param name="module"></param>
         /// <returns></returns>
-        public LoadedModule UpdateModule(ModuleView module)
+        public LoadedModule UpdateModule(ModuleView module, bool force = true)
         {
+            if(!force && loadedModules.ContainsKey(module.name))
+                return null;
+
             var getValue = new Func<string, string>((s) => 
             {
                 if(module.values.ContainsKey(s)) 
@@ -154,6 +167,13 @@ namespace contentapi.Services.Implementations
             });
             mod.script.Globals["getvalue"] = getValue;
             mod.script.Globals["getvaluenum"] = getValueNum;
+            mod.script.Globals["prntdbg"] = new Action<string>((m) => 
+            {
+                mod.debug.Enqueue($"[{mod.currentUser}:{mod.currentCommand}|{mod.currentData}] {m}");
+
+                while(mod.debug.Count > config.MaxDebugSize)
+                    mod.debug.Dequeue();
+            });
             mod.script.Globals["sendmessage"] = new Action<long, string>((uid, message) =>
             {
                 AddMessage(new ModuleMessage()
@@ -201,8 +221,12 @@ namespace contentapi.Services.Implementations
                 {
                     mod.dataConnection.Open();
                     mod.currentUser = requester.userId;
+                    mod.currentCommand = command;
+                    mod.currentData = data;
                     DynValue res = mod.script.Call(mod.script.Globals[cmdfuncname], requester.userId, data);
-                    mod.currentUser = -1;
+                    //mod.currentUser = -1;
+                    //mod.currentCommand = "";
+                    //mod.currentData = "";
                     return res.String;
                 }
             }

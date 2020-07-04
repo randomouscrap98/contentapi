@@ -17,13 +17,15 @@ namespace contentapi.test.Implementations
             messages.Add(message);
         }
 
+
         public Task<List<ModuleMessage>> ListenAsync(long lastId, Requester requester, TimeSpan maxWait, CancellationToken token)
         {
             return Task.FromResult(messages.Where(x => x.id > lastId && x.receiverUid == requester.userId).ToList());
         }
 
+        public LoadedModule GetModule(string name) { return null; }
         public bool RemoveModule(string name) { return true; }
         public string RunCommand(string module, string command, string data, Requester requester) { return "Not implemented"; }
-        public LoadedModule UpdateModule(ModuleView module) { return null; }
+        public LoadedModule UpdateModule(ModuleView module, bool force) { return null; }
     }
 }
