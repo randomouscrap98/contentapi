@@ -7,6 +7,7 @@ namespace contentapi.Services
     public class PermissionExtras
     {
         public bool allowNegativeOwnerRelation = false;
+        public List<string> allowedRelationTypes = new List<string>();
     }
 
     public interface IPermissionService

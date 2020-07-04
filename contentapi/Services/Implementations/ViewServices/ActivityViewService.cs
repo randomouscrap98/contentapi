@@ -31,7 +31,11 @@ namespace contentapi.Services.Implementations
             var result = await activity.SimpleSearchAsync(search, (q) =>
                 services.permissions.PermissionWhere(
                     q.Where(x => x.relation.type != $"{Keys.ActivityKey}{Keys.FileType}"),  //This may change sometime
-                    requester, Keys.ReadAction, new PermissionExtras() { allowNegativeOwnerRelation = search.IncludeAnonymous })
+                    requester, Keys.ReadAction, new PermissionExtras() 
+                    {  
+                        allowNegativeOwnerRelation = search.IncludeAnonymous, 
+                        allowedRelationTypes = new List<string>() { Keys.ActivityKey + Keys.ModuleType }
+                    })
             );
 
             result.ForEach(x => 

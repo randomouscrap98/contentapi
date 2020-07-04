@@ -25,22 +25,20 @@ namespace contentapi.Services.Implementations
         {
             extras = extras ?? new PermissionExtras();
 
-            //Immediately apply a limiter so we're not joining on every dang relation ever (including comments etc).
-            //The amount of creators and actions of a single type is SO MUCH LOWER. I'm not sure how optimized these
-            //queries can get but better safe than sorry
-            //query = query.Where(x => x.permission.type == Keys.CreatorRelation || x.permission.type == action);
-            
             //Nothing else to do, the user can do it if it's update or delete.
             if(requester.system || IsSuper(requester) && (action == Keys.UpdateAction || action == Keys.DeleteAction || action == Keys.CreateAction))
                 return query.Where(x => x.permission.type == Keys.CreatorRelation || x.permission.type == action);
 
             var user = requester.userId;
+            bool isRead = action == Keys.ReadAction;
+            bool allowRelationTypes = extras.allowedRelationTypes.Count > 0;
 
             return query.Where(x => 
                 //Note: the "extras" is a hack: I need "OR" parameters on permissions but can't
                 //just... do that. Until I get something better set up, this hack stuff is VEry particular and for
                 //VERY specific fields (that might not be there for every request, only the ones with the flags set.)
                 (extras.allowNegativeOwnerRelation && x.relation.entityId1 < 0) ||
+                (allowRelationTypes && extras.allowedRelationTypes.Contains(x.relation.type)) ||
                 (user > 0 && x.permission.type == Keys.CreatorRelation && x.permission.entityId1 == user) ||
                 (x.permission.type == action && (x.permission.entityId1 == 0 || x.permission.entityId1 == user)));
         }
