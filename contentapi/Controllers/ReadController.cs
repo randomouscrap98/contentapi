@@ -86,7 +86,9 @@ namespace contentapi.Controllers
         {
             public Dictionary<string, Dictionary<string, string>> listeners {get;set;}
             public Dictionary<string, List<ExpandoObject>> chains {get;set;}
+            public List<ModuleMessage> moduleMessages {get;set;}
             public long lastId {get;set;}
+            public long lastModuleId {get;set;}
             public List<string> warnings {get;set;} = new List<string>();
         }
 
@@ -103,7 +105,8 @@ namespace contentapi.Controllers
 
         [HttpGet("listen")]
         [Authorize]
-        public Task<ActionResult<ListenEndpointResult>> ListenAsync([FromQuery]Dictionary<string, List<string>> fields, [FromQuery]string listeners, [FromQuery]string actions, CancellationToken cancelToken)
+        public Task<ActionResult<ListenEndpointResult>> ListenAsync([FromQuery]Dictionary<string, List<string>> fields, 
+            [FromQuery]string listeners, [FromQuery]string actions, [FromQuery]string modules, CancellationToken cancelToken)
         {
             //HttpContext.
             return ThrowToAction(async () =>
@@ -126,7 +129,8 @@ namespace contentapi.Controllers
                     lConfig.lastListeners = ConvertListeners(listenerObject.lastListeners);
                 }
 
-                var result = await service.ListenAsync(fields, lConfig, rConfig, GetRequesterNoFail(), cancelToken);
+                var mConfig = JsonSerializer.Deserialize<ModuleChainConfig>(modules ?? "null", jsonOptions);
+                var result = await service.ListenAsync(fields, lConfig, rConfig, mConfig, GetRequesterNoFail(), cancelToken);
 
                 var returnResult = mapper.Map<ListenEndpointResult>(result);
                 returnResult.listeners = ConvertListeners(result.listeners);

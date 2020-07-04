@@ -129,14 +129,22 @@ namespace contentapi.Services.Implementations
         public List<string> chains {get;set;}
     }
 
+    public class ModuleChainConfig
+    {
+        public long lastId {get;set;} = 0;
+        public List<string> chains {get;set;}
+    }
+
     /// <summary>
     /// The results from listening in the chaining service
     /// </summary>
     public class ListenResult
     {
         public Dictionary<long, Dictionary<long, string>> listeners {get;set;}
+        public List<ModuleMessage> modulemessages {get;set;}
         public Dictionary<string, List<ExpandoObject>> chains {get;set;}
         public long lastId {get;set;}
+        public long lastModuleId {get;set;}
         public List<string> warnings {get;set;} = new List<string>();
     }
 
@@ -161,17 +169,19 @@ namespace contentapi.Services.Implementations
     {
         protected ChainServices services;
         protected RelationListenerService relationService;
+        protected IModuleService moduleService;
         protected ILogger logger;
         protected ChainServiceConfig config;
 
         //These should all be... settings?
 
-        public ChainService(ILogger<ChainService> logger, ChainServices services, RelationListenerService relationService, ChainServiceConfig config)
+        public ChainService(ILogger<ChainService> logger, ChainServices services, RelationListenerService relationService, ChainServiceConfig config, IModuleService moduleService)
         {
             this.logger = logger;
             this.services = services;
             this.relationService = relationService;
             this.config = config;
+            this.moduleService = moduleService;
         }
 
         public async Task SetupAsync() 
@@ -588,7 +598,9 @@ namespace contentapi.Services.Implementations
             public List<long> listeners {get;set;}
         }
 
-        public async Task<ListenResult> ListenAsync(Dictionary<string, List<string>> fields, ListenerChainConfig listeners, RelationListenChainConfig actions, Requester requester, CancellationToken cancelToken)
+        //protected class PhonyModuleMessage : ModuleMessage, IIdView { }
+
+        public async Task<ListenResult> ListenAsync(Dictionary<string, List<string>> fields, ListenerChainConfig listeners, RelationListenChainConfig actions, ModuleChainConfig modules, Requester requester, CancellationToken cancelToken)
         {
             var result = new ListenResult();
 
@@ -599,6 +611,8 @@ namespace contentapi.Services.Implementations
             //Assume nothing changed in the result (it may just be a listener update), and better to send the same than to send nothing.
             if(actions != null)
                 result.lastId = actions.lastId; 
+            if(modules != null)
+                result.lastModuleId = modules.lastId;
 
             fields = FixFields(fields);
 
@@ -606,7 +620,8 @@ namespace contentapi.Services.Implementations
             List<Task> waiters = new List<Task>();
 
             CheckChainLimit(listeners?.chains?.Count);
-            CheckChainLimit(actions?.chains?.Count);//,2);
+            CheckChainLimit(actions?.chains?.Count);
+            CheckChainLimit(modules?.chains?.Count);
 
             //A simple function-wide lock for asynchronous tasks. Should be safe... since it's all within the function.
             Func<Func<Task>, Task> lockAsync = async(a) =>
@@ -752,6 +767,18 @@ namespace contentapi.Services.Implementations
 
                             waiters.Add(run());
                         }
+                    }
+
+                    if (modules != null)
+                    {
+                        Func<Task> run = async () =>
+                        {
+                            result.modulemessages = await moduleService.ListenAsync(modules.lastId, requester, TimeSpan.FromDays(5), linkedCts.Token);  //listeners.lastListeners, requester, linkedCts.Token);
+                            result.lastModuleId = result.modulemessages.Max(x => x.id);
+                            await chainer(modules.chains, result.modulemessages); //Select(x => new PhonyListenerList() { id = x.Key, listeners = x.Value.Keys.ToList() }));
+                        };
+
+                        waiters.Add(run());
                     }
 
                     if (waiters.Count == 0)

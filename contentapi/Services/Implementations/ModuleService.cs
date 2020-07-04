@@ -2,6 +2,7 @@ using System;
 using System.Collections.Concurrent;
 using System.Collections.Generic;
 using System.Linq;
+using System.Text.RegularExpressions;
 using System.Threading;
 using System.Threading.Tasks;
 using contentapi.Views;
@@ -14,12 +15,13 @@ namespace contentapi.Services.Implementations
 {
     public class ModuleServiceConfig
     {
-        public TimeSpan CleanupAge {get;set;} = TimeSpan.FromDays(3);
+        public TimeSpan CleanupAge {get;set;} = TimeSpan.FromDays(2);
         public string ModuleDataConnectionString {get;set;} = "Data Source=moduledata.db"; 
     }
 
     public class SqliteLoadedModule : LoadedModule
     {
+        public long currentUser = 0;
         public SqliteConnection dataConnection = null;
     }
 
@@ -31,9 +33,7 @@ namespace contentapi.Services.Implementations
 
         protected ConcurrentDictionary<string, object> moduleLocks = new ConcurrentDictionary<string, object>();
         protected ConcurrentDictionary<string, SqliteLoadedModule> loadedModules = new ConcurrentDictionary<string, SqliteLoadedModule>();
-        protected List<ModuleMessage> privateMessages = new List<ModuleMessage>();
-        protected readonly object messageLock = new object();
-        //protected readonly object moduleLock = new object();
+        protected ConcurrentDictionary<long, List<ModuleMessage>> privateMessages = new ConcurrentDictionary<long, List<ModuleMessage>>();
 
         public ModuleService(ILogger<ModuleService> logger, ISignaler<ModuleMessage> signaler, ModuleServiceConfig config)
         { 
@@ -43,18 +43,21 @@ namespace contentapi.Services.Implementations
 
         public void AddMessage(ModuleMessage message)
         {
-            lock(messageLock)
+            var cutoff = DateTime.Today.Subtract(config.CleanupAge); //This will be the same value for an entire day
+
+            var messageList = privateMessages.GetOrAdd(message.receiverUid, (i) => new List<ModuleMessage>());
+
+            lock(messageList) //This is relatively safe because I don't plan on changing this reference.
             {
-                privateMessages.Add(message);
+                messageList.Add(message);
 
-                var cutoff = DateTime.Today.Subtract(config.CleanupAge); //This will be the same value for an entire day
-                var index = privateMessages.FindIndex(0, privateMessages.Count, x => x.date > cutoff); //As such, this index will be 0 except ONE time during the day.
+                var index = messageList.FindIndex(0, messageList.Count, x => x.date > cutoff); //Because of cutoff, this index will be 0 except ONE time during the day.
 
-                if(index > 0)
-                    privateMessages = privateMessages.Skip(index).ToList();
-
-                signaler.SignalItems(new[] { message });
+                if (index > 0)
+                    messageList.RemoveRange(0, index + 1);
             }
+
+            signaler.SignalItems(new[] { message });
         }
 
         /// <summary>
@@ -151,8 +154,10 @@ namespace contentapi.Services.Implementations
             {
                 AddMessage(new ModuleMessage()
                 {
+                    senderUid = mod.currentUser,
                     receiverUid = uid,
                     message = message,
+                    usersInMessage = Regex.Matches(message, @"%\d+%").Select(x => long.Parse(x.Value.Trim("%".ToCharArray()))).ToList(),
                     module = module.name,
                 });
             });
@@ -191,7 +196,9 @@ namespace contentapi.Services.Implementations
                 using(mod.dataConnection = new SqliteConnection(config.ModuleDataConnectionString))
                 {
                     mod.dataConnection.Open();
+                    mod.currentUser = requester.userId;
                     DynValue res = mod.script.Call(mod.script.Globals[cmdfuncname], requester.userId, data);
+                    mod.currentUser = -1;
                     return res.String;
                 }
             }
@@ -199,6 +206,17 @@ namespace contentapi.Services.Implementations
 
         public async Task<List<ModuleMessage>> ListenAsync(long lastId, Requester requester, TimeSpan maxWait, CancellationToken token)
         {
+            var myMessages = privateMessages.GetOrAdd(requester.userId, (l) => new List<ModuleMessage>());
+
+            //I HAVE TO ensure the count will be static the whole time
+            lock(myMessages)
+            {
+                if(lastId == 0)
+                    lastId = myMessages.Max(x => x.id);
+                else if(lastId < 0 && myMessages.Count > 0)
+                    lastId = myMessages[(int)Math.Max(0, myMessages.Count + lastId)].id - 1; //Minus 1 because we WANT that last message
+            }
+
             Func<ModuleMessage, bool> filter = m => m.id > lastId && m.receiverUid == requester.userId;
 
             using (CancellationTokenSource linkedCts = CancellationTokenSource.CreateLinkedTokenSource(token))
@@ -207,7 +225,7 @@ namespace contentapi.Services.Implementations
                 var listener = signaler.ListenAsync(requester, filter, maxWait, linkedCts.Token);
 
                 DateTime start = DateTime.Now; //Putting this down here to minimize startup time before listen (not that this little variable really matters)
-                var results = privateMessages.Where(filter).ToList();
+                var results = myMessages.Where(filter).ToList();
 
                 if (results.Count > 0)
                 {

@@ -7,15 +7,17 @@ using MoonSharp.Interpreter;
 
 namespace contentapi.Services
 {
-    public class ModuleMessage
+    public class ModuleMessage : IIdView
     {
         private static long GlobalId = 0;
 
         public DateTime date {get;set;} = DateTime.Now;
-        public long id = Interlocked.Increment(ref GlobalId);
+        public long id {get;set;} = Interlocked.Increment(ref GlobalId);
         public string message {get;set;}
+        public List<long> usersInMessage {get;set;} = new List<long>();
         public string module {get;set;}
-        public long receiverUid = -1;
+        public long receiverUid {get;set;} = -1;
+        public long senderUid {get;set;} = -1;
     }
 
     public class LoadedModule
