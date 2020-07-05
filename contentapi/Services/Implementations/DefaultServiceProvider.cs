@@ -57,9 +57,9 @@ namespace contentapi.Services.Implementations
             services.AddSingleton<IModuleService, ModuleService>();
             services.AddSingleton<ModuleMessageAdder>((p) => (m) =>
                 {
-                    var creator = p.GetService<ModuleMessageViewService>();
+                    var creator = p.CreateScope().ServiceProvider.GetService<ModuleMessageViewService>();
                     creator.AddMessageAsync(m).Wait();
-                }); //Because of the special nature of modules, everyone should use the same one.
+                });
 
             services.AddTransient<ActivityViewSource>();
             services.AddTransient<CategoryViewSource>();
