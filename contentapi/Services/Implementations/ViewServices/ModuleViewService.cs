@@ -32,22 +32,28 @@ namespace contentapi.Services.Implementations
         public SqliteConnection dataConnection = null;
     }
 
+    /// <summary>
+    /// The combined module view and loaded module service.
+    /// </summary>
     public class ModuleViewService : BaseEntityViewService<ModuleView, ModuleSearch>
     {
-        //protected IModuleService service;
-        //protected ISignaler<ModuleMessage> signaler;
         protected ModuleServiceConfig config;
         protected ModuleMessageViewService moduleMessageService;
+
+        protected ConcurrentDictionary<string, object> moduleLocks = new ConcurrentDictionary<string, object>();
+        protected ConcurrentDictionary<string, LoadedModule> loadedModules = new ConcurrentDictionary<string, LoadedModule>();
+        protected ConcurrentDictionary<long, List<ModuleMessageView>> privateMessages = new ConcurrentDictionary<long, List<ModuleMessageView>>();
 
         public ModuleViewService(ILogger<ModuleViewService> logger, ViewServicePack services, ModuleViewSource converter,
             ModuleServiceConfig config, ModuleMessageViewService moduleMessageService/*, IModuleService service*/) :base(services, logger, converter) 
         { 
             this.config = config;
             this.moduleMessageService = moduleMessageService;
-            //this.service = service;
         }
 
         public override string EntityType => Keys.ModuleType;
+
+        // -- View stuff --
 
         public async Task SetupAsync()
         {
@@ -104,11 +110,7 @@ namespace contentapi.Services.Implementations
             return converter.SimpleSearchAsync(search);
         }
 
-        //protected
-
-        protected ConcurrentDictionary<string, object> moduleLocks = new ConcurrentDictionary<string, object>();
-        protected ConcurrentDictionary<string, LoadedModule> loadedModules = new ConcurrentDictionary<string, LoadedModule>();
-        protected ConcurrentDictionary<long, List<ModuleMessageView>> privateMessages = new ConcurrentDictionary<long, List<ModuleMessageView>>();
+        // -- Loaded module stuff --
 
         public LoadedModule GetModule(string name)
         {
@@ -117,25 +119,6 @@ namespace contentapi.Services.Implementations
                 return null;
             return module;
         }
-
-        //public void AddMessage(ModuleMessage message)
-        //{
-        //    var cutoff = DateTime.Today.Subtract(config.CleanupAge); //This will be the same value for an entire day
-
-        //    var messageList = privateMessages.GetOrAdd(message.receiverUid, (i) => new List<ModuleMessage>());
-
-        //    lock(messageList) //This is relatively safe because I don't plan on changing this reference.
-        //    {
-        //        messageList.Add(message);
-
-        //        var index = messageList.FindIndex(0, messageList.Count, x => x.date > cutoff); //Because of cutoff, this index will be 0 except ONE time during the day.
-
-        //        if (index > 0)
-        //            messageList.RemoveRange(0, index + 1);
-        //    }
-
-        //    signaler.SignalItems(new[] { message });
-        //}
 
         /// <summary>
         /// Setup the DATA database for the given module
@@ -241,8 +224,8 @@ namespace contentapi.Services.Implementations
             {
                 moduleMessageService.AddMessageAsync(new ModuleMessageView()
                 {
-                    senderUid = mod.currentUser,
-                    receiverUid = uid,
+                    sendUserId = mod.currentUser,
+                    receiveUserId = uid,
                     message = message,
                     module = module.name
                 }).Wait();
@@ -286,9 +269,6 @@ namespace contentapi.Services.Implementations
                     mod.currentCommand = command;
                     mod.currentData = data;
                     DynValue res = mod.script.Call(mod.script.Globals[cmdfuncname], requester.userId, data);
-                    //mod.currentUser = -1;
-                    //mod.currentCommand = "";
-                    //mod.currentData = "";
                     return res.String;
                 }
             }

@@ -1,4 +1,5 @@
 using System;
+using System.Linq;
 using System.Threading;
 using contentapi.Configs;
 using contentapi.Services;
@@ -11,7 +12,7 @@ using Xunit;
 
 namespace contentapi.test
 {
-    [Collection("ASYNC")]
+    //[Collection("ASYNC")]
     public class ModuleViewServiceTests : ServiceConfigTestBase<ModuleViewService, SystemConfig>
     {
         protected SystemConfig sysConfig = new SystemConfig();
@@ -24,6 +25,7 @@ namespace contentapi.test
 
         protected override SystemConfig config => sysConfig;
 
+        protected ModuleMessageViewService moduleMessageService;
 
         protected ModuleServiceConfig myConfig = new ModuleServiceConfig() { 
             ModuleDataConnectionString = "Data Source=moduledata;Mode=Memory;Cache=Shared"
@@ -51,6 +53,8 @@ namespace contentapi.test
 
             masterconnection = new SqliteConnection(myConfig.ModuleDataConnectionString);
             masterconnection.Open();
+
+            moduleMessageService = CreateService<ModuleMessageViewService>();
         }
 
         ~ModuleViewServiceTests()
@@ -190,56 +194,56 @@ namespace contentapi.test
             var requester = new Requester() { userId = 9 };
             var mod = service.UpdateModule(modview);
             var result = service.RunCommand("test", "wow", "whatever", requester);
-            var messages = service.ListenAsync(-1, requester, TimeSpan.FromSeconds(1), CancellationToken.None).Result;
+            var messages = moduleMessageService.SearchAsync(new ModuleMessageViewSearch(), requester).Result; //service.ListenAsync(-1, requester, TimeSpan.FromSeconds(1), CancellationToken.None).Result;
             Assert.Single(messages);
             Assert.Equal("hey", messages.First().message);
             Assert.Equal("test", messages.First().module);
-            Assert.Equal(requester.userId, messages.First().receiverUid);
-            Assert.Equal(requester.userId, messages.First().senderUid);
+            Assert.Equal(requester.userId, messages.First().receiveUserId);
+            Assert.Equal(requester.userId, messages.First().sendUserId);
         }
 
-        [Fact]
-        public void ReadMessagesListen()
-        {
-            var modview = new ModuleView() { name = "test", code = @"
-                function command_wow(uid, data)
-                    sendmessage(uid, ""hey"")
-                    sendmessage(uid + 1, ""hey NO"")
-                end" 
-            };
-            var requester = new Requester() { userId = 9 };
-            var mod = service.UpdateModule(modview);
-            var result = service.RunCommand("test", "wow", "whatever", requester);
-            var messages = service.ListenAsync(-1, requester, TimeSpan.FromSeconds(1), CancellationToken.None).Result;
-            var lastId = messages.Last().id;
-            var messageWait = service.ListenAsync(lastId, requester, TimeSpan.FromSeconds(1), CancellationToken.None);
-            AssertNotWait(messageWait);
-            result = service.RunCommand("test", "wow", "whatever", requester);
-            messages = AssertWait(messageWait);
-            Assert.Single(messages);
-            Assert.Equal("hey", messages.First().message);
-            Assert.Equal("test", messages.First().module);
-            Assert.True(messages.First().id > lastId);
-        }
+        //[Fact]
+        //public void ReadMessagesListen()
+        //{
+        //    var modview = new ModuleView() { name = "test", code = @"
+        //        function command_wow(uid, data)
+        //            sendmessage(uid, ""hey"")
+        //            sendmessage(uid + 1, ""hey NO"")
+        //        end" 
+        //    };
+        //    var requester = new Requester() { userId = 9 };
+        //    var mod = service.UpdateModule(modview);
+        //    var result = service.RunCommand("test", "wow", "whatever", requester);
+        //    var messages = service.ListenAsync(-1, requester, TimeSpan.FromSeconds(1), CancellationToken.None).Result;
+        //    var lastId = messages.Last().id;
+        //    var messageWait = service.ListenAsync(lastId, requester, TimeSpan.FromSeconds(1), CancellationToken.None);
+        //    AssertNotWait(messageWait);
+        //    result = service.RunCommand("test", "wow", "whatever", requester);
+        //    messages = AssertWait(messageWait);
+        //    Assert.Single(messages);
+        //    Assert.Equal("hey", messages.First().message);
+        //    Assert.Equal("test", messages.First().module);
+        //    Assert.True(messages.First().id > lastId);
+        //}
 
-        [Fact]
-        public void ReadMessagesListen0()
-        {
-            var modview = new ModuleView() { name = "test", code = @"
-                function command_wow(uid, data)
-                    sendmessage(uid, ""hey"")
-                    sendmessage(uid + 1, ""hey NO"")
-                end" 
-            };
-            var requester = new Requester() { userId = 9 };
-            var mod = service.UpdateModule(modview);
-            var messageWait = service.ListenAsync(0, requester, TimeSpan.FromSeconds(1), CancellationToken.None);
-            AssertNotWait(messageWait);
-            var result = service.RunCommand("test", "wow", "whatever", requester);
-            var messages = AssertWait(messageWait);
-            Assert.Single(messages);
-            Assert.Equal("hey", messages.First().message);
-            Assert.Equal("test", messages.First().module);
-        }
+        //[Fact]
+        //public void ReadMessagesListen0()
+        //{
+        //    var modview = new ModuleView() { name = "test", code = @"
+        //        function command_wow(uid, data)
+        //            sendmessage(uid, ""hey"")
+        //            sendmessage(uid + 1, ""hey NO"")
+        //        end" 
+        //    };
+        //    var requester = new Requester() { userId = 9 };
+        //    var mod = service.UpdateModule(modview);
+        //    var messageWait = service.ListenAsync(0, requester, TimeSpan.FromSeconds(1), CancellationToken.None);
+        //    AssertNotWait(messageWait);
+        //    var result = service.RunCommand("test", "wow", "whatever", requester);
+        //    var messages = AssertWait(messageWait);
+        //    Assert.Single(messages);
+        //    Assert.Equal("hey", messages.First().message);
+        //    Assert.Equal("test", messages.First().module);
+        //}
     }
 }

@@ -18,7 +18,7 @@ namespace contentapi.Services.Implementations
         public List<long> SenderIds {get;set;} = new List<long>();
         public List<long> ReceiverIds {get;set;} = new List<long>();
 
-        public string TypeLike {get;set;}
+        public string ModuleLike {get;set;}
     }
 
     public class ModuleMessageViewSourceProfile : Profile
@@ -27,7 +27,8 @@ namespace contentapi.Services.Implementations
         {
             CreateMap<ModuleMessageViewSearch, EntityRelationSearch>()
                 .ForMember(x => x.EntityIds1, o => o.MapFrom(s => s.SenderIds))
-                .ForMember(x => x.EntityIds2, o => o.MapFrom(s => s.ReceiverIds.Select(x => -x).ToList()));
+                .ForMember(x => x.EntityIds2, o => o.MapFrom(s => s.ReceiverIds.Select(x => -x).ToList()))
+                .ForMember(x => x.TypeLike, o => o.MapFrom(s => s.ModuleLike));
         }
     }
 
@@ -36,6 +37,8 @@ namespace contentapi.Services.Implementations
         public string EntityType => Keys.ModuleMessageKey;
         public override Expression<Func<EntityGroup, long>> MainIdSelector => x => x.relation.id;
 
+        protected Regex userMatch = new Regex(@"%(\d+)%", RegexOptions.Compiled);
+
         public ModuleMessageViewSource(ILogger<ModuleMessageViewSource> logger, IMapper mapper, IEntityProvider provider) 
             : base(logger, mapper, provider) { }
 
@@ -43,10 +46,10 @@ namespace contentapi.Services.Implementations
         {
             var view = new ModuleMessageView();
             this.ApplyToBaseView(relation, view);
-            view.senderUid = relation.entityId1;
-            view.receiverUid = -relation.entityId2;
+            view.sendUserId = relation.entityId1;
+            view.receiveUserId = -relation.entityId2;
             view.message = relation.value;
-            view.usersInMessage = Regex.Matches(view.message, @"%\d+%").Select(x => long.Parse(x.Value.Trim("%".ToCharArray()))).ToList();
+            view.usersInMessage = userMatch.Matches(view.message).Select(x => long.Parse(x.Groups[1].Value)).ToList(); //x.Value.Trim("%".ToCharArray()))).ToList();
             view.module = relation.type.Substring(EntityType.Length);
             return view;
         }
@@ -55,8 +58,8 @@ namespace contentapi.Services.Implementations
         {
             var relation = new EntityRelation();
             this.ApplyFromBaseView(view, relation);
-            relation.entityId1 = view.senderUid;
-            relation.entityId2 = -view.receiverUid;
+            relation.entityId1 = view.sendUserId;
+            relation.entityId2 = -view.receiveUserId;
             relation.value = view.message;
             relation.type = EntityType + view.module;
             return relation;
@@ -65,7 +68,7 @@ namespace contentapi.Services.Implementations
         public override IQueryable<EntityGroup> GetBaseQuery(ModuleMessageViewSearch search)
         {
             var relationSearch = mapper.Map<EntityRelationSearch>(search);
-            relationSearch.TypeLike = EntityType + (search.TypeLike ?? "%");
+            relationSearch.TypeLike = EntityType + (search.ModuleLike ?? "%");
 
             return provider.ApplyEntityRelationSearch(Q<EntityRelation>(), relationSearch, false).Select(x => new EntityGroup() { relation = x });
         }
