@@ -1,8 +1,11 @@
+using System;
 using AutoMapper;
 using contentapi.Configs;
 using contentapi.Services.Constants;
+using contentapi.Views;
 using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.DependencyInjection;
+using Microsoft.Extensions.Logging;
 using Microsoft.Extensions.Options;
 using Randomous.EntitySystem;
 
@@ -51,7 +54,12 @@ namespace contentapi.Services.Implementations
             //Special services
             services.AddTransient<RelationListenerService>();
             services.AddTransient<ChainService>();
-            //services.AddSingleton<IModuleService, ModuleService>(); //Because of the special nature of modules, everyone should use the same one.
+            services.AddSingleton<IModuleService, ModuleService>();
+            services.AddSingleton<ModuleMessageAdder>((p) => (m) =>
+                {
+                    var creator = p.GetService<ModuleMessageViewService>();
+                    creator.AddMessageAsync(m).Wait();
+                }); //Because of the special nature of modules, everyone should use the same one.
 
             services.AddTransient<ActivityViewSource>();
             services.AddTransient<CategoryViewSource>();
@@ -74,7 +82,7 @@ namespace contentapi.Services.Implementations
                 activity = p.GetService<ActivityViewService>(),
                 watch = p.GetService<WatchViewService>(),
                 vote = p.GetService<VoteViewService>(),
-                provider = p.GetService<IEntityProvider>(),
+                //provider = p.GetService<IEntityProvider>(),
                 module = p.GetService<ModuleViewService>(),
                 modulemessage = p.GetService<ModuleMessageViewService>()
             });

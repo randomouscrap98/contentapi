@@ -34,7 +34,7 @@ namespace contentapi.Services.Implementations
         public ModuleViewService module {get;set;}
         public ModuleMessageViewService modulemessage {get;set;}
 
-        public IEntityProvider provider {get;set;}
+        //public IEntityProvider provider {get;set;}
     }
 
     /// <summary>
@@ -175,16 +175,18 @@ namespace contentapi.Services.Implementations
         protected ILogger logger;
         protected ChainServiceConfig config;
         protected SystemConfig systemConfig;
+        protected IEntityProvider provider;
 
         //These should all be... settings?
 
         public ChainService(ILogger<ChainService> logger, ChainServices services, RelationListenerService relationService, ChainServiceConfig config, /*IModuleService moduleService,*/
-            SystemConfig systemConfig)
+            SystemConfig systemConfig, IEntityProvider provider)
         {
             this.logger = logger;
             this.services = services;
             this.relationService = relationService;
             this.config = config;
+            this.provider = provider;
             //this.moduleService = moduleService;
             this.systemConfig = systemConfig;
         }
@@ -408,17 +410,17 @@ namespace contentapi.Services.Implementations
             var result = new List<SystemAggregate>();
             result.Add(new SystemAggregate()
             {
-                id = await services.provider.GetQueryable<EntityRelation>().Select(x => x.id).MaxAsync(),
+                id = await provider.GetQueryable<EntityRelation>().Select(x => x.id).MaxAsync(),
                 type = "actionMax"
             });
             result.Add(new SystemAggregate()
             {
-                id = await services.provider.GetQueryable<Entity>().Select(x => x.id).MaxAsync(),
+                id = await provider.GetQueryable<Entity>().Select(x => x.id).MaxAsync(),
                 type = "contentMax"
             });
             result.Add(new SystemAggregate()
             {
-                id = await services.provider.GetQueryable<EntityValue>().Select(x => x.id).MaxAsync(),
+                id = await provider.GetQueryable<EntityValue>().Select(x => x.id).MaxAsync(),
                 type = "valueMax"
             });
             return result;

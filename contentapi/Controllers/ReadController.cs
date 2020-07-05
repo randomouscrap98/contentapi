@@ -1,5 +1,6 @@
 using System.Collections.Generic;
 using System.Dynamic;
+using System.Linq;
 using System.Threading;
 using System.Threading.Tasks;
 using AutoMapper;
@@ -16,25 +17,42 @@ namespace contentapi.Controllers
     {
         protected ILanguageService docService;
         protected ChainService service;
+        protected ChainServiceConfig serviceConfig;
         protected RelationListenerService relationListenerService;
         protected IMapper mapper;
 
         public ReadController(ILogger<BaseSimpleController> logger, ILanguageService docService, ChainService service, 
-            RelationListenerService relationListenerService, IMapper mapper)
+            RelationListenerService relationListenerService, IMapper mapper, ChainServiceConfig serviceConfig)
             : base(logger)
         {
             this.docService = docService;
             this.service = service;
             this.relationListenerService = relationListenerService;
             this.mapper = mapper;
+            this.serviceConfig = serviceConfig;
         }
 
         protected override Task SetupAsync() { return service.SetupAsync(); }
+
 
         [HttpGet("chain")]
         public Task<ActionResult<Dictionary<string, List<ExpandoObject>>>> ChainAsync([FromQuery]List<string> requests, [FromQuery]Dictionary<string, List<string>> fields)
         {
             return ThrowToAction(() => service.ChainAsync(requests, fields, GetRequesterNoFail()));
+        }
+
+        [HttpGet("chain/info")]
+        public Task<ActionResult<ExpandoObject>> ChainInfoAsync()
+        {
+            return ThrowToAction(() =>
+            {
+                dynamic result = new ExpandoObject();
+                result.endpoints = typeof(ChainServices).GetProperties().Select(x => x.Name);
+                result.requestregex = serviceConfig.RequestRegex;
+                result.chainregex = serviceConfig.ChainRegex;
+                result.maxchains = serviceConfig.MaxChains;
+                return Task.FromResult((ExpandoObject)result);
+            });
         }
 
         [HttpGet("chain/docs")]

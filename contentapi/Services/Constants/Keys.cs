@@ -14,7 +14,7 @@ namespace contentapi.Services.Constants
         public const string VariableKey = "v:";
         public const string HistoryKey = "_";
         public const string ActivityKey = ".";
-        public const string ModuleMessageKey = "%";
+        public const string ModuleMessageKey = "M";
         public const string KeywordKey = "#";
 
         //General Relation keys (just relations, no appending)
