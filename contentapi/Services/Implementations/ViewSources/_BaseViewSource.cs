@@ -13,12 +13,16 @@ using Randomous.EntitySystem;
 namespace contentapi.Services.Implementations
 {
     public abstract class BaseViewSource<V,T,E,S> : ViewSourceServices, IViewSource<V,T,E,S> 
-        where V : BaseView where E : EntityGroup where S : EntitySearchBase, IConstrainedSearcher
+        where V : IIdView where E : EntityGroup where S : EntitySearchBase, IConstrainedSearcher
     {
         protected IMapper mapper;
         protected ILogger logger;
         protected IEntityProvider provider;
 
+        /// <summary>
+        /// Which item in an entity group contains the actual id that represents this group? Is it the relation, the entity, etc?
+        /// </summary>
+        /// <value></value>
         public abstract Expression<Func<E, long>> MainIdSelector {get;}
 
         public BaseViewSource(ILogger<BaseViewSource<V,T,E,S>> logger, IMapper mapper, IEntityProvider provider)
@@ -52,14 +56,6 @@ namespace contentapi.Services.Implementations
         {
             return query.Where(q => !(Q<EntityRelation>().Where(x => x.type == Keys.ParentRelation).Select(x => x.entityId2)).Contains(q.entity.id));
         }
-
-        //public IQueryable<E> IncludeOrphans(IQueryable<E> query)
-        //{
-        //    return query.Union(
-        //        query.Where(q => 
-        //            !(Q<EntityRelation>().Where(x => x.type == Keys.ParentRelation).Select(x => x.id)
-        //        ).Contains(q.entity.id)));
-        //}
 
         /// <summary>
         /// Modify the given query such that only those with matching values are returned
@@ -140,13 +136,35 @@ namespace contentapi.Services.Implementations
             return GroupAsync(ids, Q<R>(), keySelector);
         }
 
+        /// <summary>
+        /// Retrieve the initial objects from the given search (but not finalization such as ordering, limits, etc)
+        /// </summary>
+        /// <param name="search"></param>
+        /// <returns></returns>
         public abstract IQueryable<E> GetBaseQuery(S search);
+
+        /// <summary>
+        /// How to convert a list of database ids into a list of database objects or groups of objects
+        /// </summary>
+        /// <param name="ids"></param>
+        /// <returns></returns>
         public abstract Task<List<T>> RetrieveAsync(IQueryable<long> ids);
+
+        /// <summary>
+        /// How to convert the database object or group into the view
+        /// </summary>
+        /// <param name="basic"></param>
+        /// <returns></returns>
         public abstract V ToView(T basic);
+
+        /// <summary>
+        /// How to convert the view to a database object or group of objects
+        /// </summary>
+        /// <param name="view"></param>
+        /// <returns></returns>
         public abstract T FromView(V view);
 
         public virtual IQueryable<E> ModifySearch(IQueryable<E> query, S search) { return query; }
-        //public virtual Tuple<IQueryable<E>,Expression<Func<E, OrderSearch(IQueryable<E> query, S search) { return query; }
 
         public IQueryable<long> SearchIds(S search, Func<IQueryable<E>, IQueryable<E>> modify = null)
         {
@@ -164,29 +182,5 @@ namespace contentapi.Services.Implementations
             //the fallback ordering. This is ID and random, which we don't need to implement up here.
             return provider.ApplyFinal(husks, search).Select(x => x.id);
         }
-
-        //public class ContinuousSort
-        //{
-        //    public long id {get;set;}
-        //    public double sort {get;set;}
-        //}
-
-        ////This is SO inefficient, ESPECIALLY when it gets stacked! So many joins! But it's because there's no
-        ////group by where count in ef core... I think. I tried and it didn't work: 5/25/2020
-        //public IQueryable<ContinuousSort> ApplyAdditionalSort<R>(
-        //    IQueryable<ContinuousSort> query, 
-        //    Expression<Func<R, long>> join, 
-        //    Expression<Func<R, bool>> whereClause, 
-        //    double modifier) where R : EntityBase
-        //{
-        //    var joined = query
-        //        .GroupJoin(Q<R>().Where(whereClause), x => x.id, join, (s,r) => new { s = s, r = r })
-        //        .SelectMany(x => x.r.DefaultIfEmpty(), (x,y) => new ContinuousSort() { id = x.s.id, sort = x.s.sort });
-
-        //    return  from j in joined
-        //            group j by j.id into g
-        //            select new ContinuousSort() { id = g.Key, sort = g.Max(x => x.sort) + modifier * g.Count() };
-        //}
-
     }
 }

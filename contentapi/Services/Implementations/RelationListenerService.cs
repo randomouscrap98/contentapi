@@ -169,9 +169,10 @@ namespace contentapi.Services.Implementations
                      x.type == Keys.WatchRelation ||
                      x.type == Keys.WatchUpdate ||
                      x.type == Keys.WatchDelete ||
-                     EF.Functions.Like(x.type, $"{Keys.ActivityKey}%") || 
-                     EF.Functions.Like(x.type, $"{Keys.CommentDeleteHack}%") ||
-                     EF.Functions.Like(x.type, $"{Keys.CommentHistoryHack}%")) && 
+                     x.type.StartsWith(Keys.ActivityKey) || 
+                     x.type.StartsWith(Keys.ModuleMessageKey) && (x.entityId2 == 0 || x.entityId2 == -requester.userId) ||
+                     x.type.StartsWith(Keys.CommentDeleteHack) ||
+                     x.type.StartsWith(Keys.CommentHistoryHack)) && 
                     x.id > listenConfig.lastId),
             systemConfig.ListenTimeout, token);
 

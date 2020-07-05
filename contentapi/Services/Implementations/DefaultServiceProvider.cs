@@ -46,11 +46,12 @@ namespace contentapi.Services.Implementations
             services.AddTransient<WatchViewService>();
             services.AddTransient<VoteViewService>();
             services.AddTransient<ModuleViewService>();
+            services.AddTransient<ModuleMessageViewService>();
 
             //Special services
             services.AddTransient<RelationListenerService>();
             services.AddTransient<ChainService>();
-            services.AddSingleton<IModuleService, ModuleService>(); //Because of the special nature of modules, everyone should use the same one.
+            //services.AddSingleton<IModuleService, ModuleService>(); //Because of the special nature of modules, everyone should use the same one.
 
             services.AddTransient<ActivityViewSource>();
             services.AddTransient<CategoryViewSource>();
@@ -61,6 +62,7 @@ namespace contentapi.Services.Implementations
             services.AddTransient<WatchViewSource>();
             services.AddTransient<VoteViewSource>();
             services.AddTransient<ModuleViewSource>();
+            services.AddTransient<ModuleMessageViewSource>();
 
             services.AddTransient((p) => new ChainServices()
             {
@@ -73,7 +75,8 @@ namespace contentapi.Services.Implementations
                 watch = p.GetService<WatchViewService>(),
                 vote = p.GetService<VoteViewService>(),
                 provider = p.GetService<IEntityProvider>(),
-                module = p.GetService<ModuleViewService>()
+                module = p.GetService<ModuleViewService>(),
+                modulemessage = p.GetService<ModuleMessageViewService>()
             });
 
             //We need automapper for our view services

@@ -12,14 +12,15 @@ namespace contentapi.Controllers
 {
     public class ModuleController : BaseViewServiceController<ModuleViewService, ModuleView, ModuleSearch>
     {
-        protected IModuleService moduleService;
+        //protected IModuleService moduleService;
         protected IPermissionService permissionService;
+        protected ModuleMessageViewService moduleMessageService;
 
-        public ModuleController(ILogger<ModuleController> logger, ModuleViewService service, IModuleService moduleService,
+        public ModuleController(ILogger<ModuleController> logger, ModuleViewService service, ModuleMessageViewService moduleMessageService,
             IPermissionService permissionService)//UserViewService service, IPermissionService permissionService) 
             : base(logger, service) 
         {
-            this.moduleService = moduleService;
+            this.moduleMessageService = moduleMessageService;
             this.permissionService = permissionService;
         }
 
@@ -37,7 +38,7 @@ namespace contentapi.Controllers
                 var requester = GetRequesterNoFail();
                 if(!permissionService.IsSuper(requester))
                     throw new AuthorizationException("Can't read debug information unless super!");
-                var modData = moduleService.GetModule(name);
+                var modData = service.GetModule(name);
                 if(modData == null)
                     throw new NotFoundException($"No module with name {name}");
                 return Task.FromResult(modData.debug.ToList());
@@ -71,8 +72,18 @@ namespace contentapi.Controllers
                 var requester = GetRequesterNoFail();
                 string result = null;
                 //RunCommand should be thread safe, so just... run it async!
-                await Task.Run(() => result = moduleService.RunCommand(name, command, data, requester));
+                await Task.Run(() => result = service.RunCommand(name, command, data, requester));
                 return result;
+            });
+        }
+
+        [Authorize]
+        [HttpGet("messages")]
+        public Task<ActionResult<List<ModuleMessageView>>> GetMessagesAsync(ModuleMessageViewSearch search)
+        {
+            return ThrowToAction(() =>
+            {
+                return moduleMessageService.SearchAsync(search, GetRequesterNoFail());
             });
         }
     }

@@ -14,6 +14,8 @@ namespace contentapi.Services.Constants
         public const string VariableKey = "v:";
         public const string HistoryKey = "_";
         public const string ActivityKey = ".";
+        public const string ModuleMessageKey = "%";
+        public const string KeywordKey = "#";
 
         //General Relation keys (just relations, no appending)
         //Creator meaning is twofold: entityid1 is the creator of this content and the value is the editor
@@ -28,9 +30,6 @@ namespace contentapi.Services.Constants
         public const string WatchDelete = "uwd";
         public const string WatchUpdate = "uwu";  //owo
 
-
-        //General Value keys
-        public const string KeywordKey = "#";
 
 
         //Access stuff (I hate that these are individual, hopefully this won't impact performance too bad...)

@@ -1,13 +1,17 @@
+using System;
+using System.Threading;
 using contentapi.Configs;
 using contentapi.Services;
 using contentapi.Services.Implementations;
-using contentapi.test.Implementations;
+//using contentapi.test.Implementations;
 using contentapi.Views;
+using Microsoft.Data.Sqlite;
 using Microsoft.Extensions.DependencyInjection;
 using Xunit;
 
 namespace contentapi.test
 {
+    [Collection("ASYNC")]
     public class ModuleViewServiceTests : ServiceConfigTestBase<ModuleViewService, SystemConfig>
     {
         protected SystemConfig sysConfig = new SystemConfig();
@@ -20,10 +24,19 @@ namespace contentapi.test
 
         protected override SystemConfig config => sysConfig;
 
+
+        protected ModuleServiceConfig myConfig = new ModuleServiceConfig() { 
+            ModuleDataConnectionString = "Data Source=moduledata;Mode=Memory;Cache=Shared"
+        };
+
+        protected SqliteConnection masterconnection;
+
+
         public override IServiceCollection CreateServices()
         {
             var result = base.CreateServices();
-            result.AddSingleton<IModuleService, FakeModuleService>();
+            result.AddSingleton(myConfig);
+            //result.AddSingleton<IModuleService, FakeModuleService>();
             return result;
         }
 
@@ -35,8 +48,15 @@ namespace contentapi.test
             super = new Requester() { userId = superUser.id };
             basic = new Requester() { userId = basicUser.id };
             sysConfig.SuperUsers.Add(superUser.id);
+
+            masterconnection = new SqliteConnection(myConfig.ModuleDataConnectionString);
+            masterconnection.Open();
         }
 
+        ~ModuleViewServiceTests()
+        {
+            masterconnection.Close();
+        }
 
         [Fact]
         public void TestSuperWrite()
@@ -99,6 +119,127 @@ namespace contentapi.test
 
             var results = service.SearchAsync(new ModuleSearch(), super).Result;
             Assert.Equal(2, results.Count);
+        }
+
+        //protected override ModuleServiceConfig config => myConfig;
+
+
+        [Fact]
+        public void BasicCreate()
+        {
+            var modview = new ModuleView() { name = "test", code = "--wow"};
+            var mod = service.UpdateModule(modview);
+            Assert.True(mod.script != null);
+        }
+
+        [Fact]
+        public void BasicParameterPass()
+        {
+            var modview = new ModuleView() { name = "test", code = @"
+                function command_wow(uid, data)
+                    return ""Id: "" .. uid .. "" Data: "" .. data
+                end" 
+            };
+            var mod = service.UpdateModule(modview);
+            var result = service.RunCommand("test", "wow", "whatever", new Requester() {userId = 8});
+            Assert.Equal("Id: 8 Data: whatever", result);
+        }
+
+        [Fact]
+        public void BasicDataReadWrite()
+        {
+            var modview = new ModuleView() { name = "test", code = @"
+                function command_wow(uid, data)
+                    setdata(""myval"", ""something"")
+                    return getdata(""myval"")
+                end" 
+            };
+            var mod = service.UpdateModule(modview);
+            var result = service.RunCommand("test", "wow", "whatever", new Requester() {userId = 8});
+            Assert.Equal("something", result);
+        }
+
+        [Fact]
+        public void SecondDataReadWrite()
+        {
+            var modview = new ModuleView() { name = "test", code = @"
+                function command_wow(uid, data)
+                    setdata(""myval"", ""something"")
+                    return getdata(""myval"")
+                end
+                function command_wow2(uid, data)
+                    return getdata(""myval"")
+                end" 
+            };
+            var mod = service.UpdateModule(modview);
+            var result = service.RunCommand("test", "wow", "whatever", new Requester() {userId = 8});
+            Assert.Equal("something", result);
+            result = service.RunCommand("test", "wow2", "whatever", new Requester() {userId = 8});
+            Assert.Equal("something", result);
+        }
+
+        [Fact]
+        public void ReadMessagesInstant()
+        {
+            var modview = new ModuleView() { name = "test", code = @"
+                function command_wow(uid, data)
+                    sendmessage(uid, ""hey"")
+                    sendmessage(uid + 1, ""hey NO"")
+                end" 
+            };
+            var requester = new Requester() { userId = 9 };
+            var mod = service.UpdateModule(modview);
+            var result = service.RunCommand("test", "wow", "whatever", requester);
+            var messages = service.ListenAsync(-1, requester, TimeSpan.FromSeconds(1), CancellationToken.None).Result;
+            Assert.Single(messages);
+            Assert.Equal("hey", messages.First().message);
+            Assert.Equal("test", messages.First().module);
+            Assert.Equal(requester.userId, messages.First().receiverUid);
+            Assert.Equal(requester.userId, messages.First().senderUid);
+        }
+
+        [Fact]
+        public void ReadMessagesListen()
+        {
+            var modview = new ModuleView() { name = "test", code = @"
+                function command_wow(uid, data)
+                    sendmessage(uid, ""hey"")
+                    sendmessage(uid + 1, ""hey NO"")
+                end" 
+            };
+            var requester = new Requester() { userId = 9 };
+            var mod = service.UpdateModule(modview);
+            var result = service.RunCommand("test", "wow", "whatever", requester);
+            var messages = service.ListenAsync(-1, requester, TimeSpan.FromSeconds(1), CancellationToken.None).Result;
+            var lastId = messages.Last().id;
+            var messageWait = service.ListenAsync(lastId, requester, TimeSpan.FromSeconds(1), CancellationToken.None);
+            AssertNotWait(messageWait);
+            result = service.RunCommand("test", "wow", "whatever", requester);
+            messages = AssertWait(messageWait);
+            Assert.Single(messages);
+            Assert.Equal("hey", messages.First().message);
+            Assert.Equal("test", messages.First().module);
+            Assert.True(messages.First().id > lastId);
+        }
+
+        [Fact]
+        public void ReadMessagesListen0()
+        {
+            var modview = new ModuleView() { name = "test", code = @"
+                function command_wow(uid, data)
+                    sendmessage(uid, ""hey"")
+                    sendmessage(uid + 1, ""hey NO"")
+                end" 
+            };
+            var requester = new Requester() { userId = 9 };
+            var mod = service.UpdateModule(modview);
+            var messageWait = service.ListenAsync(0, requester, TimeSpan.FromSeconds(1), CancellationToken.None);
+            AssertNotWait(messageWait);
+            var result = service.RunCommand("test", "wow", "whatever", requester);
+            var messages = AssertWait(messageWait);
+            Assert.Single(messages);
+            Assert.Equal("hey", messages.First().message);
+            Assert.Equal("test", messages.First().module);
         }
     }
 }

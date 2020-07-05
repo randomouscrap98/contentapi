@@ -25,7 +25,7 @@ namespace contentapi.test
 
         public Task<ListenResult> BasicListen(ListenerChainConfig lConfig, RelationListenChainConfig rConfig, long requesterId)
         {
-            return chainer.ListenAsync(null, lConfig, rConfig, null, new Requester() { userId = requesterId }, cancelToken);
+            return chainer.ListenAsync(null, lConfig, rConfig, /*null,*/ new Requester() { userId = requesterId }, cancelToken);
         }
 
         public List<string> BasicCommentChain()
