@@ -608,9 +608,8 @@ namespace contentapi.Services.Implementations
             public List<long> listeners {get;set;}
         }
 
-        //protected class PhonyModuleMessage : ModuleMessage, IIdView { }
-
-        public async Task<ListenResult> ListenAsync(Dictionary<string, List<string>> fields, ListenerChainConfig listeners, RelationListenChainConfig actions, /*ModuleChainConfig modules,*/ Requester requester, CancellationToken cancelToken)
+        public async Task<ListenResult> ListenAsync(Dictionary<string, List<string>> fields, ListenerChainConfig listeners, RelationListenChainConfig actions, 
+            Requester requester, CancellationToken cancelToken)
         {
             var result = new ListenResult();
 
@@ -621,8 +620,6 @@ namespace contentapi.Services.Implementations
             //Assume nothing changed in the result (it may just be a listener update), and better to send the same than to send nothing.
             if(actions != null)
                 result.lastId = actions.lastId; 
-            //if(modules != null)
-            //    result.lastModuleId = modules.lastId;
 
             fields = FixFields(fields);
 
@@ -631,7 +628,6 @@ namespace contentapi.Services.Implementations
 
             CheckChainLimit(listeners?.chains?.Count);
             CheckChainLimit(actions?.chains?.Count);
-            //CheckChainLimit(modules?.chains?.Count);
 
             //A simple function-wide lock for asynchronous tasks. Should be safe... since it's all within the function.
             Func<Func<Task>, Task> lockAsync = async(a) =>
@@ -678,6 +674,9 @@ namespace contentapi.Services.Implementations
             //Create a new cancel source FROM the original token so that either us or the client can cancel
             using (CancellationTokenSource linkedCts = CancellationTokenSource.CreateLinkedTokenSource(cancelToken))
             {
+                //Just in case things don't behave nicely
+                linkedCts.CancelAfter(systemConfig.ListenTimeout);
+
                 try
                 {
                     if (actions != null)
@@ -778,18 +777,6 @@ namespace contentapi.Services.Implementations
                             waiters.Add(run());
                         }
                     }
-
-                    //if (modules != null)
-                    //{
-                    //    Func<Task> run = async () =>
-                    //    {
-                    //        result.modulemessages = await moduleService.ListenAsync(modules.lastId, requester, systemConfig.ListenTimeout, linkedCts.Token);  //listeners.lastListeners, requester, linkedCts.Token);
-                    //        result.lastModuleId = result.modulemessages.Max(x => x.id);
-                    //        await chainer(modules.chains, result.modulemessages); //Select(x => new PhonyListenerList() { id = x.Key, listeners = x.Value.Keys.ToList() }));
-                    //    };
-
-                    //    waiters.Add(run());
-                    //}
 
                     if (waiters.Count == 0)
                         throw new BadRequestException("No listeners registered");
