@@ -79,7 +79,7 @@ namespace contentapi.Controllers
 
         public class UserBasicPost
         {
-            public long avatar {get;set;}
+            public long? avatar {get;set;}
 
             [MaxLength(256)]
             public string special {get;set;} = null;
@@ -96,8 +96,8 @@ namespace contentapi.Controllers
                 var userView = await GetCurrentUser();
 
                 //Only set avatar if they gave us something
-                if(data.avatar >= 0)
-                    userView.avatar = data.avatar;
+                if(data.avatar != null) //>= 0)
+                    userView.avatar = (long)data.avatar;
 
                 if(data.special != null)
                     userView.special = data.special;
