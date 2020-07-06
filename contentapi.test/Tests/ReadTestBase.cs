@@ -11,8 +11,8 @@ namespace contentapi.test
 {
     public class ReadTestUnit
     {
-        public UserView commonUser;
-        public UserView specialUser;
+        public UserViewFull commonUser;
+        public UserViewFull specialUser;
 
         public ContentView commonContent;
         public ContentView specialContent;

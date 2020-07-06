@@ -83,6 +83,8 @@ namespace contentapi.Controllers
 
             [MaxLength(256)]
             public string special {get;set;} = null;
+
+            public List<long> hidelist {get;set;} = null;
         }
 
         [HttpPut("basic")]
@@ -99,6 +101,9 @@ namespace contentapi.Controllers
 
                 if(data.special != null)
                     userView.special = data.special;
+
+                if(data.hidelist != null)
+                    userView.hidelist = data.hidelist;
 
                 return mapper.Map<UserView>(await service.WriteAsync(userView, GetRequesterNoFail()));
             }); 

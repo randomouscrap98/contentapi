@@ -80,12 +80,14 @@ namespace contentapi.Controllers
             }
             catch(TimeoutException)
             {
-                Response.Headers.Add("SBS-Warning", "Non-critical timeout");
-                return null;
+                Response.Headers.Add("SBS-Warning", "Non-critical: timeout");
+                return NoContent();
+                //return null;
                 //return StatusCode(408);
             }
             catch(OperationCanceledException)
             {
+                Response.Headers.Add("SBS-Warning", "Non-critical: operation cancelled");
                 logger.LogWarning("Pageload(?) got cancelled");
                 return NoContent();
             }

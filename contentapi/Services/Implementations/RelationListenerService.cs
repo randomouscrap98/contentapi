@@ -138,6 +138,22 @@ namespace contentapi.Services.Implementations
                 //This should be OK, considering we'll be creating new dictionaries every time anyway. As always, watch the CPU
                 var result = GetListenersAsDictionary(listenersNow, lastListeners.Keys);
 
+                var users = result.Values.SelectMany(x => x.Keys).ToList();
+
+                //A VERY RAW thing (for speed)
+                foreach(var hideval in await provider.GetEntityValuesAsync(new EntityValueSearch() { EntityIds = users, KeyLike = Keys.UserHideKey }))
+                {
+                    //Parse the actual hide values for this user.
+                    var hides = hideval.value.Split(",", StringSplitOptions.RemoveEmptyEntries).Select(x => long.Parse(x));
+
+                    //Now loop through the rooms and completely remove users from lists if they're hiding there
+                    foreach(var room in result)
+                    {
+                        if(hides.Contains(0) || hides.Contains(room.Key))
+                            room.Value.Remove(hideval.entityId);
+                    }
+                }
+
                 if (result.Any(x => !x.Value.RealEqual(lastListeners[x.Key])))
                     return result;
 

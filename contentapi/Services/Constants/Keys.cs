@@ -55,6 +55,7 @@ namespace contentapi.Services.Constants
         public const string RegistrationCodeKey = "srk";
         public const string AvatarKey = "sa";
         public const string UserSpecialKey = "sus";
+        public const string UserHideKey ="suh";
 
 
         //Awful hacks

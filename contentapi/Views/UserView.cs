@@ -1,5 +1,7 @@
 
 using System;
+using System.Collections.Generic;
+using System.Linq;
 
 namespace contentapi.Views
 {
@@ -28,11 +30,12 @@ namespace contentapi.Views
         public long editUserId { get;set;}
 
         public string email { get; set; } //This field SHOULDN'T be set unless the user is ourselves.
+        public List<long> hidelist {get;set;} = new List<long>();
 
         protected override bool EqualsSelf(object obj)
         {
             var o = (UserView)obj;
-            return base.EqualsSelf(obj) && o.username == username && o.avatar == avatar && o.email == email;
+            return base.EqualsSelf(obj) && hidelist.OrderBy(x => x).SequenceEqual(o.hidelist.OrderBy(x => x));
         }
     }
 
@@ -45,10 +48,10 @@ namespace contentapi.Views
         public string salt {get;set;}
         public string registrationKey {get;set;}
 
-        protected override bool EqualsSelf(object obj)
-        {
-            var o = (UserViewFull)obj;
-            return base.EqualsSelf(obj) && o.password == password && o.salt == salt && o.registrationKey == registrationKey;
-        }
+        //protected override bool EqualsSelf(object obj)
+        //{
+        //    var o = (UserViewFull)obj;
+        //    return base.EqualsSelf(obj) && o.password == password && o.salt == salt && o.registrationKey == registrationKey;
+        //}
     }
 }

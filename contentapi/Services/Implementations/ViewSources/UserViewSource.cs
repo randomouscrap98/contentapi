@@ -57,6 +57,8 @@ namespace contentapi.Services.Implementations
                 result.avatar = long.Parse(user.GetValue(Keys.AvatarKey).value);
             if(user.HasValue(Keys.RegistrationCodeKey))
                 result.registrationKey = user.GetValue(Keys.RegistrationCodeKey).value;
+            if(user.HasValue(Keys.UserHideKey))
+                result.hidelist = user.GetValue(Keys.UserHideKey).value.Split(",".ToCharArray(),StringSplitOptions.RemoveEmptyEntries).Select(x => long.Parse(x)).ToList();
             
             result.registered = string.IsNullOrWhiteSpace(result.registrationKey);
 
@@ -78,6 +80,7 @@ namespace contentapi.Services.Implementations
                 .Add(NewValue(Keys.UserSpecialKey, user.special))
                 .Add(NewValue(Keys.EmailKey, user.email))
                 .Add(NewValue(Keys.PasswordSaltKey, user.salt))
+                .Add(NewValue(Keys.UserHideKey, string.Join(",", user.hidelist)))
                 .Add(NewValue(Keys.PasswordHashKey, user.password));
             this.ApplyFromEditView(user, newUser, EntityType);
             //Can't do anything about super

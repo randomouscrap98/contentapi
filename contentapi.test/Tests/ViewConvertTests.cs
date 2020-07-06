@@ -1,4 +1,5 @@
 using System;
+using System.Collections.Generic;
 using contentapi.Services.Constants;
 using contentapi.Services.Implementations;
 using contentapi.Views;
@@ -111,7 +112,9 @@ namespace contentapi.test
                 salt = "thesearebytefieldsbro",
                 avatar = 88,
                 email = "email@ameila.com",
-                registrationKey = "12345"
+                registrationKey = "12345",
+                special = "wowzers",
+                hidelist = new List<long>() { 5, 8, 99 }
             };
 
             FillHistoricView(view);
