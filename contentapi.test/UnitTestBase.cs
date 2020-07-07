@@ -61,7 +61,7 @@ namespace contentapi.test
 
             csp.AddDefaultServices(services);
             csp.AddServiceConfigurations(services, config);
-            services.AddSingleton(new EntityProviderConfig() { ConcurrentAccess = 1 });
+            services.AddSingleton(new EntityQueryableEfCoreConfig() { ConcurrentAccess = 1 });
             //services.AddSingleton(new ModuleServiceConfig() { ModuleDataConnectionString = "Data Source=:memory:;"});
             //services.AddSingleton<ISignaler<EntityBase>, SignalSystem<EntityBase>>(); //Why must I do this every time?
 

@@ -60,7 +60,7 @@ namespace contentapi
 
             //Fix some entity system stuff. We need singletons but the default is transient
             //The IEntityProvider that we give out needs to have only a single access
-            services.AddSingleton(new EntityProviderConfig() { ConcurrentAccess = 1 });
+            services.AddSingleton(new EntityQueryableEfCoreConfig() { ConcurrentAccess = 1 });
             //services.AddSingleton<ISignaler<EntityBase>, SignalSystem<EntityBase>>();
 
             //Add our own services from contentapi

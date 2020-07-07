@@ -1,14 +1,12 @@
 using System;
 using System.Collections.Generic;
 using System.Linq;
-using System.Text;
 using System.Text.Json;
 using System.Threading;
 using System.Threading.Tasks;
 using contentapi.Configs;
 using contentapi.Services.Constants;
 using contentapi.Services.Extensions;
-using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.Logging;
 using Randomous.EntitySystem;
 
@@ -173,7 +171,7 @@ namespace contentapi.Services.Implementations
                 listenStatuses = listenConfig.statuses
             } ;
 
-            var maxId = await provider.GetQueryable<EntityRelation>().MaxAsync(x => x.id);
+            var maxId = await provider.GetMaxAsync(provider.GetQueryable<EntityRelation>(), x => x.id);
 
             if(listenConfig.lastId <= 0)
                 listenConfig.lastId = maxId + listenConfig.lastId; //plus because negative

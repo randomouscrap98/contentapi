@@ -12,7 +12,6 @@ using AutoMapper;
 using contentapi.Configs;
 using contentapi.Services.Constants;
 using contentapi.Views;
-using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.Logging;
 using Randomous.EntitySystem;
 
@@ -410,17 +409,17 @@ namespace contentapi.Services.Implementations
             var result = new List<SystemAggregate>();
             result.Add(new SystemAggregate()
             {
-                id = await provider.GetQueryable<EntityRelation>().Select(x => x.id).MaxAsync(),
+                id = await provider.GetMaxAsync(provider.GetQueryable<EntityRelation>(), x => x.id),
                 type = "actionMax"
             });
             result.Add(new SystemAggregate()
             {
-                id = await provider.GetQueryable<Entity>().Select(x => x.id).MaxAsync(),
+                id = await provider.GetMaxAsync(provider.GetQueryable<Entity>(), x => x.id),
                 type = "contentMax"
             });
             result.Add(new SystemAggregate()
             {
-                id = await provider.GetQueryable<EntityValue>().Select(x => x.id).MaxAsync(),
+                id = await provider.GetMaxAsync(provider.GetQueryable<EntityValue>(), x => x.id),
                 type = "valueMax"
             });
             return result;
