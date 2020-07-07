@@ -772,7 +772,7 @@ namespace contentapi.Services.Implementations
                             {
                                 //I didn't have time to fix this. THIS IS SOOOO BAD, passing lock async!!! WHAT DOES IT EVEN MEAN?? Need some other way to lock
                                 //the database during threaded stuff, or get rid of scoped database
-                                result.listeners = await relationService.GetListenersAsync(listeners.lastListeners, requester, linkedCts.Token, lockAsync);
+                                result.listeners = await relationService.GetListenersAsync(listeners.lastListeners, requester, linkedCts.Token); //, lockAsync);
                                 await chainer(listeners.chains, result.listeners.Select(x => new PhonyListenerList() { id = x.Key, listeners = x.Value.Keys.ToList() }));
                             };
 

@@ -53,6 +53,19 @@ namespace contentapi.Services.Implementations
 
             //Special services
             services.AddTransient<RelationListenerService>();
+            //services.AddTransient<RelationListenerService>((p) =>
+            //{
+            //    //Due to the "async" nature of this thing, it needs its own scope. Can't share our stuff with others!
+            //    var newsp = p.CreateScope().ServiceProvider;
+            //    //return (RelationListenerService)ActivatorUtilities.GetServiceOrCreateInstance(newsp, typeof(RelationListenerService));
+            //    return new RelationListenerService(
+            //        newsp.GetService<ILogger<RelationListenerService>>(), 
+            //        newsp.GetService<IDecayer<RelationListener>>(),
+            //        newsp.GetService<IEntityProvider>(),
+            //        newsp.GetService<SystemConfig>(),
+            //        newsp.GetService<RelationListenerServiceConfig>()
+            //        );
+            //});
             services.AddTransient<ChainService>();
             services.AddSingleton<IModuleService, ModuleService>();
             services.AddSingleton<ModuleMessageAdder>((p) => (m) =>

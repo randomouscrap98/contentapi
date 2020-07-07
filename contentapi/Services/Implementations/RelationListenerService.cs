@@ -119,10 +119,10 @@ namespace contentapi.Services.Implementations
         }
 
         public async Task<Dictionary<long, Dictionary<long, string>>> GetListenersAsync(
-            Dictionary<long, Dictionary<long, string>> lastListeners, Requester requester, CancellationToken token, Func<Func<Task>, Task> lockAsync = null)
+            Dictionary<long, Dictionary<long, string>> lastListeners, Requester requester, CancellationToken token)//, Func<Func<Task>, Task> lockAsync = null)
         {
             DateTime start = DateTime.Now;
-            lockAsync = lockAsync ?? (f => f());
+            //lockAsync = lockAsync ?? (f => f());
 
             while (DateTime.Now - start < systemConfig.ListenTimeout)
             {
@@ -142,11 +142,11 @@ namespace contentapi.Services.Implementations
 
                 var users = result.Values.SelectMany(x => x.Keys).ToList();
 
-                List<EntityValue> hidevalues = null;
-                await lockAsync (async() => hidevalues = await provider.GetEntityValuesAsync(new EntityValueSearch() { EntityIds = users, KeyLike = Keys.UserHideKey }));
+                //List<EntityValue> hidevalues = null;
+                //await lockAsync (async() => hidevalues = await provider.GetEntityValuesAsync(new EntityValueSearch() { EntityIds = users, KeyLike = Keys.UserHideKey }));
 
                 //A VERY RAW thing (for speed)
-                foreach(var hideval in hidevalues)
+                foreach(var hideval in await provider.GetEntityValuesAsync(new EntityValueSearch() { EntityIds = users, KeyLike = Keys.UserHideKey }))
                 {
                     //Parse the actual hide values for this user.
                     var hides = hideval.value.Split(",", StringSplitOptions.RemoveEmptyEntries).Select(x => long.Parse(x));
