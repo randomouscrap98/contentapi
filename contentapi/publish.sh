@@ -46,6 +46,9 @@ hostrsync()
    rsync -zz -${rdf}vh -e "ssh -p $port" "$1" "$phost:$2"
 }
 
+unixtime=`date +"%s"`
+sed -i -E "s/(<Version>[0-9]+\.[0-9]+\.[0-9]+\.)[0-9]+(<\/Version>)/\1${unixtime}\2/" contentapi.csproj
+
 # The project itself. Delete the old folder (probably).
 # We REMOVE the local publish folder to get rid of old, no longer needed files
 # (don't want to sync unnecessary or even harmful things).
@@ -63,7 +66,7 @@ cp -r LanguageFiles "$lpfolder"
 rm -f "$lpfolder/content.db"
 
 # Now put the stuff on the server! A simple direct copy
-hostrsync "$lpfolder" "$pfolder"
+#hostrsync "$lpfolder" "$pfolder"
 
 # And then chmod! The main running file should be executable
-ssh $phost -p $port "cd $pfolder; chmod 750 contentapi; test -f $postinstallscript && ./$postinstallscript $postinstallargs"
+#ssh $phost -p $port "cd $pfolder; chmod 750 contentapi; test -f $postinstallscript && ./$postinstallscript $postinstallargs"

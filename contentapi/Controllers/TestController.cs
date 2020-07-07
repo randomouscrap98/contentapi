@@ -38,6 +38,18 @@ namespace contentapi.Controllers
             public int RelationCount {get;set;}= -1;
         }
 
+        [HttpGet("info")]
+        public ActionResult<ExpandoObject> GetInfo()
+        {
+            dynamic one = new ExpandoObject();
+            one.versions = new Dictionary<string, string>()
+            {
+                { "entitysystem", typeof(IEntityProvider).Assembly.GetName().Version.ToString() },
+                { "contentapi", typeof(Startup).Assembly.GetName().Version.ToString() },
+            };
+            return (ExpandoObject)one;
+        }
+
         [HttpGet]
         public async Task<ActionResult<TestData>> TestGet()
         {
