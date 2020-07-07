@@ -119,10 +119,9 @@ namespace contentapi.Services.Implementations
         }
 
         public async Task<Dictionary<long, Dictionary<long, string>>> GetListenersAsync(
-            Dictionary<long, Dictionary<long, string>> lastListeners, Requester requester, CancellationToken token)//, Func<Func<Task>, Task> lockAsync = null)
+            Dictionary<long, Dictionary<long, string>> lastListeners, Requester requester, CancellationToken token)
         {
             DateTime start = DateTime.Now;
-            //lockAsync = lockAsync ?? (f => f());
 
             while (DateTime.Now - start < systemConfig.ListenTimeout)
             {
@@ -141,9 +140,6 @@ namespace contentapi.Services.Implementations
                 var result = GetListenersAsDictionary(listenersNow, lastListeners.Keys);
 
                 var users = result.Values.SelectMany(x => x.Keys).ToList();
-
-                //List<EntityValue> hidevalues = null;
-                //await lockAsync (async() => hidevalues = await provider.GetEntityValuesAsync(new EntityValueSearch() { EntityIds = users, KeyLike = Keys.UserHideKey }));
 
                 //A VERY RAW thing (for speed)
                 foreach(var hideval in await provider.GetEntityValuesAsync(new EntityValueSearch() { EntityIds = users, KeyLike = Keys.UserHideKey }))

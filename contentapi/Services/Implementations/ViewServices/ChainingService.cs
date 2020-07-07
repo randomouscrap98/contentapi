@@ -615,7 +615,7 @@ namespace contentapi.Services.Implementations
 
             //Since all this stuff happens at the SAME TIME on the SAME dbcontext (which usually doesn't happen), we need a lock to ensure only one is 
             //getting to it at a time.
-            var semaphore = new SemaphoreSlim(1, 1);
+            //var semaphore = new SemaphoreSlim(1, 1);
 
             //Assume nothing changed in the result (it may just be a listener update), and better to send the same than to send nothing.
             if(actions != null)
@@ -630,12 +630,12 @@ namespace contentapi.Services.Implementations
             CheckChainLimit(actions?.chains?.Count);
 
             //A simple function-wide lock for asynchronous tasks. Should be safe... since it's all within the function.
-            Func<Func<Task>, Task> lockAsync = async(a) =>
-            {
-                await semaphore.WaitAsync();
-                try { await a(); }
-                finally { semaphore.Release(); }
-            };
+            //Func<Func<Task>, Task> lockAsync = async(a) =>
+            //{
+            //    await semaphore.WaitAsync();
+            //    try { await a(); }
+            //    finally { semaphore.Release(); }
+            //};
 
             //A simple function to apply the given list of chains to the given list of views
             Func<List<string>, IEnumerable<IIdView>, Task> chainer = async (l, i) =>
@@ -646,11 +646,11 @@ namespace contentapi.Services.Implementations
                     var tempViewResults = new List<List<IIdView>>() { i.ToList() };
 
                     //ONLY allow SINGLE access the database 
-                    await lockAsync(async () =>
-                    {
-                        foreach (var chain in l)
-                            await ChainAsync(SetupChainRequestString(chain, chainResults, fields), requester, tempViewResults);
-                    });
+                    //await lockAsync(async () =>
+                    //{
+                    foreach (var chain in l)
+                        await ChainAsync(SetupChainRequestString(chain, chainResults, fields), requester, tempViewResults);
+                    //});
                 }
             };
 
@@ -729,7 +729,8 @@ namespace contentapi.Services.Implementations
 
                                 //Inefficient, but I NEED to clear the notifications BEFORE chaining. This MIGHT be called WAY TOO OFTEN so...
                                 //hopefully tracking the contents make it better
-                                await lockAsync(() => services.watch.ClearAsyncFast(requester, actions.clearNotifications.Intersect(clearContents).ToArray()));
+                                //await lockAsync(() => services.watch.ClearAsyncFast(requester, actions.clearNotifications.Intersect(clearContents).ToArray()));
+                                await services.watch.ClearAsyncFast(requester, actions.clearNotifications.Intersect(clearContents).ToArray());
                                 result.lastId = relations.Max(x => x.id);
 
                                 await chainer(actions.chains, baseViews); //result.Select(x => new BaseView() {id = x.id}));
@@ -752,7 +753,8 @@ namespace contentapi.Services.Implementations
                             List<ContentView> allowedContent = null;
                             
                             //This also accesses the database, must only allow single access!
-                            await lockAsync(async () => allowedContent = await services.content.SearchAsync(new ContentSearch() { Ids = listeners.lastListeners.Keys.ToList() }, requester));
+                            //await lockAsync(async () => allowedContent = await services.content.SearchAsync(new ContentSearch() { Ids = listeners.lastListeners.Keys.ToList() }, requester));
+                            allowedContent = await services.content.SearchAsync(new ContentSearch() { Ids = listeners.lastListeners.Keys.ToList() }, requester);
 
                             foreach(var l in listeners.lastListeners.Keys.ToList())
                                 if(l > 0 && !allowedContent.Any(x => x.id == l)) //This allows invalid range ids for fun debugging or feature stuff, but still gives privacy for private rooms
@@ -770,9 +772,7 @@ namespace contentapi.Services.Implementations
 
                             Func<Task> run = async () =>
                             {
-                                //I didn't have time to fix this. THIS IS SOOOO BAD, passing lock async!!! WHAT DOES IT EVEN MEAN?? Need some other way to lock
-                                //the database during threaded stuff, or get rid of scoped database
-                                result.listeners = await relationService.GetListenersAsync(listeners.lastListeners, requester, linkedCts.Token); //, lockAsync);
+                                result.listeners = await relationService.GetListenersAsync(listeners.lastListeners, requester, linkedCts.Token);
                                 await chainer(listeners.chains, result.listeners.Select(x => new PhonyListenerList() { id = x.Key, listeners = x.Value.Keys.ToList() }));
                             };
 
