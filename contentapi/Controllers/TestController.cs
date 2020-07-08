@@ -42,9 +42,10 @@ namespace contentapi.Controllers
         public ActionResult<ExpandoObject> GetInfo()
         {
             dynamic one = new ExpandoObject();
+            //one.versions = (new[] { typeof(IEntityProvider), typeof(Startup) });
             one.versions = new Dictionary<string, string>()
             {
-                { "entitysystem", typeof(IEntityProvider).Assembly.GetName().Version.ToString() },
+                { "entitysystem", $"{typeof(IEntityProvider).Assembly.GetName().Version} " },
                 { "contentapi", typeof(Startup).Assembly.GetName().Version.ToString() },
             };
             return (ExpandoObject)one;

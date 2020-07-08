@@ -47,14 +47,10 @@ hostrsync()
    rsync -zz -${rdf}vh -e "ssh -p $port" "$1" "$phost:$2"
 }
 
-# sed "s/[ \t]*<Version>[0-9]*[0-9].[0-9]*[0-9].[0-9]*[0-9].[0-9]*[0-9]/&@/g;;a {s/0@/1/g;s/1@/2/g;s/2@/3/g;s/3@/4/g;s/4@/5/g;s/5@/6/g;s/6@/7/g;s/7@/8/g;s/8@/9/g;s/9@/@0/g;t a};s/@/1/g" contentapi.csproj
-# unixtime=`date +"%s"`
 pubcountorig=`cat ${pubcountfile}`
 pubcount=`expr "${pubcountorig}" + "1"`
 sed -i -E "s/(<Version>[0-9]+\.[0-9]+\.[0-9]+\.)[0-9]+(<\/Version>)/\1${pubcount}\2/" contentapi.csproj
 echo "${pubcount}" > "${pubcountfile}"
-
-# "s/SEARCHSTRING[0-9]*[0-9]/&@/g;:a {s/0@/1/g;s/1@/2/g;s/2@/3/g;s/3@/4/g;s/4@/5/g;s/5@/6/g;s/6@/7/g;s/7@/8/g;s/8@/9/g;s/9@/@0/g;t a};s/@/1/g"
 
 # The project itself. Delete the old folder (probably).
 # We REMOVE the local publish folder to get rid of old, no longer needed files
@@ -73,7 +69,7 @@ cp -r LanguageFiles "$lpfolder"
 rm -f "$lpfolder/content.db"
 
 # Now put the stuff on the server! A simple direct copy
-#hostrsync "$lpfolder" "$pfolder"
+hostrsync "$lpfolder" "$pfolder"
 
 # And then chmod! The main running file should be executable
-#ssh $phost -p $port "cd $pfolder; chmod 750 contentapi; test -f $postinstallscript && ./$postinstallscript $postinstallargs"
+ssh $phost -p $port "cd $pfolder; chmod 750 contentapi; test -f $postinstallscript && ./$postinstallscript $postinstallargs"
