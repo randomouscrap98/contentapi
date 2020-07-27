@@ -19,22 +19,51 @@ namespace contentapi.Controllers
     {
         public int NameChangesPerTime {get;set;} //= 3;
         public TimeSpan NameChangeRange {get;set;}
+        public TimeSpan PasswordResetExpire {get;set;}
     }
+
 
     public class UserController : BaseSimpleController
     {
+        public class PasswordReset
+        {
+            public long UserId {get;set;}
+            public string Key {get;set;}
+            public bool Valid {get;set;} = true;
+            //public DateTime Created {get;set;} = DateTime.Now;
+            
+            //public DateTime Expire {get;set;} 
+
+            //public override bool Equals(object obj)
+            //{
+            //    if(obj != null && obj is PasswordReset)
+            //    {
+            //        var o = (PasswordReset) obj;
+            //        return o.UserId == UserId;
+            //    }
+
+            //    return false;
+            //}
+
+            //public override int GetHashCode()
+            //{
+            //    return UserId.GetHashCode();
+            //}
+        }
+
         protected IHashService hashService;
         protected ITokenService tokenService;
         protected ILanguageService languageService;
         protected IEmailService emailService;
         protected IMapper mapper;
         protected UserViewService service;
+        protected IDecayer<PasswordReset> passwordResets;
 
         protected UserControllerConfig config;
 
         public UserController(ILogger<UserController> logger, IHashService hashService,
             ITokenService tokenService, ILanguageService languageService, IEmailService emailService,
-            UserControllerConfig config, UserViewService service, IMapper mapper)
+            UserControllerConfig config, UserViewService service, IMapper mapper, IDecayer<PasswordReset> passwordResets)
             :base(logger)
         { 
             this.hashService = hashService;
@@ -44,6 +73,7 @@ namespace contentapi.Controllers
             this.config = config;
             this.service = service;
             this.mapper = mapper;
+            this.passwordResets = passwordResets;
         }
 
         protected async Task<UserViewFull> GetCurrentUser()
@@ -148,14 +178,27 @@ namespace contentapi.Controllers
             return GetToken(userView.id, expireOverride);
         }
 
-
-        //The rest is registration
-        protected virtual async Task SendConfirmationEmailAsync(string recipient, string code)
+        protected virtual async Task SendEmailAsync(string subjectKey, string bodyKey, string recipient, Dictionary<string, object> replacements)
         {
-            var subject = languageService.GetString("ConfirmEmailSubject", "en");
-            var body = languageService.GetString("ConfirmEmailBody", "en", new Dictionary<string, object>() {{"confirmCode", code}});
+            var subject = languageService.GetString(subjectKey, "en");
+            var body = languageService.GetString(bodyKey, "en", replacements); //new Dictionary<string, object>() {{"confirmCode", code}});
             await emailService.SendEmailAsync(new EmailMessage(recipient, subject, body));
         }
+
+        //The rest is registration
+        //protected virtual async Task SendConfirmationEmailAsync(string recipient, string code)
+        //{
+        //    var subject = languageService.GetString("ConfirmEmailSubject", "en");
+        //    var body = languageService.GetString("ConfirmEmailBody", "en", new Dictionary<string, object>() {{"confirmCode", code}});
+        //    await emailService.SendEmailAsync(new EmailMessage(recipient, subject, body));
+        //}
+
+        //protected virtual async Task SendPasswordResetEmailAsync(string recipient, string code)
+        //{
+        //    var subject = languageService.GetString("PasswordResestSubject", "en");
+        //    var body = languageService.GetString("PasswordResetBody", "en", new Dictionary<string, object>() {{"resetCode", code}});
+        //    await emailService.SendEmailAsync(new EmailMessage(recipient, subject, body));
+        //}
 
         protected bool ValidUsername(string username)
         {
@@ -195,13 +238,19 @@ namespace contentapi.Controllers
             return await ThrowToAction(async() => mapper.Map<UserView>(await service.WriteAsync(fullUser, requester)));
         }
 
-        public class RegistrationEmailPost
+        public class EmailPost
         {
             public string email {get;set;}
         }
 
+        public class EmailKeyPost
+        {
+            public string confirmationKey {get;set;}
+        }
+
+
         [HttpPost("register/sendemail")]
-        public async Task<ActionResult> SendRegistrationEmail([FromBody]RegistrationEmailPost post)
+        public async Task<ActionResult> SendRegistrationEmail([FromBody]EmailPost post)
         {
             var requester = GetRequesterNoFail();
             var foundUser = await service.FindByEmailAsync(post.email, requester);
@@ -215,18 +264,15 @@ namespace contentapi.Controllers
             if(string.IsNullOrWhiteSpace(registrationCode))
                 return BadRequest("Nothing to do for user");
 
-            await SendConfirmationEmailAsync(post.email, foundUser.registrationKey); //registrationCode.value);
+            //await SendConfirmationEmailAsync(post.email, foundUser.registrationKey); //registrationCode.value);
+            await SendEmailAsync("ConfirmEmailSubject", "ConfirmEmailBody", post.email, new Dictionary<string, object>() {{"confirmCode", foundUser.registrationKey}});
+            //foundUser.registrationKey); //registrationCode.value);
 
             return Ok("Email sent");
         }
 
-        public class ConfirmEmailPost
-        {
-            public string confirmationKey {get;set;}
-        }
-
         [HttpPost("register/confirm")]
-        public async Task<ActionResult<string>> ConfirmEmail([FromBody]ConfirmEmailPost post)
+        public async Task<ActionResult<string>> ConfirmEmail([FromBody]EmailKeyPost post)
         {
             if(string.IsNullOrEmpty(post.confirmationKey))
                 return BadRequest("Must provide a confirmation key in the body");
@@ -244,6 +290,59 @@ namespace contentapi.Controllers
             var confirmedUser = await service.WriteAsync(unconfirmedUser, requester);
 
             return GetToken(confirmedUser.id);
+        }
+
+        [HttpPost("passwordreset/email")]
+        public async Task<ActionResult> SendPasswordResetEmailAsync([FromBody]EmailPost post)
+        {
+            var requester = GetRequesterNoFail();
+            var foundUser = await service.FindByEmailAsync(post.email, requester);
+
+            if(foundUser == null)
+                return BadRequest("No user with that email");
+
+            //Now, add a new password reset code or something.
+            var code = new PasswordReset() { UserId = foundUser.id, Key = Guid.NewGuid().ToString() };
+            passwordResets.UpdateList(new[] { code });
+
+            await SendEmailAsync("PasswordResetSubject", "PasswordResetBody", post.email, new Dictionary<string, object>() 
+            {
+                {"resetCode", code.Key},
+                {"resetTime", config.PasswordResetExpire}
+            });
+
+            return Ok("Email sent");
+        }
+
+        public class PasswordResetPost : UserCredential
+        {
+            public string resetKey {get;set;}
+        }
+
+        [HttpPost("passwordreset")]
+        public async Task<ActionResult<string>> PasswordResetAsync([FromBody]PasswordResetPost post)
+        {
+            if(string.IsNullOrEmpty(post.resetKey))
+                return BadRequest("Must provide a reset key in the body");
+
+            var reset = passwordResets.DecayList(config.PasswordResetExpire).Where(x => x.Key == post.resetKey && x.Valid).SingleOrDefault();
+
+            if(reset == null)
+                return BadRequest("Invalid password reset key");
+
+            var self = new Requester() { userId = reset.UserId };
+            var user = await service.FindByIdAsync(reset.UserId, self);
+
+            if(user == null)
+                return BadRequest("No user found for password reset, this SHOULD NOT HAPPEN!");
+
+            user.password = post.password;
+            await service.WriteAsync(user, self);
+
+            reset.Valid = false;
+            passwordResets.UpdateList(new[] { reset });
+
+            return GetToken(user.id);
         }
 
         protected bool Verify(UserViewFull user, string password)
