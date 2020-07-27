@@ -6,7 +6,9 @@ namespace contentapi.Controllers
 {
     public class CategoryController : BaseViewServiceController<CategoryViewService, CategoryView, CategorySearch>
     {
-        public CategoryController(ILogger<CategoryController> logger, CategoryViewService service) 
-            : base(logger, service) { }
+        //public CategoryController(ILogger<CategoryController> logger, CategoryViewService service) 
+        //    : base(logger, service) { }
+        public CategoryController(BaseSimpleControllerServices services, CategoryViewService service) 
+            : base(services, service) { }
     }
 }

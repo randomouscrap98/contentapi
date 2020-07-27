@@ -21,9 +21,9 @@ namespace contentapi.Controllers
         protected RelationListenerService relationListenerService;
         protected IMapper mapper;
 
-        public ReadController(ILogger<BaseSimpleController> logger, ILanguageService docService, ChainService service, 
+        public ReadController(BaseSimpleControllerServices services, ILanguageService docService, ChainService service, 
             RelationListenerService relationListenerService, IMapper mapper, ChainServiceConfig serviceConfig)
-            : base(logger)
+            : base(services)
         {
             this.docService = docService;
             this.service = service;

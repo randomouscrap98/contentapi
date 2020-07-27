@@ -7,6 +7,7 @@ namespace contentapi.Services.Constants
     public static class Keys
     {
         public const string UserIdentifier = "uid";
+        public const string UserValidate = "vl";
 
 
         //Symbolic key stuff (these are all prepended to something else)

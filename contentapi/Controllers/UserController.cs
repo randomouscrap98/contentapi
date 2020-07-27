@@ -30,25 +30,6 @@ namespace contentapi.Controllers
             public long UserId {get;set;}
             public string Key {get;set;}
             public bool Valid {get;set;} = true;
-            //public DateTime Created {get;set;} = DateTime.Now;
-            
-            //public DateTime Expire {get;set;} 
-
-            //public override bool Equals(object obj)
-            //{
-            //    if(obj != null && obj is PasswordReset)
-            //    {
-            //        var o = (PasswordReset) obj;
-            //        return o.UserId == UserId;
-            //    }
-
-            //    return false;
-            //}
-
-            //public override int GetHashCode()
-            //{
-            //    return UserId.GetHashCode();
-            //}
         }
 
         protected IHashService hashService;
@@ -61,10 +42,11 @@ namespace contentapi.Controllers
 
         protected UserControllerConfig config;
 
-        public UserController(ILogger<UserController> logger, IHashService hashService,
+
+        public UserController(BaseSimpleControllerServices services, IHashService hashService,
             ITokenService tokenService, ILanguageService languageService, IEmailService emailService,
             UserControllerConfig config, UserViewService service, IMapper mapper, IDecayer<PasswordReset> passwordResets)
-            :base(logger)
+            :base(services)
         { 
             this.hashService = hashService;
             this.tokenService = tokenService;
@@ -83,7 +65,7 @@ namespace contentapi.Controllers
 
             //A VERY SPECIFIC glitch you really only get in development 
             if (user == null)
-                throw new UnauthorizedAccessException($"No user with uid {requester.userId}");
+                throw new AuthorizationException($"No user with uid {requester.userId}");
             
             return user;
         }
@@ -143,7 +125,8 @@ namespace contentapi.Controllers
         {
             return tokenService.GetToken(new Dictionary<string, string>()
             {
-                { Keys.UserIdentifier, id.ToString() }
+                { Keys.UserIdentifier, id.ToString() },
+                { Keys.UserValidate, userValidation.GetUserValidationToken(id) }
             }, expireOverride);
         }
 
@@ -184,21 +167,6 @@ namespace contentapi.Controllers
             var body = languageService.GetString(bodyKey, "en", replacements); //new Dictionary<string, object>() {{"confirmCode", code}});
             await emailService.SendEmailAsync(new EmailMessage(recipient, subject, body));
         }
-
-        //The rest is registration
-        //protected virtual async Task SendConfirmationEmailAsync(string recipient, string code)
-        //{
-        //    var subject = languageService.GetString("ConfirmEmailSubject", "en");
-        //    var body = languageService.GetString("ConfirmEmailBody", "en", new Dictionary<string, object>() {{"confirmCode", code}});
-        //    await emailService.SendEmailAsync(new EmailMessage(recipient, subject, body));
-        //}
-
-        //protected virtual async Task SendPasswordResetEmailAsync(string recipient, string code)
-        //{
-        //    var subject = languageService.GetString("PasswordResestSubject", "en");
-        //    var body = languageService.GetString("PasswordResetBody", "en", new Dictionary<string, object>() {{"resetCode", code}});
-        //    await emailService.SendEmailAsync(new EmailMessage(recipient, subject, body));
-        //}
 
         protected bool ValidUsername(string username)
         {
@@ -292,7 +260,7 @@ namespace contentapi.Controllers
             return GetToken(confirmedUser.id);
         }
 
-        [HttpPost("passwordreset/email")]
+        [HttpPost("passwordreset/sendemail")]
         public async Task<ActionResult> SendPasswordResetEmailAsync([FromBody]EmailPost post)
         {
             var requester = GetRequesterNoFail();
@@ -336,7 +304,7 @@ namespace contentapi.Controllers
             if(user == null)
                 return BadRequest("No user found for password reset, this SHOULD NOT HAPPEN!");
 
-            user.password = post.password;
+            SetPassword(user, post.password);
             await service.WriteAsync(user, self);
 
             reset.Valid = false;
@@ -414,6 +382,15 @@ namespace contentapi.Controllers
             await service.WriteAsync(fullUser, requester);
 
             return Ok(string.Join(", ", output));
+        }
+
+        [HttpPost("invalidatealltokens")]
+        [Authorize]
+        public ActionResult InvalidateAllTokens()
+        {
+            var requester = GetRequesterNoFail();
+            userValidation.NewValidation(requester.userId);
+            return Ok("All login tokens invalidated, you will need to login again");
         }
     }
 }

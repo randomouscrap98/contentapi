@@ -14,8 +14,10 @@ namespace contentapi.Controllers
     {
         protected CommentViewService service;
 
-        public CommentController(ILogger<CommentController> logger, CommentViewService service) 
-            : base(logger)
+        public CommentController(BaseSimpleControllerServices services, CommentViewService service) 
+            : base(services)
+        //public CommentController(ILogger<CommentController> logger, CommentViewService service) 
+        //    : base(logger)
         {
             this.service = service;
         }

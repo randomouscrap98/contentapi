@@ -13,8 +13,7 @@ namespace contentapi.Controllers
     {
         protected WatchViewService service;
 
-        public WatchController(ILogger<WatchController> logger,
-            WatchViewService service) : base(logger)
+        public WatchController(BaseSimpleControllerServices services, WatchViewService service) : base(services)
         {
             this.service = service;
         }

@@ -15,8 +15,7 @@ namespace contentapi.Controllers
     {
         protected VoteViewService service;
 
-        public VoteController(ILogger<VoteController> logger,
-            VoteViewService service) : base(logger)
+        public VoteController(BaseSimpleControllerServices services, VoteViewService service) : base(services)
         {
             this.service = service;
         }

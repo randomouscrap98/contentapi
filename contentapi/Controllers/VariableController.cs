@@ -19,7 +19,7 @@ namespace contentapi.Controllers
         protected ConcurrentDictionary<long, object> userlocks = new ConcurrentDictionary<long, object>();
         protected IEntityProvider provider;
 
-        public VariableController(ILogger<BaseSimpleController> logger, IEntityProvider provider) : base(logger)
+        public VariableController(BaseSimpleControllerServices services, IEntityProvider provider) : base(services)
         {
             this.provider = provider;
         }

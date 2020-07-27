@@ -2,11 +2,24 @@ using System;
 using System.Security.Claims;
 using System.Threading.Tasks;
 using contentapi.Services.Constants;
+using contentapi.Services.Implementations;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.Extensions.Logging;
 
 namespace contentapi.Controllers
 {
+    public class BaseSimpleControllerServices //where T : BaseSimpleController
+    {
+        public ILogger<BaseSimpleController> logger;
+        public UserValidationService userValidation;
+
+        public BaseSimpleControllerServices(ILogger<BaseSimpleController> logger, UserValidationService userValidation)
+        {
+            this.logger = logger;
+            this.userValidation = userValidation;
+        }
+    }
+
     /// <summary>
     /// A bunch of methods extending the existing IProvider
     /// </summary>
@@ -20,10 +33,12 @@ namespace contentapi.Controllers
     public abstract class BaseSimpleController : ControllerBase
     {
         protected ILogger logger;
+        protected UserValidationService userValidation;
 
-        public BaseSimpleController(ILogger<BaseSimpleController> logger)
+        public BaseSimpleController(BaseSimpleControllerServices services) //ILogger<BaseSimpleController> logger, UserValidationService userValidation)
         {
-            this.logger = logger;
+            this.logger = services.logger;
+            this.userValidation = services.userValidation;
         }
 
         protected virtual Task SetupAsync() { return Task.CompletedTask; } 
@@ -32,11 +47,17 @@ namespace contentapi.Controllers
         {
             //Look for the UID from the JWT 
             var id = User.FindFirstValue(Keys.UserIdentifier);
+            var token = User.FindFirstValue(Keys.UserValidate);
 
             if(id == null)
                 throw new InvalidOperationException("User not logged in!");
+
+            var user = long.Parse(id);
+
+            if (token == null || token != userValidation.GetUserValidationToken(user))
+                throw new InvalidOperationException("User not logged in!");
             
-            return long.Parse(id);
+            return user;
         }
 
         protected long GetRequesterUidNoFail()

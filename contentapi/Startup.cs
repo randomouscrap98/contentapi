@@ -82,6 +82,9 @@ namespace contentapi
                 return websocketConfig;
             });
 
+            //services.AddTransient(typeof(BaseSimpleControllerServices<>));
+            services.AddTransient<BaseSimpleControllerServices>();
+
             //The rest is http stuff I think
 
             //Rate limiting, hope this works!

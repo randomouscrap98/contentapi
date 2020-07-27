@@ -10,8 +10,10 @@ namespace contentapi.Controllers
 {
     public class ContentController : BaseViewServiceController<ContentViewService, ContentView, ContentSearch>
     {
-        public ContentController(ILogger<ContentController> logger, ContentViewService service) 
-            : base(logger, service) { }
+        //public ContentController(ILogger<ContentController> logger, ContentViewService service) 
+        //    : base(logger, service) { }
+        public ContentController(BaseSimpleControllerServices services, ContentViewService service) 
+            : base(services, service) { }
 
         protected override Task SetupAsync() { return service.SetupAsync(); }
     }

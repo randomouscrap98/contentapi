@@ -28,9 +28,9 @@ namespace contentapi.Controllers
         protected FileViewService service;
         protected ILanguageService docService;
 
-        public FileController(ILogger<BaseSimpleController> logger, FileControllerConfig config,
+        public FileController(BaseSimpleControllerServices services, FileControllerConfig config,
             FileViewService service, ILanguageService languageService) 
-            : base(logger)
+            : base(services)
         {
             this.config = config;
             this.service = service;

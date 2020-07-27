@@ -11,8 +11,8 @@ namespace contentapi.Controllers
     {
         protected ActivityViewService service;
 
-        public ActivityController(ILogger<BaseSimpleController> logger,
-            ActivityViewService service) : base(logger)
+        public ActivityController(BaseSimpleControllerServices services, ActivityViewService service) : base(services)
+        //ILogger<BaseSimpleController> logger,
         {
             this.service = service;
         }

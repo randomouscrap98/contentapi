@@ -14,8 +14,9 @@ namespace contentapi.Controllers
     {
         protected T service;
 
-        public BaseViewServiceController(ILogger<BaseDeletableController<V>> logger, T service) 
-            : base(logger)
+        //public BaseViewServiceController(ILogger<BaseDeletableController<V>> logger, T service, UserValidationService userValidation) 
+        //    : base(logger, userValidation)
+        public BaseViewServiceController(BaseSimpleControllerServices services, T service) : base(services)
         {
             this.service = service;
         }

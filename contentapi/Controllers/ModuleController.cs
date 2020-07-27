@@ -16,9 +16,9 @@ namespace contentapi.Controllers
         protected IPermissionService permissionService;
         protected ModuleMessageViewService moduleMessageService;
 
-        public ModuleController(ILogger<ModuleController> logger, ModuleViewService service, ModuleMessageViewService moduleMessageService,
+        public ModuleController(BaseSimpleControllerServices services, ModuleViewService service, ModuleMessageViewService moduleMessageService,
             IPermissionService permissionService, IModuleService moduleService)//UserViewService service, IPermissionService permissionService) 
-            : base(logger, service) 
+            : base(services, service) 
         {
             this.moduleMessageService = moduleMessageService;
             this.permissionService = permissionService;
