@@ -54,8 +54,10 @@ namespace contentapi.Controllers
 
             var user = long.Parse(id);
 
+            //ALL of the AFTER MIDDLEWARE token checks (whatever you add) NEED to throw the SAME kinds of errors as 
+            //an actual invalid token ie bad formatting or missing or whatever
             if (token == null || token != userValidation.GetUserValidationToken(user))
-                throw new InvalidOperationException("User not logged in!");
+                throw new AuthorizationException("User not logged in!");
             
             return user;
         }
@@ -63,7 +65,7 @@ namespace contentapi.Controllers
         protected long GetRequesterUidNoFail()
         {
             try { return GetRequesterUid(); }
-            catch { return -1; }
+            catch(InvalidOperationException) { return -1; }
         }
 
         protected Requester GetRequesterNoFail()
