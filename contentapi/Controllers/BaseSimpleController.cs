@@ -93,6 +93,11 @@ namespace contentapi.Controllers
             {
                 return Unauthorized(ex.Message);
             }
+            //I keep using this on accident
+            catch(UnauthorizedAccessException ex)
+            {
+                return Unauthorized(ex.Message);
+            }
             catch(BadRequestException ex)
             {
                 return BadRequest(ex.Message);
