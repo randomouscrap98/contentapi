@@ -72,10 +72,19 @@ namespace contentapi.Controllers
 
         [HttpPost]
         [Authorize]
-        public Task<ActionResult<FileView>> UploadFile(IFormFile file, [FromQuery]bool tryresize = true)
+        public Task<ActionResult<FileView>> UploadFile(IFormFile file = null, List<IFormFile> files = null, [FromQuery]bool tryresize = true)
         {
             return ThrowToAction(async ()=>
             {
+                //File ALWAYS takes precedence, but have a nice fallback.
+                if(file == null)
+                {
+                    if(files != null && files.Count > 0)
+                        file = files[0];
+                    else
+                        throw new BadRequestException("No file or files form data found!");
+                }
+
                 if(file.Length == 0)
                     throw new BadRequestException("No data uploaded!");
                 
