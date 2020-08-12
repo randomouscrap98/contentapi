@@ -189,7 +189,18 @@ namespace contentapi.Controllers
             var requester = GetRequesterNoFail();
 
             //Go get that ONE file. This should return null if we can't read it... let's hope!
-            var fileData = await service.FindByIdAsync(id, requester);
+            //SPECIAL: the 0 file is 
+            FileView fileData = null;
+
+            if(id == 0) 
+            {
+                if(System.IO.File.Exists(GetAndMakePath(0)))
+                    fileData = new FileView() { id = 0, fileType = "image/png"};
+            }
+            else
+            {
+                fileData = await service.FindByIdAsync(id, requester);
+            }
 
             if(fileData == null)
                 return NotFound();
