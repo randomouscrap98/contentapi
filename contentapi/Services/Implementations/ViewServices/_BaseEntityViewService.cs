@@ -1,6 +1,8 @@
 using System;
+using System.Collections.Concurrent;
 using System.Collections.Generic;
 using System.Linq;
+using System.Threading;
 using System.Threading.Tasks;
 using AutoMapper;
 using contentapi.Services.Constants;
@@ -15,6 +17,7 @@ namespace contentapi.Services.Implementations
     public abstract class BaseEntityViewService<V,S> : BaseViewServices<V,S>, IViewService<V,S> where V : IEditView where S : BaseSearch, new()
     {
         protected IViewSource<V,EntityPackage,EntityGroup,S> converter;
+        private static ConcurrentDictionary<long, SemaphoreSlim> entityLocks = new ConcurrentDictionary<long, SemaphoreSlim>();
 
         public BaseEntityViewService(ViewServicePack services, ILogger<BaseEntityViewService<V,S>> logger, IViewSource<V,EntityPackage,EntityGroup,S> converter) 
             : base(services, logger) 
@@ -81,26 +84,37 @@ namespace contentapi.Services.Implementations
         {
             logger.LogTrace("WriteViewAsync called");
 
-            EntityPackage existing = null; 
+            var sem = entityLocks.GetOrAdd(view.id, i => new SemaphoreSlim(1,1));
 
-            view = await CleanViewGeneralAsync(view, requester);
+            await sem.WaitAsync();
 
-            if(view.id != 0)
+            try
             {
-                existing = await provider.FindByIdAsync(view.id);
-                view = await CleanViewUpdateAsync(view, existing, requester);
+                EntityPackage existing = null;
+
+                view = await CleanViewGeneralAsync(view, requester);
+
+                if (view.id != 0)
+                {
+                    existing = await provider.FindByIdAsync(view.id);
+                    view = await CleanViewUpdateAsync(view, existing, requester);
+                }
+
+                //Now that the view they gave is all clean, do the full conversion! It should be safe!
+                var package = converter.FromView(view);
+
+                //If this is an UPDATE, do some STUFF
+                if (view.id != 0)
+                    await services.history.UpdateWithHistoryAsync(package, requester.userId, existing);
+                else
+                    await services.history.InsertWithHistoryAsync(package, requester.userId, modifyBeforeCreate);
+
+                return package;
             }
-
-            //Now that the view they gave is all clean, do the full conversion! It should be safe!
-            var package = converter.FromView(view);
-
-            //If this is an UPDATE, do some STUFF
-            if (view.id != 0)
-                await services.history.UpdateWithHistoryAsync(package, requester.userId, existing);
-            else
-                await services.history.InsertWithHistoryAsync(package, requester.userId, modifyBeforeCreate);
-
-            return package;
+            finally
+            {
+                sem.Release();
+            }
         }
 
         public virtual async Task<V> WriteAsync(V view, Requester requester)
