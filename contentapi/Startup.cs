@@ -95,8 +95,12 @@ namespace contentapi
 
             services.AddCors();
             services.AddControllers()
-                    .AddJsonOptions(options=> options.JsonSerializerOptions.Converters.Add(new TimeSpanToStringConverter()))
-                    .AddNewtonsoftJson();
+                    //.AddJsonOptions(options=> options.JsonSerializerOptions.Converters.Add(new TimeSpanToStringConverter()))
+                    //.AddJsonOptions(options=> options.JsonSerializerOptions.Converters.Add(new DateTimeConverter()))
+                    .AddNewtonsoftJson(options =>
+                    {
+                        options.SerializerSettings.Converters.Add(new CustomDateTimeConverter());
+                    });
 
             //other rate limiting stuff
             services.AddSingleton<IHttpContextAccessor, HttpContextAccessor>();
