@@ -36,10 +36,11 @@ namespace contentapi
             writer.WriteValue(((DateTime)value).ToUniversalTime().ToString("yyyy-MM-ddTHH:mm:ss.ffZ", CultureInfo.InvariantCulture));
         }
 
+        public override bool CanRead => false;
+
         public override object ReadJson(JsonReader reader, Type objectType, object existingValue, JsonSerializer serializer)
         {
-            var value = reader.Value.ToString();
-            return DateTime.Parse(value, CultureInfo.InvariantCulture);
+            throw new NotImplementedException("Shouldn't be reading");
         }
     }
 }
