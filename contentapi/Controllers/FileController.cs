@@ -112,7 +112,7 @@ namespace contentapi.Controllers
                         logger.LogWarning($"User image too large ({imageByteCount}), trying ONE resize by {resize}");
                         width = (int)(width * resize);
                         height = (int)(height * resize);
-                        image.Mutate(x => x.Resize(width, height));
+                        image.Mutate(x => x.Resize(width, height, KnownResamplers.Lanczos3));
 
                         imageStream = new MemoryStream();
                         image.Save(imageStream, format);

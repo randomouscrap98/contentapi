@@ -170,7 +170,7 @@ namespace contentapi.Controllers
 
         protected bool ValidUsername(string username)
         {
-            if(Regex.IsMatch(username, @"[\s,|]"))
+            if(Regex.IsMatch(username, @"[\s,|%*]"))
                 return false;
             
             return true;
