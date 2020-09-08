@@ -23,12 +23,14 @@ namespace contentapi.Services.Implementations
     {
         protected CommentViewSource converter;
         protected WatchViewSource watchSource;
+        protected ICodeTimer timer;
 
         public CommentViewService(ViewServicePack services, ILogger<CommentViewService> logger,
-            CommentViewSource converter, WatchViewSource watchSource) : base(services, logger)
+            CommentViewSource converter, WatchViewSource watchSource, ICodeTimer timer) : base(services, logger)
         {
             this.converter = converter;
             this.watchSource = watchSource;
+            this.timer = timer;
         }
 
         protected async Task<EntityPackage> BasicParentCheckAsync(long parentId)
@@ -128,10 +130,19 @@ namespace contentapi.Services.Implementations
 
         public Task<CommentView> WriteAsync(CommentView view, Requester requester)
         {
-            if(view.id == 0)
-                return InsertAsync(view, requester);
-            else
-                return UpdateAsync(view, requester);
+            var t = timer.StartTimer($"Write cmt p{view.parentId}:u{view.createUserId}");
+
+            try
+            {
+                if (view.id == 0)
+                    return InsertAsync(view, requester);
+                else
+                    return UpdateAsync(view, requester);
+            }
+            finally
+            {
+                timer.EndTimer(t);
+            }
         }
 
         public async Task<CommentView> InsertAsync(CommentView view, Requester requester)

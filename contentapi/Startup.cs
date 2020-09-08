@@ -19,11 +19,16 @@ using Microsoft.AspNetCore.Mvc.NewtonsoftJson;
 using Randomous.EntitySystem;
 using Randomous.EntitySystem.Implementations;
 using Serilog;
+using System.Threading;
+using System;
 
 namespace contentapi
 {
     public class Startup
     {
+        private static Timer ServiceTimer = null;
+        private static SimpleCodeTimer Timer = null;
+
         public Startup(IConfiguration configuration)
         {
             Configuration = configuration;
@@ -61,6 +66,8 @@ namespace contentapi
             //Fix some entity system stuff. We need singletons but the default is transient
             //The IEntityProvider that we give out needs to have only a single access
             services.AddSingleton(new EntityQueryableEfCoreConfig() { ConcurrentAccess = 1 });
+
+
             //services.AddSingleton<ISignaler<EntityBase>, SignalSystem<EntityBase>>();
 
             //Add our own services from contentapi
@@ -129,6 +136,28 @@ namespace contentapi
             });
 
             AddSwagger(services);
+
+            services.AddSingleton<ICodeTimer>(p =>
+            {
+                if(Timer == null)
+                {
+                    Timer = new SimpleCodeTimer();
+                    var logger = p.GetService<ILogger>();
+                    var serviceConfig = Configuration.GetSection("ServiceTimerConfig");
+                    var delay = serviceConfig.GetValue<TimeSpan>("Delay"); 
+                    var interval = serviceConfig.GetValue<TimeSpan>("Interval");
+                    var path = serviceConfig.GetValue<string>("ProfilerPath");
+                    logger.Information($"Starting profiler: Delay {delay} Interval {interval} Path {path}");
+
+                    ServiceTimer = new Timer(x => 
+                    {
+                        try { Timer.FlushData(path).Wait(); }
+                        catch(Exception ex) { logger.Warning($"Couldn't flush profiler: {ex}"); }
+                    }, null, delay, interval);
+                }
+
+                return Timer;
+            });
         }
 
         public void AddSwagger(IServiceCollection services)
