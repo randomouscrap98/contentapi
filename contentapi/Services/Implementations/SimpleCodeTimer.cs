@@ -45,7 +45,9 @@ namespace contentapi.Services.Implementations
                 queue.Clear();
             }
 
-            await File.AppendAllLinesAsync(path, results, System.Text.Encoding.UTF8);
+            //This allows us to just throw away profiler data if we don't want to profile anymore
+            if(!string.IsNullOrWhiteSpace(path))
+                await File.AppendAllLinesAsync(path, results, System.Text.Encoding.UTF8);
         }
     }
 }
