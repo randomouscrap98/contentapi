@@ -102,14 +102,17 @@ namespace contentapi.Services.Implementations
         public async Task FixWatchLimits(WatchViewSource watchSource, Requester requester, IdLimiter limiter)
         {
             if(limiter.Watches)
-            {
-                var watchSearch = new WatchSearch();
-                watchSearch.UserIds.Add(requester.userId);
-                watchSearch.Reverse = true;
+            {   
+                if(requester.userId > 0)
+                {
+                    var watchSearch = new WatchSearch();
+                    watchSearch.UserIds.Add(requester.userId);
+                    watchSearch.Reverse = true;
 
-                limiter.Limit = (await watchSource.SimpleSearchAsync(watchSearch, q =>
-                        services.permissions.PermissionWhere(q, requester, Keys.ReadAction)))
-                    .Select(x => new IdLimit() { id = x.contentId, min = x.lastNotificationId }).ToList();
+                    limiter.Limit = (await watchSource.SimpleSearchAsync(watchSearch, q =>
+                            services.permissions.PermissionWhere(q, requester, Keys.ReadAction)))
+                        .Select(x => new IdLimit() { id = x.contentId, min = x.lastNotificationId }).ToList();
+                }
 
                 // Just a silly thing to ensure "0" elements still means "no search" (although I hate that old
                 // dicision... even though this one could easily be changed, consistency is better)

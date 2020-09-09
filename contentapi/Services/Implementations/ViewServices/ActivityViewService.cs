@@ -66,7 +66,8 @@ namespace contentapi.Services.Implementations
 
         public async Task<List<ActivityAggregateView>> SearchAggregateAsync(ActivitySearch search, Requester requester)
         {
-            //Repeat code, be careful
+            //Repeat code, be careful. This finds the appropriate ids to place in search.ContentLimit when only "Watches" is requested.
+            //It ONLY fills the limiter (search.ContentLimit) with ids!
             await FixWatchLimits(watchSource, requester, search.ContentLimit);
 
             var ids = activity.SearchIds(search, q => services.permissions.PermissionWhere(q, requester, Keys.ReadAction));
