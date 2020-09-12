@@ -724,11 +724,16 @@ namespace contentapi.Services.Implementations
 
                                 //Inefficient, but I NEED to clear the notifications BEFORE chaining. This MIGHT be called WAY TOO OFTEN so...
                                 //hopefully tracking the contents make it better
-                                await services.watch.ClearAsyncFast(requester, actions.clearNotifications.Intersect(clearContents).ToArray());
+                                var realClear = actions.clearNotifications.Intersect(clearContents).ToArray();
+                                await services.watch.ClearAsyncFast(requester, realClear);
                                 result.lastId = relations.Max(x => x.id);
 
+                                //A silly hack so we don't generate more updates than we need; consider fixing this!!
+                                foreach(var clear in realClear)
+                                    ((dynamic)addSignal(Keys.ChainWatchUpdate, 0)).contentId = clear;
+
                                 await chainer(actions.chains, baseViews); //result.Select(x => new BaseView() {id = x.id}));
-                                if (chainResults.Sum(x => x.Value.Count()) > 0)
+                                if (chainResults.Sum(x => x.Value.Count()) > 0)// && postClearId == result.lastId) //only if nothing was cleared, otherwise we need to repeat to include it
                                     break;
                                 else
                                     actions.lastId = result.lastId;
