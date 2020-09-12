@@ -178,12 +178,14 @@ namespace contentapi.Services.Implementations
             else if(maxId - listenConfig.lastId > 1000)
                 throw new BadRequestException($"LastID too far back! Perhaps restart your listener! System current max: {maxId}");
 
+            //This SERIOUSLY requires INTIMATE knowledge of how each of these systems works, like what entityId1 means etc.
+            //That's bad.
             var results = await provider.ListenAsync<EntityRelation>(listenId, (q) => 
                 q.Where(x => 
                     (x.type == Keys.CommentHack || 
-                     x.type == Keys.WatchRelation ||
-                     x.type == Keys.WatchUpdate ||
-                     x.type == Keys.WatchDelete ||
+                     x.type == Keys.WatchRelation && x.entityId1 == listenId.userId ||
+                     (x.type == Keys.WatchUpdate ||
+                      x.type == Keys.WatchDelete) && x.value.StartsWith($"{listenId.userId}_") ||
                      x.type.StartsWith(Keys.ActivityKey) || 
                      x.type.StartsWith(Keys.ModuleMessageKey) && (x.entityId2 == 0 || x.entityId2 == -requester.userId) ||
                      x.type.StartsWith(Keys.CommentDeleteHack) ||
