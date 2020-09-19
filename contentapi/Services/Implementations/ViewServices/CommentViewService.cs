@@ -23,17 +23,20 @@ namespace contentapi.Services.Implementations
     {
         protected CommentViewSource converter;
         protected WatchViewSource watchSource;
+        protected BanViewSource banSource;
         protected ICodeTimer timer;
 
         public CommentViewService(ViewServicePack services, ILogger<CommentViewService> logger,
-            CommentViewSource converter, WatchViewSource watchSource, ICodeTimer timer) : base(services, logger)
+            CommentViewSource converter, WatchViewSource watchSource, BanViewSource banSource, 
+            ICodeTimer timer) : base(services, logger)
         {
             this.converter = converter;
             this.watchSource = watchSource;
             this.timer = timer;
+            this.banSource = banSource;
         }
 
-        protected async Task<EntityPackage> BasicParentCheckAsync(long parentId)
+        protected async Task<EntityPackage> BasicParentCheckAsync(long parentId, Requester requester)
         {
             var parent = await provider.FindByIdAsync(parentId);
 
@@ -41,13 +44,20 @@ namespace contentapi.Services.Implementations
             if (parent == null || !parent.Entity.type.StartsWith(Keys.ContentType))
                 throw new NotFoundException("Parent couldn't be found!");
 
+            //Banning is such a "base" thing
+            var ban = await banSource.GetUserBan(requester.userId);
+
+            //This just means they can't create public content, but they can still make private stuff... idk
+            if(ban != null && (ban.type == BanType.@public && services.permissions.CanUser(new Requester() { userId = 0}, Keys.ReadAction, parent)))
+                throw new AuthorizationException("You are banned: " + ban.message);
+
             return parent;
         }
 
         protected async Task<EntityPackage> ModifyCheckAsync(EntityRelation existing, Requester requester)
         {
             //Go find the parent. If it's not content, BAD BAD BAD
-            var parent = await BasicParentCheckAsync(existing.entityId1);
+            var parent = await BasicParentCheckAsync(existing.entityId1, requester);
             var uid = requester.userId;
 
             //Only the owner (and super users) can edit (until wee get permission overrides set up)
@@ -60,7 +70,7 @@ namespace contentapi.Services.Implementations
         protected async Task<EntityPackage> FullParentCheckAsync(long parentId, string action, Requester requester)
         {
             //Go find the parent. If it's not content, BAD BAD BAD
-            var parent = await BasicParentCheckAsync(parentId);
+            var parent = await BasicParentCheckAsync(parentId, requester);
 
             //Create is full-on parent permission inheritance
             if (!services.permissions.CanUser(requester, action, parent))

@@ -2,6 +2,7 @@
 using System;
 using System.Collections.Generic;
 using System.Linq;
+using System.Text.Json.Serialization;
 
 namespace contentapi.Views
 {
@@ -14,6 +15,13 @@ namespace contentapi.Views
         public long avatar {get;set;}
         public DateTime createDate { get; set; }
         public string special {get;set;}
+
+        //Will be null if yeah
+        public bool banned {get;set;}//{get => _ban != null;}
+
+        //Hopefully this won't get serialized anywhere
+        //[JsonIgnore]
+        //public BanView _ban;
 
         //This is actually GET only, don't use it during compare.
         public bool super { get;set; }
@@ -28,6 +36,8 @@ namespace contentapi.Views
         public DateTime editDate { get;set;}
         public long createUserId { get;set;} 
         public long editUserId { get;set;}
+
+        public BanView ban {get;set;} //{get => _ban; }
 
         public string email { get; set; } //This field SHOULDN'T be set unless the user is ourselves.
         public List<long> hidelist {get;set;} = new List<long>();

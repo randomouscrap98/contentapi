@@ -1,5 +1,6 @@
 
 using System;
+using System.Collections.Generic;
 using System.Linq;
 using contentapi.Configs;
 using contentapi.Services.Implementations;
@@ -8,15 +9,16 @@ using Xunit;
 
 namespace contentapi.test
 {
-    public class BanServiceTests : ServiceConfigTestBase<PublicBanViewService, SystemConfig>
+    //public class BanServiceTests : ServiceConfigTestBase<PublicBanViewService, SystemConfig>
+    public class BanServiceTests : ServiceConfigTestBase<BanViewService, SystemConfig>
     {
         protected SystemConfig myConfig = new SystemConfig();
 
         protected override SystemConfig config => myConfig;
 
-        protected PublicBanView GetBasicView()
+        protected BanView GetBasicView()
         {
-            return new PublicBanView() { expireDate = DateTime.Now.AddDays(5), message = "haha loser", bannedUserId = 5 };
+            return new BanView() { expireDate = DateTime.Now.AddDays(5), message = "haha loser", bannedUserId = 5 };
         }
 
         [Fact]

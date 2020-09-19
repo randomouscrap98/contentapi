@@ -10,22 +10,24 @@ using Randomous.EntitySystem;
 
 namespace contentapi.Services.Implementations
 {
-    public class BanViewBaseService<B> : BaseViewServices<B, BanSearch>, IViewService<B, BanSearch> where B : BanViewBase, new()
+    //public class BanViewBaseService<B> : BaseViewServices<B, BanSearch>, IViewService<B, BanSearch> where B : BanViewBase, new()
+    public class BanViewService : BaseViewServices<BanView, BanSearch>, IViewService<BanView, BanSearch> //where B : BanViewBase, new()
     {
-        protected BanViewBaseSource<B> source;
+        //protected BanViewBaseSource<B> source;
+        protected BanViewSource source;
 
-        public BanViewBaseService(ViewServicePack services, ILogger<BanViewBaseService<B>> logger, BanViewBaseSource<B> source)
+        public BanViewService(ViewServicePack services, ILogger<BanViewService> logger, BanViewSource source)
             : base(services, logger) 
         { 
             this.source = source;
         }
 
-        public Task<B> DeleteAsync(long id, Requester requester)
+        public Task<BanView> DeleteAsync(long id, Requester requester)
         {
             throw new System.NotImplementedException(); //Yeah for real, can't delete bans
         }
 
-        public override async Task<List<B>> PreparedSearchAsync(BanSearch search, Requester requester)
+        public override async Task<List<BanView>> PreparedSearchAsync(BanSearch search, Requester requester)
         {
             if(!services.permissions.IsSuper(requester))
                 throw new AuthorizationException("Can't read bans");
@@ -33,7 +35,7 @@ namespace contentapi.Services.Implementations
             return await source.SimpleSearchAsync(search, (q) => q);
         }
 
-        public async Task<B> WriteAsync(B view, Requester requester)
+        public async Task<BanView> WriteAsync(BanView view, Requester requester)
         {
             if(!services.permissions.IsSuper(requester))
                 throw new AuthorizationException("Can't write bans");
@@ -48,9 +50,9 @@ namespace contentapi.Services.Implementations
         }
     }
 
-    public class PublicBanViewService : BanViewBaseService<PublicBanView>
-    {
-        public PublicBanViewService(ViewServicePack services, ILogger<BanViewBaseService<PublicBanView>> logger, BanViewBaseSource<PublicBanView> source) 
-            : base(services, logger, source) { }
-    }
+    //public class PublicBanViewService : BanViewBaseService<PublicBanView>
+    //{
+    //    public PublicBanViewService(ViewServicePack services, ILogger<BanViewBaseService<PublicBanView>> logger, BanViewBaseSource<PublicBanView> source) 
+    //        : base(services, logger, source) { }
+    //}
 }

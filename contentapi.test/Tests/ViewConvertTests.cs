@@ -236,20 +236,21 @@ namespace contentapi.test
         [Fact]
         public void TestBanConvert()
         {
-            var service = CreateService<PublicBanViewSource>();
+            var service = CreateService<BanViewSource>();
 
             //var tailoredDate = (new DateTime((DateTime.Now.AddDays(5).Ticks / 10000000) * 10000000)).ToUniversalTime(); //, DateTime.Now.Kind); //DateTime.Now.AddDays(5);
             var tailoredDate = new DateTime((DateTime.Now.AddDays(5).Ticks / 10000000) * 10000000);
             //tailoredDate.Ticks = tailoredDate.Ticks;
 
             //Just some standard content view
-            var view = new PublicBanView()
+            var view = new BanView()
             {
                 id = 99,
                 createUserId = 88,
                 bannedUserId = 76,
                 expireDate = tailoredDate,
                 message = "Wowwee zowwoieeiy",
+                type = BanType.@public,
                 createDate = DateTime.Now
             };
 

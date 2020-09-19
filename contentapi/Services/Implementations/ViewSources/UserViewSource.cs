@@ -29,13 +29,16 @@ namespace contentapi.Services.Implementations
     public class UserViewSource : BaseEntityViewSource<UserViewFull, EntityPackage, EntityGroup, UserSearch>
     {
         protected IPermissionService service;
+        protected BanViewSource banSource;
+        //protected 
 
         public override string EntityType => Keys.UserType;
 
-        public UserViewSource(ILogger<UserViewSource> logger, IMapper mapper, IEntityProvider provider, IPermissionService service) 
+        public UserViewSource(ILogger<UserViewSource> logger, IMapper mapper, IEntityProvider provider, IPermissionService service, BanViewSource banSource) 
             : base(logger, mapper, provider) 
         { 
             this.service = service;
+            this.banSource = banSource;
         }
 
         public override UserViewFull ToView(EntityPackage user)
@@ -60,6 +63,10 @@ namespace contentapi.Services.Implementations
             if(user.HasValue(Keys.UserHideKey))
                 result.hidelist = user.GetValue(Keys.UserHideKey).value.Split(",".ToCharArray(),StringSplitOptions.RemoveEmptyEntries).Select(x => long.Parse(x)).ToList();
             
+            //Doesn't matter that there are two fields because nobody can set these anyway
+            result.ban = banSource.GetCurrentBan(user.Relations);
+            result.banned = result.ban != null;
+
             result.registered = string.IsNullOrWhiteSpace(result.registrationKey);
 
             return result;
@@ -84,6 +91,7 @@ namespace contentapi.Services.Implementations
                 .Add(NewValue(Keys.PasswordHashKey, user.password));
             this.ApplyFromEditView(user, newUser, EntityType);
             //Can't do anything about super
+            //Also ignore the ban lol that's not how it works.
             
             if(!string.IsNullOrWhiteSpace(user.registrationKey))
                 newUser.Add(NewValue(Keys.RegistrationCodeKey, user.registrationKey));

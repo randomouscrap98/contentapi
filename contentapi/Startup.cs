@@ -107,6 +107,7 @@ namespace contentapi
                     .AddNewtonsoftJson(options =>
                     {
                         options.SerializerSettings.Converters.Add(new CustomDateTimeConverter());
+                        options.SerializerSettings.Converters.Add(new Newtonsoft.Json.Converters.StringEnumConverter());
                     });
 
             //other rate limiting stuff

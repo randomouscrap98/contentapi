@@ -23,8 +23,8 @@ namespace contentapi.Services.Implementations
 
         public ContentViewService(ViewServicePack services, ILogger<ContentViewService> logger, 
             CategoryViewSource categoryService, ContentViewSource converter,
-            CommentViewSource commentSource, WatchViewSource watchSource, VoteViewSource voteSource) 
-            : base(services, logger, converter) 
+            CommentViewSource commentSource, WatchViewSource watchSource, VoteViewSource voteSource, BanViewSource banSource) 
+            : base(services, logger, converter, banSource) 
         { 
             this.categoryService = categoryService;
             this.commentSource = commentSource;

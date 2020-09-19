@@ -11,21 +11,22 @@ namespace contentapi.Controllers
     [Authorize]
     public class BanController : BaseSimpleController
     {
-        protected PublicBanViewService service;
+        //protected PublicBanViewService service;
+        protected BanViewService service;
 
-        public BanController(BaseSimpleControllerServices services, PublicBanViewService service) : base(services)
+        public BanController(BaseSimpleControllerServices services, BanViewService service) : base(services)
         {
             this.service = service;
         }
 
         [HttpGet]
-        public Task<ActionResult<List<PublicBanView>>> GetActivityAsync([FromQuery]BanSearch search)
+        public Task<ActionResult<List<BanView>>> GetActivityAsync([FromQuery]BanSearch search)
         {
             return ThrowToAction(() => service.SearchAsync(search, GetRequesterNoFail()));
         }
 
         [HttpPost()]
-        public Task<ActionResult<PublicBanView>> PostAsync([FromBody]PublicBanView ban)
+        public Task<ActionResult<BanView>> PostAsync([FromBody]BanView ban)
         {
             return ThrowToAction(() => service.WriteAsync(ban, GetRequesterNoFail()));
         }

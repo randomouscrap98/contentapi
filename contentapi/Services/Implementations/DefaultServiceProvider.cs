@@ -43,7 +43,8 @@ namespace contentapi.Services.Implementations
             services.AddSingleton<ICodeTimer, SimpleCodeTimer>();
 
             services.AddTransient<ActivityViewService>();
-            services.AddTransient<PublicBanViewService>();
+            //services.AddTransient<PublicBanViewService>();
+            services.AddTransient<BanViewService>(); //BanViewBaseSource<PublicBanView>, PublicBanViewSource>();
             services.AddTransient<CategoryViewService>();
             services.AddTransient<CommentViewService>();
             services.AddTransient<ContentViewService>();
@@ -82,8 +83,7 @@ namespace contentapi.Services.Implementations
                 });
 
             services.AddTransient<ActivityViewSource>();
-            services.AddTransient<PublicBanViewSource>();
-            services.AddTransient<BanViewBaseSource<PublicBanView>, PublicBanViewSource>();
+            services.AddTransient<BanViewSource>();
             services.AddTransient<CategoryViewSource>();
             services.AddTransient<CommentViewSource>();
             services.AddTransient<ContentViewSource>();
