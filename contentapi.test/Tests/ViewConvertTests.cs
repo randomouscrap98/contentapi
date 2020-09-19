@@ -236,7 +236,7 @@ namespace contentapi.test
         [Fact]
         public void TestBanConvert()
         {
-            var service = CreateService<PublicBanViewBaseSource>();
+            var service = CreateService<PublicBanViewSource>();
 
             //var tailoredDate = (new DateTime((DateTime.Now.AddDays(5).Ticks / 10000000) * 10000000)).ToUniversalTime(); //, DateTime.Now.Kind); //DateTime.Now.AddDays(5);
             var tailoredDate = new DateTime((DateTime.Now.AddDays(5).Ticks / 10000000) * 10000000);

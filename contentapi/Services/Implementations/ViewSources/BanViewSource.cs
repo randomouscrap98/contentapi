@@ -37,26 +37,7 @@ namespace contentapi.Services.Implementations
 
         //This shouldn't match much, permissions aren't assigned to users, and we don't care...?
         public override Expression<Func<EntityRelation, long>> PermIdSelector => x => x.entityId2;
-        public string ExpireDateFormat = "s"; //"yyyy-MM-ddTHH:mm:ss";
-
-
-        //public BanType RTypeToBType(string relationType)
-        //{
-        //    var part = relationType.Substring(EntityType.Length, SubtypeLength);
-
-        //    if(part == Keys.BanPublicKey)
-        //        return BanType.@public;
-        //    else
-        //        throw new InvalidOperationException("Couldn't convert ban (sub)type " + relationType);
-        //}
-
-        //public string BTypeToRSubType(BanType type)
-        //{
-        //    if(type == BanType.@public)
-        //        return Keys.BanPublicKey;
-        //    else
-        //        throw new InvalidOperationException("Couldn't reverse convert ban (sub)type " + type);
-        //}
+        public string ExpireDateFormat = "s";
 
         public override B ToView(EntityRelation relation)
         {
@@ -66,7 +47,6 @@ namespace contentapi.Services.Implementations
             view.createDate = (DateTime)relation.createDateProper();
             view.createUserId = relation.entityId1;
             view.bannedUserId = relation.entityId2;
-            //view.type = RTypeToBType(relation.type);
             view.message = relation.value;
             view.expireDate = DateTime.Parse(relation.type.Substring(EntityType.Length) + "Z");
 
@@ -88,7 +68,7 @@ namespace contentapi.Services.Implementations
         public override EntityRelationSearch CreateSearch(BanSearch search)
         {
             var es = base.CreateSearch(search);
-            es.TypeLike += "%"; //((search.Type == BanType.none ? BTypeToRSubType(search.Type) : "") + "%");
+            es.TypeLike += "%";
             return es;
         }
 
@@ -109,12 +89,11 @@ namespace contentapi.Services.Implementations
         }
     }
 
-    public class PublicBanViewBaseSource : BanViewBaseSource<PublicBanView>
+    public class PublicBanViewSource : BanViewBaseSource<PublicBanView>
     {
-        public PublicBanViewBaseSource(ILogger<BanViewBaseSource<PublicBanView>> logger, IMapper mapper, IEntityProvider provider) 
+        public PublicBanViewSource(ILogger<BanViewBaseSource<PublicBanView>> logger, IMapper mapper, IEntityProvider provider) 
             : base(logger, mapper, provider) { }
 
         public override string EntityType => Keys.PublicBanKey;
     }
-    //BaseRelationViewSource<B, EntityRelation, EntityGroup, BanSearch> where B : BanViewBase, new()
 }
