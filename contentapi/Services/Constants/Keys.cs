@@ -18,6 +18,10 @@ namespace contentapi.Services.Constants
         public const string ModuleMessageKey = "M";
         public const string KeywordKey = "#";
 
+        public const string BanKey = "B";
+        public const string BanPublicKey = "P";
+        //public const string PublicBanKey = "BP";
+
         //General Relation keys (just relations, no appending)
         //Creator meaning is twofold: entityid1 is the creator of this content and the value is the editor
         public const string CreatorRelation = "rc"; 

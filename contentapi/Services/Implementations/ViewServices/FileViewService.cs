@@ -9,8 +9,8 @@ namespace contentapi.Services.Implementations
 
     public class FileViewService : BasePermissionViewService<FileView, FileSearch>
     {
-        public FileViewService(ViewServicePack services, ILogger<FileViewService> logger, FileViewSource converter) 
-            : base(services, logger, converter) { }
+        public FileViewService(ViewServicePack services, ILogger<FileViewService> logger, FileViewSource converter, BanViewSource banSource) 
+            : base(services, logger, converter, banSource) { }
 
         public override string ParentType => Keys.UserType;
         public override string EntityType => Keys.FileType;

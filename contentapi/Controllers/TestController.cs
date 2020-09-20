@@ -5,6 +5,7 @@ using System.Linq;
 using System.Threading.Tasks;
 using AutoMapper;
 using contentapi.Configs;
+using contentapi.Services;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.Extensions.Logging;
 using Randomous.EntitySystem;
@@ -24,11 +25,13 @@ namespace contentapi.Controllers
     public class TestController : BaseSimpleController
     {
         protected IEntityProvider provider;
+        //protected ICodeTimer timer;
 
-        public TestController(BaseSimpleControllerServices services, IEntityProvider provider) 
+        public TestController(BaseSimpleControllerServices services, IEntityProvider provider) //, ICodeTimer timer) 
             : base(services) 
         { 
             this.provider = provider;
+            //this.timer = timer;
         }
 
         public class TestData
@@ -108,5 +111,11 @@ namespace contentapi.Controllers
         {
             throw new InvalidOperationException("This is the exception message");
         }
+
+        //[HttpGet("writeperformance")]
+        //public ActionResult<string> WritePerformance()
+        //{
+        //    timer.
+        //}
     }
 }

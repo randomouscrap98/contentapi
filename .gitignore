@@ -37,8 +37,9 @@ msbuild.wrn
 
 
 #mystuff
+ignore/
 contentapi.hardtests
-contentapi/content.db
+contentapi/*content.db
 contentapi/LanguageFiles
 mytemp
 secrets.json
@@ -47,3 +48,4 @@ appsettings.Development.json
 uploads
 .vscode_old
 moduledata.db
+profiler.txt

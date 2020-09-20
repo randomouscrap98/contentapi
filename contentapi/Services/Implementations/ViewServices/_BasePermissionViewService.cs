@@ -15,8 +15,14 @@ namespace contentapi.Services.Implementations
 {
     public abstract class BasePermissionViewService<V,S> : BaseEntityViewService<V,S> where V : StandardView where S : BaseContentSearch, new()
     {
-        public BasePermissionViewService(ViewServicePack services, ILogger<BasePermissionViewService<V, S>> logger, IViewSource<V,EntityPackage,EntityGroup,S> converter) 
-            : base(services, logger, converter) { }
+        protected BanViewSource banSource;
+
+        public BasePermissionViewService(ViewServicePack services, ILogger<BasePermissionViewService<V, S>> logger, 
+            IViewSource<V,EntityPackage,EntityGroup,S> converter, BanViewSource banSource) 
+            : base(services, logger, converter) 
+        { 
+            this.banSource = banSource;
+        }
 
         public abstract string ParentType {get;}
         public virtual bool AllowOrphanPosts => false;
@@ -58,6 +64,19 @@ namespace contentapi.Services.Implementations
         {
             view = await base.CleanViewGeneralAsync(view, requester);
 
+            //This SHOULD stop banned users from posting or editing content... I think??
+            //var bansearch = new BanSearch();
+            //bansearch.CreateUserIds.Add(requester.userId);
+            //var ban = banSource.GetCurrentBan(await banSource.SimpleSearchRawAsync(bansearch));
+            var ban = await banSource.GetUserBan(requester.userId);
+
+            //This just means they can't create public content, but they can still make private stuff... idk
+            if(ban != null && (ban.type == BanType.@public && view.permissions.ContainsKey(0) && 
+               view.permissions[0].ToLower().Contains(Actions.KeyMap[Keys.ReadAction].ToLower()))) //Don't handle other kinds of bans yet
+            {
+                throw new AuthorizationException("You are banned: " + ban.message);
+            }
+
             if(view.parentId > 0)
             {
                 var parent = await provider.FindByIdAsync(view.parentId);
@@ -67,7 +86,7 @@ namespace contentapi.Services.Implementations
 
                 if(!String.IsNullOrEmpty(ParentType) && !parent.Entity.type.StartsWith(ParentType))
                     throw new BadRequestException("Wrong parent type!");
-
+                
                 //Only for CREATING. This is a silly weird thing since this is the general cleanup...
                 //Almost NOTHING requires cleanup specifically for create.
                 if(view.id == 0 && !CanUser(requester, Keys.CreateAction, parent))

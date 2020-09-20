@@ -175,11 +175,12 @@ namespace contentapi.Services.Implementations
         protected ChainServiceConfig config;
         protected SystemConfig systemConfig;
         protected IEntityProvider provider;
+        protected ICodeTimer timer;
 
         //These should all be... settings?
 
         public ChainService(ILogger<ChainService> logger, ChainServices services, RelationListenerService relationService, ChainServiceConfig config, /*IModuleService moduleService,*/
-            SystemConfig systemConfig, IEntityProvider provider)
+            SystemConfig systemConfig, IEntityProvider provider, ICodeTimer timer)
         {
             this.logger = logger;
             this.services = services;
@@ -188,6 +189,7 @@ namespace contentapi.Services.Implementations
             this.provider = provider;
             //this.moduleService = moduleService;
             this.systemConfig = systemConfig;
+            this.timer = timer;
         }
 
         public async Task SetupAsync() 
@@ -454,19 +456,28 @@ namespace contentapi.Services.Implementations
         protected Task ChainStringAsync<S,V>(ChainRequestString chainDataString, Func<S, Task<List<V>>> search, List<List<IIdView>> previousChains)
             where S : IConstrainedSearcher where V : IIdView
         {
-            var chainData = new ChainRequest<S,V>(chainDataString) { retriever = search };
+            var t = timer.StartTimer($"{chainDataString.endpoint} {string.Join(".", chainDataString.chains)}");
 
             try
             {
-                chainData.baseSearch = JsonSerializer.Deserialize<S>(chainDataString.search, config.JsonOptions);
-            }
-            catch(Exception ex)
-            {
-                //I don't care too much about json deseralize errors, just the message. I don't even log it.
-                throw new BadRequestException(ex.Message + " (CHAIN REMINDER: json search comes last AFTER all . chaining in a request)");
-            }
+                var chainData = new ChainRequest<S, V>(chainDataString) { retriever = search };
 
-            return ChainAsync(chainData, previousChains);
+                try
+                {
+                    chainData.baseSearch = JsonSerializer.Deserialize<S>(chainDataString.search, config.JsonOptions);
+                }
+                catch (Exception ex)
+                {
+                    //I don't care too much about json deseralize errors, just the message. I don't even log it.
+                    throw new BadRequestException(ex.Message + " (CHAIN REMINDER: json search comes last AFTER all . chaining in a request)");
+                }
+
+                return ChainAsync(chainData, previousChains);
+            }
+            finally
+            {
+                timer.EndTimer(t);
+            }
         }
 
         /// <summary>
@@ -612,10 +623,6 @@ namespace contentapi.Services.Implementations
         {
             var result = new ListenResult();
 
-            //Since all this stuff happens at the SAME TIME on the SAME dbcontext (which usually doesn't happen), we need a lock to ensure only one is 
-            //getting to it at a time.
-            //var semaphore = new SemaphoreSlim(1, 1);
-
             //Assume nothing changed in the result (it may just be a listener update), and better to send the same than to send nothing.
             if(actions != null)
                 result.lastId = actions.lastId; 
@@ -628,14 +635,6 @@ namespace contentapi.Services.Implementations
             CheckChainLimit(listeners?.chains?.Count);
             CheckChainLimit(actions?.chains?.Count);
 
-            //A simple function-wide lock for asynchronous tasks. Should be safe... since it's all within the function.
-            //Func<Func<Task>, Task> lockAsync = async(a) =>
-            //{
-            //    await semaphore.WaitAsync();
-            //    try { await a(); }
-            //    finally { semaphore.Release(); }
-            //};
-
             //A simple function to apply the given list of chains to the given list of views
             Func<List<string>, IEnumerable<IIdView>, Task> chainer = async (l, i) =>
             {
@@ -645,11 +644,8 @@ namespace contentapi.Services.Implementations
                     var tempViewResults = new List<List<IIdView>>() { i.ToList() };
 
                     //ONLY allow SINGLE access the database 
-                    //await lockAsync(async () =>
-                    //{
                     foreach (var chain in l)
                         await ChainAsync(SetupChainRequestString(chain, chainResults, fields), requester, tempViewResults);
-                    //});
                 }
             };
 
@@ -728,12 +724,16 @@ namespace contentapi.Services.Implementations
 
                                 //Inefficient, but I NEED to clear the notifications BEFORE chaining. This MIGHT be called WAY TOO OFTEN so...
                                 //hopefully tracking the contents make it better
-                                //await lockAsync(() => services.watch.ClearAsyncFast(requester, actions.clearNotifications.Intersect(clearContents).ToArray()));
-                                await services.watch.ClearAsyncFast(requester, actions.clearNotifications.Intersect(clearContents).ToArray());
+                                var realClear = actions.clearNotifications.Intersect(clearContents).ToArray();
+                                await services.watch.ClearAsyncFast(requester, realClear);
                                 result.lastId = relations.Max(x => x.id);
 
+                                //A silly hack so we don't generate more updates than we need; consider fixing this!!
+                                foreach(var clear in realClear)
+                                    ((dynamic)addSignal(Keys.ChainWatchUpdate, 0)).contentId = clear;
+
                                 await chainer(actions.chains, baseViews); //result.Select(x => new BaseView() {id = x.id}));
-                                if (chainResults.Sum(x => x.Value.Count()) > 0)
+                                if (chainResults.Sum(x => x.Value.Count()) > 0)// && postClearId == result.lastId) //only if nothing was cleared, otherwise we need to repeat to include it
                                     break;
                                 else
                                     actions.lastId = result.lastId;
@@ -752,7 +752,6 @@ namespace contentapi.Services.Implementations
                             List<ContentView> allowedContent = null;
                             
                             //This also accesses the database, must only allow single access!
-                            //await lockAsync(async () => allowedContent = await services.content.SearchAsync(new ContentSearch() { Ids = listeners.lastListeners.Keys.ToList() }, requester));
                             allowedContent = await services.content.SearchAsync(new ContentSearch() { Ids = listeners.lastListeners.Keys.ToList() }, requester);
 
                             foreach(var l in listeners.lastListeners.Keys.ToList())

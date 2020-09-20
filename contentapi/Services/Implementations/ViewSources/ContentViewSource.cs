@@ -17,6 +17,7 @@ namespace contentapi.Services.Implementations
     {
         public string Keyword {get;set;}
         public string Type {get;set;}
+        public bool IncludeAbout {get;set;} = false;
     }
 
     public class ContentViewSourceProfile : Profile

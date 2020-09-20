@@ -40,8 +40,11 @@ namespace contentapi.Services.Implementations
             services.AddSingleton(typeof(IDecayer<>), typeof(Decayer<>)); //Is it safe to make ALL decayers singletons? I don't know... I suppose that's what it's for?
             services.AddTransient(typeof(ITempTokenService<>), typeof(TempTokenService<>));
             services.AddSingleton<UserValidationService>();
+            services.AddSingleton<ICodeTimer, SimpleCodeTimer>();
 
             services.AddTransient<ActivityViewService>();
+            //services.AddTransient<PublicBanViewService>();
+            services.AddTransient<BanViewService>(); //BanViewBaseSource<PublicBanView>, PublicBanViewSource>();
             services.AddTransient<CategoryViewService>();
             services.AddTransient<CommentViewService>();
             services.AddTransient<ContentViewService>();
@@ -80,6 +83,7 @@ namespace contentapi.Services.Implementations
                 });
 
             services.AddTransient<ActivityViewSource>();
+            services.AddTransient<BanViewSource>();
             services.AddTransient<CategoryViewSource>();
             services.AddTransient<CommentViewSource>();
             services.AddTransient<ContentViewSource>();

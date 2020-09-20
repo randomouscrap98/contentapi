@@ -42,6 +42,7 @@ namespace contentapi.Services.Implementations
             var history = new EntityRelation(relation);
             history.id = 0;
             history.createDate = DateTime.UtcNow;
+            history.value = $"{relation.entityId1}_{history.value}";
             history.entityId1 = relation.id; //Link back! LINK BAKC!!!
             if(type != null) history.type = type;
             return history;
