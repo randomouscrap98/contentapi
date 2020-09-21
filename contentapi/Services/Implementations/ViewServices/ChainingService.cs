@@ -664,6 +664,15 @@ namespace contentapi.Services.Implementations
                 
                 return signal;
             };
+
+            Func<IEnumerable<long>, Task> clearNotifications = async (list) =>
+            {
+                await services.watch.ClearAsyncFast(requester, list.ToArray());
+
+                //A silly hack so we don't generate more updates than we need; consider fixing this!!
+                foreach(var clear in list)
+                    ((dynamic)addSignal(Keys.ChainWatchUpdate, 0)).contentId = clear;
+            };
             
 
             //Create a new cancel source FROM the original token so that either us or the client can cancel
@@ -681,6 +690,9 @@ namespace contentapi.Services.Implementations
                         //and get the "task" that represents this async code. Actually... maybe this IS how you do it.
                         Func<Task> run = async () =>
                         {
+                            //Regardless, clear EVERYTHING they want on start.
+                            await clearNotifications(actions.clearNotifications);
+
                             while (true) //I'm RELYING on the fact that OTHER tasks SHOULD have the proper long-polling timeout
                             {
                                 var relations = await relationService.ListenAsync(actions, requester, linkedCts.Token);
@@ -724,16 +736,12 @@ namespace contentapi.Services.Implementations
 
                                 //Inefficient, but I NEED to clear the notifications BEFORE chaining. This MIGHT be called WAY TOO OFTEN so...
                                 //hopefully tracking the contents make it better
-                                var realClear = actions.clearNotifications.Intersect(clearContents).ToArray();
-                                await services.watch.ClearAsyncFast(requester, realClear);
+                                await clearNotifications(actions.clearNotifications.Intersect(clearContents));
                                 result.lastId = relations.Max(x => x.id);
 
-                                //A silly hack so we don't generate more updates than we need; consider fixing this!!
-                                foreach(var clear in realClear)
-                                    ((dynamic)addSignal(Keys.ChainWatchUpdate, 0)).contentId = clear;
+                                await chainer(actions.chains, baseViews); 
 
-                                await chainer(actions.chains, baseViews); //result.Select(x => new BaseView() {id = x.id}));
-                                if (chainResults.Sum(x => x.Value.Count()) > 0)// && postClearId == result.lastId) //only if nothing was cleared, otherwise we need to repeat to include it
+                                if (chainResults.Sum(x => x.Value.Count()) > 0)
                                     break;
                                 else
                                     actions.lastId = result.lastId;
