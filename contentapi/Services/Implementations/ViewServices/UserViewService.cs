@@ -6,6 +6,8 @@ using AutoMapper;
 using contentapi.Services.Extensions;
 using Randomous.EntitySystem.Extensions;
 using contentapi.Services.Constants;
+using System;
+using Randomous.EntitySystem;
 
 namespace contentapi.Services.Implementations
 {
@@ -38,6 +40,8 @@ namespace contentapi.Services.Implementations
             this.emailService = emailService;
         }
 
+        public UserViewSource Source => (UserViewSource)converter;
+
         public override string EntityType => Keys.UserType;
 
         public override async Task<UserViewFull> CleanViewGeneralAsync(UserViewFull view, Requester requester)
@@ -53,7 +57,20 @@ namespace contentapi.Services.Implementations
             return view;
         }
 
-        public override async Task<UserViewFull> WriteAsync(UserViewFull view, Requester requester)
+        //public override Task<UserViewFull> WriteAsync(UserViewFull view, Requester requester)
+        //{
+        //    return WriteAsyncHistoric(view, requester);
+        //}
+
+        public async Task<UserViewFull> WriteSpecialAsync(long id, Requester requester, Action<EntityPackage> modify)
+        {
+            var original = await services.provider.FindByIdAsync(id);
+            modify(original);
+            await services.provider.WriteAsync(original);
+            return converter.ToView(original);
+        }
+
+        public override async Task<UserViewFull> WriteAsync(UserViewFull view, Requester requester)//, bool history = true)
         {
             return converter.ToView(await WriteViewBaseAsync(view, requester, (p) =>
             {
@@ -61,7 +78,7 @@ namespace contentapi.Services.Implementations
                 var creatorRelation = p.GetRelation(Keys.CreatorRelation);
                 creatorRelation.entityId1 = creatorRelation.entityId2;
                 creatorRelation.value = creatorRelation.entityId2.ToString(); //Warn: this is VERY implementation specific! Kinda sucks to have two pieces of code floating around!
-            }));
+            })); //, history));
         }
 
         public async Task<UserViewFull> FindByUsernameAsync(string username, Requester requester)

@@ -72,6 +72,29 @@ namespace contentapi.Services.Implementations
             return result;
         }
 
+        public void SetGenericValue(EntityPackage package, string key, string value)
+        {
+            if(package.HasValue(key))
+                package.GetValue(key).value = value;
+            else
+                package.Add(NewValue(key, value));
+        }
+
+        public void SetAvatar(EntityPackage package, UserViewFull user)
+        {
+            SetGenericValue(package, Keys.AvatarKey, user.avatar.ToString());
+        }
+
+        public void SetSpecial(EntityPackage package, UserViewFull user)
+        {                
+            SetGenericValue(package, Keys.UserSpecialKey, user.special);
+        }
+
+        public void SetHidelist(EntityPackage package, UserViewFull user)
+        {
+            SetGenericValue(package, Keys.UserHideKey, string.Join(",", user.hidelist));
+        }
+
         public override EntityPackage FromView(UserViewFull user)
         {
             var NewValue = new Func<string, string, EntityValue>((k,v) => new EntityValue()
@@ -83,13 +106,18 @@ namespace contentapi.Services.Implementations
             });
 
             var newUser = this.NewEntity(user.username)
-                .Add(NewValue(Keys.AvatarKey, user.avatar.ToString()))
-                .Add(NewValue(Keys.UserSpecialKey, user.special))
+                //.Add(NewValue(Keys.AvatarKey, user.avatar.ToString()))
+                //.Add(NewValue(Keys.UserSpecialKey, user.special))
                 .Add(NewValue(Keys.EmailKey, user.email))
                 .Add(NewValue(Keys.PasswordSaltKey, user.salt))
-                .Add(NewValue(Keys.UserHideKey, string.Join(",", user.hidelist)))
+                //.Add(NewValue(Keys.UserHideKey, string.Join(",", user.hidelist)))
                 .Add(NewValue(Keys.PasswordHashKey, user.password));
             this.ApplyFromEditView(user, newUser, EntityType);
+
+            SetAvatar(newUser, user);
+            SetSpecial(newUser, user);
+            SetHidelist(newUser, user);
+                //.Add(NewValue(Keys.UserHideKey, string.Join(",", user.hidelist)))
             //Can't do anything about super
             //Also ignore the ban lol that's not how it works.
             

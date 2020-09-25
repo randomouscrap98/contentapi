@@ -106,18 +106,33 @@ namespace contentapi.Controllers
             return ThrowToAction<UserView>(async () => 
             {
                 var userView = await GetCurrentUser();
+                var requester =GetRequesterNoFail();
 
-                //Only set avatar if they gave us something
-                if(data.avatar != null) //>= 0)
-                    userView.avatar = (long)data.avatar;
+                return mapper.Map<UserView>(await service.WriteSpecialAsync(userView.id, requester, p =>
+                {
+                    //Only set avatar if they gave us something
+                    if(data.avatar != null) //>= 0)
+                    {
+                        userView.avatar = (long)data.avatar;
+                        service.Source.SetAvatar(p, userView);
+                    }
 
-                if(data.special != null)
-                    userView.special = data.special;
+                    if(data.special != null)
+                    {
+                        userView.special = data.special;
+                        service.Source.SetSpecial(p, userView);
+                    }
 
-                if(data.hidelist != null)
-                    userView.hidelist = data.hidelist;
+                    if(data.hidelist != null)
+                    {
+                        userView.hidelist = data.hidelist;
+                        service.Source.SetHidelist(p, userView);
+                    }
+                }));
 
-                return mapper.Map<UserView>(await service.WriteAsync(userView, GetRequesterNoFail()));
+
+                //Basic doesn't create a new history item (I hope)
+                //return mapper.Map<UserView>(await service.WriteAsyncHistoric(userView, GetRequesterNoFail(), false));
             }); 
         }
 
