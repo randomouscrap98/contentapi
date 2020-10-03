@@ -99,40 +99,60 @@ namespace contentapi.Controllers
             public List<long> hidelist {get;set;} = null;
         }
 
+        protected Task<UserViewFull> SpecialWrite(UserViewFull original, UserViewFull updated, Requester requester)
+        {
+            //All of these force a public update, which is honestly simpler
+            if(original.avatar != updated.avatar || original.username != updated.username || 
+                original.special != updated.special)
+            {
+                return service.WriteAsync(updated, requester);
+            }
+            else
+            {
+                return service.WriteSpecialAsync(original.id, requester, p =>
+                {
+                    //Regardless of if these were updated or not, set them anyway. Shouldn't do any harm...
+                    service.Source.SetEmail(p, updated);
+                    service.Source.SetHidelist(p, updated);
+                    service.Source.SetPassword(p, updated);
+                });
+            }
+        }
+
+        ////A quick hack just to get this done
+        //public class SpecialUserSet
+        //{
+        //    //Public
+        //    public long? avatar = null;
+        //    public string special = null;
+        //    public string username = null;
+
+        //    //Private
+        //    public List<long> hidelist = null;
+        //    public string email = null;
+        //    public string salt = null;
+        //    public string password = null;
+
+        //}
+
         [HttpPut("basic")]
         [Authorize]
         public Task<ActionResult<UserView>> PutBasicAsync([FromBody]UserBasicPost data)
         {
             return ThrowToAction<UserView>(async () => 
             {
-                var userView = await GetCurrentUser();
-                var requester =GetRequesterNoFail();
+                var original = await GetCurrentUser();
+                var userView = mapper.Map<UserViewFull>(original); //await GetCurrentUser();
+                var requester = GetRequesterNoFail();
 
-                return mapper.Map<UserView>(await service.WriteSpecialAsync(userView.id, requester, p =>
-                {
-                    //Only set avatar if they gave us something
-                    if(data.avatar != null) //>= 0)
-                    {
-                        userView.avatar = (long)data.avatar;
-                        service.Source.SetAvatar(p, userView);
-                    }
+                if(data.avatar != null) //>= 0)
+                    userView.avatar = (long)data.avatar;
+                if(data.special != null)
+                    userView.special = data.special;
+                if(data.hidelist != null)
+                    userView.hidelist = data.hidelist;
 
-                    if(data.special != null)
-                    {
-                        userView.special = data.special;
-                        service.Source.SetSpecial(p, userView);
-                    }
-
-                    if(data.hidelist != null)
-                    {
-                        userView.hidelist = data.hidelist;
-                        service.Source.SetHidelist(p, userView);
-                    }
-                }));
-
-
-                //Basic doesn't create a new history item (I hope)
-                //return mapper.Map<UserView>(await service.WriteAsyncHistoric(userView, GetRequesterNoFail(), false));
+                return mapper.Map<UserView>(await SpecialWrite(original, userView, requester));
             }); 
         }
 
@@ -247,9 +267,7 @@ namespace contentapi.Controllers
             if(string.IsNullOrWhiteSpace(registrationCode))
                 return BadRequest("Nothing to do for user");
 
-            //await SendConfirmationEmailAsync(post.email, foundUser.registrationKey); //registrationCode.value);
             await SendEmailAsync("ConfirmEmailSubject", "ConfirmEmailBody", post.email, new Dictionary<string, object>() {{"confirmCode", foundUser.registrationKey}});
-            //foundUser.registrationKey); //registrationCode.value);
 
             return Ok("Email sent");
         }
@@ -314,13 +332,14 @@ namespace contentapi.Controllers
                 return BadRequest("Invalid password reset key");
 
             var self = new Requester() { userId = reset.UserId };
-            var user = await service.FindByIdAsync(reset.UserId, self);
+            var original = await service.FindByIdAsync(reset.UserId, self);
+            var user = mapper.Map<UserViewFull>(original);
 
             if(user == null)
                 return BadRequest("No user found for password reset, this SHOULD NOT HAPPEN!");
 
             SetPassword(user, post.password);
-            await service.WriteAsync(user, self);
+            await SpecialWrite(original, user, self); //Not using return, don't need to map
 
             reset.Valid = false;
             passwordResets.UpdateList(new[] { reset });
@@ -346,7 +365,9 @@ namespace contentapi.Controllers
         [Authorize]
         public async Task<ActionResult> SensitiveAsync([FromBody]SensitiveUserChange change)
         {
-            var fullUser = await GetCurrentUser();
+            var original = await GetCurrentUser();
+            var fullUser = mapper.Map<UserViewFull>(original); //await GetCurrentUser();
+
             var output = new List<string>();
 
             var requester = GetRequesterNoFail();
@@ -394,7 +415,7 @@ namespace contentapi.Controllers
                 output.Add("Changed username");
             }
 
-            await service.WriteAsync(fullUser, requester);
+            await SpecialWrite(original, fullUser, requester); //Not using return, don't need to map
 
             return Ok(string.Join(", ", output));
         }

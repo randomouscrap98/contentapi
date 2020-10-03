@@ -198,7 +198,8 @@ namespace contentapi
         public void Configure(IApplicationBuilder app, IWebHostEnvironment env)
         {
             //Wide open for now, this might need to be changed later.
-            app.UseCors(x => x.AllowAnyOrigin().AllowAnyMethod().AllowAnyHeader());
+            app.UseCors(x => x.AllowAnyOrigin().AllowAnyMethod().AllowAnyHeader().WithExposedHeaders("*")
+                .SetPreflightMaxAge(TimeSpan.FromHours(6)));
 
             if(Configuration.GetValue<bool>("ShowExceptions"))
                 app.UseDeveloperExceptionPage();

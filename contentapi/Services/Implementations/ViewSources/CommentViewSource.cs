@@ -104,16 +104,24 @@ namespace contentapi.Services.Implementations
         public async Task<List<EntityRelationPackage>> LinkAsync(IEnumerable<EntityRelation> relations)
         {
             //This finds historical data (if there is any, it's probably none every time)
-            var secondarySearch = new EntityRelationSearch();
-            secondarySearch.EntityIds1 = relations.Select(x => -x.id).ToList();
 
-            var historyRelations = await provider.GetEntityRelationsAsync(secondarySearch);
-
-            return relations.Select(x => new EntityRelationPackage()
+            if(relations.Count() > 0)
             {
-                Main = x,
-                Related = historyRelations.Where(y => y.entityId1 == -x.id).ToList()
-            }).ToList();
+                var secondarySearch = new EntityRelationSearch();
+                secondarySearch.EntityIds1 = relations.Select(x => -x.id).ToList();
+
+                var historyRelations = await provider.GetEntityRelationsAsync(secondarySearch);
+
+                return relations.Select(x => new EntityRelationPackage()
+                {
+                    Main = x,
+                    Related = historyRelations.Where(y => y.entityId1 == -x.id).ToList()
+                }).ToList();
+            }
+            else
+            {
+                return new List<EntityRelationPackage>(); //NOTHING
+            }
         }
 
         //We have this simple code everywhere because we may NOT return the same thing every time

@@ -90,6 +90,17 @@ namespace contentapi.Services.Implementations
             SetGenericValue(package, Keys.UserSpecialKey, user.special);
         }
 
+        public void SetEmail(EntityPackage package, UserViewFull user)
+        {                
+            SetGenericValue(package, Keys.EmailKey, user.email);
+        }
+
+        public void SetPassword(EntityPackage package, UserViewFull user)
+        {                
+            SetGenericValue(package, Keys.PasswordSaltKey, user.salt);
+            SetGenericValue(package, Keys.PasswordHashKey, user.password);
+        }
+
         public void SetHidelist(EntityPackage package, UserViewFull user)
         {
             SetGenericValue(package, Keys.UserHideKey, string.Join(",", user.hidelist));
@@ -105,19 +116,16 @@ namespace contentapi.Services.Implementations
                 value = v
             });
 
-            var newUser = this.NewEntity(user.username)
-                //.Add(NewValue(Keys.AvatarKey, user.avatar.ToString()))
-                //.Add(NewValue(Keys.UserSpecialKey, user.special))
-                .Add(NewValue(Keys.EmailKey, user.email))
-                .Add(NewValue(Keys.PasswordSaltKey, user.salt))
-                //.Add(NewValue(Keys.UserHideKey, string.Join(",", user.hidelist)))
-                .Add(NewValue(Keys.PasswordHashKey, user.password));
+            var newUser = this.NewEntity(user.username);
             this.ApplyFromEditView(user, newUser, EntityType);
 
+            //SetUsername(newUser, user);
             SetAvatar(newUser, user);
             SetSpecial(newUser, user);
             SetHidelist(newUser, user);
-                //.Add(NewValue(Keys.UserHideKey, string.Join(",", user.hidelist)))
+            SetEmail(newUser, user);
+            SetPassword(newUser, user);
+
             //Can't do anything about super
             //Also ignore the ban lol that's not how it works.
             

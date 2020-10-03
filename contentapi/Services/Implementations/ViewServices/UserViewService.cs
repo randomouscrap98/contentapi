@@ -18,6 +18,7 @@ namespace contentapi.Services.Implementations
             CreateMap<UserViewBasic, UserView>().ReverseMap();
             CreateMap<UserViewBasic, UserViewFull>().ReverseMap();
             CreateMap<UserView, UserViewFull>().ReverseMap();
+            CreateMap<UserViewFull, UserViewFull>(); //Simple object mapping
             CreateMap<UserCredential, UserViewFull>().ReverseMap();
         }
     }
