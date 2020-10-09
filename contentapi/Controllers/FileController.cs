@@ -1,6 +1,8 @@
 using System;
+using System.Collections.Concurrent;
 using System.Collections.Generic;
 using System.IO;
+using System.Threading;
 using System.Threading.Tasks;
 using contentapi.Services;
 using contentapi.Services.Implementations;
@@ -27,6 +29,10 @@ namespace contentapi.Controllers
         protected FileControllerConfig config;
         protected FileViewService service;
         protected ILanguageService docService;
+
+        //protected ConcurrentDictionary<long, object> filelocks = new ConcurrentDictionary<long, object>();
+        //protected readonly object fileLock = new object();
+        protected readonly SemaphoreSlim filelock = new SemaphoreSlim(1, 1);
 
         public FileController(BaseSimpleControllerServices services, FileControllerConfig config,
             FileViewService service, ILanguageService languageService) 
@@ -63,6 +69,7 @@ namespace contentapi.Controllers
             return path.Replace(config.Location, "").Replace("\\", "Z").Replace("/", "Z");
         }
 
+        //Should be thread safe
         protected string GetAndMakePath(long id, GetFileModify modify = null)
         {
             var result = GetPath(id, modify);
@@ -137,10 +144,19 @@ namespace contentapi.Controllers
 
                 try
                 {
-                    //Now just copy to the filesystem?
-                    using (var stream = System.IO.File.Create(finalLocation))
+                    await filelock.WaitAsync();
+
+                    try
                     {
-                        await imageStream.CopyToAsync(stream);
+                        //Now just copy to the filesystem?
+                        using (var stream = System.IO.File.Create(finalLocation))
+                        {
+                            await imageStream.CopyToAsync(stream);
+                        }
+                    }
+                    finally
+                    {
+                        filelock.Release();
                     }
                 }
                 catch
@@ -206,44 +222,56 @@ namespace contentapi.Controllers
                 return NotFound();
             
             var finalPath = GetAndMakePath(fileData.id, modify); 
-            
+
             //Ok NOW we can go get it. We may need to perform a resize beforehand if we can't find the file.
-            if(!System.IO.File.Exists(finalPath))
+            //NOTE: locking on the entire write may increase wait times for brand new images (and image uploads) but it saves cpu cycles
+            //in those cases by only resizing an image once.
+            await filelock.WaitAsync();
+
+            try
             {
-                var baseImage = GetPath(fileData.id);
-                IImageFormat format;
-
-                await Task.Run(() =>
+                //Will checking the fileinfo be too much??
+                if (!System.IO.File.Exists(finalPath) || (new FileInfo(finalPath)).Length == 0)
                 {
-                    using (var image = Image.Load(baseImage, out format))
+                    var baseImage = GetPath(fileData.id);
+                    IImageFormat format;
+
+                    await Task.Run(() =>
                     {
-                        var maxDim = Math.Max(image.Width, image.Height);
-                        var minDim = Math.Min(image.Width, image.Height);
-
-                        //Square ALWAYS happens, it can happen before other things.
-                        if(modify.crop)
-                            image.Mutate(x => x.Crop(new Rectangle((image.Width - minDim)/2, (image.Height - minDim)/2, minDim, minDim)));
-
-                        if(modify.size > 0 && !((format.DefaultMimeType == "image/gif" /*|| modify.noGrow*/) && (modify.size > image.Width || modify.size > image.Height)))
+                        using (var image = Image.Load(baseImage, out format))
                         {
-                            var width = 0;
-                            var height = 0;
+                            var maxDim = Math.Max(image.Width, image.Height);
+                            var minDim = Math.Min(image.Width, image.Height);
 
-                            //Preserve aspect ratio when not square
-                            if (image.Width > image.Height)
-                                width = modify.size;
-                            else
-                                height = modify.size;
+                            //Square ALWAYS happens, it can happen before other things.
+                            if (modify.crop)
+                                image.Mutate(x => x.Crop(new Rectangle((image.Width - minDim) / 2, (image.Height - minDim) / 2, minDim, minDim)));
 
-                            image.Mutate(x => x.Resize(width, height));
+                            if (modify.size > 0 && !((format.DefaultMimeType == "image/gif" /*|| modify.noGrow*/) && (modify.size > image.Width || modify.size > image.Height)))
+                            {
+                                var width = 0;
+                                var height = 0;
+
+                                //Preserve aspect ratio when not square
+                                if (image.Width > image.Height)
+                                    width = modify.size;
+                                else
+                                    height = modify.size;
+
+                                image.Mutate(x => x.Resize(width, height));
+                            }
+
+                            using (var stream = System.IO.File.OpenWrite(finalPath))
+                            {
+                                image.Save(stream, format);
+                            }
                         }
-
-                        using (var stream = System.IO.File.OpenWrite(finalPath))
-                        {
-                            image.Save(stream, format);
-                        }
-                    }
-                });
+                    });
+                }
+            }
+            finally
+            {
+                filelock.Release();
             }
 
             Response.Headers.Add("ETag", GetETag(finalPath));
