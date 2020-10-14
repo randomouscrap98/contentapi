@@ -29,8 +29,11 @@ where the json string is (query encoded):
 {
     "lastId" : num,
     "statuses" : {"contentId" : "status", "otherContentId" : "status" },
-    "chain" : ["comment.0id", "etc" ]
+    "chains" : ["comment.0id", "etc" ]
 }
+
+NOTE: IF YOUR LONG POLLER ISN'T EVER COMPLETING, MAKE SURE IT'S "CHAINS" 
+AND NOT "CHAIN"
 
 The endpoint will "complete" when data is able to be chained. Regardless of 
 how many "general" actions are going on across the website, it will NOT 
@@ -43,9 +46,9 @@ given id).
 
 For instance, to listen for comments since 500, you might do:
 
-/api/read/listen?actions=%7B%22lastId%22%20%3A%200%2C%20%22chain%22%20%3A%20%5B%20%22comment.0id%22%20%5D%7D
+/api/read/listen?actions=%7B%22lastId%22%20%3A%200%2C%20%22chains%22%20%3A%20%5B%20%22comment.0id%22%20%5D%7D
 
-Where the ugly query parameter is the encoded json: {"lastId":500,"chain":["comment.0id"]}
+Where the ugly query parameter is the encoded json: {"lastId":500,"chains":["comment.0id"]}
 
 You could chain to multiple things to receive multiple things from the actions
 listening endpoint. For instance, you could chain comments AND activity/etc.
@@ -77,7 +80,7 @@ where the json string is (query encoded):
 
 {
     "lastListeners" : { "contentId" : { "user" : "status", "user2": "status" }, "contentId" : {etc.} },
-    "chain" : [ "user.0listeners", "etc" ]
+    "chains" : [ "user.0listeners", "etc" ]
 }
 
 The endpoint will return, when DIFFERENT from the lastListeners given, 
