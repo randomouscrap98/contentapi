@@ -25,7 +25,7 @@ namespace contentapi.test
             var comment = new CommentView() {content = "HELLO", parentId = commonContent ? unit.commonContent.id : unit.specialContent.id };
             var requester = new Requester() { userId = commonUser ? unit.commonUser.id : unit.specialUser.id };
 
-            AssertAllowed<NotFoundException>(() =>
+            AssertAllowed<ForbiddenException>(() =>
             {
                 var view = commentService.WriteAsync(comment, requester).Result;
                 Assert.True(view.id > 0);
