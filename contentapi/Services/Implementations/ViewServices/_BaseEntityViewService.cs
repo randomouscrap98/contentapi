@@ -4,7 +4,6 @@ using System.Collections.Generic;
 using System.Linq;
 using System.Threading;
 using System.Threading.Tasks;
-using AutoMapper;
 using contentapi.Services.Constants;
 using contentapi.Services.Extensions;
 using contentapi.Views;
@@ -18,9 +17,6 @@ namespace contentapi.Services.Implementations
     {
         protected IViewSource<V,EntityPackage,EntityGroup,S> converter;
         private static ConcurrentDictionary<long, SemaphoreSlim> entityLocks = new ConcurrentDictionary<long, SemaphoreSlim>();
-
-        //public const int SpecialRetries = 5;
-        //public const int SpecialDelayMs = 1000;
 
         public BaseEntityViewService(ViewServicePack services, ILogger<BaseEntityViewService<V,S>> logger, IViewSource<V,EntityPackage,EntityGroup,S> converter) 
             : base(services, logger) 
@@ -83,8 +79,6 @@ namespace contentapi.Services.Implementations
             return Task.FromResult(view);
         }
 
-        //public async Task<EntityPackage> UpdateFieldsNoHistory(Requester requester, Action<)
-
         public virtual async Task<EntityPackage> WriteViewBaseAsync(V view, Requester requester, Action<EntityPackage> modifyBeforeCreate = null) //, bool history = true)
         {
             logger.LogTrace("WriteViewAsync called");
@@ -108,40 +102,11 @@ namespace contentapi.Services.Implementations
                 //Now that the view they gave is all clean, do the full conversion! It should be safe!
                 var package = converter.FromView(view);
 
-                //Only historic writes (default) do fancy stuff.
-                //if(history)
-                //{
-                    //If this is an UPDATE, do some STUFF
-                    if (view.id != 0)
-                        await services.history.UpdateWithHistoryAsync(package, requester.userId, existing);
-                    else
-                        await services.history.InsertWithHistoryAsync(package, requester.userId, modifyBeforeCreate);
-                //}
-                //else
-                //{
-                //    var deletes = new List<EntityBase>();
-
-                //    //Go find all the OLD values and relations and DELETE them?? deleting seems scary idk...
-                //    if(existing != null)
-                //    {
-                //        existing.Relations.ForEach(x => x.type = "XXX");
-                //        existing.Values.ForEach(x => x.key = "XXX");
-
-                //        deletes.AddRange(existing.Relations);
-                //        deletes.AddRange(existing.Values);
-                //    }
-
-                //    //This NEEDS TO BE RETRIED IF SOMETHING FAILS!!!!
-                //    if(deletes.Count > 0)
-                //        await BadStaticCrap.BasicRetry(() => services.provider.WriteAsync(deletes.ToArray()));
-
-                //    //var oldRelations = services.provider.GetEntityRelationsAsync(new EntityRelationSearch() { Ent})
-                //    await services.provider.WriteAsync(package);
-
-                //    //This NEEDS TO BE RETRIED IF SOMETHING FAILS!!!!
-                //    if(deletes.Count > 0)
-                //        await BadStaticCrap.BasicRetry(() => services.provider.DeleteAsync(deletes.ToArray()));
-                //}
+                //If this is an UPDATE, do some STUFF
+                if (view.id != 0)
+                    await services.history.UpdateWithHistoryAsync(package, requester.userId, existing);
+                else
+                    await services.history.InsertWithHistoryAsync(package, requester.userId, modifyBeforeCreate);
 
                 return package;
             }
@@ -187,7 +152,7 @@ namespace contentapi.Services.Implementations
             var last = await provider.FindByIdAsync(entityId);
 
             if(last == null || !last.Entity.type.StartsWith(EntityType))
-                throw new InvalidOperationException("No entity with that ID and type!");
+                throw new BadRequestException("No entity with that ID and type!");
             
             return last;
         }

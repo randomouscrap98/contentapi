@@ -30,17 +30,7 @@ namespace contentapi.Services.Implementations
         public async Task CheckPermissionUsersAsync(V view)
         {
             //And now make sure every single user exists
-            var userIds = view.permissions.Keys.ToList();//new List<long>();
-
-            //foreach(var perm in view.permissions)
-            //{
-            //    //long uid = 0;
-
-            //    //if(!long.TryParse(perm.Key, out uid))
-            //    //    throw new BadRequestException($"Cannot parse permission uid {perm.Key}");
-            //    
-            //    userIds.Add(uid);
-            //}
+            var userIds = view.permissions.Keys.ToList();
 
             userIds = userIds.Distinct().ToList();
             userIds.Remove(0); //Don't include the default
@@ -65,16 +55,13 @@ namespace contentapi.Services.Implementations
             view = await base.CleanViewGeneralAsync(view, requester);
 
             //This SHOULD stop banned users from posting or editing content... I think??
-            //var bansearch = new BanSearch();
-            //bansearch.CreateUserIds.Add(requester.userId);
-            //var ban = banSource.GetCurrentBan(await banSource.SimpleSearchRawAsync(bansearch));
             var ban = await banSource.GetUserBan(requester.userId);
 
             //This just means they can't create public content, but they can still make private stuff... idk
             if(ban != null && (ban.type == BanType.@public && view.permissions.ContainsKey(0) && 
                view.permissions[0].ToLower().Contains(Actions.KeyMap[Keys.ReadAction].ToLower()))) //Don't handle other kinds of bans yet
             {
-                throw new AuthorizationException("You are banned: " + ban.message);
+                throw new BannedException(ban.message);
             }
 
             if(view.parentId > 0)
@@ -90,7 +77,7 @@ namespace contentapi.Services.Implementations
                 //Only for CREATING. This is a silly weird thing since this is the general cleanup...
                 //Almost NOTHING requires cleanup specifically for create.
                 if(view.id == 0 && !CanUser(requester, Keys.CreateAction, parent))
-                    throw new AuthorizationException($"User cannot create entities in parent {view.parentId}");
+                    throw new ForbiddenException($"User cannot create entities in parent {view.parentId}");
             }
             else if (!AllowOrphanPosts)
             {
@@ -116,13 +103,13 @@ namespace contentapi.Services.Implementations
             view = await base.CleanViewUpdateAsync(view, existing, requester);
 
             if (!CanUser(requester, Keys.UpdateAction, existing))
-                throw new AuthorizationException("User cannot update this entity");
+                throw new ForbiddenException("User cannot update this entity");
 
             //Restore the permissions from the package, don't bother throwing an error.
             if(!services.permissions.IsSuper(requester) && existing.GetRelation(Keys.CreatorRelation).entityId1 != requester.userId)
             {
                 var existingView = converter.ToView(existing);
-                view.permissions = existingView.permissions; //services.permissions.ConvertRelationsToPerms(existing.Relations);
+                view.permissions = existingView.permissions;
             }
 
             return view;
@@ -133,7 +120,7 @@ namespace contentapi.Services.Implementations
             var result = await base.DeleteCheckAsync(standinId, requester);
 
             if(!CanUser(requester, Keys.DeleteAction, result))
-                throw new AuthorizationException("No permission to delete");
+                throw new ForbiddenException("No permission to delete");
 
             return result;
         }

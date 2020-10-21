@@ -38,7 +38,7 @@ namespace contentapi.Controllers
             {
                 var requester = GetRequesterNoFail();
                 if(!permissionService.IsSuper(requester))
-                    throw new AuthorizationException("Can't read debug information unless super!");
+                    throw new ForbiddenException("Can't read debug information unless super!");
                 var modData = moduleService.GetModule(name);
                 if(modData == null)
                     throw new NotFoundException($"No module with name {name}");

@@ -30,7 +30,7 @@ namespace contentapi.Services.Implementations
             var item = await converter.FindByIdRawAsync(id);
 
             if(item == null)
-                throw new BadRequestException($"Can't find watch with id {id}");
+                throw new NotFoundException($"Can't find watch with id {id}");
 
             //Don't really care if this fails afterwards, it's whatever. It's only a log essentially
             await provider.WriteAsync(converter.HistoricCopy(item, Keys.WatchDelete));

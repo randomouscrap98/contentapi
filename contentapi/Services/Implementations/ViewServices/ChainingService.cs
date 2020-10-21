@@ -32,8 +32,6 @@ namespace contentapi.Services.Implementations
         public VoteViewService vote {get;set;}
         public ModuleViewService module {get;set;}
         public ModuleMessageViewService modulemessage {get;set;}
-
-        //public IEntityProvider provider {get;set;}
     }
 
     /// <summary>
@@ -116,8 +114,6 @@ namespace contentapi.Services.Implementations
     /// </summary>
     public class RelationListenChainConfig : RelationListenConfig
     { 
-        //public long lastId {get;set;} = -1;
-        //public Dictionary<long, string> statuses {get;set;} = new Dictionary<long, string>();
         public List<string> chains {get;set;}
     }
 
@@ -130,22 +126,14 @@ namespace contentapi.Services.Implementations
         public List<string> chains {get;set;}
     }
 
-    //public class ModuleChainConfig
-    //{
-    //    public long lastId {get;set;} = 0;
-    //    public List<string> chains {get;set;}
-    //}
-
     /// <summary>
     /// The results from listening in the chaining service
     /// </summary>
     public class ListenResult
     {
         public Dictionary<long, Dictionary<long, string>> listeners {get;set;}
-        //public List<ModuleMessage> modulemessages {get;set;}
         public Dictionary<string, List<ExpandoObject>> chains {get;set;}
         public long lastId {get;set;}
-        //public long lastModuleId {get;set;}
         public List<string> warnings {get;set;} = new List<string>();
     }
 
@@ -170,7 +158,6 @@ namespace contentapi.Services.Implementations
     {
         protected ChainServices services;
         protected RelationListenerService relationService;
-        //protected IModuleService moduleService;
         protected ILogger logger;
         protected ChainServiceConfig config;
         protected SystemConfig systemConfig;
@@ -179,7 +166,7 @@ namespace contentapi.Services.Implementations
 
         //These should all be... settings?
 
-        public ChainService(ILogger<ChainService> logger, ChainServices services, RelationListenerService relationService, ChainServiceConfig config, /*IModuleService moduleService,*/
+        public ChainService(ILogger<ChainService> logger, ChainServices services, RelationListenerService relationService, ChainServiceConfig config,
             SystemConfig systemConfig, IEntityProvider provider, ICodeTimer timer)
         {
             this.logger = logger;
@@ -187,7 +174,6 @@ namespace contentapi.Services.Implementations
             this.relationService = relationService;
             this.config = config;
             this.provider = provider;
-            //this.moduleService = moduleService;
             this.systemConfig = systemConfig;
             this.timer = timer;
         }
@@ -285,19 +271,21 @@ namespace contentapi.Services.Implementations
         /// <returns></returns>
         public List<long> LinkToSearch<S>(Chaining chain, List<List<IIdView>> existingChains, S search) where S : IIdSearcher
         {
-            if(chain.searchFieldPath.Count == 0) //string.IsNullOrEmpty(chain.searchField))
+            if(chain.searchFieldPath.Count == 0)
                 chain.searchFieldPath.Add("Ids");
             
             // Before going out and getting stuff, make sure ALL our fields are good. Reflection is expensive!
             if (chain.index < 0 || chain.getFieldPath.Count == 0 || existingChains.Count <= chain.index)
                 throw new BadRequestException($"Bad chain index or missing field: {chain}");
 
-            //Uh-oh, assume it is list of long... even if it's not ogh
+            //Uh-oh, assume it is list of long... even if it's not ogh. WHY DO WE DO THIS? This is bad code, but we're getting a REFERENCE
+            //to the search ids so we can append to them later. This is NECESSARY, DO NOT REMOVE! Without appending to searchids, this does
+            //not work, this is DESIGNED to have side effects and directly modify the given search (which is this part)
             var searchIds = (List<long>)GetIdsFromFieldPath(search, chain.searchFieldPath);
 
             try
             {
-                var ids = existingChains[chain.index].SelectMany(x => GetIdsFromFieldPath(x, chain.getFieldPath)).ToList(); //GetIdsFromFieldPath(existingChains[chain.index], chain.getFieldPath).ToList();
+                var ids = existingChains[chain.index].SelectMany(x => GetIdsFromFieldPath(x, chain.getFieldPath)).ToList();
 
                 //Ensure a true "empty search" if there were no results. There is a CHANCE that later linkings
                 //will actually add values to this search field. This is OK; the max value will not break the search.
@@ -554,9 +542,9 @@ namespace contentapi.Services.Implementations
             return results.ToDictionary(x => x.Key, y => y.Value.Select(x => x.result).ToList());
         }
 
-        protected void CheckChainLimit(int? count)//, double modifier = 1)
+        protected void CheckChainLimit(int? count)
         {
-            if(count != null && count > config.MaxChains)// * modifier)
+            if(count != null && count > config.MaxChains)
                 throw new BadRequestException($"Can't chain deeper than {config.MaxChains}");
         }
 
@@ -685,6 +673,9 @@ namespace contentapi.Services.Implementations
                 {
                     if (actions != null)
                     {
+                        if(actions.chains.Count < 1)
+                            throw new BadRequestException("No chains on actions found: long poller will never complete!");
+
                         //An ABSOLUTELY SILLY HACK because I don't actually know how to write this pattern using C#. I want an asynchronous... "task",
                         //and ugh maybe this IS how you do it? I mean that I want a section of code to run asynchronously with "await" and stuff,
                         //and get the "task" that represents this async code. Actually... maybe this IS how you do it.

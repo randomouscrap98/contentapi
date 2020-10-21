@@ -6,7 +6,6 @@ using Randomous.EntitySystem;
 
 namespace contentapi.Services.Implementations
 {
-
     public class CategoryViewService : BasePermissionViewService<CategoryView, CategorySearch>
     {
         public CategoryViewService(ViewServicePack services, ILogger<CategoryViewService> logger, CategoryViewSource converter, BanViewSource banSource) 

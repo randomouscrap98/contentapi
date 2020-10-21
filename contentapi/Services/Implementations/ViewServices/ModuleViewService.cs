@@ -6,11 +6,6 @@ using contentapi.Services.Extensions;
 using contentapi.Services.Constants;
 using System.Text.RegularExpressions;
 using Randomous.EntitySystem;
-using System;
-using Microsoft.Data.Sqlite;
-using MoonSharp.Interpreter;
-using System.Collections.Concurrent;
-using System.Linq;
 
 namespace contentapi.Services.Implementations
 {
@@ -22,7 +17,6 @@ namespace contentapi.Services.Implementations
         protected ModuleServiceConfig config;
         protected ModuleMessageViewService moduleMessageService;
         protected IModuleService moduleService;
-
 
         public ModuleViewService(ILogger<ModuleViewService> logger, ViewServicePack services, ModuleViewSource converter,
             ModuleServiceConfig config, ModuleMessageViewService moduleMessageService, IModuleService service) :base(services, logger, converter) 
@@ -47,8 +41,7 @@ namespace contentapi.Services.Implementations
         {
             view = await base.CleanViewGeneralAsync(view, requester);
 
-            if(!services.permissions.IsSuper(requester))
-                throw new AuthorizationException("Only supers can create modules!");
+            FailUnlessSuper(requester);
 
             if(!Regex.IsMatch(view.name, "^[a-z0-9_]+$"))
                 throw new BadRequestException("Module name can only be lowercase letters, numbers, and _");
@@ -64,10 +57,7 @@ namespace contentapi.Services.Implementations
         public override async Task<EntityPackage> DeleteCheckAsync(long entityId, Requester requester) 
         {
             var result = await base.DeleteCheckAsync(entityId, requester);
-
-            if(!services.permissions.IsSuper(requester))
-                throw new AuthorizationException("Only supers can delete modules!");
-            
+            FailUnlessSuper(requester);
             return result;
         }
 

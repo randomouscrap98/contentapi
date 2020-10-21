@@ -57,7 +57,7 @@ namespace contentapi.Controllers
             //ALL of the AFTER MIDDLEWARE token checks (whatever you add) NEED to throw the SAME kinds of errors as 
             //an actual invalid token ie bad formatting or missing or whatever
             if (token == null || token != userValidation.GetUserValidationToken(user))
-                throw new AuthorizationException("User not logged in!");
+                throw new UnauthorizedAccessException("User not logged in!");
             
             return user;
         }
@@ -89,14 +89,22 @@ namespace contentapi.Controllers
                     throw ex.Flatten().InnerException;
                 }
             }
-            catch(AuthorizationException ex)
-            {
-                return Unauthorized(ex.Message);
-            }
+            //catch(AuthorizationException ex)
+            //{
+            //    return Unauthorized(ex.Message);
+            //}
             //I keep using this on accident
             catch(UnauthorizedAccessException ex)
             {
                 return Unauthorized(ex.Message);
+            }
+            catch(ForbiddenException ex)
+            {
+                return Forbid(ex.Message);
+            }
+            catch(BannedException ex)
+            {
+                return StatusCode(418, ex.Message); //new StatusCodeResult()
             }
             catch(BadRequestException ex)
             {

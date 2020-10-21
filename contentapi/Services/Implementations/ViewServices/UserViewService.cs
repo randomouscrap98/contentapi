@@ -58,11 +58,6 @@ namespace contentapi.Services.Implementations
             return view;
         }
 
-        //public override Task<UserViewFull> WriteAsync(UserViewFull view, Requester requester)
-        //{
-        //    return WriteAsyncHistoric(view, requester);
-        //}
-
         public async Task<UserViewFull> WriteSpecialAsync(long id, Requester requester, Action<EntityPackage> modify)
         {
             var original = await services.provider.FindByIdAsync(id);
@@ -79,7 +74,7 @@ namespace contentapi.Services.Implementations
                 var creatorRelation = p.GetRelation(Keys.CreatorRelation);
                 creatorRelation.entityId1 = creatorRelation.entityId2;
                 creatorRelation.value = creatorRelation.entityId2.ToString(); //Warn: this is VERY implementation specific! Kinda sucks to have two pieces of code floating around!
-            })); //, history));
+            }));
         }
 
         public async Task<UserViewFull> FindByUsernameAsync(string username, Requester requester)

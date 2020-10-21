@@ -12,15 +12,13 @@ namespace contentapi.Services.Implementations
     public class ActivityViewService : BaseViewServices<ActivityView, ActivitySearch>, IViewReadService<ActivityView, ActivitySearch>
     {
         protected ActivityViewSource activity;
-        //protected CommentViewSource comments;
         protected WatchViewSource watchSource;
 
         public ActivityViewService(ViewServicePack services, ILogger<ActivityViewService> logger, 
-            ActivityViewSource activity, /*CommentViewSource comments,*/ WatchViewSource watchSource) 
+            ActivityViewSource activity, WatchViewSource watchSource) 
             : base(services, logger) 
         { 
             this.activity = activity;
-            //this.comments = comments;
             this.watchSource = watchSource;
         }
 
@@ -61,7 +59,6 @@ namespace contentapi.Services.Implementations
         {
             public long userId {get;set;}
             public long contentId {get;set;}
-            //public string action {get;set;}
         }
 
         public async Task<List<ActivityAggregateView>> SearchAggregateAsync(ActivitySearch search, Requester requester)
@@ -81,7 +78,6 @@ namespace contentapi.Services.Implementations
                 lastDate = x.Max(y => y.Value.lastDate),
                 firstDate = x.Min(y => y.Value.firstDate),
                 lastId = x.Max(y => y.Value.lastId),
-                //userActions = x.Select(y => new { user = y.Key.userId, action = y.Key.action })
                 userIds = x.Select(y => y.Key.userId).Distinct().ToList()
             }).ToList();
         }

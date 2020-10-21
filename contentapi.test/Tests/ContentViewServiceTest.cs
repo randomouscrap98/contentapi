@@ -90,11 +90,11 @@ namespace contentapi.test
                     a(); 
                     Assert.True(allowed);
                 }
-                catch(AuthorizationException) 
+                catch(ForbiddenException) 
                 { 
                     Assert.False(allowed); 
                 }
-                catch(AggregateException ex) when (ex.InnerException is AuthorizationException) 
+                catch(AggregateException ex) when (ex.InnerException is ForbiddenException) 
                 { 
                     Assert.False(allowed); 
                 }

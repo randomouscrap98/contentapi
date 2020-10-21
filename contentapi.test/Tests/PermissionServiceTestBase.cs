@@ -19,14 +19,6 @@ namespace contentapi.test
 
         //Assume most things can have a parent that is of the same type (this is mostly true...)
         public abstract long SetupParent(Action<BasePermissionView> modify = null); //BAD DEPENDENCIES TEST BREAK AGGHH
-        //{
-        //    var view = new V() { };
-        //    if(modify != null)
-        //        modify(view);
-        //    //view.permissions.Add("0", defaultPerms);
-        //    view = service.WriteAsync(view, new Requester(){system = true}).Result; //This will result in a creator of 0
-        //    return view.id;
-        //}
 
         public virtual async Task<V> BasicInsertAsync(Requester requester, Action<V> modify = null, bool insertThrows = false, Action<BasePermissionView> parentModify = null)//string parentDefaultPerms = "C")
         {
@@ -45,7 +37,7 @@ namespace contentapi.test
                 var writeView = await service.WriteAsync(view, requester);
                 return writeView;
             }
-            catch(AuthorizationException)
+            catch(ForbiddenException)
             {
                 if(!insertThrows)
                     throw;
@@ -239,11 +231,11 @@ namespace contentapi.test
                         a(); 
                         Assert.True(allowed);
                     }
-                    catch(AuthorizationException) 
+                    catch(ForbiddenException) 
                     { 
                         Assert.False(allowed); 
                     }
-                    catch(AggregateException ex) when (ex.InnerException is AuthorizationException) 
+                    catch(AggregateException ex) when (ex.InnerException is ForbiddenException) 
                     { 
                         Assert.False(allowed); 
                     }

@@ -1,13 +1,10 @@
 using System;
 using System.Collections.Generic;
 using System.Linq;
-using System.Threading;
 using System.Threading.Tasks;
-using contentapi.Configs;
 using contentapi.Services.Constants;
 using contentapi.Services.Extensions;
 using contentapi.Views;
-using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.Logging;
 using Randomous.EntitySystem;
 
@@ -42,14 +39,14 @@ namespace contentapi.Services.Implementations
 
             //Parent must be content
             if (parent == null || !parent.Entity.type.StartsWith(Keys.ContentType))
-                throw new NotFoundException("Parent couldn't be found!");
+                throw new BadRequestException("Parent couldn't be found!");
 
             //Banning is such a "base" thing
             var ban = await banSource.GetUserBan(requester.userId);
 
             //This just means they can't create public content, but they can still make private stuff... idk
             if(ban != null && (ban.type == BanType.@public && services.permissions.CanUser(new Requester() { userId = 0}, Keys.ReadAction, parent)))
-                throw new AuthorizationException("You are banned: " + ban.message);
+                throw new BannedException(ban.message);
 
             return parent;
         }
@@ -62,7 +59,7 @@ namespace contentapi.Services.Implementations
 
             //Only the owner (and super users) can edit (until wee get permission overrides set up)
             if(existing.entityId2 != -uid && !services.permissions.IsSuper(requester))
-                throw new UnauthorizedAccessException($"Cannot update comment {uid}");
+                throw new ForbiddenException($"Cannot update comment {existing.id}");
 
             return parent;
         }
@@ -74,7 +71,7 @@ namespace contentapi.Services.Implementations
 
             //Create is full-on parent permission inheritance
             if (!services.permissions.CanUser(requester, action, parent))
-                throw new NotFoundException("Comment or content not found"); //$"Cannot perform this action in content {parent.Entity.id}");
+                throw new ForbiddenException($"Cannot perform action on parent {parentId}"); //$"Cannot perform this action in content {parent.Entity.id}");
             
             return parent;
         }

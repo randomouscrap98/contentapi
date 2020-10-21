@@ -34,7 +34,7 @@ namespace contentapi.Services.Implementations
         }
 
         public override string EntityType => Keys.ContentType;
-        public override string ParentType => Keys.CategoryType; //null;
+        public override string ParentType => Keys.CategoryType; 
         public override bool AllowOrphanPosts => true;
 
         public List<long> BuildSupersForId(long id, Dictionary<long, List<long>> existing, IList<CategoryView> categories)
@@ -104,10 +104,10 @@ namespace contentapi.Services.Implementations
                 //but at least... I don't know, it's way more performant. Come up with some system perhaps after
                 //you see what you need in other instances.
                 var watches = await watchSource.GroupAsync<EntityRelation, long>(
-                    watchSource.SearchIds(new WatchSearch() { ContentIds = baseIds }), watchSource.PermIdSelector); //x => x.entityId2);
+                    watchSource.SearchIds(new WatchSearch() { ContentIds = baseIds }), watchSource.PermIdSelector);
 
                 var comments = await commentSource.GroupAsync<EntityRelation, long>(
-                    commentSource.SearchIds(new CommentSearch() { ParentIds = baseIds }), commentSource.PermIdSelector); //x => x.entityId1);
+                    commentSource.SearchIds(new CommentSearch() { ParentIds = baseIds }), commentSource.PermIdSelector);
 
                 var votes = new Dictionary<string, Dictionary<long, SimpleAggregateData>>();
 
@@ -130,8 +130,8 @@ namespace contentapi.Services.Implementations
 
                 baseResult.ForEach(x =>
                 {
-                    if (watches.ContainsKey(x.id)) //-x.id))
-                        x.about.watches = watches[x.id]; //-x.id];
+                    if (watches.ContainsKey(x.id)) 
+                        x.about.watches = watches[x.id]; 
                     if (comments.ContainsKey(x.id))
                         x.about.comments = comments[x.id];
 
@@ -142,8 +142,8 @@ namespace contentapi.Services.Implementations
                     {
                         x.about.votes.Add(voteWeight.Key, new SimpleAggregateData());
 
-                        if (votes[voteWeight.Key].ContainsKey(x.id)) //-x.id))
-                        x.about.votes[voteWeight.Key] = votes[voteWeight.Key][x.id]; //-x.id];
+                        if (votes[voteWeight.Key].ContainsKey(x.id))
+                            x.about.votes[voteWeight.Key] = votes[voteWeight.Key][x.id];
                     }
                 });
             }

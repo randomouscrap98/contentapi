@@ -5,9 +5,7 @@ using System.Threading.Tasks;
 using contentapi.Services.Constants;
 using contentapi.Services.Extensions;
 using contentapi.Views;
-using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.Logging;
-using Randomous.EntitySystem;
 
 namespace contentapi.Services.Implementations
 {
@@ -31,7 +29,7 @@ namespace contentapi.Services.Implementations
             var item = await converter.FindByIdRawAsync(id);
 
             if(item == null)
-                throw new BadRequestException($"Can't find vote with id {id}");
+                throw new NotFoundException($"Can't find vote with id {id}");
 
             await provider.DeleteAsync(item);
             return converter.ToView(item);

@@ -6,7 +6,6 @@ using System.Threading.Tasks;
 using Microsoft.AspNetCore.Authorization;
 using System.Collections.Generic;
 using contentapi.Services;
-using Microsoft.Extensions.Logging;
 using AutoMapper;
 using contentapi.Services.Implementations;
 using contentapi.Services.Constants;
@@ -65,7 +64,7 @@ namespace contentapi.Controllers
 
             //A VERY SPECIFIC glitch you really only get in development 
             if (user == null)
-                throw new AuthorizationException($"No user with uid {requester.userId}");
+                throw new UnauthorizedAccessException($"No user with uid {requester.userId}");
             
             return user;
         }
@@ -119,22 +118,6 @@ namespace contentapi.Controllers
             }
         }
 
-        ////A quick hack just to get this done
-        //public class SpecialUserSet
-        //{
-        //    //Public
-        //    public long? avatar = null;
-        //    public string special = null;
-        //    public string username = null;
-
-        //    //Private
-        //    public List<long> hidelist = null;
-        //    public string email = null;
-        //    public string salt = null;
-        //    public string password = null;
-
-        //}
-
         [HttpPut("basic")]
         [Authorize]
         public Task<ActionResult<UserView>> PutBasicAsync([FromBody]UserBasicPost data)
@@ -142,10 +125,10 @@ namespace contentapi.Controllers
             return ThrowToAction<UserView>(async () => 
             {
                 var original = await GetCurrentUser();
-                var userView = mapper.Map<UserViewFull>(original); //await GetCurrentUser();
+                var userView = mapper.Map<UserViewFull>(original);
                 var requester = GetRequesterNoFail();
 
-                if(data.avatar != null) //>= 0)
+                if(data.avatar != null)
                     userView.avatar = (long)data.avatar;
                 if(data.special != null)
                     userView.special = data.special;
@@ -199,7 +182,7 @@ namespace contentapi.Controllers
         protected virtual async Task SendEmailAsync(string subjectKey, string bodyKey, string recipient, Dictionary<string, object> replacements)
         {
             var subject = languageService.GetString(subjectKey, "en");
-            var body = languageService.GetString(bodyKey, "en", replacements); //new Dictionary<string, object>() {{"confirmCode", code}});
+            var body = languageService.GetString(bodyKey, "en", replacements);
             await emailService.SendEmailAsync(new EmailMessage(recipient, subject, body));
         }
 

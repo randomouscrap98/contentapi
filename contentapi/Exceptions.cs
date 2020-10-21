@@ -14,9 +14,21 @@ namespace contentapi
         public NotFoundException(string message) : base(message) { }
     }
 
-    public class AuthorizationException : Exception
+    /*public class AuthorizationException : Exception
     {
         public AuthorizationException() : base() {}
         public AuthorizationException(string message) : base(message) { }
+    }*/
+
+    public class ForbiddenException : Exception
+    {
+        public ForbiddenException() : base() {}
+        public ForbiddenException(string message) : base(message) {}
+    }
+
+    public class BannedException : Exception
+    {
+        public BannedException() : base() {}
+        public BannedException(string message) : base(message) {}
     }
 }

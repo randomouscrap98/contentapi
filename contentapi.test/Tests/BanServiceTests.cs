@@ -24,7 +24,7 @@ namespace contentapi.test
         [Fact]
         public void ReadNoPerms()
         {
-            AssertThrows<AuthorizationException>(() => service.SearchAsync(new BanSearch(), new Requester()).Wait());
+            AssertThrows<ForbiddenException>(() => service.SearchAsync(new BanSearch(), new Requester()).Wait());
         }
 
         [Fact]
@@ -38,7 +38,7 @@ namespace contentapi.test
         [Fact]
         public void WriteNoPerms()
         {
-            AssertThrows<AuthorizationException>(() => service.WriteAsync(GetBasicView(), new Requester()).Wait());
+            AssertThrows<ForbiddenException>(() => service.WriteAsync(GetBasicView(), new Requester()).Wait());
         }
 
         [Fact]
