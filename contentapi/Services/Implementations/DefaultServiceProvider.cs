@@ -106,6 +106,7 @@ namespace contentapi.Services.Implementations
                 vote = p.GetService<VoteViewService>(),
                 //provider = p.GetService<IEntityProvider>(),
                 module = p.GetService<ModuleViewService>(),
+                ban = p.GetService<BanViewService>(),
                 modulemessage = p.GetService<ModuleMessageViewService>()
             });
 

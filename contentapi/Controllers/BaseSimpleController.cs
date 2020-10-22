@@ -100,7 +100,7 @@ namespace contentapi.Controllers
             }
             catch(ForbiddenException ex)
             {
-                return Forbid(ex.Message);
+                return StatusCode(403, ex.Message); //Forbid(ex.Message);
             }
             catch(BannedException ex)
             {

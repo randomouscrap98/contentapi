@@ -32,6 +32,7 @@ namespace contentapi.Services.Implementations
         public VoteViewService vote {get;set;}
         public ModuleViewService module {get;set;}
         public ModuleMessageViewService modulemessage {get;set;}
+        public BanViewService ban {get;set;}
     }
 
     /// <summary>
@@ -358,6 +359,15 @@ namespace contentapi.Services.Implementations
         /// <returns></returns>
         public Task ChainAsync(ChainRequestString data, Requester requester, List<List<IIdView>> previousResults)
         {
+            //var svcs = GetProperties(services.GetType());
+
+            //var matchedService = svcs.FirstOrDefault(x => x.Name == data.endpoint);
+
+            //if(matchedService != null)
+            //    return ChainStringAsync(data, matchedService.GetValue(services), requester, previousResults);
+
+            //This HAS to be this stupid because of the generics: referencing the service directly gives us the typing information
+            //Don't know how to do that with reflection yet
             if (data.endpoint == "file")
                 return ChainStringAsync(data, services.file, requester, previousResults);
             else if (data.endpoint == "user")
@@ -372,10 +382,10 @@ namespace contentapi.Services.Implementations
                 return ChainStringAsync(data, services.modulemessage, requester, previousResults);
             else if (data.endpoint == "comment")
                 return ChainStringAsync(data, services.comment, requester, previousResults);
-            else if (data.endpoint == "commentaggregate")
-                return ChainStringAsync<CommentSearch, CommentAggregateView>(data, (s) => services.comment.SearchAggregateAsync(s, requester), previousResults);
             else if (data.endpoint == "activity")
                 return ChainStringAsync(data, services.activity, requester, previousResults);
+            else if (data.endpoint == "commentaggregate")
+                return ChainStringAsync<CommentSearch, CommentAggregateView>(data, (s) => services.comment.SearchAggregateAsync(s, requester), previousResults);
             else if (data.endpoint == "activityaggregate")
                 return ChainStringAsync<ActivitySearch, ActivityAggregateView>(data, (s) => services.activity.SearchAggregateAsync(s, requester), previousResults);
             else if (data.endpoint == "systemaggregate")
@@ -384,6 +394,8 @@ namespace contentapi.Services.Implementations
                 return ChainStringAsync(data, services.watch, requester, previousResults);
             else if (data.endpoint == "vote")
                 return ChainStringAsync(data, services.vote, requester, previousResults);
+            else if (data.endpoint == "ban")
+                return ChainStringAsync(data, services.ban, requester, previousResults);
             else
                 throw new BadRequestException($"Unknown request: {data.endpoint}");
         }
