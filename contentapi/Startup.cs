@@ -15,8 +15,6 @@ using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.IdentityModel.Tokens;
 using Microsoft.OpenApi.Models;
-using Microsoft.AspNetCore.Mvc.NewtonsoftJson;
-using Randomous.EntitySystem;
 using Randomous.EntitySystem.Implementations;
 using Serilog;
 using System.Threading;
@@ -67,9 +65,6 @@ namespace contentapi
             //The IEntityProvider that we give out needs to have only a single access
             services.AddSingleton(new EntityQueryableEfCoreConfig() { ConcurrentAccess = 1 });
 
-
-            //services.AddSingleton<ISignaler<EntityBase>, SignalSystem<EntityBase>>();
-
             //Add our own services from contentapi
             var contentApiDefaultProvider = new Services.Implementations.DefaultServiceProvider();
             contentApiDefaultProvider.AddDefaultServices(services);
@@ -89,7 +84,6 @@ namespace contentapi
                 return websocketConfig;
             });
 
-            //services.AddTransient(typeof(BaseSimpleControllerServices<>));
             services.AddTransient<BaseSimpleControllerServices>();
 
             //The rest is http stuff I think
@@ -102,8 +96,6 @@ namespace contentapi
 
             services.AddCors();
             services.AddControllers()
-                    //.AddJsonOptions(options=> options.JsonSerializerOptions.Converters.Add(new TimeSpanToStringConverter()))
-                    //.AddJsonOptions(options=> options.JsonSerializerOptions.Converters.Add(new DateTimeConverter()))
                     .AddNewtonsoftJson(options =>
                     {
                         options.SerializerSettings.Converters.Add(new CustomDateTimeConverter());

@@ -674,6 +674,7 @@ namespace contentapi.Services.Implementations
                     ((dynamic)addSignal(Keys.ChainWatchUpdate, 0)).contentId = clear;
             };
             
+            //NOTE: START THREADED AREA
 
             //Create a new cancel source FROM the original token so that either us or the client can cancel
             using (CancellationTokenSource linkedCts = CancellationTokenSource.CreateLinkedTokenSource(cancelToken))

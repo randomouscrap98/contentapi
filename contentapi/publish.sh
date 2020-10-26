@@ -13,11 +13,14 @@
 # - Copy publish to remote at install location
 # - Set up remote system (permissions, services(?), dbmigrations, etc)
 
+port=240
+
 # Stuff for connecting
 if [ "$1" = "production" ]
 then
    echo "WARN: PUBLISHING PRODUCTION"
-   phost=csanchez@direct.smilebasicsource.com # The production server (and user to connect)
+   phost=csanchez@smilebasicsource.com # The production server (and user to connect)
+   port=22
    pfolder="/var/www/contentapi"                        # The REMOTE location to PLACE all files
    rdf="rl"
 else
@@ -26,7 +29,6 @@ else
    rdf="a"
 fi
 
-port=240
 # rsync='rsync -zz -${rdf}vh -e "ssh -p $port"' 
 postinstallscript="postinstall.sh"
 postinstallargs=""
