@@ -84,9 +84,9 @@ namespace contentapi.Services.Implementations
             return view;
         }
 
-        public override IQueryable<EntityGroup> GetBaseQuery(CommentSearch search)
+        public override async Task<IQueryable<EntityGroup>> GetBaseQuery(CommentSearch search)
         {
-            var baseQuery = base.GetBaseQuery(search);
+            var baseQuery = await base.GetBaseQuery(search);
 
             if(!string.IsNullOrEmpty(search.ContentLike))
                 baseQuery = baseQuery.Where(x => EF.Functions.Like(x.relation.value, search.ContentLike));
@@ -125,12 +125,12 @@ namespace contentapi.Services.Implementations
         }
 
         //We have this simple code everywhere because we may NOT return the same thing every time
-        public override Task<List<EntityRelationPackage>> RetrieveAsync(IQueryable<long> ids)
+        public override async Task<List<EntityRelationPackage>> RetrieveAsync(IQueryable<long> ids)
         {
-            return LinkAsync(GetByIds<EntityRelation>(ids));
+            return await LinkAsync(await GetByIds<EntityRelation>(ids));
         }
 
-        public override IQueryable<long> FinalizeQuery(IQueryable<EntityGroup> query, CommentSearch search)  
+        public override Task<IQueryable<long>> FinalizeQuery(IQueryable<EntityGroup> query, CommentSearch search)  
         {
             if(search.ContentLimit.Limit.Count > 0)
                 return SimpleMultiLimit(query, search.ContentLimit.Limit, e => e.entityId1);

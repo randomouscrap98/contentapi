@@ -120,7 +120,7 @@ namespace contentapi.Services.Implementations
             //Repeat code, be careful
             await FixWatchLimits(watchSource, requester, search.ContentLimit);
 
-            var ids = converter.SearchIds(search, q => services.permissions.PermissionWhere(q, requester, Keys.ReadAction));
+            var ids = await converter.SearchIds(search, q => services.permissions.PermissionWhere(q, requester, Keys.ReadAction));
 
             var groups = await converter.GroupAsync<EntityRelation,TempGroup>(ids, x => new TempGroup(){ userId = -x.entityId2, contentId = x.entityId1});
 

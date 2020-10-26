@@ -10,7 +10,7 @@ namespace contentapi.Services
 {
     public interface IViewSource<V,T,E,S> : IViewConverter<V, T> where E : EntityGroup where S : IIdSearcher where V : IIdView
     {
-        IQueryable<long> SearchIds(S search, Func<IQueryable<E>, IQueryable<E>> modify = null);
+        Task<IQueryable<long>> SearchIds(S search, Func<IQueryable<E>, IQueryable<E>> modify = null);
         Task<List<T>> RetrieveAsync(IQueryable<long> ids);
         //Task<Dictionary<K, SimpleAggregateData>> GroupAsync<R,K>(IQueryable<long> ids, IQueryable<R> join, Expression<Func<R, K>> keySelector) where R : EntityBase;//Expression<Func<);
         Task<Dictionary<K, SimpleAggregateData>> GroupAsync<R,K>(IQueryable<long> ids, Expression<Func<R, K>> keySelector) where R : EntityBase;//Expression<Func<);

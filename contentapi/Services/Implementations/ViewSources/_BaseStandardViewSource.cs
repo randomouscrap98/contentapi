@@ -1,5 +1,6 @@
 using System;
 using System.Linq;
+using System.Threading.Tasks;
 using AutoMapper;
 using contentapi.Services.Constants;
 using contentapi.Views;
@@ -14,20 +15,20 @@ namespace contentapi.Services.Implementations
         protected BaseStandardViewSource(ILogger<BaseStandardViewSource<V,T,E,S>> logger, IMapper mapper, IEntityProvider provider) 
             : base(logger, mapper, provider) { }
         
-        public override IQueryable<E> ModifySearch(IQueryable<E> query, S search)
+        public override async Task<IQueryable<E>> ModifySearch(IQueryable<E> query, S search)
         {
-            query = base.ModifySearch(query, search);
+            query = await base.ModifySearch(query, search);
 
             if(search.ParentIds.Count > 0)
             {
-                var limited = LimitByParents(query, search.ParentIds);
+                var limited = await LimitByParents(query, search.ParentIds);
 
                 if(search.ParentIds.Contains(0))
                 {
                     if(search.ParentIds.Count == 1)
-                        query = GetOrphans(query);
+                        query = await GetOrphans(query);
                     else
-                        query = limited.Union(GetOrphans(query));
+                        query = limited.Union(await GetOrphans(query));
                 }
                 else
                 {
@@ -36,7 +37,7 @@ namespace contentapi.Services.Implementations
             }
             
             if(!string.IsNullOrEmpty(search.AssociatedKey) || !string.IsNullOrEmpty(search.AssociatedValue))
-                query = LimitByValue(query, (Keys.AssociatedValueKey + search.AssociatedKey ?? "%"), search.AssociatedValue ?? "%");
+                query = await LimitByValue(query, (Keys.AssociatedValueKey + search.AssociatedKey ?? "%"), search.AssociatedValue ?? "%");
             
             return query;
         }

@@ -65,17 +65,17 @@ namespace contentapi.Services.Implementations
             return relation;
         }
 
-        public override IQueryable<EntityGroup> GetBaseQuery(ModuleMessageViewSearch search)
+        public override async Task<IQueryable<EntityGroup>> GetBaseQuery(ModuleMessageViewSearch search)
         {
             var relationSearch = mapper.Map<EntityRelationSearch>(search);
             relationSearch.TypeLike = EntityType + (search.ModuleLike ?? "%");
 
-            return provider.ApplyEntityRelationSearch(Q<EntityRelation>(), relationSearch, false).Select(x => new EntityGroup() { relation = x });
+            return provider.ApplyEntityRelationSearch(await Q<EntityRelation>(), relationSearch, false).Select(x => new EntityGroup() { relation = x });
         }
 
-        public override Task<List<EntityRelation>> RetrieveAsync(IQueryable<long> ids)
+        public override async Task<List<EntityRelation>> RetrieveAsync(IQueryable<long> ids)
         {
-            return provider.GetListAsync(GetByIds<EntityRelation>(ids));
+            return await provider.GetListAsync(await GetByIds<EntityRelation>(ids));
         }
     }
 }

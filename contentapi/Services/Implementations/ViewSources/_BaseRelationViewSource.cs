@@ -2,6 +2,7 @@ using System;
 using System.Collections.Generic;
 using System.Linq;
 using System.Linq.Expressions;
+using System.Threading.Tasks;
 using AutoMapper;
 using contentapi.Views;
 using Microsoft.Extensions.Logging;
@@ -26,17 +27,17 @@ namespace contentapi.Services.Implementations
             return relationSearch;
         }
 
-        public override IQueryable<E> GetBaseQuery(S search)
+        public override async Task<IQueryable<E>> GetBaseQuery(S search)
         {
             var entitySearch = CreateSearch(search);
 
-            return provider.ApplyEntityRelationSearch(Q<EntityRelation>(), entitySearch, false)
-                .Join(Q<EntityRelation>(), PermIdSelector, r => r.entityId2, 
+            return provider.ApplyEntityRelationSearch(await Q<EntityRelation>(), entitySearch, false)
+                .Join(await Q<EntityRelation>(), PermIdSelector, r => r.entityId2, 
                 (r1, r2) => new E() { relation = r1, permission = r2});
         }
 
 
-        public IQueryable<long> SimpleMultiLimit(IQueryable<E> query, IEnumerable<IdLimit> limit, Func<EntityRelation, long> limitExpression)
+        public async Task<IQueryable<long>> SimpleMultiLimit(IQueryable<E> query, IEnumerable<IdLimit> limit, Func<EntityRelation, long> limitExpression)
         {
             //join query with watches, select query where id > watch id
             var ids = query
@@ -54,7 +55,7 @@ namespace contentapi.Services.Implementations
 
             //var ids = crap.Select(x => x.id);
 
-            return Q<EntityRelation>().Where(x => ids.Contains(x.id)).Select(x => x.id);
+            return (await Q<EntityRelation>()).Where(x => ids.Contains(x.id)).Select(x => x.id);
         }
     }
 }

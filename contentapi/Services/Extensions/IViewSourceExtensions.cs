@@ -9,12 +9,12 @@ namespace contentapi.Services.Extensions
 {
     public static class IViewSourceExtensions
     {
-        public static Task<List<T>> SimpleSearchRawAsync<V,T,E,S>(
+        public static async Task<List<T>> SimpleSearchRawAsync<V,T,E,S>(
             this IViewSource<V,T,E,S> source, S search, Func<IQueryable<E>, IQueryable<E>> modify = null) 
             where V : IIdView where S : IIdSearcher where E : EntityGroup
         {
-            var ids = source.SearchIds(search, modify);
-            return source.RetrieveAsync(ids);
+            var ids = await source.SearchIds(search, modify);
+            return await source.RetrieveAsync(ids);
         }
 
         public static async Task<List<V>> SimpleSearchAsync<V,T,E,S>(

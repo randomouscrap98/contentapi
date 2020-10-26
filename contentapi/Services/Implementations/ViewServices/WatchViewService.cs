@@ -64,7 +64,7 @@ namespace contentapi.Services.Implementations
         public async Task<WatchView> ClearAsync(WatchView view, Requester requester, bool trackChanges = true)
         {
             //Go get the last relation ID
-            var lastRelationId = await provider.GetMaxAsync(Q<EntityRelation>(), x => x.id);
+            var lastRelationId = await provider.GetMaxAsync(await Q<EntityRelation>(), x => x.id);
             view.lastNotificationId = lastRelationId;
             return await WriteAsync(view, requester, trackChanges);
         }
@@ -76,8 +76,8 @@ namespace contentapi.Services.Implementations
                 return;
 
             //Find the relations for requester by ids
-            var relations = await provider.GetListAsync((Q<EntityRelation>().Where(x => x.entityId1 == requester.userId && x.type == converter.EntityType && contentIds.Contains(-x.entityId2))));
-            var lastRelationId = await provider.GetMaxAsync(Q<EntityRelation>(), x => x.id);
+            var relations = await provider.GetListAsync(((await Q<EntityRelation>()).Where(x => x.entityId1 == requester.userId && x.type == converter.EntityType && contentIds.Contains(-x.entityId2))));
+            var lastRelationId = await provider.GetMaxAsync(await Q<EntityRelation>(), x => x.id);
             var lastRelationString = lastRelationId.ToString();
 
             //Update them all and write them back
@@ -134,7 +134,7 @@ namespace contentapi.Services.Implementations
 
                 //Kind of a hack: we know activity and all things must come from relations. So since we 
                 //JUST watched it, the id will be... well, the last id
-                view.lastNotificationId = await provider.GetMaxAsync(Q<EntityRelation>(), x => x.id);
+                view.lastNotificationId = await provider.GetMaxAsync(await Q<EntityRelation>(), x => x.id);
             }
 
             var rel = converter.FromView(view);

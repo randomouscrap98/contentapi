@@ -32,9 +32,9 @@ namespace contentapi.Services.Implementations
             this.provider = provider;
         }
 
-        public IQueryable<X> Q<X>() where X : EntityBase
+        public Task<IQueryable<X>> Q<X>() where X : EntityBase
         {
-            return provider.GetQueryable<X>();
+            return provider.GetQueryableAsync<X>();
         }
 
         /// <summary>
@@ -44,17 +44,18 @@ namespace contentapi.Services.Implementations
         /// <param name="parentIds"></param>
         /// <typeparam name="E"></typeparam>
         /// <returns></returns>
-        public IQueryable<E> LimitByParents(IQueryable<E> query, List<long> parentIds)
+        public async Task<IQueryable<E>> LimitByParents(IQueryable<E> query, List<long> parentIds)
         {
             return  from q in query
-                    join r in Q<EntityRelation>() on q.entity.id equals r.entityId2
+                    join r in await Q<EntityRelation>() on q.entity.id equals r.entityId2
                     where r.type == Keys.ParentRelation && parentIds.Contains(r.entityId1)
                     select q;
         }
 
-        public IQueryable<E> GetOrphans(IQueryable<E> query)
+        public async Task<IQueryable<E>> GetOrphans(IQueryable<E> query)
         {
-            return query.Where(q => !(Q<EntityRelation>().Where(x => x.type == Keys.ParentRelation).Select(x => x.entityId2)).Contains(q.entity.id));
+            var relations = await Q<EntityRelation>();
+            return query.Where(q => !(relations.Where(x => x.type == Keys.ParentRelation).Select(x => x.entityId2)).Contains(q.entity.id));
         }
 
         /// <summary>
@@ -65,15 +66,15 @@ namespace contentapi.Services.Implementations
         /// <param name="valueLike"></param>
         /// <typeparam name="E"></typeparam>
         /// <returns></returns>
-        public IQueryable<E> LimitByValue(IQueryable<E> query, string keyLike, string valueLike)
+        public async Task<IQueryable<E>> LimitByValue(IQueryable<E> query, string keyLike, string valueLike)
         {
             return  from q in query
-                    join v in Q<EntityValue>() on q.entity.id equals v.entityId
+                    join v in await Q<EntityValue>() on q.entity.id equals v.entityId
                     where EF.Functions.Like(v.key, keyLike) && EF.Functions.Like(v.value, valueLike)
                     select q;
         }
 
-        public IQueryable<E> LimitByCreateEdit(IQueryable<E> query, List<long> creators, List<long> editors)
+        public async Task<IQueryable<E>> LimitByCreateEdit(IQueryable<E> query, List<long> creators, List<long> editors)
         {
             //Nothing to do, no use joining.
             if(creators.Count == 0 && editors.Count == 0)
@@ -82,24 +83,24 @@ namespace contentapi.Services.Implementations
             var editorStrings = editors.Select(x => x.ToString());
 
             return  from q in query
-                    join r in Q<EntityRelation>() on q.entity.id equals r.entityId2
+                    join r in await Q<EntityRelation>() on q.entity.id equals r.entityId2
                     where r.type == Keys.CreatorRelation && 
                         (creators.Count == 0 || creators.Contains(r.entityId1)) && 
                         (editors.Count == 0 || editorStrings.Contains(r.value))
                     select q;
         }
 
-        public IQueryable<X> GetByIds<X>(IQueryable<long> ids) where X : EntityBase
+        public async Task<IQueryable<X>> GetByIds<X>(IQueryable<long> ids) where X : EntityBase
         {
             return
-                from e in provider.GetQueryable<X>()
+                from e in await Q<X>()
                 join i in ids on e.id equals i
                 select e;
         }
 
-        public virtual IQueryable<long> FinalizeQuery(IQueryable<E> query, S search)  //where S : EntitySearchBase
+        public virtual Task<IQueryable<long>> FinalizeQuery(IQueryable<E> query, S search)  //where S : EntitySearchBase
         {
-            return query.GroupBy(MainIdSelector).Select(x => x.Key);
+            return Task.FromResult(query.GroupBy(MainIdSelector).Select(x => x.Key));
         }
 
         private async Task<Dictionary<X, SimpleAggregateData>> GroupAsync<R,X>(IQueryable<long> ids, IQueryable<R> join, Expression<Func<R,X>> keySelector) where R : EntityBase
@@ -131,9 +132,9 @@ namespace contentapi.Services.Implementations
             return pureList.ToDictionary(x => x.key, y => y.aggregate);
         }
 
-        public Task<Dictionary<X, SimpleAggregateData>> GroupAsync<R,X>(IQueryable<long> ids, Expression<Func<R,X>> keySelector) where R : EntityBase
+        public async Task<Dictionary<X, SimpleAggregateData>> GroupAsync<R,X>(IQueryable<long> ids, Expression<Func<R,X>> keySelector) where R : EntityBase
         {
-            return GroupAsync(ids, Q<R>(), keySelector);
+            return await GroupAsync(ids, await Q<R>(), keySelector);
         }
 
         /// <summary>
@@ -141,7 +142,7 @@ namespace contentapi.Services.Implementations
         /// </summary>
         /// <param name="search"></param>
         /// <returns></returns>
-        public abstract IQueryable<E> GetBaseQuery(S search);
+        public abstract Task<IQueryable<E>> GetBaseQuery(S search);
 
         /// <summary>
         /// How to convert a list of database ids into a list of database objects or groups of objects
@@ -164,19 +165,19 @@ namespace contentapi.Services.Implementations
         /// <returns></returns>
         public abstract T FromView(V view);
 
-        public virtual IQueryable<E> ModifySearch(IQueryable<E> query, S search) { return query; }
+        public virtual Task<IQueryable<E>> ModifySearch(IQueryable<E> query, S search) { return Task.FromResult(query); }
 
-        public IQueryable<long> SearchIds(S search, Func<IQueryable<E>, IQueryable<E>> modify = null)
+        public async Task<IQueryable<long>> SearchIds(S search, Func<IQueryable<E>, IQueryable<E>> modify = null)
         {
-            var query = GetBaseQuery(search);
+            var query = await GetBaseQuery(search);
 
-            query = ModifySearch(query, search);
+            query = await ModifySearch(query, search);
 
             if(modify != null)
                 query = modify(query);
 
             //Finalize may include special sorting / etc.
-            var husks = FinalizeQuery(query, search).Select(x => new EntityBase() { id = x });
+            var husks = (await FinalizeQuery(query, search)).Select(x => new EntityBase() { id = x });
 
             //Note: applyfinal finalizes some limiters (such as skip/take) and ALSO tries to apply
             //the fallback ordering. This is ID and random, which we don't need to implement up here.

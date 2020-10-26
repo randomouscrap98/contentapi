@@ -99,7 +99,7 @@ namespace contentapi.Services.Implementations
             return es;
         }
 
-        public override IQueryable<long> FinalizeQuery(IQueryable<EntityGroup> query, BanSearch search)  
+        public override Task<IQueryable<long>> FinalizeQuery(IQueryable<EntityGroup> query, BanSearch search)  
         {
             //if(search.ExpireDateStart.Ticks != 0)
             //    query = query.Where(x => String.Compare(x.relation.type, EntityType + search.ExpireDateStart.ToString(ExpireDateFormat)) >= 0);
@@ -110,9 +110,9 @@ namespace contentapi.Services.Implementations
         }
 
         //We have this simple code everywhere because we may NOT return the same thing every time
-        public override Task<List<EntityRelation>> RetrieveAsync(IQueryable<long> ids)
+        public override async Task<List<EntityRelation>> RetrieveAsync(IQueryable<long> ids)
         {
-            return provider.GetListAsync(GetByIds<EntityRelation>(ids));
+            return await provider.GetListAsync(await GetByIds<EntityRelation>(ids));
         }
 
         public BanView GetCurrentBan(IEnumerable<EntityRelation> relations)

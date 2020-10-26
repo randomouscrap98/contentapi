@@ -23,7 +23,7 @@ namespace contentapi.Services.Implementations
 
         public override async Task<List<T>> RetrieveAsync(IQueryable<long> ids)
         {
-            return (await provider.LinkAsync(GetByIds<Entity>(ids))).Cast<T>().ToList();
+            return (await provider.LinkAsync(await GetByIds<Entity>(ids))).Cast<T>().ToList();
         }
         
         public virtual EntitySearch CreateSearch(S search) //where S : BaseSearch
@@ -33,27 +33,27 @@ namespace contentapi.Services.Implementations
             return entitySearch;
         }
 
-        public override IQueryable<E> GetBaseQuery(S search)
+        public override async Task<IQueryable<E>> GetBaseQuery(S search)
         {
             var entitySearch = CreateSearch(search);
 
-            return provider.ApplyEntitySearch(Q<Entity>(), entitySearch, false)
-                .Join(Q<EntityRelation>(), e => e.id, r => r.entityId2, 
+            return provider.ApplyEntitySearch(await Q<Entity>(), entitySearch, false)
+                .Join(await Q<EntityRelation>(), e => e.id, r => r.entityId2, 
                 (e, r) => new E() { entity = e, permission = r});
         }
 
-        public override IQueryable<E> ModifySearch(IQueryable<E> query, S search)
+        public override async Task<IQueryable<E>> ModifySearch(IQueryable<E> query, S search)
         {
-            return LimitByCreateEdit(base.ModifySearch(query, search), search.CreateUserIds, search.EditUserIds);
+            return await LimitByCreateEdit(await base.ModifySearch(query, search), search.CreateUserIds, search.EditUserIds);
         }
 
-        public override IQueryable<long> FinalizeQuery(IQueryable<E> query, S search)
+        public override async Task<IQueryable<long>> FinalizeQuery(IQueryable<E> query, S search)
         {
             if(search.Sort == "editdate")
             {
                 var newGroups =  
                     from q in query
-                    join r in Q<EntityRelation>() on q.entity.id equals r.entityId2
+                    join r in await Q<EntityRelation>() on q.entity.id equals r.entityId2
                     where r.type == Keys.CreatorRelation
                     select new E{ entity = q.entity, relation = r };
                  
@@ -67,7 +67,7 @@ namespace contentapi.Services.Implementations
                 return condense.Select(x => x.key);
             }
 
-            return base.FinalizeQuery(query, search);
+            return await base.FinalizeQuery(query, search);
         }
 
         //public override IQueryable<E> OrderSearch(IQueryable<E> query, S search)

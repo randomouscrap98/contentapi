@@ -62,10 +62,10 @@ namespace contentapi.Services.Implementations
             };
         }
 
-        public Task<List<long>> GetRevisionIdsAsync(long packageId)
+        public async Task<List<long>> GetRevisionIdsAsync(long packageId)
         {
-            return provider.GetListAsync(
-                from r in provider.GetQueryable<EntityRelation>()
+            return await provider.GetListAsync(
+                from r in await provider.GetQueryableAsync<EntityRelation>()
                 where r.entityId1 == packageId && r.type == Keys.HistoryRelation
                 select r.entityId2);
         }

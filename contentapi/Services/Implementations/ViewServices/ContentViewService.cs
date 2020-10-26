@@ -104,10 +104,10 @@ namespace contentapi.Services.Implementations
                 //but at least... I don't know, it's way more performant. Come up with some system perhaps after
                 //you see what you need in other instances.
                 var watches = await watchSource.GroupAsync<EntityRelation, long>(
-                    watchSource.SearchIds(new WatchSearch() { ContentIds = baseIds }), watchSource.PermIdSelector);
+                    await watchSource.SearchIds(new WatchSearch() { ContentIds = baseIds }), watchSource.PermIdSelector);
 
                 var comments = await commentSource.GroupAsync<EntityRelation, long>(
-                    commentSource.SearchIds(new CommentSearch() { ParentIds = baseIds }), commentSource.PermIdSelector);
+                    await commentSource.SearchIds(new CommentSearch() { ParentIds = baseIds }), commentSource.PermIdSelector);
 
                 var votes = new Dictionary<string, Dictionary<long, SimpleAggregateData>>();
 
@@ -125,7 +125,7 @@ namespace contentapi.Services.Implementations
                 foreach (var voteWeight in Votes.VoteWeights)
                 {
                     votes.Add(voteWeight.Key, await voteSource.GroupAsync<EntityRelation, long>(
-                        voteSource.SearchIds(new VoteSearch() { ContentIds = baseIds, Vote = voteWeight.Key }), voteSource.PermIdSelector)); //x => x.entityId2));
+                        await voteSource.SearchIds(new VoteSearch() { ContentIds = baseIds, Vote = voteWeight.Key }), voteSource.PermIdSelector)); //x => x.entityId2));
                 }
 
                 baseResult.ForEach(x =>

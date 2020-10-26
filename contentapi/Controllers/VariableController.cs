@@ -34,30 +34,33 @@ namespace contentapi.Controllers
 
             search.EntityIds.Add(-GetRequesterUid());
 
-            var baseValues = provider.GetQueryable<EntityValue>();
+            var baseValues = await provider.GetQueryableAsync<EntityValue>();
             var searchValues = provider.ApplyEntityValueSearch(baseValues, search);
 
             return await provider.GetListAsync(searchValues.Select(x => x.key.Substring(Keys.VariableKey.Length)));
         }
 
-        protected Task<List<EntityValue>> GetVariables(IEnumerable<string> keys) //string key)
+        protected async Task<List<EntityValue>> GetVariables(IEnumerable<string> keys) //string key)
         {
             var uid = GetRequesterUid();
 
             var realKeys = keys.Select(x => Keys.VariableKey + x);
 
+            var values = await provider.GetQueryableAsync<EntityValue>();
+            var entities = await provider.GetQueryableAsync<Entity>();
+
             var query = 
-                from v in provider.GetQueryable<EntityValue>()
+                from v in values
                 where realKeys.Contains(v.key) //&& v.entityId == -uid
                 //where EF.Functions.Like(v.key, Keys.VariableKey + key) && v.entityId == -uid
-                join e in provider.GetQueryable<Entity>() on -v.entityId equals e.id
+                join e in entities on -v.entityId equals e.id
                 where EF.Functions.Like(e.type, $"{Keys.UserType}%") && e.id == uid
                 select v;
                 //The JOIN is REQUIRED because we had some issues in the past of values getting
                 //duplicated across history Keys. Now this code is stuck here forever until the database
                 //gets cleaned up.
 
-            return provider.GetListAsync(query); //).OnlySingle();
+            return await provider.GetListAsync(query);
         }
 
         protected async Task<EntityValue> GetVariable(string key)

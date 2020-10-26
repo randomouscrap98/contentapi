@@ -78,9 +78,9 @@ namespace contentapi.Services.Implementations
         }
 
         //We have this simple code everywhere because we may NOT return the same thing every time
-        public override Task<List<EntityRelation>> RetrieveAsync(IQueryable<long> ids)
+        public override async Task<List<EntityRelation>> RetrieveAsync(IQueryable<long> ids)
         {
-            return provider.GetListAsync(GetByIds<EntityRelation>(ids));
+            return await provider.GetListAsync(await GetByIds<EntityRelation>(ids));
         }
     }
 }

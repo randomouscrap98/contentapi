@@ -67,7 +67,7 @@ namespace contentapi.Services.Implementations
             //It ONLY fills the limiter (search.ContentLimit) with ids!
             await FixWatchLimits(watchSource, requester, search.ContentLimit);
 
-            var ids = activity.SearchIds(search, q => services.permissions.PermissionWhere(q, requester, Keys.ReadAction));
+            var ids = await activity.SearchIds(search, q => services.permissions.PermissionWhere(q, requester, Keys.ReadAction));
 
             var groups = await activity.GroupAsync<EntityRelation,TempGroup>(ids, x => new TempGroup(){ userId = x.entityId1, contentId = -x.entityId2 });
 

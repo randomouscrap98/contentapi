@@ -39,10 +39,10 @@ namespace contentapi.Services.Implementations
             if(userIds.Count == 0)
                 return;
 
+            var entities = await provider.GetQueryableAsync<Entity>();
+
             //TODO: searching for users should be done by the user view service! why are all these services mixing together aaaaa
-            var found = await provider.ApplyEntitySearch(
-                provider.GetQueryable<Entity>(), 
-                new EntitySearch() { TypeLike = Keys.UserType, Ids = userIds }).CountAsync();
+            var found = await provider.ApplyEntitySearch(entities, new EntitySearch() { TypeLike = Keys.UserType, Ids = userIds }).CountAsync();
 
             //Note: there is NO type checking. Is this safe? Do you want people to be able to set permissions for 
             //things that aren't users? What about the 0 id?
@@ -151,7 +151,7 @@ namespace contentapi.Services.Implementations
 
         public override async Task<List<V>> PreparedSearchAsync(S search, Requester requester)
         {
-            var ids = converter.SearchIds(search, (q) => services.permissions.PermissionWhere(q, requester, Keys.ReadAction));
+            var ids = await converter.SearchIds(search, (q) => services.permissions.PermissionWhere(q, requester, Keys.ReadAction));
             var packages = await converter.RetrieveAsync(ids);
             var perms = await ComputeMyPermsAsync(packages, requester);
             return packages.Select(x =>

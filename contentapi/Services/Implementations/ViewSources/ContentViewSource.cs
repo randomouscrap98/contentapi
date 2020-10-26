@@ -85,17 +85,17 @@ namespace contentapi.Services.Implementations
             return es;
         }
 
-        public override IQueryable<EntityGroup> ModifySearch(IQueryable<EntityGroup> query, ContentSearch search)
+        public override async Task<IQueryable<EntityGroup>> ModifySearch(IQueryable<EntityGroup> query, ContentSearch search)
         {
-            query = base.ModifySearch(query, search);
+            query = await base.ModifySearch(query, search);
 
             if(!string.IsNullOrWhiteSpace(search.Keyword))
-                query = LimitByValue(query, Keys.KeywordKey, search.Keyword);
+                query = await LimitByValue(query, Keys.KeywordKey, search.Keyword);
             
             return query;
         }
 
-        public override IQueryable<long> FinalizeQuery(IQueryable<EntityGroup> query, ContentSearch search)
+        public override async Task<IQueryable<long>> FinalizeQuery(IQueryable<EntityGroup> query, ContentSearch search)
         {
             var condense = query.GroupBy(MainIdSelector).Select(x => x.Key);
 
@@ -127,7 +127,7 @@ namespace contentapi.Services.Implementations
             {
                 //The relation stuff!
                 var joined = condense 
-                    .GroupJoin(Q<EntityRelation>().Where(x => weights.Keys.Contains(x.type)), s => s, r => -r.entityId2, (s, r) => new { s = s, r = r })
+                    .GroupJoin((await Q<EntityRelation>()).Where(x => weights.Keys.Contains(x.type)), s => s, r => -r.entityId2, (s, r) => new { s = s, r = r })
                     .SelectMany(x => x.r.DefaultIfEmpty(), (x, y) => new { id = x.s, passthrough = y });
 
                 var grouped = 
@@ -148,7 +148,7 @@ namespace contentapi.Services.Implementations
                 return grouped.Select(x => x.id);
             }
 
-            return base.FinalizeQuery(query, search);
+            return await base.FinalizeQuery(query, search);
         }
     }
 }

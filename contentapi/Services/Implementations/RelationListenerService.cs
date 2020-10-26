@@ -171,7 +171,7 @@ namespace contentapi.Services.Implementations
                 listenStatuses = listenConfig.statuses
             } ;
 
-            var maxId = await provider.GetMaxAsync(provider.GetQueryable<EntityRelation>(), x => x.id);
+            var maxId = await provider.GetMaxAsync(await provider.GetQueryableAsync<EntityRelation>(), x => x.id);
 
             if(listenConfig.lastId <= 0)
                 listenConfig.lastId = maxId + listenConfig.lastId; //plus because negative

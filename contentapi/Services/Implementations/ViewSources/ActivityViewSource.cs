@@ -103,18 +103,18 @@ namespace contentapi.Services.Implementations
             return es;
         }
 
-        public override IQueryable<long> FinalizeQuery(IQueryable<EntityGroup> query, ActivitySearch search)  
+        public override async Task<IQueryable<long>> FinalizeQuery(IQueryable<EntityGroup> query, ActivitySearch search)  
         {
             if(search.ContentLimit.Limit.Count > 0)
-                return SimpleMultiLimit(query, search.ContentLimit.Limit, (e) => -e.entityId2);
+                return await SimpleMultiLimit(query, search.ContentLimit.Limit, (e) => -e.entityId2);
 
-            return base.FinalizeQuery(query, search);
+            return await base.FinalizeQuery(query, search);
         }
 
         //We have this simple code everywhere because we may NOT return the same thing every time
-        public override Task<List<EntityRelation>> RetrieveAsync(IQueryable<long> ids)
+        public override async Task<List<EntityRelation>> RetrieveAsync(IQueryable<long> ids)
         {
-            return provider.GetListAsync(GetByIds<EntityRelation>(ids));
+            return await provider.GetListAsync(await GetByIds<EntityRelation>(ids));
         }
     }
 }

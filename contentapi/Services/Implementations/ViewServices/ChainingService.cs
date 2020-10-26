@@ -411,17 +411,17 @@ namespace contentapi.Services.Implementations
             var result = new List<SystemAggregate>();
             result.Add(new SystemAggregate()
             {
-                id = await provider.GetMaxAsync(provider.GetQueryable<EntityRelation>(), x => x.id),
+                id = await provider.GetMaxAsync(await provider.GetQueryableAsync<EntityRelation>(), x => x.id),
                 type = "actionMax"
             });
             result.Add(new SystemAggregate()
             {
-                id = await provider.GetMaxAsync(provider.GetQueryable<Entity>(), x => x.id),
+                id = await provider.GetMaxAsync(await provider.GetQueryableAsync<Entity>(), x => x.id),
                 type = "contentMax"
             });
             result.Add(new SystemAggregate()
             {
-                id = await provider.GetMaxAsync(provider.GetQueryable<EntityValue>(), x => x.id),
+                id = await provider.GetMaxAsync(await provider.GetQueryableAsync<EntityValue>(), x => x.id),
                 type = "valueMax"
             });
             return result;

@@ -79,18 +79,21 @@ namespace contentapi.Services.Implementations
             if(id > 0)
                 valueSearch.EntityIds.Add(id);
             
+            var values = await provider.GetQueryableAsync<EntityValue>();
+            var entities = await provider.GetQueryableAsync<Entity>();
+
             var thing = 
-                from v in provider.ApplyEntityValueSearch(provider.GetQueryable<EntityValue>(), valueSearch)
-                join e in provider.GetQueryable<Entity>() on v.entityId equals e.id
+                from v in provider.ApplyEntityValueSearch(values, valueSearch)
+                join e in entities on v.entityId equals e.id
                 where EF.Functions.Like(e.type, $"{type}%")
                 select v;
 
             return (await provider.GetListAsync(thing)).OnlySingle();
         }
 
-        public IQueryable<E> Q<E>() where E : EntityBase
+        public Task<IQueryable<E>> Q<E>() where E : EntityBase
         {
-            return provider.GetQueryable<E>();
+            return provider.GetQueryableAsync<E>();
         }
 
         public void FailUnlessSuper(Requester requester)
