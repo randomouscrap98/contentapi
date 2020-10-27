@@ -1,12 +1,10 @@
 using System;
 using System.Collections.Generic;
 using System.Linq;
-using System.Linq.Expressions;
 using System.Threading.Tasks;
 using AutoMapper;
 using contentapi.Services.Constants;
 using contentapi.Views;
-using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.Logging;
 using Randomous.EntitySystem;
 using Randomous.EntitySystem.Extensions;
@@ -17,6 +15,7 @@ namespace contentapi.Services.Implementations
     {
         public string Keyword {get;set;}
         public string Type {get;set;}
+        public List<string> NotTypes {get;set;} = new List<string>();
         public bool IncludeAbout {get;set;} = false;
     }
 
@@ -34,12 +33,9 @@ namespace contentapi.Services.Implementations
     {
         public override string EntityType => Keys.ContentType;
 
-        //protected VoteService voteService;
-
-        public ContentViewSource(ILogger<ContentViewSource> logger, IMapper mapper, IEntityProvider provider) //, VoteService voteService) 
+        public ContentViewSource(ILogger<ContentViewSource> logger, IMapper mapper, IEntityProvider provider)
             : base(logger, mapper, provider) 
         { 
-            //this.voteService = voteService;
         }
 
         public override EntityPackage FromView(ContentView view)
@@ -97,7 +93,11 @@ namespace contentapi.Services.Implementations
 
         public override async Task<IQueryable<long>> FinalizeQuery(IQueryable<EntityGroup> query, ContentSearch search)
         {
-            var condense = query.GroupBy(MainIdSelector).Select(x => x.Key);
+            if(search.NotTypes.Count > 0)
+            {
+                search.NotTypes = search.NotTypes.Select(x => EntityType + x).ToList();
+                query = query.Where(x => !search.NotTypes.Contains(x.entity.type));
+            }
 
             Dictionary<string, double> weights = new Dictionary<string, double>();
 
@@ -125,6 +125,10 @@ namespace contentapi.Services.Implementations
 
             if(weights.Any(x => x.Value != 0))
             {
+                logger.LogWarning("TEMP LOG: performing heavy content sorting query!");
+
+                var condense = query.GroupBy(MainIdSelector).Select(x => x.Key);
+
                 //The relation stuff!
                 var joined = condense 
                     .GroupJoin((await Q<EntityRelation>()).Where(x => weights.Keys.Contains(x.type)), s => s, r => -r.entityId2, (s, r) => new { s = s, r = r })

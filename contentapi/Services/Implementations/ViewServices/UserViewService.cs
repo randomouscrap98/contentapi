@@ -62,6 +62,7 @@ namespace contentapi.Services.Implementations
         {
             var original = await services.provider.FindByIdAsync(id);
             modify(original);
+            original.Relink(); //Probably safe... I hope
             await services.provider.WriteAsync(original);
             return converter.ToView(original);
         }

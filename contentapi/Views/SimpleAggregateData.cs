@@ -1,4 +1,5 @@
 using System;
+using System.Collections.Generic;
 
 namespace contentapi.Views
 {
@@ -10,6 +11,10 @@ namespace contentapi.Views
         public int count {get;set;}
     }
 
+    public class StandardAggregateData : SimpleAggregateData
+    {
+        public List<long> userIds {get;set;} = new List<long>();
+    }
     //public class KeyedAggregateData : SimpleAggregateData
     //{
     //    public long key {get;set;}

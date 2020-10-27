@@ -37,40 +37,10 @@ namespace contentapi.Services.Implementations
         public override string ParentType => Keys.CategoryType; 
         public override bool AllowOrphanPosts => true;
 
-        public List<long> BuildSupersForId(long id, Dictionary<long, List<long>> existing, IList<CategoryView> categories)
-        {
-            if(id <= 0) 
-                return new List<long>();
-            else if(existing.ContainsKey(id))
-                return existing[id];
-            
-            var category = categories.FirstOrDefault(x => x.id == id);
-        
-            if(category == null)
-                throw new InvalidOperationException($"Build super for non-existent id {id}");
-            
-            var ourSupers = new List<long>(category.localSupers);
-            ourSupers.AddRange(BuildSupersForId(category.parentId, existing, categories));
-
-            existing.Add(id, ourSupers.Distinct().ToList());
-
-            return ourSupers;
-        }
-
-        public Dictionary<long, List<long>> GetAllSupers(IList<CategoryView> categories)
-        {
-            var currentCache = new Dictionary<long, List<long>>();
-
-            foreach(var category in categories)
-                BuildSupersForId(category.id, currentCache, categories);
-            
-            return currentCache;
-        }
-
         public async Task SetupAsync()
         {
             var categories = await categoryService.SimpleSearchAsync(new CategorySearch());  //Just pull every dang category, whatever
-            cachedSupers = GetAllSupers(categories);
+            cachedSupers = categoryService.GetAllSupers(categories);
         }
         
         public override bool CanUser(Requester requester, string action, EntityPackage package)

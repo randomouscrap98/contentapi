@@ -11,7 +11,10 @@ using Randomous.EntitySystem.Extensions;
 
 namespace contentapi.Services.Implementations
 {
-    public class CategorySearch : BaseContentSearch { }
+    public class CategorySearch : BaseContentSearch 
+    { 
+        public bool ComputeExtras {get;set;}
+    }
 
     public class CategoryViewSource : BaseStandardViewSource<CategoryView, EntityPackage, EntityGroup, CategorySearch>
     {
@@ -37,6 +40,36 @@ namespace contentapi.Services.Implementations
             }
 
             return package;
+        }
+
+        public List<long> BuildSupersForId(long id, Dictionary<long, List<long>> existing, IList<CategoryView> categories)
+        {
+            if(id <= 0) 
+                return new List<long>();
+            else if(existing.ContainsKey(id))
+                return existing[id];
+            
+            var category = categories.FirstOrDefault(x => x.id == id);
+        
+            if(category == null)
+                throw new InvalidOperationException($"Build super for non-existent id {id}");
+            
+            var ourSupers = new List<long>(category.localSupers);
+            ourSupers.AddRange(BuildSupersForId(category.parentId, existing, categories));
+
+            existing.Add(id, ourSupers.Distinct().ToList());
+
+            return ourSupers;
+        }
+
+        public Dictionary<long, List<long>> GetAllSupers(IList<CategoryView> categories)
+        {
+            var currentCache = new Dictionary<long, List<long>>();
+
+            foreach(var category in categories)
+                BuildSupersForId(category.id, currentCache, categories);
+            
+            return currentCache;
         }
 
         public override CategoryView ToView(EntityPackage package)

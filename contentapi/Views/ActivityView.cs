@@ -16,14 +16,14 @@ namespace contentapi.Views
         public string extra {get;set;}
     }
 
-    public class ActivityAggregateView : IIdView
+    public class ActivityAggregateView : StandardAggregateData, IIdView
     {
         public long id {get;set;} //This is PARENT id
-        public int count {get;set;}
-        public DateTime? firstDate {get;set;}
-        public DateTime? lastDate {get;set;}
-        public long lastId {get;set;}
-        public List<long> userIds {get;set;}
+        //public int count {get;set;}
+        //public DateTime? firstDate {get;set;}
+        //public DateTime? lastDate {get;set;}
+        //public long lastId {get;set;}
+        //public List<long> userIds {get;set;}
         //public Dictionary<string,string> userActions {get;set;}
     }
 }
