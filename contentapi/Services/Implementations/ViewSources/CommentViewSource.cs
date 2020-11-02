@@ -101,34 +101,41 @@ namespace contentapi.Services.Implementations
             return new EntityRelationPackage() {Main = FromViewSimple(view)};
         }
 
-        public async Task<List<EntityRelationPackage>> LinkAsync(IEnumerable<EntityRelation> relations)
+        public async Task<List<EntityRelationPackage>> LinkAsync(IQueryable<EntityRelation> relations)
         {
             //This finds historical data (if there is any, it's probably none every time)
-            var t = services.timer.StartTimer($"comment linkasync ({string.Join(",", relations)})");
+            var t = services.timer.StartTimer(""); 
 
             try
             {
-                if(relations.Count() > 0)
-                {
-                    var secondarySearch = new EntityRelationSearch();
-                    secondarySearch.EntityIds1 = relations.Select(x => -x.id).ToList();
-
-                    var historyRelations = await services.provider.GetEntityRelationsAsync(secondarySearch);
-
-                    return relations.Select(x => new EntityRelationPackage()
-                    {
-                        Main = x,
-                        Related = historyRelations.Where(y => y.entityId1 == -x.id).ToList()
-                    }).ToList();
-                }
-                else
-                {
-                    return new List<EntityRelationPackage>(); //NOTHING
-                }
+                var realList = await services.provider.GetListAsync(relations);
+                t.Name = $"comment linkasync ({string.Join(",", realList.Select(x => x.id))})";
+                return await LinkAsync(realList);
             }
             finally
             {
                 services.timer.EndTimer(t);
+            }
+        }
+
+        public async Task<List<EntityRelationPackage>> LinkAsync(List<EntityRelation> relations)
+        {
+            if (relations.Count > 0)
+            {
+                var secondarySearch = new EntityRelationSearch();
+                secondarySearch.EntityIds1 = relations.Select(x => -x.id).ToList();
+
+                var historyRelations = await services.provider.GetEntityRelationsAsync(secondarySearch);
+
+                return relations.Select(x => new EntityRelationPackage()
+                {
+                    Main = x,
+                    Related = historyRelations.Where(y => y.entityId1 == -x.id).ToList()
+                }).ToList();
+            }
+            else
+            {
+                return new List<EntityRelationPackage>(); //NOTHING
             }
         }
 

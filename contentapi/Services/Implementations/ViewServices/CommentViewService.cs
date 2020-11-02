@@ -202,7 +202,7 @@ namespace contentapi.Services.Implementations
             existing.entityId2 = 0;
             await provider.WriteAsync(copy, existing);
 
-            var relationPackage = (await converter.LinkAsync(new[] { existing })).OnlySingle();
+            var relationPackage = (await converter.LinkAsync(new List<EntityRelation>() { existing })).OnlySingle();
             return converter.ToView(relationPackage);
         }
 
