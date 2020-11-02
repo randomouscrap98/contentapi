@@ -12,12 +12,25 @@ using Randomous.EntitySystem;
 
 namespace contentapi.Services.Implementations
 {
+    public class BaseViewSourceServices
+    {
+        public IMapper mapper {get;set;}
+        public IEntityProvider provider {get;set;}
+        public ICodeTimer timer {get;set;}
+
+        public BaseViewSourceServices(IMapper mapper, IEntityProvider provider, ICodeTimer timer)
+        {
+            this.mapper = mapper;
+            this.provider = provider;
+            this.timer = timer;
+        }
+    }
+
     public abstract class BaseViewSource<V,T,E,S> : ViewSourceServices, IViewSource<V,T,E,S> 
         where V : IIdView where E : EntityGroup where S : EntitySearchBase, IConstrainedSearcher
     {
-        protected IMapper mapper;
         protected ILogger logger;
-        protected IEntityProvider provider;
+        protected BaseViewSourceServices services;
 
         /// <summary>
         /// Which item in an entity group contains the actual id that represents this group? Is it the relation, the entity, etc?
@@ -25,16 +38,15 @@ namespace contentapi.Services.Implementations
         /// <value></value>
         public abstract Expression<Func<E, long>> MainIdSelector {get;}
 
-        public BaseViewSource(ILogger<BaseViewSource<V,T,E,S>> logger, IMapper mapper, IEntityProvider provider)
+        public BaseViewSource(ILogger<BaseViewSource<V,T,E,S>> logger, BaseViewSourceServices services) //IMapper mapper, IEntityProvider provider, ICodeTimer timer)
         {
             this.logger = logger;
-            this.mapper = mapper;
-            this.provider = provider;
+            this.services = services;
         }
 
         public Task<IQueryable<X>> Q<X>() where X : EntityBase
         {
-            return provider.GetQueryableAsync<X>();
+            return services.provider.GetQueryableAsync<X>();
         }
 
         /// <summary>
@@ -105,7 +117,7 @@ namespace contentapi.Services.Implementations
 
         private async Task<Dictionary<X, SimpleAggregateData>> GroupAsync<R,X>(IQueryable<long> ids, IQueryable<R> join, Expression<Func<R,X>> keySelector) where R : EntityBase
         {
-            var pureList = await provider.GetListAsync(
+            var pureList = await services.provider.GetListAsync(
                 ids.Join(join, x => x, r => r.id, (x, r) => r).GroupBy(keySelector).Select(g => new 
                 { 
                     key = g.Key, 
@@ -181,7 +193,7 @@ namespace contentapi.Services.Implementations
 
             //Note: applyfinal finalizes some limiters (such as skip/take) and ALSO tries to apply
             //the fallback ordering. This is ID and random, which we don't need to implement up here.
-            return provider.ApplyFinal(husks, search).Select(x => x.id);
+            return services.provider.ApplyFinal(husks, search).Select(x => x.id);
         }
     }
 }

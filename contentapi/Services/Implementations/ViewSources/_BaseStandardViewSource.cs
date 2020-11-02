@@ -12,8 +12,8 @@ namespace contentapi.Services.Implementations
     public abstract class BaseStandardViewSource<V,T,E,S> : BaseEntityViewSource<V,T,E,S>
         where V : StandardView where E : EntityGroup, new() where S : BaseContentSearch, IConstrainedSearcher where T : EntityPackage
     {
-        protected BaseStandardViewSource(ILogger<BaseStandardViewSource<V,T,E,S>> logger, IMapper mapper, IEntityProvider provider) 
-            : base(logger, mapper, provider) { }
+        protected BaseStandardViewSource(ILogger<BaseStandardViewSource<V,T,E,S>> logger, BaseViewSourceServices services)
+            : base(logger, services) {}
         
         public override async Task<IQueryable<E>> ModifySearch(IQueryable<E> query, S search)
         {

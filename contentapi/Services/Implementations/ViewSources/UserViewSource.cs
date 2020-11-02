@@ -34,8 +34,8 @@ namespace contentapi.Services.Implementations
 
         public override string EntityType => Keys.UserType;
 
-        public UserViewSource(ILogger<UserViewSource> logger, IMapper mapper, IEntityProvider provider, IPermissionService service, BanViewSource banSource) 
-            : base(logger, mapper, provider) 
+        public UserViewSource(ILogger<UserViewSource> logger, BaseViewSourceServices services, IPermissionService service, BanViewSource banSource) 
+            : base(logger, services)
         { 
             this.service = service;
             this.banSource = banSource;

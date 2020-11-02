@@ -15,20 +15,20 @@ namespace contentapi.Services.Implementations
     public abstract class BaseEntityViewSource<V,T,E,S> : BaseViewSource<V,T,E,S>
         where V : BaseView where E : EntityGroup, new() where S : BaseHistorySearch, IConstrainedSearcher where T : EntityPackage
     {
-        public BaseEntityViewSource(ILogger<BaseViewSource<V,T,E,S>> logger, IMapper mapper, IEntityProvider provider) 
-            : base(logger, mapper, provider) { }
+        public BaseEntityViewSource(ILogger<BaseViewSource<V,T,E,S>> logger, BaseViewSourceServices services)
+            : base(logger, services) { }
         
         public abstract string EntityType {get;}
         public override Expression<Func<E, long>> MainIdSelector => x => x.entity.id;
 
         public override async Task<List<T>> RetrieveAsync(IQueryable<long> ids)
         {
-            return (await provider.LinkAsync(await GetByIds<Entity>(ids))).Cast<T>().ToList();
+            return (await services.provider.LinkAsync(await GetByIds<Entity>(ids))).Cast<T>().ToList();
         }
         
         public virtual EntitySearch CreateSearch(S search) //where S : BaseSearch
         {
-            var entitySearch = mapper.Map<EntitySearch>(search);
+            var entitySearch = services.mapper.Map<EntitySearch>(search);
             entitySearch.TypeLike = EntityType;
             return entitySearch;
         }
@@ -37,7 +37,7 @@ namespace contentapi.Services.Implementations
         {
             var entitySearch = CreateSearch(search);
 
-            return provider.ApplyEntitySearch(await Q<Entity>(), entitySearch, false)
+            return services.provider.ApplyEntitySearch(await Q<Entity>(), entitySearch, false)
                 .Join(await Q<EntityRelation>(), e => e.id, r => r.entityId2, 
                 (e, r) => new E() { entity = e, permission = r});
         }

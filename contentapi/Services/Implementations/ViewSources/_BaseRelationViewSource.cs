@@ -13,8 +13,8 @@ namespace contentapi.Services.Implementations
     public abstract class BaseRelationViewSource<V,T,E,S> : BaseViewSource<V,T,E,S>
         where V : BaseView where E : EntityGroup, new() where S : EntitySearchBase, IConstrainedSearcher
     {
-        public BaseRelationViewSource(ILogger<BaseRelationViewSource<V,T,E,S>> logger, IMapper mapper, IEntityProvider provider) 
-            : base(logger, mapper, provider) { }
+        public BaseRelationViewSource(ILogger<BaseRelationViewSource<V,T,E,S>> logger, BaseViewSourceServices services)
+            : base(logger, services) { }
         
         public abstract string EntityType {get;}
         public abstract Expression<Func<EntityRelation, long>> PermIdSelector {get;}
@@ -22,7 +22,7 @@ namespace contentapi.Services.Implementations
 
         public virtual EntityRelationSearch CreateSearch(S search)
         {
-            var relationSearch = mapper.Map<EntityRelationSearch>(search);
+            var relationSearch = services.mapper.Map<EntityRelationSearch>(search);
             relationSearch.TypeLike = EntityType;
             return relationSearch;
         }
@@ -31,7 +31,7 @@ namespace contentapi.Services.Implementations
         {
             var entitySearch = CreateSearch(search);
 
-            return provider.ApplyEntityRelationSearch(await Q<EntityRelation>(), entitySearch, false)
+            return services.provider.ApplyEntityRelationSearch(await Q<EntityRelation>(), entitySearch, false)
                 .Join(await Q<EntityRelation>(), PermIdSelector, r => r.entityId2, 
                 (r1, r2) => new E() { relation = r1, permission = r2});
         }

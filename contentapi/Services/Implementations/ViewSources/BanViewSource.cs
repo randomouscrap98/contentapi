@@ -32,13 +32,10 @@ namespace contentapi.Services.Implementations
         }
     }
 
-    //public abstract class BanViewBaseSource<B> : BaseRelationViewSource<B, EntityRelation, EntityGroup, BanSearch> where B : BanViewBase, new()
     public class BanViewSource : BaseRelationViewSource<BanView, EntityRelation, EntityGroup, BanSearch> //where B : BanViewBase, new()
     {
-        public BanViewSource(ILogger<BanViewSource> logger, IMapper mapper, IEntityProvider provider) 
-            : base(logger, mapper, provider) { }
-        //public BanViewBaseSource(ILogger<BanViewBaseSource<B>> logger, IMapper mapper, IEntityProvider provider) 
-        //    : base(logger, mapper, provider) { }
+        public BanViewSource(ILogger<BanViewSource> logger, BaseViewSourceServices services)
+            : base(logger, services) { }
 
         //This shouldn't match much, permissions aren't assigned to users, and we don't care...?
         public override string EntityType => Keys.BanKey;
@@ -101,18 +98,13 @@ namespace contentapi.Services.Implementations
 
         public override Task<IQueryable<long>> FinalizeQuery(IQueryable<EntityGroup> query, BanSearch search)  
         {
-            //if(search.ExpireDateStart.Ticks != 0)
-            //    query = query.Where(x => String.Compare(x.relation.type, EntityType + search.ExpireDateStart.ToString(ExpireDateFormat)) >= 0);
-            //if(search.ExpireDateEnd.Ticks != 0)
-            //    query = query.Where(x => String.Compare(x.relation.type, EntityType + search.ExpireDateEnd.ToString(ExpireDateFormat)) <= 0);
-
             return base.FinalizeQuery(query, search);
         }
 
         //We have this simple code everywhere because we may NOT return the same thing every time
         public override async Task<List<EntityRelation>> RetrieveAsync(IQueryable<long> ids)
         {
-            return await provider.GetListAsync(await GetByIds<EntityRelation>(ids));
+            return await services.provider.GetListAsync(await GetByIds<EntityRelation>(ids));
         }
 
         public BanView GetCurrentBan(IEnumerable<EntityRelation> relations)

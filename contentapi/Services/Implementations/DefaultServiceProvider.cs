@@ -42,6 +42,8 @@ namespace contentapi.Services.Implementations
             services.AddSingleton<UserValidationService>();
             services.AddSingleton<ICodeTimer, SimpleCodeTimer>();
 
+            services.AddTransient<BaseViewSourceServices>();
+
             services.AddTransient<ActivityViewService>();
             services.AddTransient<BanViewService>();
             services.AddTransient<CategoryViewService>();
@@ -56,19 +58,6 @@ namespace contentapi.Services.Implementations
 
             //Special services
             services.AddTransient<RelationListenerService>();
-            //services.AddTransient<RelationListenerService>((p) =>
-            //{
-            //    //Due to the "async" nature of this thing, it needs its own scope. Can't share our stuff with others!
-            //    var newsp = p.CreateScope().ServiceProvider;
-            //    //return (RelationListenerService)ActivatorUtilities.GetServiceOrCreateInstance(newsp, typeof(RelationListenerService));
-            //    return new RelationListenerService(
-            //        newsp.GetService<ILogger<RelationListenerService>>(), 
-            //        newsp.GetService<IDecayer<RelationListener>>(),
-            //        newsp.GetService<IEntityProvider>(),
-            //        newsp.GetService<SystemConfig>(),
-            //        newsp.GetService<RelationListenerServiceConfig>()
-            //        );
-            //});
             services.AddTransient<ChainService>();
             services.AddSingleton<IModuleService, ModuleService>();
             services.AddSingleton<ModuleMessageAdder>((p) => (m) =>
@@ -103,7 +92,6 @@ namespace contentapi.Services.Implementations
                 activity = p.GetService<ActivityViewService>(),
                 watch = p.GetService<WatchViewService>(),
                 vote = p.GetService<VoteViewService>(),
-                //provider = p.GetService<IEntityProvider>(),
                 module = p.GetService<ModuleViewService>(),
                 ban = p.GetService<BanViewService>(),
                 modulemessage = p.GetService<ModuleMessageViewService>()

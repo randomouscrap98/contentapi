@@ -39,8 +39,8 @@ namespace contentapi.Services.Implementations
 
         protected Regex userMatch = new Regex(@"%(\d+)%", RegexOptions.Compiled);
 
-        public ModuleMessageViewSource(ILogger<ModuleMessageViewSource> logger, IMapper mapper, IEntityProvider provider) 
-            : base(logger, mapper, provider) { }
+        public ModuleMessageViewSource(ILogger<ModuleMessageViewSource> logger, BaseViewSourceServices services)
+            : base(logger, services) {}
 
         public override ModuleMessageView ToView(EntityRelation relation)
         {
@@ -67,15 +67,15 @@ namespace contentapi.Services.Implementations
 
         public override async Task<IQueryable<EntityGroup>> GetBaseQuery(ModuleMessageViewSearch search)
         {
-            var relationSearch = mapper.Map<EntityRelationSearch>(search);
+            var relationSearch = services.mapper.Map<EntityRelationSearch>(search);
             relationSearch.TypeLike = EntityType + (search.ModuleLike ?? "%");
 
-            return provider.ApplyEntityRelationSearch(await Q<EntityRelation>(), relationSearch, false).Select(x => new EntityGroup() { relation = x });
+            return services.provider.ApplyEntityRelationSearch(await Q<EntityRelation>(), relationSearch, false).Select(x => new EntityGroup() { relation = x });
         }
 
         public override async Task<List<EntityRelation>> RetrieveAsync(IQueryable<long> ids)
         {
-            return await provider.GetListAsync(await GetByIds<EntityRelation>(ids));
+            return await services.provider.GetListAsync(await GetByIds<EntityRelation>(ids));
         }
     }
 }

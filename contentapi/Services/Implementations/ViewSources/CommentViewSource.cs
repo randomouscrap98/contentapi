@@ -37,8 +37,8 @@ namespace contentapi.Services.Implementations
         public override string EntityType => Keys.CommentHack;
         public override Expression<Func<EntityRelation, long>> PermIdSelector => x => x.entityId1;
 
-        public CommentViewSource(ILogger<CommentViewSource> logger, IMapper mapper, IEntityProvider provider) 
-            : base(logger, mapper, provider) { }
+        public CommentViewSource(ILogger<CommentViewSource> logger, BaseViewSourceServices services)
+            : base(logger, services) {}
 
         public CommentView ToViewSimple(EntityRelation relation)
         {
@@ -104,23 +104,31 @@ namespace contentapi.Services.Implementations
         public async Task<List<EntityRelationPackage>> LinkAsync(IEnumerable<EntityRelation> relations)
         {
             //This finds historical data (if there is any, it's probably none every time)
+            var t = services.timer.StartTimer($"comment linkasync ({string.Join(",", relations)})");
 
-            if(relations.Count() > 0)
+            try
             {
-                var secondarySearch = new EntityRelationSearch();
-                secondarySearch.EntityIds1 = relations.Select(x => -x.id).ToList();
-
-                var historyRelations = await provider.GetEntityRelationsAsync(secondarySearch);
-
-                return relations.Select(x => new EntityRelationPackage()
+                if(relations.Count() > 0)
                 {
-                    Main = x,
-                    Related = historyRelations.Where(y => y.entityId1 == -x.id).ToList()
-                }).ToList();
+                    var secondarySearch = new EntityRelationSearch();
+                    secondarySearch.EntityIds1 = relations.Select(x => -x.id).ToList();
+
+                    var historyRelations = await services.provider.GetEntityRelationsAsync(secondarySearch);
+
+                    return relations.Select(x => new EntityRelationPackage()
+                    {
+                        Main = x,
+                        Related = historyRelations.Where(y => y.entityId1 == -x.id).ToList()
+                    }).ToList();
+                }
+                else
+                {
+                    return new List<EntityRelationPackage>(); //NOTHING
+                }
             }
-            else
+            finally
             {
-                return new List<EntityRelationPackage>(); //NOTHING
+                services.timer.EndTimer(t);
             }
         }
 

@@ -1,5 +1,6 @@
 using System;
 using System.Collections;
+using System.Collections.Concurrent;
 using System.Collections.Generic;
 using System.Dynamic;
 using System.Linq;
@@ -166,6 +167,7 @@ namespace contentapi.Services.Implementations
         protected ICodeTimer timer;
 
         //These should all be... settings?
+        private static ConcurrentDictionary<Type, List<PropertyInfo>> SavedProperties = new ConcurrentDictionary<Type, List<PropertyInfo>>();
 
         public ChainService(ILogger<ChainService> logger, ChainServices services, RelationListenerService relationService, ChainServiceConfig config,
             SystemConfig systemConfig, IEntityProvider provider, ICodeTimer timer)
@@ -189,12 +191,17 @@ namespace contentapi.Services.Implementations
         }
 
         //https://stackoverflow.com/a/26766221/1066474
-        protected IEnumerable<PropertyInfo> GetProperties(Type type)
+        protected List<PropertyInfo> GetProperties(Type type)
         {
             if (!type.IsInterface)
-                return type.GetProperties();
+                return type.GetProperties().ToList();
 
-            return (new Type[] { type }).Concat(type.GetInterfaces()).SelectMany(i => i.GetProperties());
+            return (new Type[] { type }).Concat(type.GetInterfaces()).SelectMany(i => i.GetProperties()).ToList();
+        }
+
+        protected List<PropertyInfo> GetPropertiesMemoized(Type type)
+        {
+            return SavedProperties.GetOrAdd(type, (t) => GetProperties(t));
         }
 
         protected IEnumerable<long> GetIdsFromFieldPath(object start, List<string> fieldPath, int offset = 0)
@@ -207,7 +214,7 @@ namespace contentapi.Services.Implementations
             }
             else
             {
-                var properties = GetProperties(start.GetType());
+                var properties = GetPropertiesMemoized(start.GetType());
                 var property = properties.FirstOrDefault(x => x.Name.ToLower() == fieldPath[offset].ToLower());
                 readValue = property.GetValue(start);
             }
@@ -359,13 +366,6 @@ namespace contentapi.Services.Implementations
         /// <returns></returns>
         public Task ChainAsync(ChainRequestString data, Requester requester, List<List<IIdView>> previousResults)
         {
-            //var svcs = GetProperties(services.GetType());
-
-            //var matchedService = svcs.FirstOrDefault(x => x.Name == data.endpoint);
-
-            //if(matchedService != null)
-            //    return ChainStringAsync(data, matchedService.GetValue(services), requester, previousResults);
-
             //This HAS to be this stupid because of the generics: referencing the service directly gives us the typing information
             //Don't know how to do that with reflection yet
             if (data.endpoint == "file")
@@ -441,7 +441,15 @@ namespace contentapi.Services.Implementations
         protected Task ChainStringAsync<S,V>(ChainRequestString chainData, IViewReadService<V,S> service, Requester requester, List<List<IIdView>> previousChains)
             where S : IConstrainedSearcher where V : IIdView
         {
-            return ChainStringAsync<S,V>(chainData, (s) => service.SearchAsync(s, requester), previousChains);
+            var t = timer.StartTimer($"[{requester.userId}] {chainData.endpoint} {string.Join(".", chainData.chains)}");
+            try
+            {
+                return ChainStringAsync<S,V>(chainData, (s) => service.SearchAsync(s, requester), previousChains);
+            }
+            finally
+            {
+                timer.EndTimer(t);
+            }
         }
 
         /// <summary>
@@ -456,28 +464,19 @@ namespace contentapi.Services.Implementations
         protected Task ChainStringAsync<S,V>(ChainRequestString chainDataString, Func<S, Task<List<V>>> search, List<List<IIdView>> previousChains)
             where S : IConstrainedSearcher where V : IIdView
         {
-            var t = timer.StartTimer($"{chainDataString.endpoint} {string.Join(".", chainDataString.chains)}");
+            var chainData = new ChainRequest<S, V>(chainDataString) { retriever = search };
 
             try
             {
-                var chainData = new ChainRequest<S, V>(chainDataString) { retriever = search };
-
-                try
-                {
-                    chainData.baseSearch = JsonSerializer.Deserialize<S>(chainDataString.search, config.JsonOptions);
-                }
-                catch (Exception ex)
-                {
-                    //I don't care too much about json deseralize errors, just the message. I don't even log it.
-                    throw new BadRequestException(ex.Message + " (CHAIN REMINDER: json search comes last AFTER all . chaining in a request)");
-                }
-
-                return ChainAsync(chainData, previousChains);
+                chainData.baseSearch = JsonSerializer.Deserialize<S>(chainDataString.search, config.JsonOptions);
             }
-            finally
+            catch (Exception ex)
             {
-                timer.EndTimer(t);
+                //I don't care too much about json deseralize errors, just the message. I don't even log it.
+                throw new BadRequestException(ex.Message + " (CHAIN REMINDER: json search comes last AFTER all . chaining in a request)");
             }
+
+            return ChainAsync(chainData, previousChains);
         }
 
         /// <summary>
@@ -499,7 +498,7 @@ namespace contentapi.Services.Implementations
             if(type == typeof(UserViewFull))
                 type = typeof(UserViewBasic);
 
-            var baseProperties = GetProperties(type);
+            var baseProperties = GetPropertiesMemoized(type);
 
             //Before doing ANYTHING, IMMEDIATELY convert fields to actual properties. It's easy if they pass us null: they want everything.
             if(data.fields == null)
@@ -519,7 +518,17 @@ namespace contentapi.Services.Implementations
             foreach(var c in data.chains)
                 LinkToSearch(c, previousChains, data.baseSearch);
             
-            var myResults = await data.retriever(data.baseSearch);
+            List<V> myResults = null;
+            var t = timer.StartTimer($"dbonly (probably next): {string.Join(".", data.chains)}");
+            try
+            {
+                myResults = await data.retriever(data.baseSearch);
+            }
+            finally
+            {
+                timer.EndTimer(t);
+            }
+
             previousChains.Add(myResults.Cast<IIdView>().ToList());
 
             //Only add ones that aren't in the list

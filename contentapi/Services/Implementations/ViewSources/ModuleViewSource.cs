@@ -25,8 +25,8 @@ namespace contentapi.Services.Implementations
     {
         public override string EntityType => Keys.ModuleType;
 
-        public ModuleViewSource(ILogger<ModuleViewSource> logger, IMapper mapper, IEntityProvider provider) 
-            : base(logger, mapper, provider) { }
+        public ModuleViewSource(ILogger<ModuleViewSource> logger, BaseViewSourceServices services)
+            : base(logger, services) {}
 
         public override ModuleView ToView(EntityPackage module)
         {

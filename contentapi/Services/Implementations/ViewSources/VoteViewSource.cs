@@ -32,8 +32,8 @@ namespace contentapi.Services.Implementations
 
     public class VoteViewSource: BaseRelationViewSource<VoteView, EntityRelation, EntityGroup, VoteSearch>
     {
-        public VoteViewSource(ILogger<VoteViewSource> logger, IMapper mapper, IEntityProvider provider) 
-            : base(logger, mapper, provider) { }
+        public VoteViewSource(ILogger<VoteViewSource> logger, BaseViewSourceServices services)
+            : base(logger, services) {}
 
         public override string EntityType => Keys.VoteRelation;
         public override Expression<Func<EntityRelation, long>> PermIdSelector => x => -x.entityId2;
@@ -76,7 +76,7 @@ namespace contentapi.Services.Implementations
         //We have this simple code everywhere because we may NOT return the same thing every time
         public override async Task<List<EntityRelation>> RetrieveAsync(IQueryable<long> ids)
         {
-            return await provider.GetListAsync(await GetByIds<EntityRelation>(ids));
+            return await services.provider.GetListAsync(await GetByIds<EntityRelation>(ids));
         }
     }
 }
