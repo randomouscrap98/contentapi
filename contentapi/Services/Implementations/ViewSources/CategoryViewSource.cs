@@ -51,8 +51,10 @@ namespace contentapi.Services.Implementations
             
             var category = categories.FirstOrDefault(x => x.id == id);
         
+            //This is a dangling category, the line ends here
             if(category == null)
-                throw new InvalidOperationException($"Build super for non-existent id {id}");
+                return new List<long>(); 
+                //throw new InvalidOperationException($"Build super for non-existent id {id}");
             
             var ourSupers = new List<long>(category.localSupers);
             ourSupers.AddRange(BuildSupersForId(category.parentId, existing, categories));
