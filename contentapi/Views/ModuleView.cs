@@ -15,6 +15,8 @@ namespace contentapi.Views
         [Required]
         public string code {get;set;}
 
+        public string description {get;set;}
+
         public DateTime editDate { get ; set; }
         public long createUserId { get ; set ; }
         public long editUserId { get ; set ; }

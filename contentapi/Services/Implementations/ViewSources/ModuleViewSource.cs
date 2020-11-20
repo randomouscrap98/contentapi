@@ -4,6 +4,7 @@ using contentapi.Services.Constants;
 using contentapi.Views;
 using Microsoft.Extensions.Logging;
 using Randomous.EntitySystem;
+using Randomous.EntitySystem.Extensions;
 
 namespace contentapi.Services.Implementations
 {
@@ -33,8 +34,11 @@ namespace contentapi.Services.Implementations
             var result = new ModuleView() 
             { 
                 name = module.Entity.name, 
-                code = module.Entity.content, 
+                code = module.Entity.content
             };
+
+            if(module.HasValue(Keys.ModuleDescriptionKey))
+                result.description = module.GetValue(Keys.ModuleDescriptionKey).value;
 
             ApplyToEditView(module, result);
             ApplyToValueView(module, result);
@@ -44,7 +48,8 @@ namespace contentapi.Services.Implementations
 
         public override EntityPackage FromView(ModuleView module)
         {
-            var package = this.NewEntity(module.name, module.code);
+            var package = this.NewEntity(module.name, module.code)
+                .Add(NewValue(Keys.ModuleDescriptionKey, module.description));
             ApplyFromEditView(module, package, EntityType);
             ApplyFromValueView(module, package, EntityType);
             return package;

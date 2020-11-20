@@ -55,6 +55,8 @@ namespace contentapi.Controllers
                     extraFolder += $"{modify.size}";
                 if(modify.crop)
                     extraFolder += "a";
+                if(modify.freeze)
+                    extraFolder += "f";
 
                 if(extraFolder != "_")
                     return Path.Join(config.Location, extraFolder, name);
@@ -183,6 +185,7 @@ namespace contentapi.Controllers
         {
             public int size {get;set;}
             public bool crop {get;set;}
+            public bool freeze {get;set;} = false;
             //public bool noGrow {get;set;}
         }
 
@@ -242,12 +245,20 @@ namespace contentapi.Controllers
                         {
                             var maxDim = Math.Max(image.Width, image.Height);
                             var minDim = Math.Min(image.Width, image.Height);
+                            var isGif = format.DefaultMimeType == "image/gif";
 
                             //Square ALWAYS happens, it can happen before other things.
                             if (modify.crop)
                                 image.Mutate(x => x.Crop(new Rectangle((image.Width - minDim) / 2, (image.Height - minDim) / 2, minDim, minDim)));
 
-                            if (modify.size > 0 && !((format.DefaultMimeType == "image/gif" /*|| modify.noGrow*/) && (modify.size > image.Width || modify.size > image.Height)))
+                            //Saving as png also works, but this preserves the format (even if it's a little heavier compute, it's only a one time thing)
+                            if(modify.freeze && isGif)
+                            {
+                                while(image.Frames.Count > 1)
+                                    image.Frames.RemoveFrame(1);
+                            }
+
+                            if (modify.size > 0 && !(isGif && (modify.size > image.Width || modify.size > image.Height)))
                             {
                                 var width = 0;
                                 var height = 0;
@@ -263,7 +274,10 @@ namespace contentapi.Controllers
 
                             using (var stream = System.IO.File.OpenWrite(finalPath))
                             {
-                                image.Save(stream, format);
+                                //if(modify.freeze && isGif)
+                                //    image.SaveAsPng(stream);
+                                //else
+                                    image.Save(stream, format);
                             }
                         }
                     });

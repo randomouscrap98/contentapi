@@ -63,6 +63,9 @@ namespace contentapi.Services.Constants
         public const string UserHideKey ="suh";
 
 
+        public const string ModuleDescriptionKey = "md";
+
+
         //Awful hacks
         public const string CommentHack = "Zcc";
         public const string CommentHistoryHack ="Zcu";
