@@ -24,8 +24,8 @@ namespace contentapi
 {
     public class Startup
     {
-        private static Timer ServiceTimer = null;
-        private static SimpleCodeTimer Timer = null;
+        //private static Timer ServiceTimer = null;
+        //private static SimpleCodeTimer Timer = null;
 
         public Startup(IConfiguration configuration)
         {
@@ -130,27 +130,27 @@ namespace contentapi
 
             AddSwagger(services);
 
-            services.AddSingleton<ICodeTimer>(p =>
-            {
-                if(Timer == null)
-                {
-                    Timer = new SimpleCodeTimer();
-                    var logger = p.GetService<ILogger>();
-                    var serviceConfig = Configuration.GetSection("ServiceTimerConfig");
-                    var delay = serviceConfig.GetValue<TimeSpan>("Delay"); 
-                    var interval = serviceConfig.GetValue<TimeSpan>("Interval");
-                    var path = serviceConfig.GetValue<string>("ProfilerPath");
-                    logger.Information($"Starting profiler: Delay {delay} Interval {interval} Path {path}");
+            //services.AddSingleton<ICodeTimer>(p =>
+            //{
+            //    if(Timer == null)
+            //    {
+            //        Timer = new SimpleCodeTimer();
+            //        var logger = p.GetService<ILogger>();
+            //        var serviceConfig = Configuration.GetSection("ServiceTimerConfig");
+            //        var delay = serviceConfig.GetValue<TimeSpan>("Delay"); 
+            //        var interval = serviceConfig.GetValue<TimeSpan>("Interval");
+            //        var path = serviceConfig.GetValue<string>("ProfilerPath");
+            //        logger.Information($"Starting profiler: Delay {delay} Interval {interval} Path {path}");
 
-                    ServiceTimer = new Timer(x => 
-                    {
-                        try { Timer.FlushData(path).Wait(); }
-                        catch(Exception ex) { logger.Warning($"Couldn't flush profiler: {ex}"); }
-                    }, null, delay, interval);
-                }
+            //        ServiceTimer = new Timer(x => 
+            //        {
+            //            try { Timer.FlushData(path).Wait(); }
+            //            catch(Exception ex) { logger.Warning($"Couldn't flush profiler: {ex}"); }
+            //        }, null, delay, interval);
+            //    }
 
-                return Timer;
-            });
+            //    return Timer;
+            //});
         }
 
         public void AddSwagger(IServiceCollection services)

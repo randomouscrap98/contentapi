@@ -1,6 +1,8 @@
 using System;
 using System.Collections.Generic;
 using System.Linq;
+using System.Linq.Expressions;
+using System.Text;
 using contentapi.Configs;
 using contentapi.Services.Constants;
 using Microsoft.Extensions.Logging;
@@ -21,26 +23,79 @@ namespace contentapi.Services.Implementations
             this.config = config;
         }
 
-        public IQueryable<E> PermissionWhere<E>(IQueryable<E> query, Requester requester, string action, PermissionExtras extras = null) where E : EntityGroup
+        protected Expression<Func<E,bool>> PermissionWhereBasePrecomputed<E>(long user, bool isSuper, string action, PermissionExtras extras = null) where E : EntityGroup
         {
             extras = extras ?? new PermissionExtras();
 
             //Nothing else to do, the user can do it if it's update or delete.
-            if(requester.system || IsSuper(requester) && (action == Keys.UpdateAction || action == Keys.DeleteAction || action == Keys.CreateAction))
-                return query.Where(x => x.permission.type == Keys.CreatorRelation || x.permission.type == action);
+            //if(IsSuper(requester))// && !isRead) //(action == Keys.UpdateAction || action == Keys.DeleteAction || action == Keys.CreateAction))
+            //    return x => x.permission.type == Keys.CreatorRelation || x.permission.type != Keys.ReadAction; //x.permission.type == action;
 
-            var user = requester.userId;
             bool isRead = action == Keys.ReadAction;
             bool allowRelationTypes = extras.allowedRelationTypes.Count > 0;
 
-            return query.Where(x => 
+            return x => 
                 //Note: the "extras" is a hack: I need "OR" parameters on permissions but can't
                 //just... do that. Until I get something better set up, this hack stuff is VEry particular and for
                 //VERY specific fields (that might not be there for every request, only the ones with the flags set.)
+                (!isRead && isSuper) ||
                 (extras.allowNegativeOwnerRelation && x.relation.entityId1 < 0) ||
                 (allowRelationTypes && extras.allowedRelationTypes.Contains(x.relation.type)) ||
                 (user > 0 && x.permission.type == Keys.CreatorRelation && x.permission.entityId1 == user) ||
-                (x.permission.type == action && (x.permission.entityId1 == 0 || x.permission.entityId1 == user)));
+                (x.permission.type == action && (x.permission.entityId1 == 0 || x.permission.entityId1 == user));
+        }
+
+        public IQueryable<E> PermissionWhere<E>(IQueryable<E> query, Requester requester, string action, PermissionExtras extras = null) where E : EntityGroup
+        {
+            return query.Where(PermissionWhereBasePrecomputed<E>(requester.userId, IsSuper(requester), action, extras));
+            //extras = extras ?? new PermissionExtras();
+
+            ////Nothing else to do, the user can do it if it's update or delete.
+            //if(IsSuper(requester) && (action == Keys.UpdateAction || action == Keys.DeleteAction || action == Keys.CreateAction))
+            //    return query.Where(x => x.permission.type == Keys.CreatorRelation || x.permission.type == action);
+
+            //var user = requester.userId;
+            //bool isRead = action == Keys.ReadAction;
+            //bool allowRelationTypes = extras.allowedRelationTypes.Count > 0;
+
+            //return query.Where(x => 
+            //    //Note: the "extras" is a hack: I need "OR" parameters on permissions but can't
+            //    //just... do that. Until I get something better set up, this hack stuff is VEry particular and for
+            //    //VERY specific fields (that might not be there for every request, only the ones with the flags set.)
+            //    (extras.allowNegativeOwnerRelation && x.relation.entityId1 < 0) ||
+            //    (allowRelationTypes && extras.allowedRelationTypes.Contains(x.relation.type)) ||
+            //    (user > 0 && x.permission.type == Keys.CreatorRelation && x.permission.entityId1 == user) ||
+            //    (x.permission.type == action && (x.permission.entityId1 == 0 || x.permission.entityId1 == user)));
+        }
+
+        public Dictionary<long, string> CanUserMany(Requester requester, IEnumerable<EntityPackage> contents)
+        {
+            bool isSuper = IsSuper(requester);
+            long user = requester.userId;
+
+            var result = new Dictionary<long, string>(); //contents.ToDictionary(x => x.Entity.id, y => new StringBuilder());
+            var builder = new StringBuilder();
+            var extras = new PermissionExtras();
+            var permbase = Actions.ActionMap.Values.ToDictionary(x => x, y => 
+                PermissionWhereBasePrecomputed<EntityGroup>(user, isSuper, y, extras).Compile());
+
+            foreach(var c in contents)
+            {
+                builder.Clear();
+                var queryon = c.Relations.Select(x => new EntityGroup() { permission = x });
+
+                foreach(var action in Actions.ActionMap) //services.permissions.PermissionActionMap)
+                {
+                    if(queryon.Any(permbase[action.Value]))
+                        builder.Append(action.Key);
+                    //if(CanUser(requester, action.Value, c))
+                    //    result[c.Entity.id].Append(action.Key);
+                }
+
+                result.Add(c.Entity.id, builder.ToString());
+            }
+
+            return result;
         }
 
         public bool CanUser(Requester requester, string action, EntityPackage package)

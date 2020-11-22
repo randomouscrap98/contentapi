@@ -23,7 +23,14 @@ namespace contentapi.Services.Implementations
 
         public override async Task<List<T>> RetrieveAsync(IQueryable<long> ids)
         {
-            return (await services.provider.LinkAsync(await GetByIds<Entity>(ids))).Cast<T>().ToList();
+            var ct = services.timer.StartTimer($"GetByIds:{GetType().Name}");
+            var entities = await GetByIds<Entity>(ids);
+            services.timer.EndTimer(ct);
+            ct = services.timer.StartTimer($"LinkAsync:{GetType().Name}");
+            var linked = await services.provider.LinkAsync(entities);
+            ct.Name += $"({linked.Count})";
+            services.timer.EndTimer(ct);
+            return linked.Cast<T>().ToList();
         }
         
         public virtual EntitySearch CreateSearch(S search) //where S : BaseSearch

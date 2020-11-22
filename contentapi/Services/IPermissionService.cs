@@ -20,6 +20,8 @@ namespace contentapi.Services
         IQueryable<E> PermissionWhere<E>(IQueryable<E> query, Requester requester, string action, PermissionExtras extras = null) where E : EntityGroup;
         bool CanUser(Requester requester, string action, EntityPackage package);
 
+        Dictionary<long, string> CanUserMany(Requester requester, IEnumerable<EntityPackage> contents);
+
         void CheckPermissionValues(Dictionary<long, string> perms);
     }
 }

@@ -16,13 +16,15 @@ namespace contentapi.Services.Implementations
         public IMapper mapper;
         public IPermissionService permissions;
         public IHistoryService history;
+        public ICodeTimer timer;
 
-        public ViewServicePack(IEntityProvider provider, IMapper mapper, IPermissionService permissions, IHistoryService history)
+        public ViewServicePack(IEntityProvider provider, IMapper mapper, IPermissionService permissions, IHistoryService history, ICodeTimer timer)
         {
             this.provider = provider;
             this.mapper = mapper;
             this.permissions = permissions;
             this.history = history;
+            this.timer = timer;
         }
     }
 

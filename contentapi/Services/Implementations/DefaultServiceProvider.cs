@@ -61,14 +61,14 @@ namespace contentapi.Services.Implementations
             services.AddTransient<ChainService>();
             services.AddSingleton<IModuleService, ModuleService>();
             services.AddSingleton<ModuleMessageAdder>((p) => (m) =>
-                {
-                    //This is EXCEPTIONALLY inefficient: a new database context (not to mention other services)
-                    //will need to be created EVERY TIME someone sends a module message. That is awful...
-                    //I mean it's not MUCH worse IF the module is only sending a single message... eh, if you
-                    //notice bad cpu usage, go fix this.
-                    var creator = p.CreateScope().ServiceProvider.GetService<ModuleMessageViewService>();
-                    creator.AddMessageAsync(m).Wait();
-                });
+            {
+                //This is EXCEPTIONALLY inefficient: a new database context (not to mention other services)
+                //will need to be created EVERY TIME someone sends a module message. That is awful...
+                //I mean it's not MUCH worse IF the module is only sending a single message... eh, if you
+                //notice bad cpu usage, go fix this.
+                var creator = p.CreateScope().ServiceProvider.GetService<ModuleMessageViewService>();
+                creator.AddMessageAsync(m).Wait();
+            });
 
             services.AddTransient<ActivityViewSource>();
             services.AddTransient<BanViewSource>();
@@ -122,6 +122,7 @@ namespace contentapi.Services.Implementations
             AddConfiguration<ChainServiceConfig>(services, config);
             AddConfiguration<ModuleServiceConfig>(services, config);
             AddConfiguration<RelationListenerServiceConfig>(services, config);
+            AddConfiguration<SimpleCodeTimerConfig>(services, config);
             //AddConfiguration<DocumentationConfig>(services, config);
             services.AddSingleton<HashConfig>();
         }

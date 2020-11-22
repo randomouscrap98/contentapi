@@ -132,21 +132,29 @@ namespace contentapi.Services.Implementations
 
         public virtual Task<Dictionary<long, string>> ComputeMyPermsAsync(List<EntityPackage> content, Requester requester)
         {
-            //This ensures they ALL have it or something.
-            var result = content.ToDictionary(x => x.Entity.id, y => new StringBuilder());
+            var ct = services.timer.StartTimer($"ComputeMyPerms:{GetType().Name}");
 
-            //A potential optimization: pre-include read somehow... build this into search.
+            var result = services.permissions.CanUserMany(requester, content);
 
-            foreach(var c in content)
-            {
-                foreach(var action in Actions.ActionMap) //services.permissions.PermissionActionMap)
-                {
-                    if(CanUser(requester, action.Value, c))
-                        result[c.Entity.id].Append(action.Key);
-                }
-            }
+            ////This ensures they ALL have it or something.
+            //var result = content.ToDictionary(x => x.Entity.id, y => new StringBuilder());
 
-            return Task.FromResult(result.ToDictionary(x => x.Key, y => y.Value.ToString()));
+            ////A potential optimization: pre-include read somehow... build this into search.
+
+            //foreach(var c in content)
+            //{
+            //    foreach(var action in Actions.ActionMap) //services.permissions.PermissionActionMap)
+            //    {
+            //        if(CanUser(requester, action.Value, c))
+            //            result[c.Entity.id].Append(action.Key);
+            //    }
+            //}
+
+            //var final = result.ToDictionary(x => x.Key, y => y.Value.ToString());
+
+            services.timer.EndTimer(ct);
+
+            return Task.FromResult(result); //final);
         }
 
         public override async Task<List<V>> PreparedSearchAsync(S search, Requester requester)
