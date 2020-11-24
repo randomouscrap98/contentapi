@@ -111,7 +111,7 @@ namespace contentapi.Services.Implementations
             }
             else if (search.Sort == "score") {
                 globalVoteWeight = 1;
-                globalWatchWeight = 1;
+                globalWatchWeight = 1.2;
             }
 
             //ALL keys have to be present in the dictionary! We don't discriminate! And the SQL parameter 
@@ -146,6 +146,9 @@ namespace contentapi.Services.Implementations
                     grouped = grouped.OrderByDescending(x => x.sum);
                 else
                     grouped = grouped.OrderBy(x => x.sum);
+                
+                //TEMP: LOGGING SUMS
+                //logger.LogWarning("Sums: \n" + string.Join("\n", (await services.provider.GetListAsync(grouped)).Select(x => $"{x.id}:{x.sum}")));
                 
                 return grouped.Select(x => x.id);
             }
