@@ -54,6 +54,18 @@ namespace contentapi.Services.Implementations
             return await LimitByCreateEdit(await base.ModifySearch(query, search), search.CreateUserIds, search.EditUserIds);
         }
 
+        //protected IQueryable<long> MagicCondense<M>(IQueryable<E> query, Expression<Func<E, M>> s, S search)
+        //{
+        //    var condense = query.GroupBy(MainIdSelector).Select(x => new { key = x.Key, sort = s(x) }); //x.Max(y => y.relation.createDate) });
+
+        //    if (search.Reverse)
+        //        condense = condense.OrderByDescending(x => x.sort);//.Select(x => x.q);
+        //    else
+        //        condense = condense.OrderBy(x => x.sort);//.Select(x => x.q);
+
+        //    return condense.Select(x => x.key);
+        //}
+
         public override async Task<IQueryable<long>> FinalizeQuery(IQueryable<E> query, S search)
         {
             if(search.Sort == "editdate")
@@ -71,6 +83,15 @@ namespace contentapi.Services.Implementations
                 else
                     condense = condense.OrderBy(x => x.sort);//.Select(x => x.q);
                 
+                return condense.Select(x => x.key);
+            }
+            if(search.Sort == "name")
+            {
+                var condense = query.GroupBy(MainIdSelector).Select(x => new { key = x.Key, sort = x.Max(y => y.entity.name) });
+                if(search.Reverse)
+                    condense = condense.OrderByDescending(x => x.sort);//.Select(x => x.q);
+                else
+                    condense = condense.OrderBy(x => x.sort);//.Select(x => x.q);
                 return condense.Select(x => x.key);
             }
 
