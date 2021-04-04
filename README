@@ -1,3 +1,18 @@
+To use:
+--------
+
+- Install dotnet core 3.1: https://dotnet.microsoft.com/download/dotnet/3.1
+- Install some IDE (I use vscode): https://code.visualstudio.com/download
+- git checkout whatever
+
+* Need a default appsettings.json, I'll get that set up somewhere
+* Need an SQLITE database, IDR if that's even in the repo
+
+If using vscode, run "code ." in the root directory.
+Should be able to just start debugging at any point.
+Hosting includes a swagger endpoint, something like localhost:5050/swagger/index.html. Lets you use API through web
+
+
 For publishing:
 ---------------
 
