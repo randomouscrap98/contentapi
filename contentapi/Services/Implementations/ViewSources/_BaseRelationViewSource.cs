@@ -20,6 +20,9 @@ namespace contentapi.Services.Implementations
         public abstract Expression<Func<EntityRelation, long>> PermIdSelector {get;}
         public override Expression<Func<E, long>> MainIdSelector => x => x.relation.id;
 
+        //TODO: THIS NEEDS TO BE REWRITTEN!!
+        public bool JoinPermissions = true;
+
         public virtual EntityRelationSearch CreateSearch(S search)
         {
             var relationSearch = services.mapper.Map<EntityRelationSearch>(search);
@@ -31,15 +34,23 @@ namespace contentapi.Services.Implementations
         {
             var entitySearch = CreateSearch(search);
 
-            return services.provider.ApplyEntityRelationSearch(await Q<EntityRelation>(), entitySearch, false)
-                .Join(await Q<EntityRelation>(), PermIdSelector, r => r.entityId2, 
-                (r1, r2) => new E() { relation = r1, permission = r2});
+            if(JoinPermissions)
+            {
+                return services.provider.ApplyEntityRelationSearch(await Q<EntityRelation>(), entitySearch, false)
+                    .Join(await Q<EntityRelation>(), PermIdSelector, r => r.entityId2,
+                    (r1, r2) => new E() { relation = r1, permission = r2 });
+            }
+            else
+            {
+                return services.provider.ApplyEntityRelationSearch(await Q<EntityRelation>(), entitySearch, false).Select(r => new E() { relation = r});
+            }
         }
 
 
         public async Task<IQueryable<long>> SimpleMultiLimit(IQueryable<E> query, IEnumerable<IdLimit> limit, Func<EntityRelation, long> limitExpression)
         {
             //join query with watches, select query where id > watch id
+            //This is done IN MEMORY!! Isn't it?? You can't join against an IEnumerable from a database, can you?
             var ids = query
                 .GroupBy(MainIdSelector).Select(x => new EntityRelation() { 
                     id = x.Max(y => y.relation.id), 
@@ -49,11 +60,6 @@ namespace contentapi.Services.Implementations
                 .Join(limit, limitExpression, l => l.id, (r, l) => new { r = r, l = l })
                 .Where(x => x.r.id > x.l.min)
                 .Select(x => x.r.id);
-                //join l in limit on q.limitId equals l.id
-                //where q.id > l.min
-                //select q;
-
-            //var ids = crap.Select(x => x.id);
 
             return (await Q<EntityRelation>()).Where(x => ids.Contains(x.id)).Select(x => x.id);
         }

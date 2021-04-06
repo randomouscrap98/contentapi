@@ -1,4 +1,5 @@
 using System;
+using System.Collections.Generic;
 using System.Linq;
 using contentapi.Services.Implementations;
 using contentapi.Views;
@@ -47,6 +48,28 @@ namespace contentapi.test
 
             //Now make sure it shows up only when we want it. It should be our ONLY comment
             var comments = commentService.SearchAsync(new CommentSearch(), new Requester() { userId = readCommon ? unit.commonUser.id : unit.specialUser.id }).Result;
+
+            if(allowed)
+                Assert.Contains(view.id, comments.Select(x => x.id));
+            else
+                Assert.Empty(comments);
+        }
+
+        [Theory]
+        [InlineData(true, true, true)]
+        [InlineData(true, false, true)]
+        [InlineData(false, true, false)]
+        [InlineData(false, false, true)]
+        public void OptimizedRead(bool writeCommon, bool readCommon, bool allowed)
+        {
+            //Just the simple write
+            var view = commentService.WriteAsync(
+                new CommentView() { content = "HELLO", parentId = writeCommon ? unit.commonContent.id : unit.specialContent.id }, 
+                new Requester() { userId = writeCommon ? unit.commonUser.id : unit.specialUser.id }).Result;
+            Assert.True(view.id > 0);
+
+            //Now make sure it shows up only when we want it. It should be our ONLY comment
+            var comments = commentService.SearchAsync(new CommentSearch() {ParentIds = new List<long>{unit.commonContent.id, unit.specialContent.id} }, new Requester() { userId = readCommon ? unit.commonUser.id : unit.specialUser.id }).Result;
 
             if(allowed)
                 Assert.Contains(view.id, comments.Select(x => x.id));
