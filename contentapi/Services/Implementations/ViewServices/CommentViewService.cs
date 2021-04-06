@@ -109,17 +109,21 @@ namespace contentapi.Services.Implementations
 
             try
             {
-                ////INCLUDE the parent ids if we can do so!! It'll probably (maaaaybe?) end up being faster because of the optimized path below!
-                //if(search.ParentIds.Count == 0 && (search.CreateEnd.Ticks > 0 || search.CreateStart.Ticks > 0 || search.MaxId > 0 || search.MinId > 0))
-                //{
-                //    search.ParentIds = (await converter.GroupAsync(await converter.SearchIds(search), converter.PermIdSelector)).Keys.ToList();
-                //}
+                var limitIds = search.ContentLimit.Limit.Select(x => x.id).ToList();
+
+                //An optimization: regardless of what the USER asked for, a content limit query will ONLY return
+                //rows (comments) where the comment parent is within the limiter. This enables the later optimization
+                if(limitIds.Count > 0)
+                {
+                    search.ParentIds = limitIds;
+                }
 
                 if(search.ParentIds.Count > 0)
                 {
                     //Limit parentids by the ones this requester is allowed to have.
                     var ids = await contentSource.SearchIds(new ContentSearch() { Ids = search.ParentIds }, q => services.permissions.PermissionWhere(q, requester, Keys.ReadAction));
                     search.ParentIds = await services.provider.GetListAsync(ids);
+                    search.ParentIds.Add(long.MaxValue); //Ensures it stays at "empty" parentids
                     await perform(null);
                 }
                 else
@@ -141,26 +145,6 @@ namespace contentapi.Services.Implementations
             List<CommentView> result = null;
             await OptimizedCommentSearch(search, requester, async (f) => result = await converter.SimpleSearchAsync(search, f));
             return result;
-            //await FixWatchLimits(watchSource, requester, search.ContentLimit);
-
-            //if(search.ParentIds.Count > 0)
-            //{
-            //    converter.JoinPermissions = false;
-
-            //    try
-            //    {
-            //        return await converter.SimpleSearchAsync(search);
-            //    }
-            //    finally
-            //    {
-            //        converter.JoinPermissions = true;
-            //    }
-            //}
-            //else
-            //{
-            //    return await converter.SimpleSearchAsync(search, q =>
-            //        services.permissions.PermissionWhere(q, requester, Keys.ReadAction));
-            //}
         }
 
         public class TempGroup
@@ -171,12 +155,8 @@ namespace contentapi.Services.Implementations
 
         public async Task<List<CommentAggregateView>> SearchAggregateAsync(CommentSearch search, Requester requester)
         {
-            //Repeat code, be careful
             IQueryable<long> ids = null;
             await OptimizedCommentSearch(search, requester, async (f) => ids = await converter.SearchIds(search, f));
-            //await FixWatchLimits(watchSource, requester, search.ContentLimit);
-
-            //var ids = await converter.SearchIds(search, q => services.permissions.PermissionWhere(q, requester, Keys.ReadAction));
 
             var groups = await converter.GroupAsync<EntityRelation,TempGroup>(ids, x => new TempGroup(){ userId = -x.entityId2, contentId = x.entityId1});
 

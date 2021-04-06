@@ -3,7 +3,6 @@ using System.Collections.Generic;
 using System.Linq;
 using System.Linq.Expressions;
 using System.Threading.Tasks;
-using AutoMapper;
 using contentapi.Views;
 using Microsoft.Extensions.Logging;
 using Randomous.EntitySystem;
@@ -50,13 +49,12 @@ namespace contentapi.Services.Implementations
         public async Task<IQueryable<long>> SimpleMultiLimit(IQueryable<E> query, IEnumerable<IdLimit> limit, Func<EntityRelation, long> limitExpression)
         {
             //join query with watches, select query where id > watch id
-            //This is done IN MEMORY!! Isn't it?? You can't join against an IEnumerable from a database, can you?
             var ids = query
                 .GroupBy(MainIdSelector).Select(x => new EntityRelation() { 
                     id = x.Max(y => y.relation.id), 
                     entityId1 = x.Max(y => y.relation.entityId1),
                     entityId2 = x.Max(y => y.relation.entityId2)})
-                .AsEnumerable()
+                .AsEnumerable() //This is done IN MEMORY from this point!! Isn't it?? You can't join against an IEnumerable from a database, can you?
                 .Join(limit, limitExpression, l => l.id, (r, l) => new { r = r, l = l })
                 .Where(x => x.r.id > x.l.min)
                 .Select(x => x.r.id);

@@ -1,7 +1,6 @@
 using System;
 using System.Collections.Generic;
 using System.Linq;
-using System.Text;
 using System.Threading.Tasks;
 using contentapi.Services.Constants;
 using contentapi.Services.Extensions;
@@ -133,28 +132,10 @@ namespace contentapi.Services.Implementations
         public virtual Task<Dictionary<long, string>> ComputeMyPermsAsync(List<EntityPackage> content, Requester requester)
         {
             var ct = services.timer.StartTimer($"ComputeMyPerms:{GetType().Name}");
-
             var result = services.permissions.CanUserMany(requester, content);
-
-            ////This ensures they ALL have it or something.
-            //var result = content.ToDictionary(x => x.Entity.id, y => new StringBuilder());
-
-            ////A potential optimization: pre-include read somehow... build this into search.
-
-            //foreach(var c in content)
-            //{
-            //    foreach(var action in Actions.ActionMap) //services.permissions.PermissionActionMap)
-            //    {
-            //        if(CanUser(requester, action.Value, c))
-            //            result[c.Entity.id].Append(action.Key);
-            //    }
-            //}
-
-            //var final = result.ToDictionary(x => x.Key, y => y.Value.ToString());
-
             services.timer.EndTimer(ct);
 
-            return Task.FromResult(result); //final);
+            return Task.FromResult(result); 
         }
 
         public override async Task<List<V>> PreparedSearchAsync(S search, Requester requester)

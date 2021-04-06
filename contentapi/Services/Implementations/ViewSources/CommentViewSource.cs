@@ -12,7 +12,7 @@ using Randomous.EntitySystem;
 
 namespace contentapi.Services.Implementations
 {
-    public class CommentSearch : BaseSearch //BaseParentSearch
+    public class CommentSearch : BaseSearch
     {
         public List<long> ParentIds {get;set;} = new List<long>();
         public List<long> UserIds {get;set;} = new List<long>();
