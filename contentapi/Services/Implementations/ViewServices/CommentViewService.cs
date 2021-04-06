@@ -105,25 +105,32 @@ namespace contentapi.Services.Implementations
         {
             await FixWatchLimits(watchSource, requester, search.ContentLimit);
 
-            if(search.ParentIds.Count > 0)
-            {
-                converter.JoinPermissions = false;
+            converter.JoinPermissions = false;
 
-                try
+            try
+            {
+                ////INCLUDE the parent ids if we can do so!! It'll probably (maaaaybe?) end up being faster because of the optimized path below!
+                //if(search.ParentIds.Count == 0 && (search.CreateEnd.Ticks > 0 || search.CreateStart.Ticks > 0 || search.MaxId > 0 || search.MinId > 0))
+                //{
+                //    search.ParentIds = (await converter.GroupAsync(await converter.SearchIds(search), converter.PermIdSelector)).Keys.ToList();
+                //}
+
+                if(search.ParentIds.Count > 0)
                 {
                     //Limit parentids by the ones this requester is allowed to have.
-                    var ids = await contentSource.SearchIds(new ContentSearch() { Ids = search.ParentIds}, q => services.permissions.PermissionWhere(q, requester, Keys.ReadAction));
+                    var ids = await contentSource.SearchIds(new ContentSearch() { Ids = search.ParentIds }, q => services.permissions.PermissionWhere(q, requester, Keys.ReadAction));
                     search.ParentIds = await services.provider.GetListAsync(ids);
                     await perform(null);
                 }
-                finally
+                else
                 {
                     converter.JoinPermissions = true;
+                    await perform(q => services.permissions.PermissionWhere(q, requester, Keys.ReadAction));
                 }
             }
-            else
+            finally
             {
-                await perform(q => services.permissions.PermissionWhere(q, requester, Keys.ReadAction));
+                converter.JoinPermissions = true;
             }
         }
 
