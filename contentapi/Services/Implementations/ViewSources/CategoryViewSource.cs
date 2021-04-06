@@ -1,7 +1,5 @@
-using System;
 using System.Collections.Generic;
 using System.Linq;
-using System.Threading.Tasks;
 using AutoMapper;
 using contentapi.Services.Constants;
 using contentapi.Views;
@@ -54,7 +52,6 @@ namespace contentapi.Services.Implementations
             //This is a dangling category, the line ends here
             if(category == null)
                 return new List<long>(); 
-                //throw new InvalidOperationException($"Build super for non-existent id {id}");
             
             var ourSupers = new List<long>(category.localSupers);
             ourSupers.AddRange(BuildSupersForId(category.parentId, existing, categories));

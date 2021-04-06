@@ -13,7 +13,10 @@ namespace contentapi.Services.Implementations
 {
     public class ContentViewService : BasePermissionViewService<ContentView, ContentSearch>
     {
-        protected CategoryViewSource categoryService;
+        //Pulling the REAL service gives us some optimizations, since we get access to caching!
+        //protected CategoryViewSource categoryService;
+        protected CategoryViewService categoryService;
+
         protected CommentViewSource commentSource;
         protected ContentViewSource contentSource;
         protected WatchViewSource watchSource;
@@ -22,7 +25,7 @@ namespace contentapi.Services.Implementations
         protected Dictionary<long, List<long>> cachedSupers = null;
 
         public ContentViewService(ViewServicePack services, ILogger<ContentViewService> logger, 
-            CategoryViewSource categoryService, ContentViewSource converter,
+            CategoryViewService categoryService, ContentViewSource converter,
             CommentViewSource commentSource, WatchViewSource watchSource, VoteViewSource voteSource, BanViewSource banSource) 
             : base(services, logger, converter, banSource) 
         { 
@@ -39,8 +42,8 @@ namespace contentapi.Services.Implementations
 
         public async Task SetupAsync()
         {
-            var categories = await categoryService.SimpleSearchAsync(new CategorySearch());  //Just pull every dang category, whatever
-            cachedSupers = categoryService.GetAllSupers(categories);
+            var categories = await categoryService.SearchAsync(new CategorySearch(), new Requester() { system = true }); //categoryService.SimpleSearchAsync(new CategorySearch());  //Just pull every dang category, whatever
+            cachedSupers = categoryService.viewSource.GetAllSupers(categories);
         }
         
         public override bool CanUser(Requester requester, string action, EntityPackage package)

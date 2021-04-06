@@ -1,5 +1,5 @@
 using System.Collections.Generic;
-using System.Linq;
+using System.Text.Json;
 using System.Threading.Tasks;
 using contentapi.Services.Constants;
 using contentapi.Services.Extensions;
@@ -16,7 +16,11 @@ namespace contentapi.Services.Implementations
 
         public override string EntityType => Keys.CategoryType;
         public override string ParentType => Keys.CategoryType;
-        protected CategoryViewSource viewSource => (CategoryViewSource)converter;
+        public CategoryViewSource viewSource => (CategoryViewSource)converter;
+
+        //Cache is static? mmmm should probably be a service, fix this later.
+        protected static readonly object CacheLock = new object();
+        protected static Dictionary<string, List<CategoryView>> Cache = new Dictionary<string, List<CategoryView>>();
 
         public override async Task<EntityPackage> DeleteCheckAsync(long id, Requester requester)
         {
@@ -25,11 +29,44 @@ namespace contentapi.Services.Implementations
             return package;
         }
 
+        protected void FlushCache()
+        {
+            lock(CacheLock)
+            {
+                logger.LogInformation($"Flushing entire cateogry cache ({Cache.Count} cached)");
+                Cache.Clear();
+            }
+        }
+
+        //Track writes and deletes. ANY write/delete causes us to flush the full in-memory 
+        public override async Task<CategoryView> WriteAsync(CategoryView view, Requester requester)
+        {
+            var result = await base.WriteAsync(view, requester);
+            FlushCache();
+            return result;
+        }
+
+        public override async Task<CategoryView> DeleteAsync(long entityId, Requester requester)
+        {
+            var result = await base.DeleteAsync(entityId, requester);
+            FlushCache();
+            return result;
+        }
+
         public override async Task<List<CategoryView>> PreparedSearchAsync(CategorySearch search, Requester requester)
         {
-            var baseResult = await base.PreparedSearchAsync(search, requester);
+            string key = JsonSerializer.Serialize(search) + JsonSerializer.Serialize(requester); 
 
-            //var baseIds = baseResult.Select(x => x.id).ToList();
+            lock(CacheLock)
+            {
+                if(Cache.ContainsKey(key))
+                {
+                    logger.LogDebug($"Using cached category result ({Cache[key].Count}) for key {key}");
+                    return Cache[key];
+                }
+            }
+
+            var baseResult = await base.PreparedSearchAsync(search, requester);
 
             if(baseResult.Count > 0 && search.ComputeExtras)
             {
@@ -42,6 +79,15 @@ namespace contentapi.Services.Implementations
                     if(!x.myPerms.ToLower().Contains(createKey) && supers.ContainsKey(x.id) && supers[x.id].Contains(requester.userId))
                         x.myPerms += createKey;
                 });
+            }
+
+            lock(CacheLock)
+            {
+                if(!Cache.ContainsKey(key))
+                {
+                    logger.LogDebug($"Caching {baseResult.Count} categories for key ({Cache.Count} total): {key}");
+                    Cache.Add(key, baseResult);
+                }
             }
 
             return baseResult;
