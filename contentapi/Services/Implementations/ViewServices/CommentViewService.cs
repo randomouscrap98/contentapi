@@ -104,8 +104,6 @@ namespace contentapi.Services.Implementations
         protected async Task OptimizedCommentSearch(CommentSearch search, Requester requester, Func<Func<IQueryable<EntityGroup>, IQueryable<EntityGroup>>, Task> perform)
         {
             await FixWatchLimits(watchSource, requester, search.ContentLimit);
-                //await perform(q => services.permissions.PermissionWhere(q, requester, Keys.ReadAction));
-
 
             if(search.ParentIds.Count > 0)
             {
@@ -117,7 +115,6 @@ namespace contentapi.Services.Implementations
                     var ids = await contentSource.SearchIds(new ContentSearch() { Ids = search.ParentIds}, q => services.permissions.PermissionWhere(q, requester, Keys.ReadAction));
                     search.ParentIds = await services.provider.GetListAsync(ids);
                     await perform(null);
-                    //return await converter.SimpleSearchAsync(search);
                 }
                 finally
                 {
@@ -127,8 +124,6 @@ namespace contentapi.Services.Implementations
             else
             {
                 await perform(q => services.permissions.PermissionWhere(q, requester, Keys.ReadAction));
-                //return await converter.SimpleSearchAsync(search, q =>
-                //    services.permissions.PermissionWhere(q, requester, Keys.ReadAction));
             }
         }
 

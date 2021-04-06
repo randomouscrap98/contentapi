@@ -765,7 +765,9 @@ namespace contentapi.Services.Implementations
 
                                 await chainer(actions.chains, baseViews); 
 
-                                if (chainResults.Sum(x => x.Value.Count()) > 0)
+                                //That where statement ignores autoclears for the desired... well, content ids. A 0 signal id
+                                //means we did it "fast", so it should definitely be a fake clear.
+                                if (chainResults.Where(x => x.Key != Keys.ChainWatchUpdate || x.Value.Any(y => y.id != 0)).Sum(x => x.Value.Count()) > 0)
                                     break;
                                 else
                                     actions.lastId = result.lastId;

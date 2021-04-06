@@ -76,8 +76,19 @@ namespace contentapi.Services.Implementations
                 var watches = await watchSource.GroupAsync<EntityRelation, long>(
                     await watchSource.SearchIds(new WatchSearch() { ContentIds = baseIds }), watchSource.PermIdSelector);
 
-                var comments = await commentSource.GroupAsync<EntityRelation, long>(
-                    await commentSource.SearchIds(new CommentSearch() { ParentIds = baseIds }), commentSource.PermIdSelector);
+                //TODO: STOP THIS MADNESS!!
+                commentSource.JoinPermissions = false;
+
+                Dictionary<long, SimpleAggregateData> comments = null;
+                try
+                {
+                    comments = await commentSource.GroupAsync<EntityRelation, long>(
+                        await commentSource.SearchIds(new CommentSearch() { ParentIds = baseIds }), commentSource.PermIdSelector);
+                }
+                finally
+                {
+                    commentSource.JoinPermissions = true;
+                }
 
                 var votes = new Dictionary<string, Dictionary<long, SimpleAggregateData>>();
 
