@@ -103,7 +103,8 @@ namespace contentapi.Services.Implementations
 
         protected async Task OptimizedCommentSearch(CommentSearch search, Requester requester, Func<Func<IQueryable<EntityGroup>, IQueryable<EntityGroup>>, Task> perform)
         {
-            await FixWatchLimits(watchSource, requester, search.ContentLimit);
+            //If fixing the watch limits automatically safe limited us, we don't have to perform the (sometimes lengthy) permission calculation again.
+            var safeLimited = await FixWatchLimits(watchSource, requester, search.ContentLimit);
 
             converter.JoinPermissions = false;
 
@@ -118,12 +119,26 @@ namespace contentapi.Services.Implementations
                     search.ParentIds = limitIds;
                 }
 
+                //If we STILL have no parentids and there's a potential for optimization, try it
+                if(search.ParentIds.Count == 0 && (search.CreateEnd.Ticks > 0 || search.CreateStart.Ticks > 0 || search.MinId > 0 || search.MaxId > 0 || 
+                    search.Ids.Count > 0))
+                {
+                    var tempSearch = services.mapper.Map<CommentSearch>(search);
+                    tempSearch.Limit = -1; //Remove limits, we're grouping.
+                    search.ParentIds = (await converter.GroupAsync(await converter.SearchIds(tempSearch), converter.PermIdSelector)).Select(x => x.Key).ToList();
+                }
+
                 if(search.ParentIds.Count > 0)
                 {
-                    //Limit parentids by the ones this requester is allowed to have.
-                    var ids = await contentSource.SearchIds(new ContentSearch() { Ids = search.ParentIds }, q => services.permissions.PermissionWhere(q, requester, Keys.ReadAction));
-                    search.ParentIds = await services.provider.GetListAsync(ids);
-                    search.ParentIds.Add(long.MaxValue); //Ensures it stays at "empty" parentids
+                    //If we're already safe limited, don't reperform the parent id limit
+                    if(!safeLimited)
+                    {
+                        //Limit parentids by the ones this requester is allowed to have.
+                        var ids = await contentSource.SearchIds(new ContentSearch() { Ids = search.ParentIds }, q => services.permissions.PermissionWhere(q, requester, Keys.ReadAction));
+                        search.ParentIds = await services.provider.GetListAsync(ids);
+                        search.ParentIds.Add(long.MaxValue); //Ensures it stays at "empty" parentids
+                    }
+
                     await perform(null);
                 }
                 else

@@ -102,6 +102,12 @@ namespace contentapi.Services.Implementations
                     select q;
         }
 
+        /// <summary>
+        /// Find actual rows based solely on ids.
+        /// </summary>
+        /// <param name="ids"></param>
+        /// <typeparam name="X"></typeparam>
+        /// <returns></returns>
         public async Task<IQueryable<X>> GetByIds<X>(IQueryable<long> ids) where X : EntityBase
         {
             return
@@ -179,6 +185,12 @@ namespace contentapi.Services.Implementations
 
         public virtual Task<IQueryable<E>> ModifySearch(IQueryable<E> query, S search) { return Task.FromResult(query); }
 
+        /// <summary>
+        /// Basic search for ONLY ids (to save memory space, especially on entityframework pull) without linking?
+        /// </summary>
+        /// <param name="search"></param>
+        /// <param name="modify"></param>
+        /// <returns></returns>
         public async Task<IQueryable<long>> SearchIds(S search, Func<IQueryable<E>, IQueryable<E>> modify = null)
         {
             var query = await GetBaseQuery(search);

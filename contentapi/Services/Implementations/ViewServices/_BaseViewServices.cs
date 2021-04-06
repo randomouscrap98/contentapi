@@ -104,7 +104,14 @@ namespace contentapi.Services.Implementations
                 throw new ForbiddenException("Must be super user to perform this action!");
         }
 
-        public async Task FixWatchLimits(WatchViewSource watchSource, Requester requester, IdLimiter limiter)
+        /// <summary>
+        /// Replace contentlimit list with watchlist (yes, FULL replacement!)
+        /// </summary>
+        /// <param name="watchSource"></param>
+        /// <param name="requester"></param>
+        /// <param name="limiter"></param>
+        /// <returns>Whether or not the "limiter" has been properly limited by permission in this call</returns>
+        public async Task<bool> FixWatchLimits(WatchViewSource watchSource, Requester requester, IdLimiter limiter)
         {
             if(limiter.Watches)
             {   
@@ -117,12 +124,16 @@ namespace contentapi.Services.Implementations
                     limiter.Limit = (await watchSource.SimpleSearchAsync(watchSearch, q =>
                             services.permissions.PermissionWhere(q, requester, Keys.ReadAction)))
                         .Select(x => new IdLimit() { id = x.contentId, min = x.lastNotificationId }).ToList();
+
+                    return true;
                 }
 
                 // Just a silly thing to ensure "0" elements still means "no search" (although I hate that old
                 // dicision... even though this one could easily be changed, consistency is better)
                 limiter.Limit.Add(new IdLimit() { id = long.MaxValue }); 
             }
+
+            return false;
         }
 
     }

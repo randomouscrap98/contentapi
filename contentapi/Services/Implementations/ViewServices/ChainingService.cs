@@ -492,72 +492,63 @@ namespace contentapi.Services.Implementations
             where V : IIdView where S : IConstrainedSearcher
         {
             //NOTE: the entire chaining system uses almost no processing, ALL time is wasted in the view services themselves after testing.
-            //var ta = timer.StartTimer($"{data}");
+            Dictionary<string, PropertyInfo> properties = null;
 
-            //try
-            //{
-                Dictionary<string, PropertyInfo> properties = null;
+            Type type = typeof(V);
 
-                Type type = typeof(V);
+            //My poor design has led to this...
+            if (type == typeof(UserViewFull))
+                type = typeof(UserViewBasic);
 
-                //My poor design has led to this...
-                if (type == typeof(UserViewFull))
-                    type = typeof(UserViewBasic);
+            var baseProperties = GetPropertiesMemoized(type);
 
-                var baseProperties = GetPropertiesMemoized(type);
+            //Before doing ANYTHING, IMMEDIATELY convert fields to actual properties. It's easy if they pass us null: they want everything.
+            if (data.fields == null)
+            {
+                properties = baseProperties.ToDictionary(x => x.Name, x => x);
+            }
+            else
+            {
+                var lowerFields = data.fields.Select(x => x.ToLower());
+                properties = baseProperties.Where(x => lowerFields.Contains(x.Name.ToLower())).ToDictionary(x => x.Name, x => x);
 
-                //Before doing ANYTHING, IMMEDIATELY convert fields to actual properties. It's easy if they pass us null: they want everything.
-                if (data.fields == null)
+                if (properties.Count != data.fields.Count)
+                    throw new BadRequestException($"Unknown fields in list: {string.Join(",", data.fields)}");
+            }
+
+            //Parse the chains, get the ids. WARN: THIS IS DESTRUCTIVE TO DATA.BASESEARCH!!!
+            foreach (var c in data.chains)
+                LinkToSearch(c, previousChains, data.baseSearch);
+
+            List<V> myResults = null;
+            var t = timer.StartTimer($"{data}");
+            try
+            {
+                myResults = await data.retriever(data.baseSearch);
+            }
+            finally
+            {
+                timer.EndTimer(t);
+            }
+
+            previousChains.Add(myResults.Cast<IIdView>().ToList());
+
+            //Only add ones that aren't in the list
+            foreach (var v in myResults)
+            {
+                if (!data.mergeList.Any(x => x.id == v.id))
                 {
-                    properties = baseProperties.ToDictionary(x => x.Name, x => x);
-                }
-                else
-                {
-                    var lowerFields = data.fields.Select(x => x.ToLower());
-                    properties = baseProperties.Where(x => lowerFields.Contains(x.Name.ToLower())).ToDictionary(x => x.Name, x => x);
+                    var result = new TaggedChainResult() { id = v.id, result = new ExpandoObject() };
 
-                    if (properties.Count != data.fields.Count)
-                        throw new BadRequestException($"Unknown fields in list: {string.Join(",", data.fields)}");
-                }
+                    foreach (var p in properties)
+                        result.result.TryAdd(p.Key, p.Value.GetValue(v));
 
-                //Parse the chains, get the ids. WARN: THIS IS DESTRUCTIVE TO DATA.BASESEARCH!!!
-                foreach (var c in data.chains)
-                    LinkToSearch(c, previousChains, data.baseSearch);
-
-                List<V> myResults = null;
-                var t = timer.StartTimer($"{data}");
-                try
-                {
-                    myResults = await data.retriever(data.baseSearch);
-                }
-                finally
-                {
-                    timer.EndTimer(t);
-                }
-
-                previousChains.Add(myResults.Cast<IIdView>().ToList());
-
-                //Only add ones that aren't in the list
-                foreach (var v in myResults)
-                {
-                    if (!data.mergeList.Any(x => x.id == v.id))
+                    lock (data.mergeLock)
                     {
-                        var result = new TaggedChainResult() { id = v.id, result = new ExpandoObject() };
-
-                        foreach (var p in properties)
-                            result.result.TryAdd(p.Key, p.Value.GetValue(v));
-
-                        lock (data.mergeLock)
-                        {
-                            data.mergeList.Add(result);
-                        }
+                        data.mergeList.Add(result);
                     }
                 }
-            //}
-            //finally
-            //{
-            //    timer.EndTimer(ta);
-            //}
+            }
         }
 
         //You don't want to call this repeatedly, so only call it on the request LISTS

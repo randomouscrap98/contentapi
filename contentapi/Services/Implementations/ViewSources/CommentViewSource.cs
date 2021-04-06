@@ -28,6 +28,7 @@ namespace contentapi.Services.Implementations
             CreateMap<CommentSearch, EntityRelationSearch>()
                 .ForMember(x => x.EntityIds1, o => o.MapFrom(s => s.ParentIds))
                 .ForMember(x => x.EntityIds2, o => o.MapFrom(s => s.UserIds.Select(x => -x).ToList()));
+            CreateMap<CommentSearch, CommentSearch>().ReverseMap();
                 //We actually CAN map parent ids directly
         }
     }
@@ -109,7 +110,7 @@ namespace contentapi.Services.Implementations
             try
             {
                 var realList = await services.provider.GetListAsync(relations);
-                t.Name = $"comment linkasync ({string.Join(",", realList.Select(x => x.id))})";
+                t.Name = $"comment linkasync {realList.Count} ({string.Join(",", realList.Select(x => x.id))})";
                 return await LinkAsync(realList);
             }
             finally
