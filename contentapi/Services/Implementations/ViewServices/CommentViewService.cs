@@ -174,7 +174,7 @@ namespace contentapi.Services.Implementations
             //This did seem to increase comment performance, but deletion stopped being reported. The delete WORKED, but 
             //the comment did not get removed in real time, which means the comment event was either empty or.... who knows.
             //Write a regression test for comment deletion alerts and restore this later maybe
-            /*if(search.Ids.Count > 0)
+            if(search.Ids.Count > 0)
             {
                 var otherSearch = new CommentSearch() { Ids = search.Ids };
                 LimitSearch(otherSearch, requester); //Apply the same rules!
@@ -204,7 +204,7 @@ namespace contentapi.Services.Implementations
                         return result;
                     }
                 }
-            }*/
+            }
 
             await OptimizedCommentSearch(search, requester, async (f) => result = await converter.SimpleSearchAsync(search, f));
             return result;
@@ -298,6 +298,9 @@ namespace contentapi.Services.Implementations
 
         public async Task<CommentView> DeleteAsync(long id, Requester requester)
         {
+            //Even if it doesn't succeed, get rid of it asap
+            singlecache.FlushKeys(new[] { id });
+
             var uid = requester.userId;
             var existing = await ExistingCheckAsync(id);
             var parent = await ModifyCheckAsync(existing, requester);
@@ -308,7 +311,6 @@ namespace contentapi.Services.Implementations
             await provider.WriteAsync(copy, existing);
 
             var relationPackage = (await converter.LinkAsync(new List<EntityRelation>() { existing })).OnlySingle();
-            singlecache.FlushKeys(new[] { id });
             return converter.ToView(relationPackage);
         }
 
