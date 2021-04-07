@@ -68,16 +68,19 @@ namespace contentapi.Services.Implementations
         protected IEntityProvider provider;
         protected SystemConfig systemConfig;
         protected RelationListenerServiceConfig config;
+        protected UserViewService userService;
         protected ILogger logger;
 
 
         public RelationListenerService(ILogger<RelationListenerService> logger, IDecayer<RelationListener> decayer,
-            IEntityProvider provider, SystemConfig systemConfig, RelationListenerServiceConfig config)
+            IEntityProvider provider, SystemConfig systemConfig, RelationListenerServiceConfig config,
+            UserViewService userService)
         {
             this.logger = logger;
             this.provider = provider;
             this.systemConfig = systemConfig;
             this.config = config;
+            this.userService = userService;
 
             this.listenDecayer = decayer;
         }
@@ -123,8 +126,6 @@ namespace contentapi.Services.Implementations
 
             while (DateTime.Now - start < systemConfig.ListenTimeout)
             {
-                //logger.LogInformation($"Listen loop for {requester.userId}");
-
                 //It seems strange to update the decayer with the WHOLE LIST but remember: this whole list is the EXACT SNAPSHOT of who's listening 
                 //RIGHT NOW! because it's "instant", it's ok to continuously update the decayer, when someone leaves, they will appear gone in 
                 //EVERYONE'S listener list connection
@@ -139,8 +140,8 @@ namespace contentapi.Services.Implementations
 
                 var users = result.Values.SelectMany(x => x.Keys).ToList();
 
-                //A VERY RAW thing (for speed)
-                foreach(var hideval in await provider.GetEntityValuesAsync(new EntityValueSearch() { EntityIds = users, KeyLike = Keys.UserHideKey }))
+                //foreach(var hideval in await provider.GetEntityValuesAsync(new EntityValueSearch() { EntityIds = users, KeyLike = Keys.UserHideKey }))
+                foreach(var hideval in (await userService.GetUserHideDataAsync(users)).value)
                 {
                     //Parse the actual hide values for this user.
                     var hides = hideval.value.Split(",", StringSplitOptions.RemoveEmptyEntries).Select(x => long.Parse(x));

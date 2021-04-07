@@ -1,6 +1,7 @@
 using System;
 using System.Collections.Generic;
 using System.Linq;
+using System.Text.Json;
 using System.Threading.Tasks;
 using contentapi.Services.Constants;
 using contentapi.Services.Extensions;
@@ -23,16 +24,18 @@ namespace contentapi.Services.Implementations
         protected BanViewSource banSource;
         protected ContentViewSource contentSource;
         protected ICodeTimer timer;
+        protected CacheService<long, CommentView> singlecache;
 
         public CommentViewService(ViewServicePack services, ILogger<CommentViewService> logger,
             CommentViewSource converter, WatchViewSource watchSource, BanViewSource banSource, 
-            ContentViewSource contentSource, ICodeTimer timer) : base(services, logger)
+            ContentViewSource contentSource, ICodeTimer timer, CacheService<long, CommentView> singlecache) : base(services, logger)
         {
             this.converter = converter;
             this.watchSource = watchSource;
             this.timer = timer;
             this.banSource = banSource;
             this.contentSource = contentSource;
+            this.singlecache = singlecache;
         }
 
         protected async Task<EntityPackage> BasicParentCheckAsync(long parentId, Requester requester)
@@ -119,13 +122,22 @@ namespace contentapi.Services.Implementations
                     search.ParentIds = limitIds;
                 }
 
-                //If we STILL have no parentids and there's a potential for optimization, try it
-                if(search.ParentIds.Count == 0 && (search.CreateEnd.Ticks > 0 || search.CreateStart.Ticks > 0 || search.MinId > 0 || search.MaxId > 0 || 
-                    search.Ids.Count > 0))
+                //We can do some special stuff to increase performance if we STILL have no parentids
+                if(search.ParentIds.Count == 0)
                 {
                     var tempSearch = services.mapper.Map<CommentSearch>(search);
                     tempSearch.Limit = -1; //Remove limits, we're grouping.
-                    search.ParentIds = (await converter.GroupAsync(await converter.SearchIds(tempSearch), converter.PermIdSelector)).Select(x => x.Key).ToList();
+
+                    if(search.Ids.Count > 0)
+                    {
+                        //This is a more optimized group because it does not require a join
+                        search.ParentIds = (await converter.GroupAsync<EntityRelation, long>(
+                            await converter.GetBaseQuery(tempSearch), g=>g.relation, converter.PermIdSelector)).Select(x => x.Key).ToList();
+                    }
+                    else if(search.CreateEnd.Ticks > 0 || search.CreateStart.Ticks > 0 || search.MinId > 0 || search.MaxId > 0)
+                    {
+                        search.ParentIds = (await converter.GroupAsync(await converter.SearchIds(tempSearch), converter.PermIdSelector)).Select(x => x.Key).ToList();
+                    }
                 }
 
                 if(search.ParentIds.Count > 0)
@@ -158,6 +170,33 @@ namespace contentapi.Services.Implementations
             logger.LogTrace($"Comment GetAsync called by {requester}");
 
             List<CommentView> result = null;
+            var otherSearch = new CommentSearch() { Ids = search.Ids };
+
+            //This means ONLY the ids are used!
+            if(JsonSerializer.Serialize(otherSearch) == JsonSerializer.Serialize(search))
+            {
+                result = singlecache.GetValues(search.Ids);
+
+                //NOTE: there is a period of time where the cache could be invalid by the time you get this data. I'm willing
+                //to accept slightly out of date information... but does that mean some people will NEVER get the updates? no,
+                //it just means for THIS request, they may have something slightly amiss.
+                if(result.Select(x => x.id).OrderBy(x => x).SequenceEqual(search.Ids.Distinct().OrderBy(x => x)))
+                {
+                    //THIS IS A WIN! It means we have all the comments we were searching for! Now just remove the ones you're NOT ALLOWED to see
+                    var allowedIds = await services.provider.GetListAsync(await contentSource.SearchIds(
+                        new ContentSearch() { Ids = result.Select(x => x.parentId).ToList() }, 
+                        q => services.permissions.PermissionWhere(q, requester, Keys.ReadAction))
+                    );
+
+                    //Remove any that don't show up in allowed ids
+                    result.RemoveAll(x => !allowedIds.Contains(x.parentId));
+
+                    logger.LogDebug($"Using {string.Join(",", result.Select(x => x.id))} in-memory comments for {string.Join(",", search.Ids)}");
+
+                    return result;
+                }
+            }
+
             await OptimizedCommentSearch(search, requester, async (f) => result = await converter.SimpleSearchAsync(search, f));
             return result;
         }
@@ -186,16 +225,22 @@ namespace contentapi.Services.Implementations
             }).ToList();
         }
 
-        public Task<CommentView> WriteAsync(CommentView view, Requester requester)
+        public async Task<CommentView> WriteAsync(CommentView view, Requester requester)
         {
             var t = timer.StartTimer($"Write cmt p{view.parentId}:u{view.createUserId}");
 
             try
             {
+                CommentView result = null;
+
                 if (view.id == 0)
-                    return InsertAsync(view, requester);
+                    result = await InsertAsync(view, requester);
                 else
-                    return UpdateAsync(view, requester);
+                    result = await UpdateAsync(view, requester);
+
+                singlecache.StoreItem(result.id, result, true);
+
+                return result;
             }
             finally
             {
@@ -254,6 +299,7 @@ namespace contentapi.Services.Implementations
             await provider.WriteAsync(copy, existing);
 
             var relationPackage = (await converter.LinkAsync(new List<EntityRelation>() { existing })).OnlySingle();
+            singlecache.FlushKeys(new[] { id });
             return converter.ToView(relationPackage);
         }
 

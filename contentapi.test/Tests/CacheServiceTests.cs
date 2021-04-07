@@ -43,6 +43,19 @@ namespace contentapi.test
         }
 
         [Fact]
+        public void FlushKey()
+        {
+            service.StoreItem("one", "something");
+            service.StoreItem("two", "somethingelse");
+            var result = service.GetValues(new[]{"one", "two"});
+            Assert.Equal(2, result.Count);
+            service.FlushKeys(new[] { "one" });
+            result = service.GetValues(new[]{"one", "two"});
+            Assert.Single(result);
+            Assert.Equal("somethingelse", result.First());
+        }
+
+        [Fact]
         public void PurgeCache()
         {
             service.StoreItem("one", "something");

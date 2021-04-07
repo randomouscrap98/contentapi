@@ -38,8 +38,20 @@ namespace contentapi.Services.Implementations
         {
             lock(CacheLock)
             {
-                logger.LogInformation($"Flushing entire {typeof(V)} cache ({Cache.Count} cached)");
+                logger.LogInformation($"Flushing entire {typeof(V).Name} cache ({Cache.Count} cached)");
                 Cache.Clear();
+            }
+        }
+
+        public void FlushKeys(IEnumerable<K> keys)
+        {
+            lock(CacheLock)
+            {
+                logger.LogInformation($"Flushing from {typeof(V).Name} cache keys: {string.Join(",", keys)}");
+
+                foreach(var key in keys)
+                    if(Cache.ContainsKey(key))
+                        Cache.Remove(key);
             }
         }
 
@@ -61,7 +73,7 @@ namespace contentapi.Services.Implementations
                 {
                     if(Cache.ContainsKey(key))
                     {
-                        logger.LogDebug($"Using cached {typeof(V)} result ({Cache[key].Id}) for key {key}");
+                        logger.LogDebug($"Using cached {typeof(V).Name} result ({Cache[key].Id}) for key {key}");
                         Cache[key].LastAccess = DateTime.Now;
                         result.Add(Cache[key].Value);
                     }
@@ -98,7 +110,7 @@ namespace contentapi.Services.Implementations
 
                 if(Cache.Count > Config.MaxCached)
                 {
-                    logger.LogInformation($"Trimming {typeof(V)} cache back {Config.TrimCount} ({Cache.Count} current)");
+                    logger.LogInformation($"Trimming {typeof(V).Name} cache back {Config.TrimCount} ({Cache.Count} current)");
                     Cache = Cache.OrderBy(x => x.Value.LastAccess).Skip(Config.TrimCount).ToDictionary(x => x.Key, x => x.Value);
                 }
             }

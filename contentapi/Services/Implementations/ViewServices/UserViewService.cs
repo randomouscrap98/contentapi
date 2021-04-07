@@ -8,6 +8,7 @@ using Randomous.EntitySystem.Extensions;
 using contentapi.Services.Constants;
 using System;
 using Randomous.EntitySystem;
+using System.Linq;
 
 namespace contentapi.Services.Implementations
 {
@@ -23,18 +24,25 @@ namespace contentapi.Services.Implementations
         }
     }
 
+    public class UserHideData
+    {
+        public List<EntityValue> value {get;set;}
+    }
+
     public class UserViewService : BaseEntityViewService<UserViewFull, UserSearch>
     {
         protected IHashService hashService;
         protected ITokenService tokenService;
         protected ILanguageService languageService;
         protected IEmailService emailService;
+        protected CacheService<string, UserHideData> hidecache;
 
         public UserViewService(ILogger<UserViewService> logger, ViewServicePack services, IHashService hashService,
             ITokenService tokenService, ILanguageService languageService, IEmailService emailService,
-            UserViewSource converter)
+            UserViewSource converter, CacheService<string, UserHideData> hidecache)
             :base(services, logger, converter)
         { 
+            this.hidecache = hidecache;
             this.hashService = hashService;
             this.tokenService = tokenService;
             this.languageService = languageService;
@@ -64,11 +72,13 @@ namespace contentapi.Services.Implementations
             modify(original);
             original.Relink(); //Probably safe... I hope
             await services.provider.WriteAsync(original);
+            hidecache.PurgeCache(); //Yes, the whole thing. Oh well
             return converter.ToView(original);
         }
 
         public override async Task<UserViewFull> WriteAsync(UserViewFull view, Requester requester)//, bool history = true)
         {
+            hidecache.PurgeCache(); //Yes, the whole thing. Oh well
             return converter.ToView(await WriteViewBaseAsync(view, requester, (p) =>
             {
                 //Before creating the user, we need to set the owner as themselves, not as anonymous.
@@ -76,6 +86,24 @@ namespace contentapi.Services.Implementations
                 creatorRelation.entityId1 = creatorRelation.entityId2;
                 creatorRelation.value = creatorRelation.entityId2.ToString(); //Warn: this is VERY implementation specific! Kinda sucks to have two pieces of code floating around!
             }));
+        }
+
+        public override Task<UserViewFull> DeleteAsync(long entityId, Requester requester)
+        {
+            hidecache.PurgeCache();
+            return base.DeleteAsync(entityId, requester);
+        }
+
+        public async Task<UserHideData> GetUserHideDataAsync(IEnumerable<long> users)
+        {
+            UserHideData result = null;
+            var search = new EntityValueSearch() { EntityIds = users.Distinct().OrderBy(x => x).ToList(), KeyLike = Keys.UserHideKey };
+            var key = string.Join(",", search.EntityIds);
+            if(hidecache.GetValue(key, ref result))
+                return result;
+            result = new UserHideData() { value = await provider.GetEntityValuesAsync(search) };
+            hidecache.StoreItem(key, result);
+            return result;
         }
 
         public async Task<UserViewFull> FindByUsernameAsync(string username, Requester requester)
