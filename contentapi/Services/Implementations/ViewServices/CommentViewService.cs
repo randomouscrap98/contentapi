@@ -171,7 +171,10 @@ namespace contentapi.Services.Implementations
 
             List<CommentView> result = null;
 
-            if(search.Ids.Count > 0)
+            //This did seem to increase comment performance, but deletion stopped being reported. The delete WORKED, but 
+            //the comment did not get removed in real time, which means the comment event was either empty or.... who knows.
+            //Write a regression test for comment deletion alerts and restore this later maybe
+            /*if(search.Ids.Count > 0)
             {
                 var otherSearch = new CommentSearch() { Ids = search.Ids };
                 LimitSearch(otherSearch, requester); //Apply the same rules!
@@ -201,7 +204,7 @@ namespace contentapi.Services.Implementations
                         return result;
                     }
                 }
-            }
+            }*/
 
             await OptimizedCommentSearch(search, requester, async (f) => result = await converter.SimpleSearchAsync(search, f));
             return result;
