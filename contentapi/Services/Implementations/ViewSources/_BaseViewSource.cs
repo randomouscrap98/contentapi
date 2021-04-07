@@ -38,7 +38,7 @@ namespace contentapi.Services.Implementations
         /// <value></value>
         public abstract Expression<Func<E, long>> MainIdSelector {get;}
 
-        public BaseViewSource(ILogger<BaseViewSource<V,T,E,S>> logger, BaseViewSourceServices services) //IMapper mapper, IEntityProvider provider, ICodeTimer timer)
+        public BaseViewSource(ILogger<BaseViewSource<V,T,E,S>> logger, BaseViewSourceServices services)
         {
             this.logger = logger;
             this.services = services;
@@ -121,10 +121,18 @@ namespace contentapi.Services.Implementations
             return Task.FromResult(query.GroupBy(MainIdSelector).Select(x => x.Key));
         }
 
-        private async Task<Dictionary<X, SimpleAggregateData>> GroupAsync<R,X>(IQueryable<long> ids, IQueryable<R> join, Expression<Func<R,X>> keySelector) where R : EntityBase
+        private async Task<Dictionary<X, SimpleAggregateData>> GroupAsync<R,X>(IQueryable<long> ids, IQueryable<R> join, 
+            IQueryable<E> real, Expression<Func<E,R>> GroupSelector, Expression<Func<R,X>> keySelector) where R : EntityBase
         {
+            IQueryable<R> final;
+
+            if(real == null)
+                final = ids.Join(join, x => x, r => r.id, (x, r) => r);
+            else
+                final = real.Select(GroupSelector);
+
             var pureList = await services.provider.GetListAsync(
-                ids.Join(join, x => x, r => r.id, (x, r) => r).GroupBy(keySelector).Select(g => new 
+                final.GroupBy(keySelector).Select(g => new 
                 { 
                     key = g.Key, 
                     aggregate = new SimpleAggregateData()
@@ -152,7 +160,13 @@ namespace contentapi.Services.Implementations
 
         public async Task<Dictionary<X, SimpleAggregateData>> GroupAsync<R,X>(IQueryable<long> ids, Expression<Func<R,X>> keySelector) where R : EntityBase
         {
-            return await GroupAsync(ids, await Q<R>(), keySelector);
+            return await GroupAsync(ids, await Q<R>(), null, null, keySelector);
+        }
+
+        // Not part of an api
+        public async Task<Dictionary<X, SimpleAggregateData>> GroupAsync<R,X>(IQueryable<E> real, Expression<Func<E,R>> GroupSelector, Expression<Func<R,X>> keySelector) where R : EntityBase
+        {
+            return await GroupAsync(null, null, real, GroupSelector, keySelector);
         }
 
         /// <summary>
