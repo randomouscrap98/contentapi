@@ -170,30 +170,36 @@ namespace contentapi.Services.Implementations
             logger.LogTrace($"Comment GetAsync called by {requester}");
 
             List<CommentView> result = null;
-            var otherSearch = new CommentSearch() { Ids = search.Ids };
 
-            //This means ONLY the ids are used!
-            if(JsonSerializer.Serialize(otherSearch) == JsonSerializer.Serialize(search))
+            if(search.Ids.Count > 0)
             {
-                result = singlecache.GetValues(search.Ids);
+                var otherSearch = new CommentSearch() { Ids = search.Ids };
+                LimitSearch(otherSearch, requester); //Apply the same rules!
+                var otherSearchJson = JsonSerializer.Serialize(otherSearch);
+                var searchJson = JsonSerializer.Serialize(search);
 
-                //NOTE: there is a period of time where the cache could be invalid by the time you get this data. I'm willing
-                //to accept slightly out of date information... but does that mean some people will NEVER get the updates? no,
-                //it just means for THIS request, they may have something slightly amiss.
-                if(result.Select(x => x.id).OrderBy(x => x).SequenceEqual(search.Ids.Distinct().OrderBy(x => x)))
+                //This means ONLY the ids are used!
+                if (otherSearchJson == searchJson)
                 {
-                    //THIS IS A WIN! It means we have all the comments we were searching for! Now just remove the ones you're NOT ALLOWED to see
-                    var allowedIds = await services.provider.GetListAsync(await contentSource.SearchIds(
-                        new ContentSearch() { Ids = result.Select(x => x.parentId).ToList() }, 
-                        q => services.permissions.PermissionWhere(q, requester, Keys.ReadAction))
-                    );
+                    result = singlecache.GetValues(search.Ids);
 
-                    //Remove any that don't show up in allowed ids
-                    result.RemoveAll(x => !allowedIds.Contains(x.parentId));
+                    //NOTE: there is a period of time where the cache could be invalid by the time you get this data. I'm willing
+                    //to accept slightly out of date information... but does that mean some people will NEVER get the updates? no,
+                    //it just means for THIS request, they may have something slightly amiss.
+                    if (result.Select(x => x.id).OrderBy(x => x).SequenceEqual(search.Ids.Distinct().OrderBy(x => x)))
+                    {
+                        //THIS IS A WIN! It means we have all the comments we were searching for! Now just remove the ones you're NOT ALLOWED to see
+                        var allowedIds = await services.provider.GetListAsync(await contentSource.SearchIds(
+                            new ContentSearch() { Ids = result.Select(x => x.parentId).ToList() },
+                            q => services.permissions.PermissionWhere(q, requester, Keys.ReadAction))
+                        );
 
-                    logger.LogDebug($"Using {string.Join(",", result.Select(x => x.id))} in-memory comments for {string.Join(",", search.Ids)}");
+                        //Remove any that don't show up in allowed ids
+                        result.RemoveAll(x => !allowedIds.Contains(x.parentId));
+                        logger.LogDebug($"* Using in-memory comments ({string.Join(",", result.Select(x => x.id))}) for ids {string.Join(",", search.Ids)}");
 
-                    return result;
+                        return result;
+                    }
                 }
             }
 
