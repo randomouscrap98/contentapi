@@ -99,8 +99,6 @@ namespace contentapi.Services.Implementations
                     var comments = await commentSource.GroupAsync<EntityRelation, long>(
                         await commentSource.GetBaseQuery(new CommentSearch() { ParentIds = baseIds }), g=>g.relation, commentSource.PermIdSelector);
                     services.timer.EndTimer(t);
-                    //var comments = await commentSource.GroupAsync<EntityRelation, long>(
-                    //    await commentSource.SearchIds(new CommentSearch() { ParentIds = baseIds }), commentSource.PermIdSelector);
 
                     t = services.timer.StartTimer($"[{rid}] watch pull (both)"); 
 

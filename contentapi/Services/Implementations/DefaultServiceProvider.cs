@@ -1,4 +1,5 @@
 using System;
+using System.Collections.Generic;
 using AutoMapper;
 using contentapi.Configs;
 using contentapi.Services.Constants;
@@ -41,6 +42,10 @@ namespace contentapi.Services.Implementations
             services.AddTransient(typeof(ITempTokenService<>), typeof(TempTokenService<>));
             services.AddSingleton<UserValidationService>();
             services.AddSingleton<ICodeTimer, SimpleCodeTimer>();
+
+            //TODO: eventually, make this configurable? But how, not all the cache will be good!
+            services.AddSingleton<CacheServiceConfig>();
+            services.AddSingleton<CacheService<string, List<CategoryView>>>();
 
             services.AddTransient<BaseViewSourceServices>();
 
