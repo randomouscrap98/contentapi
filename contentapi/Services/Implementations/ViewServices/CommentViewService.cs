@@ -243,9 +243,15 @@ namespace contentapi.Services.Implementations
                 CommentView result = null;
 
                 if (view.id == 0)
+                {
                     result = await InsertAsync(view, requester);
+                }
                 else
+                {
+                    //Need to get rid of the cache BEFORE the update
+                    singlecache.FlushKeys(new[] { view.id });
                     result = await UpdateAsync(view, requester);
+                }
 
                 singlecache.StoreItem(result.id, result, true);
 
