@@ -22,10 +22,12 @@ For publishing:
  (press enter a bunch of times)
  ssh-copy-id user@server -p sshPort
  
- Also, if using git bash for all this sh stuff, you need rsync:
+ Also, if using git bash for all this sh stuff, you need rsync to publish:
  
- http://www2.futureware.at/~nickoe/msys2-mirror/msys/x86_64/rsync-3.1.2-2-x86_64.pkg.tar.xz
- (https://blog.tiger-workshop.com/add-rsync-to-git-bash-for-windows/)
+ http://www2.futureware.at/~nickoe/msys2-mirror/msys/x86_64/
+ (https://blog.tiger-workshop.com/add-rsync-to-git-bash-for-windows/ for original post)
+ (The stupid rsync zip is stored in a new format 7zip doesn't recognize, might need https://www.tc4shell.com/en/7zip/modern7z/)
+ (*sigh* even more additional for rsync: https://gist.github.com/hisplan/ee54e48f17b92c6609ac16f83073dde6#gistcomment-3605244)
  
  Also, if on windows, you should add sqlite3 to your path. 
  
