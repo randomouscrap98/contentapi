@@ -8,8 +8,8 @@ namespace contentapi.Services.Implementations
 {
     public class CacheServiceConfig
     {
-        public int MaxCached {get;set;} = 2000;
-        public int TrimCount {get;set;} = 200;
+        public int MaxCached {get;set;} = 500;
+        public int TrimCount {get;set;} = 100;
     }
 
     public class CacheValue<V>
