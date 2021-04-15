@@ -6,24 +6,31 @@ using contentapi.Services.Extensions;
 using contentapi.Services.Constants;
 using System.Text.RegularExpressions;
 using Randomous.EntitySystem;
+using System.Text.Json;
 
 namespace contentapi.Services.Implementations
 {
     /// <summary>
     /// The combined module view and loaded module service.
     /// </summary>
+    /// <remarks>
+    /// This is another 
+    /// </remarks>
     public class ModuleViewService : BaseEntityViewService<ModuleView, ModuleSearch>
     {
         protected ModuleServiceConfig config;
         protected ModuleMessageViewService moduleMessageService;
         protected IModuleService moduleService;
+        protected CacheService<string, List<ModuleView>> cache;
 
         public ModuleViewService(ILogger<ModuleViewService> logger, ViewServicePack services, ModuleViewSource converter,
-            ModuleServiceConfig config, ModuleMessageViewService moduleMessageService, IModuleService service) :base(services, logger, converter) 
+            ModuleServiceConfig config, ModuleMessageViewService moduleMessageService, IModuleService service,
+            CacheService<string, List<ModuleView>> cache) :base(services, logger, converter) 
         { 
             this.config = config;
             this.moduleMessageService = moduleMessageService;
             this.moduleService = service;
+            this.cache = cache;
         }
 
         public override string EntityType => Keys.ModuleType;
@@ -73,6 +80,7 @@ namespace contentapi.Services.Implementations
 
         public override async Task<ModuleView> WriteAsync(ModuleView view, Requester requester)
         {
+            cache.PurgeCache();
             var result = await base.WriteAsync(view, requester);
             moduleService.UpdateModule(result);
             return result;
@@ -80,18 +88,25 @@ namespace contentapi.Services.Implementations
 
         public override async Task<ModuleView> DeleteAsync(long entityId, Requester requester)
         {
+            cache.PurgeCache();
             var result = await base.DeleteAsync(entityId, requester);
             moduleService.RemoveModule(result.name);
             return result;
         }
 
-        public override Task<List<ModuleView>> PreparedSearchAsync(ModuleSearch search, Requester requester)
+        public override async Task<List<ModuleView>> PreparedSearchAsync(ModuleSearch search, Requester requester)
         {
-            //NO permissions check! All modules are readable!
-            return converter.SimpleSearchAsync(search);
+            string key = JsonSerializer.Serialize(search) + JsonSerializer.Serialize(requester); 
+            List<ModuleView> baseResult = null;
+
+            if(!cache.GetValue(key, ref baseResult))
+            {
+                //NO permissions check! All modules are readable!
+                baseResult = await converter.SimpleSearchAsync(search);
+                cache.StoreItem(key, baseResult);
+            }
+
+            return baseResult;
         }
-
-        // -- Loaded module stuff --
-
     }
 }

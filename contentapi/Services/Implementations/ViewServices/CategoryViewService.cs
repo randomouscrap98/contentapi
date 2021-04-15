@@ -24,10 +24,6 @@ namespace contentapi.Services.Implementations
         public override string ParentType => Keys.CategoryType;
         public CategoryViewSource viewSource => (CategoryViewSource)converter;
 
-        //Cache is static? mmmm should probably be a service, fix this later.
-        //protected static readonly object CacheLock = new object();
-        //protected static Dictionary<string, List<CategoryView>> Cache = new Dictionary<string, List<CategoryView>>();
-
         public override async Task<EntityPackage> DeleteCheckAsync(long id, Requester requester)
         {
             var package = await base.DeleteCheckAsync(id, requester);
@@ -35,29 +31,18 @@ namespace contentapi.Services.Implementations
             return package;
         }
 
-        //protected void FlushCache()
-        //{
-        //    lock(CacheLock)
-        //    {
-        //        logger.LogInformation($"Flushing entire cateogry cache ({Cache.Count} cached)");
-        //        Cache.Clear();
-        //    }
-        //}
-
         //Track writes and deletes. ANY write/delete causes us to flush the full in-memory 
         public override async Task<CategoryView> WriteAsync(CategoryView view, Requester requester)
         {
-            var result = await base.WriteAsync(view, requester);
             cache.PurgeCache();
-            //FlushCache();
+            var result = await base.WriteAsync(view, requester);
             return result;
         }
 
         public override async Task<CategoryView> DeleteAsync(long entityId, Requester requester)
         {
-            var result = await base.DeleteAsync(entityId, requester);
             cache.PurgeCache();
-            //FlushCache();
+            var result = await base.DeleteAsync(entityId, requester);
             return result;
         }
 
