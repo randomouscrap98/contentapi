@@ -44,11 +44,11 @@ namespace contentapi.test
         {
             var modview = new ModuleView() { name = "test", code = @"
                 function default(uid, data)
-                    return ""Id: "" .. uid .. "" Data: "" .. data[1]
+                    return ""Id: "" .. uid .. "" Data: "" .. data
                 end" 
             };
             var mod = service.UpdateModule(modview);
-            var result = service.RunCommand("test", new List<string>{"whatever"}, new Requester() {userId = 8});
+            var result = service.RunCommand("test", "whatever", new Requester() {userId = 8});
             Assert.Equal("Id: 8 Data: whatever", result);
         }
 
@@ -59,11 +59,11 @@ namespace contentapi.test
             var modview = new ModuleView() { name = "test", code = @"
                 subcommands = ""wow""
                 function default(uid, data)
-                    return ""Id: "" .. uid .. "" Data: "" .. data[1]
+                    return ""Id: "" .. uid .. "" Data: "" .. data
                 end" 
             };
             var mod = service.UpdateModule(modview);
-            var result = service.RunCommand("test", new List<string>{"whatever"}, new Requester() {userId = 8});
+            var result = service.RunCommand("test", "whatever", new Requester() {userId = 8});
             Assert.Equal("Id: 8 Data: whatever", result);
         }
 
@@ -74,11 +74,11 @@ namespace contentapi.test
             var modview = new ModuleView() { name = "test", code = @"
                 subcommands = {wow="""" }
                 function command_wow(uid, data)
-                    return ""Id: "" .. uid .. "" Data: "" .. data[2]
+                    return ""Id: "" .. uid .. "" Data: "" .. data
                 end" 
             };
             var mod = service.UpdateModule(modview);
-            var result = service.RunCommand("test", new List<string>{"wow", "whatever"}, new Requester() {userId = 8});
+            var result = service.RunCommand("test", "wow whatever", new Requester() {userId = 8});
             Assert.Equal("Id: 8 Data: whatever", result);
         }
 
@@ -89,11 +89,11 @@ namespace contentapi.test
             var modview = new ModuleView() { name = "test", code = @"
                 subcommands = {[""wow""]={[""function""]=""lolwut""} }
                 function lolwut(uid, data)
-                    return ""Id: "" .. uid .. "" Data: "" .. data[2]
+                    return ""Id: "" .. uid .. "" Data: "" .. data
                 end" 
             };
             var mod = service.UpdateModule(modview);
-            var result = service.RunCommand("test", new List<string>{"wow", "whatever"}, new Requester() {userId = 8});
+            var result = service.RunCommand("test", " wow  whatever ", new Requester() {userId = 8});
             Assert.Equal("Id: 8 Data: whatever", result);
         }
 
@@ -107,7 +107,7 @@ namespace contentapi.test
                 end" 
             };
             var mod = service.UpdateModule(modview);
-            var result = service.RunCommand("test", new List<string>{ "whatever" }, new Requester() {userId = 8});
+            var result = service.RunCommand("test", "whatever", new Requester() {userId = 8});
             Assert.Equal("something", result);
         }
 
@@ -116,16 +116,16 @@ namespace contentapi.test
         {
             var modview = new ModuleView() { name = "test", code = @"
                 function default(uid, data)
-                    if #data > 0 then
-                        setdata(""myval"", data[1])
+                    if data != nil then
+                        setdata(""myval"", data)
                     end
                     return getdata(""myval"")
                 end" 
             };
             var mod = service.UpdateModule(modview);
-            var result = service.RunCommand("test", new List<string> { "something" }, new Requester() {userId = 8});
+            var result = service.RunCommand("test", "something", new Requester() {userId = 8});
             Assert.Equal("something", result);
-            result = service.RunCommand("test", new List<string> {}, new Requester() {userId = 8});
+            result = service.RunCommand("test", null, new Requester() {userId = 8});
             Assert.Equal("something", result);
         }
 
@@ -140,7 +140,7 @@ namespace contentapi.test
             };
             var requester = new Requester() { userId = 9 };
             var mod = service.UpdateModule(modview);
-            var result = service.RunCommand("test", new List<string>{"whatever"}, requester);
+            var result = service.RunCommand("test", "whatever", requester);
             var messages = moduleMessageService.SearchAsync(new ModuleMessageViewSearch(), requester).Result; //service.ListenAsync(-1, requester, TimeSpan.FromSeconds(1), CancellationToken.None).Result;
             Assert.Single(messages);
             Assert.Equal("hey", messages.First().message);

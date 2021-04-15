@@ -84,7 +84,7 @@ namespace contentapi.Controllers
         /// <returns></returns>
         [Authorize]
         [HttpPost("{name}")]
-        public Task<ActionResult<string>> RunCommand([FromRoute]string name, [FromBody]List<string> arguments)
+        public Task<ActionResult<string>> RunCommand([FromRoute]string name, [FromBody]string arguments)
         {
             return ThrowToAction(async () =>
             {

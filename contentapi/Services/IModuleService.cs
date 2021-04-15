@@ -11,7 +11,7 @@ namespace contentapi.Services
         public Queue<string> debug {get;set;} = new Queue<string>();
 
         public string currentFunction = "";
-        public List<string> currentArgs = new List<string>();
+        public string currentArgs = "";
         public long currentUser = 0;
         public SqliteConnection dataConnection = null;
     }
@@ -22,8 +22,6 @@ namespace contentapi.Services
         LoadedModule GetModule(string name);
         bool RemoveModule(string name) ;
 
-        //void AddMessage(ModuleMessageView message);
-
-        string RunCommand(string module, List<string> args, Requester requester) ;
+        string RunCommand(string module, string arglist, Requester requester) ;
     }
 }

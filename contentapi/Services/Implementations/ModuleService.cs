@@ -2,6 +2,7 @@ using System;
 using System.Collections.Concurrent;
 using System.Collections.Generic;
 using System.Linq;
+using System.Text.RegularExpressions;
 using contentapi.Views;
 using Microsoft.Data.Sqlite;
 using Microsoft.Extensions.Logging;
@@ -175,48 +176,50 @@ namespace contentapi.Services.Implementations
             }
         }
 
-        /// <summary>
-        /// Figure out function to call from given args. WARN: NOT THREAD SAFE!!
-        /// </summary>
-        /// <param name="mod"></param>
-        /// <param name="args"></param>
-        /// <returns></returns>
-        public string GetFunctionName(LoadedModule mod, List<string> args)
-        {
-            var cmdfuncname = config.DefaultFunction;
-
-            if (args.Count > 0 && mod.script.Globals.Keys.Any(x => x.String == config.SubcommandVariable))
-            {
-                var subcommands = mod.script.Globals.Get(config.SubcommandVariable).Table;
-                var subarg = args[0];
-
-                //NOTE: Currently case sensitive!
-                if (subcommands != null && subcommands.Keys.Any(x => x.String == subarg))
-                {
-                    var subcommand = subcommands.Get(subarg).Table;
-
-                    if (subcommand != null && subcommand.Keys.Any(x => x.String == config.SubcommandFunctionKey))
-                        return subcommand.Get(config.SubcommandFunctionKey).String;
-                    else
-                        return config.DefaultSubcommandPrepend += subarg;
-                }
-            }
-
-            return config.DefaultFunction;
-        }
-
-        public string RunCommand(string module, List<string> args, Requester requester)
+        public string RunCommand(string module, string arglist, Requester requester)
         {
             LoadedModule mod = null;
 
             if(!loadedModules.TryGetValue(module, out mod))
                 throw new BadRequestException($"No module with name {module}");
 
-            //var cmdfuncname = $"command_{command}";
+            arglist = arglist?.Trim();
 
             lock(moduleLocks.GetOrAdd(module, s => new object()))
             {
-                var cmdfuncname = GetFunctionName(mod, args);
+                //By DEFAULT, we call the default function with whatever is leftover in the arglist
+                var cmdfuncname = config.DefaultFunction;
+                Func<DynValue> callScript = () => mod.script.Call(mod.script.Globals[cmdfuncname], requester.userId, arglist);
+
+                //There is a subcommand variable and we passed args which could be read as a subcommand (don't know if it's the right format or anything)
+                if (arglist != null && mod.script.Globals.Keys.Any(x => x.String == config.SubcommandVariable))
+                {
+                    var subcommands = mod.script.Globals.Get(config.SubcommandVariable).Table;
+                    var match = Regex.Match(arglist, @"^\s*(\w+)\s*(.*)$");
+
+                    //The subcommands is in the right format and our arglist indicates we have the ability to get a subcommand
+                    if(subcommands != null && match.Success)
+                    {
+                        var subarg = match.Groups[1].Value;
+                        arglist = match.Groups[2].Value.Trim();
+
+                        //NOTE: Currently case sensitive!
+                        //There is a subcommand defined for the subcommand we pulled from the arglist. 
+                        if (subcommands.Keys.Any(x => x.String == subarg))
+                        {
+                            var subcommand = subcommands.Get(subarg).Table;
+
+                            //The function to call at this point is either the default subcommand naming scheme or the user's requested function
+                            if (subcommand != null && subcommand.Keys.Any(x => x.String == config.SubcommandFunctionKey))
+                                cmdfuncname = subcommand.Get(config.SubcommandFunctionKey).String;
+                            else
+                                cmdfuncname = config.DefaultSubcommandPrepend + subarg;
+
+                            //Check args and parse here, altering "callScript"
+                        }
+                    }
+
+                }
 
                 if(!mod.script.Globals.Keys.Any(x => x.String == cmdfuncname))
                     throw new BadRequestException($"Command function '{cmdfuncname}' not found in module {module}");
@@ -226,8 +229,8 @@ namespace contentapi.Services.Implementations
                     mod.dataConnection.Open();
                     mod.currentUser = requester.userId;
                     mod.currentFunction = cmdfuncname;
-                    mod.currentArgs = args;
-                    DynValue res = mod.script.Call(mod.script.Globals[cmdfuncname], requester.userId, args);
+                    mod.currentArgs = arglist;
+                    DynValue res = callScript();
                     return res.String;
                 }
             }
