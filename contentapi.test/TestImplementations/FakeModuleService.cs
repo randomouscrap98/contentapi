@@ -19,7 +19,7 @@ namespace contentapi.test.Implementations
 
         public LoadedModule GetModule(string name) { return null; }
         public bool RemoveModule(string name) { return true; }
-        public string RunCommand(string module, string command, string data, Requester requester) { return "Not implemented"; }
+        public string RunCommand(string module, List<string> args, Requester requester) { return "Not implemented"; }
         public LoadedModule UpdateModule(ModuleView module, bool force) { return null; }
     }
 }

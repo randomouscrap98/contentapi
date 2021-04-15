@@ -46,7 +46,7 @@ namespace contentapi.Services.Implementations
             //TODO: eventually, make this configurable? But how, not all the cache will be good!
             services.AddSingleton<CacheServiceConfig>();
             services.AddSingleton<CacheService<string, List<CategoryView>>>();
-            services.AddSingleton<CacheService<string, UserHideData>>();
+            services.AddSingleton<CacheService<string, UserGroupHideData>>();
             services.AddSingleton<CacheService<long, CommentView>>();
 
             services.AddTransient<BaseViewSourceServices>();

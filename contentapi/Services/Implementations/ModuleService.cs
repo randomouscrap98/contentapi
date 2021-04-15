@@ -14,6 +14,12 @@ namespace contentapi.Services.Implementations
         public int MaxDebugSize {get;set;} = 1000;
         public TimeSpan CleanupAge {get;set;} = TimeSpan.FromDays(2);
         public string ModuleDataConnectionString {get;set;} = "Data Source=moduledata.db"; 
+
+        //Not configured elsewhere... probably. Maybe the stuff above isn't configured elsewhere either, I haven't checked.
+        public string SubcommandVariable {get;set;} = "subcommands";
+        public string DefaultFunction {get;set;} = "default";
+        public string DefaultSubcommandPrepend {get;set;} = "command_";
+        public string SubcommandFunctionKey {get;set;} = "function";
     }
 
     public delegate void ModuleMessageAdder (ModuleMessageView view);
@@ -136,7 +142,7 @@ namespace contentapi.Services.Implementations
             mod.script.Globals["getvaluenum"] = getValueNum;
             mod.script.Globals["prntdbg"] = new Action<string>((m) => 
             {
-                mod.debug.Enqueue($"[{mod.currentUser}:{mod.currentCommand}|{mod.currentData}] {m}");
+                mod.debug.Enqueue($"[{mod.currentUser}:{mod.currentFunction}|{string.Join(",", mod.currentArgs)}] {m}");
 
                 while(mod.debug.Count > config.MaxDebugSize)
                     mod.debug.Dequeue();
@@ -169,27 +175,59 @@ namespace contentapi.Services.Implementations
             }
         }
 
-        public string RunCommand(string module, string command, string data, Requester requester)
+        /// <summary>
+        /// Figure out function to call from given args. WARN: NOT THREAD SAFE!!
+        /// </summary>
+        /// <param name="mod"></param>
+        /// <param name="args"></param>
+        /// <returns></returns>
+        public string GetFunctionName(LoadedModule mod, List<string> args)
+        {
+            var cmdfuncname = config.DefaultFunction;
+
+            if (args.Count > 0 && mod.script.Globals.Keys.Any(x => x.String == config.SubcommandVariable))
+            {
+                var subcommands = mod.script.Globals.Get(config.SubcommandVariable).Table;
+                var subarg = args[0];
+
+                //NOTE: Currently case sensitive!
+                if (subcommands != null && subcommands.Keys.Any(x => x.String == subarg))
+                {
+                    var subcommand = subcommands.Get(subarg).Table;
+
+                    if (subcommand != null && subcommand.Keys.Any(x => x.String == config.SubcommandFunctionKey))
+                        return subcommand.Get(config.SubcommandFunctionKey).String;
+                    else
+                        return config.DefaultSubcommandPrepend += subarg;
+                }
+            }
+
+            return config.DefaultFunction;
+        }
+
+        public string RunCommand(string module, List<string> args, Requester requester)
         {
             LoadedModule mod = null;
 
             if(!loadedModules.TryGetValue(module, out mod))
                 throw new BadRequestException($"No module with name {module}");
-            
-            var cmdfuncname = $"command_{command}";
+
+            //var cmdfuncname = $"command_{command}";
 
             lock(moduleLocks.GetOrAdd(module, s => new object()))
             {
+                var cmdfuncname = GetFunctionName(mod, args);
+
                 if(!mod.script.Globals.Keys.Any(x => x.String == cmdfuncname))
-                    throw new BadRequestException($"No command '{command}' in module {module}");
+                    throw new BadRequestException($"Command function '{cmdfuncname}' not found in module {module}");
 
                 using(mod.dataConnection = new SqliteConnection(config.ModuleDataConnectionString))
                 {
                     mod.dataConnection.Open();
                     mod.currentUser = requester.userId;
-                    mod.currentCommand = command;
-                    mod.currentData = data;
-                    DynValue res = mod.script.Call(mod.script.Globals[cmdfuncname], requester.userId, data);
+                    mod.currentFunction = cmdfuncname;
+                    mod.currentArgs = args;
+                    DynValue res = mod.script.Call(mod.script.Globals[cmdfuncname], requester.userId, args);
                     return res.String;
                 }
             }

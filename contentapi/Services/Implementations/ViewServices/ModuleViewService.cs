@@ -30,6 +30,10 @@ namespace contentapi.Services.Implementations
 
         // -- View stuff --
 
+        /// <summary>
+        /// Need all the cached data/etc set up before we can serve up views! We store all modules in memory
+        /// </summary>
+        /// <returns></returns>
         public async Task SetupAsync()
         {
             var modules = await SearchAsync(new ModuleSearch(), new Requester() { system = true });
@@ -37,6 +41,12 @@ namespace contentapi.Services.Implementations
                 moduleService.UpdateModule(module, false);
         }
 
+        /// <summary>
+        /// This is a write/permission check performed whether updating OR inserting
+        /// </summary>
+        /// <param name="view"></param>
+        /// <param name="requester"></param>
+        /// <returns></returns>
         public override async Task<ModuleView> CleanViewGeneralAsync(ModuleView view, Requester requester)
         {
             view = await base.CleanViewGeneralAsync(view, requester);

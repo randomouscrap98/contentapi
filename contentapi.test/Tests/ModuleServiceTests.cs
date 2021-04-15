@@ -1,3 +1,4 @@
+using System.Collections.Generic;
 using System.Linq;
 using contentapi.Services.Implementations;
 using contentapi.Views;
@@ -42,12 +43,57 @@ namespace contentapi.test
         public void BasicParameterPass()
         {
             var modview = new ModuleView() { name = "test", code = @"
-                function command_wow(uid, data)
-                    return ""Id: "" .. uid .. "" Data: "" .. data
+                function default(uid, data)
+                    return ""Id: "" .. uid .. "" Data: "" .. data[1]
                 end" 
             };
             var mod = service.UpdateModule(modview);
-            var result = service.RunCommand("test", "wow", "whatever", new Requester() {userId = 8});
+            var result = service.RunCommand("test", new List<string>{"whatever"}, new Requester() {userId = 8});
+            Assert.Equal("Id: 8 Data: whatever", result);
+        }
+
+        [Fact]
+        public void WrongSubcommands()
+        {
+            //The subcommands variable exists but is the wrong type, the module system shouldn't care
+            var modview = new ModuleView() { name = "test", code = @"
+                subcommands = ""wow""
+                function default(uid, data)
+                    return ""Id: "" .. uid .. "" Data: "" .. data[1]
+                end" 
+            };
+            var mod = service.UpdateModule(modview);
+            var result = service.RunCommand("test", new List<string>{"whatever"}, new Requester() {userId = 8});
+            Assert.Equal("Id: 8 Data: whatever", result);
+        }
+
+        [Fact]
+        public void EmptySubcommand()
+        {
+            //The subcommands variable exists but is the wrong type, the module system shouldn't care
+            var modview = new ModuleView() { name = "test", code = @"
+                subcommands = {wow="""" }
+                function command_wow(uid, data)
+                    return ""Id: "" .. uid .. "" Data: "" .. data[2]
+                end" 
+            };
+            var mod = service.UpdateModule(modview);
+            var result = service.RunCommand("test", new List<string>{"wow", "whatever"}, new Requester() {userId = 8});
+            Assert.Equal("Id: 8 Data: whatever", result);
+        }
+
+        [Fact]
+        public void SubcommandFunction()
+        {
+            //The subcommands variable exists but is the wrong type, the module system shouldn't care
+            var modview = new ModuleView() { name = "test", code = @"
+                subcommands = {[""wow""]={[""function""]=""lolwut""} }
+                function lolwut(uid, data)
+                    return ""Id: "" .. uid .. "" Data: "" .. data[2]
+                end" 
+            };
+            var mod = service.UpdateModule(modview);
+            var result = service.RunCommand("test", new List<string>{"wow", "whatever"}, new Requester() {userId = 8});
             Assert.Equal("Id: 8 Data: whatever", result);
         }
 
@@ -55,13 +101,13 @@ namespace contentapi.test
         public void BasicDataReadWrite()
         {
             var modview = new ModuleView() { name = "test", code = @"
-                function command_wow(uid, data)
+                function default(uid, data)
                     setdata(""myval"", ""something"")
                     return getdata(""myval"")
                 end" 
             };
             var mod = service.UpdateModule(modview);
-            var result = service.RunCommand("test", "wow", "whatever", new Requester() {userId = 8});
+            var result = service.RunCommand("test", new List<string>{ "whatever" }, new Requester() {userId = 8});
             Assert.Equal("something", result);
         }
 
@@ -69,18 +115,17 @@ namespace contentapi.test
         public void SecondDataReadWrite()
         {
             var modview = new ModuleView() { name = "test", code = @"
-                function command_wow(uid, data)
-                    setdata(""myval"", ""something"")
-                    return getdata(""myval"")
-                end
-                function command_wow2(uid, data)
+                function default(uid, data)
+                    if #data > 0 then
+                        setdata(""myval"", data[1])
+                    end
                     return getdata(""myval"")
                 end" 
             };
             var mod = service.UpdateModule(modview);
-            var result = service.RunCommand("test", "wow", "whatever", new Requester() {userId = 8});
+            var result = service.RunCommand("test", new List<string> { "something" }, new Requester() {userId = 8});
             Assert.Equal("something", result);
-            result = service.RunCommand("test", "wow2", "whatever", new Requester() {userId = 8});
+            result = service.RunCommand("test", new List<string> {}, new Requester() {userId = 8});
             Assert.Equal("something", result);
         }
 
@@ -88,14 +133,14 @@ namespace contentapi.test
         public void ReadMessagesInstant()
         {
             var modview = new ModuleView() { name = "test", code = @"
-                function command_wow(uid, data)
+                function default(uid, data)
                     sendmessage(uid, ""hey"")
                     sendmessage(uid + 1, ""hey NO"")
                 end" 
             };
             var requester = new Requester() { userId = 9 };
             var mod = service.UpdateModule(modview);
-            var result = service.RunCommand("test", "wow", "whatever", requester);
+            var result = service.RunCommand("test", new List<string>{"whatever"}, requester);
             var messages = moduleMessageService.SearchAsync(new ModuleMessageViewSearch(), requester).Result; //service.ListenAsync(-1, requester, TimeSpan.FromSeconds(1), CancellationToken.None).Result;
             Assert.Single(messages);
             Assert.Equal("hey", messages.First().message);

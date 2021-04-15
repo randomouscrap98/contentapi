@@ -10,8 +10,8 @@ namespace contentapi.Services
         public Script script {get;set;}
         public Queue<string> debug {get;set;} = new Queue<string>();
 
-        public string currentCommand = "";
-        public string currentData = "";
+        public string currentFunction = "";
+        public List<string> currentArgs = new List<string>();
         public long currentUser = 0;
         public SqliteConnection dataConnection = null;
     }
@@ -24,6 +24,6 @@ namespace contentapi.Services
 
         //void AddMessage(ModuleMessageView message);
 
-        string RunCommand(string module, string command, string data, Requester requester) ;
+        string RunCommand(string module, List<string> args, Requester requester) ;
     }
 }

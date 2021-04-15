@@ -24,9 +24,15 @@ namespace contentapi.Services.Implementations
         }
     }
 
+    public class UserGroupHideData
+    {
+        public List<UserHideData> hides {get;set;} = new List<UserHideData>();
+    }
+
     public class UserHideData
     {
-        public List<EntityValue> value {get;set;}
+        public long userId;
+        public List<long> hides = new List<long>();
     }
 
     public class UserViewService : BaseEntityViewService<UserViewFull, UserSearch>
@@ -35,11 +41,11 @@ namespace contentapi.Services.Implementations
         protected ITokenService tokenService;
         protected ILanguageService languageService;
         protected IEmailService emailService;
-        protected CacheService<string, UserHideData> hidecache;
+        protected CacheService<string, UserGroupHideData> hidecache;
 
         public UserViewService(ILogger<UserViewService> logger, ViewServicePack services, IHashService hashService,
             ITokenService tokenService, ILanguageService languageService, IEmailService emailService,
-            UserViewSource converter, CacheService<string, UserHideData> hidecache)
+            UserViewSource converter, CacheService<string, UserGroupHideData> hidecache)
             :base(services, logger, converter)
         { 
             this.hidecache = hidecache;
@@ -94,14 +100,18 @@ namespace contentapi.Services.Implementations
             return base.DeleteAsync(entityId, requester);
         }
 
-        public async Task<UserHideData> GetUserHideDataAsync(IEnumerable<long> users)
+        public async Task<UserGroupHideData> GetUserHideDataAsync(IEnumerable<long> users)
         {
-            UserHideData result = null;
+            UserGroupHideData result = null;
             var search = new EntityValueSearch() { EntityIds = users.Distinct().OrderBy(x => x).ToList(), KeyLike = Keys.UserHideKey };
             var key = string.Join(",", search.EntityIds);
             if(hidecache.GetValue(key, ref result))
                 return result;
-            result = new UserHideData() { value = await provider.GetEntityValuesAsync(search) };
+            result = new UserGroupHideData() { hides = (await provider.GetEntityValuesAsync(search)).Select(x => 
+                new UserHideData() {
+                    userId = x.entityId,
+                    hides = x.value.Split(",", StringSplitOptions.RemoveEmptyEntries).Select(x => long.Parse(x)).ToList()
+                }).ToList() };
             hidecache.StoreItem(key, result);
             return result;
         }

@@ -30,6 +30,11 @@ namespace contentapi.Controllers
             await service.SetupAsync();
         }
 
+        /// <summary>
+        /// Modules can log debug information, useful for... well, debugging. Only supers can read these logs though!
+        /// </summary>
+        /// <param name="name"></param>
+        /// <returns></returns>
         [Authorize]
         [HttpGet("debug/{name}")]
         public Task<ActionResult<List<string>>> GetDebug([FromRoute]string name)
@@ -46,6 +51,12 @@ namespace contentapi.Controllers
             });
         }
 
+        /// <summary>
+        /// Allows you to POST either a new or updated module. The module service determines whether you have permission or not
+        /// </summary>
+        /// <param name="name"></param>
+        /// <param name="module"></param>
+        /// <returns></returns>
         [Authorize]
         [HttpPost("{name}")]
         public Task<ActionResult<ModuleView>> PostByNameAsync([FromRoute]string name, [FromBody]ModuleView module)
@@ -64,20 +75,32 @@ namespace contentapi.Controllers
             });
         }
 
+        /// <summary>
+        /// POST command data to a module. Assume all the arguments have been split already; modules work on arguments!
+        /// </summary>
+        /// <param name="name"></param>
+        /// <param name="command"></param>
+        /// <param name="data"></param>
+        /// <returns></returns>
         [Authorize]
-        [HttpPost("{name}/{command}")]
-        public Task<ActionResult<string>> RunCommand([FromRoute]string name, [FromRoute]string command, [FromBody]string data)
+        [HttpPost("{name}")]
+        public Task<ActionResult<string>> RunCommand([FromRoute]string name, [FromBody]List<string> arguments)
         {
             return ThrowToAction(async () =>
             {
                 var requester = GetRequesterNoFail();
                 string result = null;
                 //RunCommand should be thread safe, so just... run it async!
-                await Task.Run(() => result = moduleService.RunCommand(name, command, data, requester));
+                await Task.Run(() => result = moduleService.RunCommand(name, arguments, requester));
                 return result;
             });
         }
 
+        /// <summary>
+        /// Without polling, search through modules messages to get the ones you want. Users will generally not call this.
+        /// </summary>
+        /// <param name="search"></param>
+        /// <returns></returns>
         [Authorize]
         [HttpGet("messages")]
         public Task<ActionResult<List<ModuleMessageView>>> GetMessagesAsync([FromQuery]ModuleMessageViewSearch search)
