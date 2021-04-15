@@ -33,6 +33,7 @@ namespace contentapi.Services.Implementations
                 //it just means for THIS request, they may have something slightly amiss.
                 if (result.Select(x => x.id).OrderBy(x => x).SequenceEqual(search.Ids.Distinct().OrderBy(x => x)))
                 {
+                    result.RemoveAll(x => !(x.receiveUserId == 0 || x.receiveUserId != requester.userId));
                     logger.LogDebug($"* Using in-memory module message ({string.Join(",", result.Select(x => x.id))}) for ids {string.Join(",", search.Ids)}");
                     return result;
                 }
