@@ -1,5 +1,6 @@
 using System.Collections.Generic;
 using System.Linq;
+using System.Text.Json;
 using System.Threading.Tasks;
 using AutoMapper;
 using contentapi.Services.Constants;
@@ -30,7 +31,7 @@ namespace contentapi.Services.Implementations
 
     //The very most basic view service functions. Eventually, fix this to be services; don't have
     //time right now.
-    public abstract class BaseViewServices<V,S> where S : BaseSearch //IConstrainedSearcher
+    public abstract class BaseViewServices<V,S> where S : BaseSearch, new() //IConstrainedSearcher
     {
         protected ViewServicePack services;
         protected ILogger logger;
@@ -54,6 +55,24 @@ namespace contentapi.Services.Implementations
             //This is the same, trust me (or it better be!). IDs are much faster
             if(search.Sort == "createdate")
                 search.Sort = "id";
+        }
+
+        /// <summary>
+        /// Return whether the given search made by the given requester is ONLY ids. WARN: LIMITS SEARCH!
+        /// </summary>
+        /// <param name="search"></param>
+        /// <param name="r"></param>
+        /// <returns></returns>
+        public bool OnlyIdSearch(S search, Requester r)
+        {
+            LimitSearch(search, r);
+            var otherSearch = new S() { Ids = search.Ids };
+            LimitSearch(otherSearch, r); //Apply the same rules!
+            var otherSearchJson = JsonSerializer.Serialize(otherSearch);
+            var searchJson = JsonSerializer.Serialize(search);
+
+            //This means ONLY the ids are used!
+            return otherSearchJson == searchJson;
         }
 
         public Task<List<V>> SearchAsync(S search, Requester requester)

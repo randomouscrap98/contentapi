@@ -10,17 +10,35 @@ namespace contentapi.Services.Implementations
     public class ModuleMessageViewService : BaseViewServices<ModuleMessageView, ModuleMessageViewSearch>, IViewReadService<ModuleMessageView, ModuleMessageViewSearch>
     {
         protected ModuleMessageViewSource moduleMessageSource;
+        protected CacheService<long, ModuleMessageView> singlecache;
 
         public ModuleMessageViewService(ViewServicePack services, ILogger<ModuleMessageViewService> logger, 
-            ModuleMessageViewSource moduleMessageSource)
+            ModuleMessageViewSource moduleMessageSource, CacheService<long, ModuleMessageView> singlecache)
             : base(services, logger) 
         { 
             this.moduleMessageSource = moduleMessageSource;
+            this.singlecache = singlecache;
         }
 
         public override async Task<List<ModuleMessageView>> PreparedSearchAsync(ModuleMessageViewSearch search, Requester requester)
         {
-            var result = await moduleMessageSource.SimpleSearchAsync(search, (q) =>
+            List<ModuleMessageView> result = null;
+
+            if(search.Ids.Count > 0 && OnlyIdSearch(search, requester))
+            {
+                result = singlecache.GetValues(search.Ids);
+
+                //NOTE: there is a period of time where the cache could be invalid by the time you get this data. I'm willing
+                //to accept slightly out of date information... but does that mean some people will NEVER get the updates? no,
+                //it just means for THIS request, they may have something slightly amiss.
+                if (result.Select(x => x.id).OrderBy(x => x).SequenceEqual(search.Ids.Distinct().OrderBy(x => x)))
+                {
+                    logger.LogDebug($"* Using in-memory module message ({string.Join(",", result.Select(x => x.id))}) for ids {string.Join(",", search.Ids)}");
+                    return result;
+                }
+            }
+
+            result = await moduleMessageSource.SimpleSearchAsync(search, (q) =>
                 q.Where(x => x.relation.entityId2 == 0 || x.relation.entityId2 == -requester.userId) //Can only get your own module messages
             );
 
@@ -32,7 +50,9 @@ namespace contentapi.Services.Implementations
         {
             var relation = moduleMessageSource.FromView(basic);
             await provider.WriteAsync(relation);
-            return moduleMessageSource.ToView(relation);
+            var view = moduleMessageSource.ToView(relation);
+            singlecache.StoreItem(view.id, view);
+            return view;
         }
     }
 }
