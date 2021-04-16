@@ -2,6 +2,7 @@ using System;
 using System.Collections.Generic;
 using System.Dynamic;
 using System.Linq;
+using System.Runtime;
 using System.Threading.Tasks;
 using AutoMapper;
 using contentapi.Configs;
@@ -25,13 +26,14 @@ namespace contentapi.Controllers
     public class TestController : BaseSimpleController
     {
         protected IEntityProvider provider;
+        protected IPermissionService permissions;
         //protected ICodeTimer timer;
 
-        public TestController(BaseSimpleControllerServices services, IEntityProvider provider) //, ICodeTimer timer) 
+        public TestController(BaseSimpleControllerServices services, IEntityProvider provider, IPermissionService permissions) //, ICodeTimer timer) 
             : base(services) 
         { 
             this.provider = provider;
-            //this.timer = timer;
+            this.permissions = permissions;
         }
 
         public class TestData
@@ -91,6 +93,38 @@ namespace contentapi.Controllers
         public ActionResult<Dictionary<string, string>> GetHeaders()
         {
             return this.Request.Headers.ToDictionary(x => x.Key, x => x.Value.ToString());
+        }
+
+        [HttpGet("memory")]
+        public ActionResult<long> GetMemory()
+        {
+            return GC.GetTotalMemory(false);
+        }
+
+        public class GCData
+        {
+            public bool blocking {get;set;}
+            public long memoryBefore {get;set;}
+            public long memoryAfter {get;set;}
+        }
+
+        [HttpGet("gc")]
+        public Task<ActionResult<GCData>> GarbageCollect()
+        {
+            return ThrowToAction<GCData>(() =>
+            {
+                if(!permissions.IsSuper(GetRequesterNoFail()))
+                    throw new ForbiddenException("Must be super to garbage collect!");
+
+                var result = new GCData() { blocking = true, memoryBefore = GC.GetTotalMemory(false) };
+
+                GCSettings.LargeObjectHeapCompactionMode = GCLargeObjectHeapCompactionMode.CompactOnce;
+                GC.Collect(2, GCCollectionMode.Forced, true, true);
+
+                result.memoryAfter = GC.GetTotalMemory(false);
+
+                return Task.FromResult(result); //Task.FromResult($"Completed garbage collection! (blocking) Before: {memory/1024/1024}mb, after: {afterMemory/1024/1024}mb");
+            });
         }
         
         public class SystemData
