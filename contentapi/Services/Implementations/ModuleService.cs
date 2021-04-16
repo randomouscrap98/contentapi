@@ -177,17 +177,24 @@ namespace contentapi.Services.Implementations
             }
         }
 
+        /// <summary>
+        /// Describes a module command argument, parsed out of the argument list defined in the lua script
+        /// </summary>
         public class ModuleArgumentInfo
         {
             public string name {get;set;}
             public string type {get;set;}
-            //public string value {get;set;}
         }
 
+        /// <summary>
+        /// Using the given subcommand, retrieve the parsed argument information (NOT the values, just what the argument 'is')
+        /// </summary>
+        /// <param name="subcommand"></param>
+        /// <returns></returns>
         public List<ModuleArgumentInfo> GetArgumentInfo(Table subcommand) //, string arglist) //, List<object> existingArgs)
         {
             //Do nothing, there are no args
-            if(subcommand == null || !subcommand.Keys.Any(x => x.String == config.ArgumentsKey))
+            if(!(subcommand != null && subcommand.Keys.Any(x => x.String == config.ArgumentsKey)))
                 return null;
             
             //Find the args
@@ -197,16 +204,10 @@ namespace contentapi.Services.Implementations
                 return null;
 
             //Now we can REALLY parse the args!
-
-            //user, word, freeform
             var result = new List<ModuleArgumentInfo>();
-            var forcedFinal = false;
 
             foreach(var arg in subcmdargs.Values.Select(x => x.String))
             {
-                if(forcedFinal)
-                    throw new InvalidOperationException("No argument can come after a 'freeform' argument!");
-
                 if(string.IsNullOrWhiteSpace(arg))
                     throw new InvalidOperationException("Argument specifier was the wrong type! It needs to be a string!");
 
@@ -215,27 +216,65 @@ namespace contentapi.Services.Implementations
                 if(argparts.Length != 2)
                     throw new InvalidOperationException("Argument specifier not in the right format! name_type");
 
-                //var newInfo = new ModuleArgumentInfo() { name = argparts[0], type = argparts[1]};
-
-                result.Append(new ModuleArgumentInfo() { name = argparts[0], type = argparts[1]});
-                //arglist = arglist.Trim();
-
-                //result.Append(newInfo);
-
-                //var argname = argparts[1];
-
-                //switch(argparts[1])
-                //{
-
-                //}
+                result.Add(new ModuleArgumentInfo() { name = argparts[0], type = argparts[1]});
             }
 
             return result;
         }
 
+        /// <summary>
+        /// Using the given argument information, fill (as in actually mutate) the given list of argument values
+        /// </summary>
+        /// <param name="argumentInfos"></param>
+        /// <param name="arglist"></param>
+        /// <param name="existingArgs"></param>
         public void ParseArgs(List<ModuleArgumentInfo> argumentInfos, string arglist, List<object> existingArgs)
         {
+            var forcedFinal = false;
 
+            foreach(var argInfo in argumentInfos)
+            {
+                if(forcedFinal)
+                    throw new InvalidOperationException("No argument can come after a 'freeform' argument!");
+
+                arglist.Trim();
+
+                Action<string, Action<Match>> genericMatch = (r, a) =>
+                {
+                    var regex = new Regex(r, RegexOptions.Compiled | RegexOptions.IgnoreCase);
+                    var match = regex.Match(arglist);
+
+                    if(!match.Success)
+                        throw new InvalidOperationException($"Parse error in argument '{argInfo.name}', not of type '{argInfo.type}'");
+                    
+                    arglist = regex.Replace(arglist, "");
+
+                    try
+                    {
+                        a(match);
+                    }
+                    catch(Exception ex)
+                    {
+                        throw new InvalidOperationException($"Parse error in argument '{argInfo.name}' of type '{argInfo.type}', type conversion error", ex);
+                    }
+                };
+
+                switch(argInfo.type)
+                {                       
+                    case "user":
+                        genericMatch(@"^([0-9]+)(\([^\s]+\))?", m => { existingArgs.Add(long.Parse(m.Groups[1].Value)); });
+                        break;
+                    case "word":
+                        genericMatch(@"^([^\s]+)", m => { existingArgs.Add(m.Groups[1].Value); });
+                        break;
+                    case "freeform":
+                        existingArgs.Add(arglist); //Just append whatever is left
+                        forcedFinal = true;
+                        break;
+                    default:
+                        throw new InvalidOperationException($"Unknown argument type: {argInfo.type} ({argInfo.name})");
+                }
+            }
         }
 
         public string RunCommand(string module, string arglist, Requester requester)
@@ -293,7 +332,7 @@ namespace contentapi.Services.Implementations
 
                 //Oops, didn't fill up the arglist with anything! Careful, this is dangerous!
                 if(scriptArgs.Count == 1)
-                    scriptArgs.Append(arglist);
+                    scriptArgs.Add(arglist);
 
                 using(mod.dataConnection = new SqliteConnection(config.ModuleDataConnectionString))
                 {
