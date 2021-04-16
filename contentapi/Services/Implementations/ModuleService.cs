@@ -21,6 +21,7 @@ namespace contentapi.Services.Implementations
         public string DefaultFunction {get;set;} = "default";
         public string DefaultSubcommandPrepend {get;set;} = "command_";
         public string SubcommandFunctionKey {get;set;} = "function";
+        public string ArgumentsKey {get;set;} = "arguments";
     }
 
     public delegate void ModuleMessageAdder (ModuleMessageView view);
@@ -176,6 +177,67 @@ namespace contentapi.Services.Implementations
             }
         }
 
+        public class ModuleArgumentInfo
+        {
+            public string name {get;set;}
+            public string type {get;set;}
+            //public string value {get;set;}
+        }
+
+        public List<ModuleArgumentInfo> GetArgumentInfo(Table subcommand) //, string arglist) //, List<object> existingArgs)
+        {
+            //Do nothing, there are no args
+            if(subcommand == null || !subcommand.Keys.Any(x => x.String == config.ArgumentsKey))
+                return null;
+            
+            //Find the args
+            var subcmdargs = subcommand.Get(config.ArgumentsKey).Table;
+            
+            if(subcmdargs == null)
+                return null;
+
+            //Now we can REALLY parse the args!
+
+            //user, word, freeform
+            var result = new List<ModuleArgumentInfo>();
+            var forcedFinal = false;
+
+            foreach(var arg in subcmdargs.Values.Select(x => x.String))
+            {
+                if(forcedFinal)
+                    throw new InvalidOperationException("No argument can come after a 'freeform' argument!");
+
+                if(string.IsNullOrWhiteSpace(arg))
+                    throw new InvalidOperationException("Argument specifier was the wrong type! It needs to be a string!");
+
+                var argparts = arg.Split("_".ToCharArray(), StringSplitOptions.RemoveEmptyEntries);
+
+                if(argparts.Length != 2)
+                    throw new InvalidOperationException("Argument specifier not in the right format! name_type");
+
+                //var newInfo = new ModuleArgumentInfo() { name = argparts[0], type = argparts[1]};
+
+                result.Append(new ModuleArgumentInfo() { name = argparts[0], type = argparts[1]});
+                //arglist = arglist.Trim();
+
+                //result.Append(newInfo);
+
+                //var argname = argparts[1];
+
+                //switch(argparts[1])
+                //{
+
+                //}
+            }
+
+            return result;
+        }
+
+        public void ParseArgs(List<ModuleArgumentInfo> argumentInfos, string arglist, List<object> existingArgs)
+        {
+
+        }
+
         public string RunCommand(string module, string arglist, Requester requester)
         {
             LoadedModule mod = null;
@@ -189,7 +251,9 @@ namespace contentapi.Services.Implementations
             {
                 //By DEFAULT, we call the default function with whatever is leftover in the arglist
                 var cmdfuncname = config.DefaultFunction;
-                Func<DynValue> callScript = () => mod.script.Call(mod.script.Globals[cmdfuncname], requester.userId, arglist);
+                List<object> scriptArgs = new List<object> { requester.userId };
+
+                //Func<DynValue> callScript = () => mod.script.Call(mod.script.Globals[cmdfuncname], requester.userId, arglist);
 
                 //There is a subcommand variable and we passed args which could be read as a subcommand (don't know if it's the right format or anything)
                 if (arglist != null && mod.script.Globals.Keys.Any(x => x.String == config.SubcommandVariable))
@@ -216,13 +280,20 @@ namespace contentapi.Services.Implementations
                                 cmdfuncname = config.DefaultSubcommandPrepend + subarg;
 
                             //Check args and parse here, altering "callScript"
+                            var argInfos = GetArgumentInfo(subcommand);
+
+                            if(argInfos != null)
+                                ParseArgs(argInfos, arglist, scriptArgs);
                         }
                     }
-
                 }
 
                 if(!mod.script.Globals.Keys.Any(x => x.String == cmdfuncname))
                     throw new BadRequestException($"Command function '{cmdfuncname}' not found in module {module}");
+
+                //Oops, didn't fill up the arglist with anything! Careful, this is dangerous!
+                if(scriptArgs.Count == 1)
+                    scriptArgs.Append(arglist);
 
                 using(mod.dataConnection = new SqliteConnection(config.ModuleDataConnectionString))
                 {
@@ -230,7 +301,7 @@ namespace contentapi.Services.Implementations
                     mod.currentUser = requester.userId;
                     mod.currentFunction = cmdfuncname;
                     mod.currentArgs = arglist;
-                    DynValue res = callScript();
+                    DynValue res = mod.script.Call(mod.script.Globals[cmdfuncname], scriptArgs.ToArray());
                     return res.String;
                 }
             }
