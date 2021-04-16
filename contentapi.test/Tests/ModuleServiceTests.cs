@@ -98,6 +98,51 @@ namespace contentapi.test
         }
 
         [Fact]
+        public void SubcommandArguments_Word()
+        {
+            //The subcommands variable exists but is the wrong type, the module system shouldn't care
+            var modview = new ModuleView() { name = "test", code = @"
+                subcommands = {[""wow""]={[""arguments""]={""first_word"",""second_word""}} }
+                function command_wow(uid, word1, word2)
+                    return ""Id: "" .. uid .. "" Word1: "" .. word1 .. "" Word2: "" .. word2
+                end" 
+            };
+            var mod = service.UpdateModule(modview);
+            var result = service.RunCommand("test", "wow whatever stop", new Requester() {userId = 8});
+            Assert.Equal("Id: 8 Word1: whatever Word2: stop", result);
+        }
+
+        [Fact]
+        public void SubcommandArguments_User()
+        {
+            //The subcommands variable exists but is the wrong type, the module system shouldn't care
+            var modview = new ModuleView() { name = "test", code = @"
+                subcommands = {[""wow""]={[""arguments""]={""first_user"",""second_user""}} }
+                function command_wow(uid, user1, user2)
+                    return ""Id: "" .. uid .. "" User1: "" .. user1 .. "" User2: "" .. user2
+                end" 
+            };
+            var mod = service.UpdateModule(modview);
+            var result = service.RunCommand("test", "wow 11 144(lol_username!)", new Requester() {userId = 8});
+            Assert.Equal("Id: 8 User1: 11 User2: 144", result);
+        }
+
+        [Fact]
+        public void SubcommandArguments_Mixed()
+        {
+            //The subcommands variable exists but is the wrong type, the module system shouldn't care
+            var modview = new ModuleView() { name = "test", code = @"
+                subcommands = {[""wow""]={[""arguments""]={""first_user"",""second_word"",""third_freeform""}} }
+                function command_wow(uid, user, word, freeform)
+                    return ""Id: "" .. uid .. "" User: "" .. user .. "" Word: "" .. word .. "" Freeform: "" .. freeform
+                end" 
+            };
+            var mod = service.UpdateModule(modview);
+            var result = service.RunCommand("test", "wow 4(somebody) kills a lot of people", new Requester() {userId = 8});
+            Assert.Equal("Id: 8 User: 4 Word: kills Freeform: a lot of people", result);
+        }
+
+        [Fact]
         public void BasicDataReadWrite()
         {
             var modview = new ModuleView() { name = "test", code = @"

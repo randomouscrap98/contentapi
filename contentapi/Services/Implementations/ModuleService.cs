@@ -216,6 +216,7 @@ namespace contentapi.Services.Implementations
                 if(argparts.Length != 2)
                     throw new InvalidOperationException("Argument specifier not in the right format! name_type");
 
+                //Remember: all we're doing is figuring out the information available from the argument list
                 result.Add(new ModuleArgumentInfo() { name = argparts[0], type = argparts[1]});
             }
 
@@ -234,21 +235,28 @@ namespace contentapi.Services.Implementations
 
             foreach(var argInfo in argumentInfos)
             {
+                //forcedFinal is specifically for "freeform" arguments, which MUST come at the end! It just 
+                //eats up the rest of the input
                 if(forcedFinal)
                     throw new InvalidOperationException("No argument can come after a 'freeform' argument!");
 
-                arglist.Trim();
+                //Kind of wasteful, but just easier to always start with a clean slate after ripping args out
+                arglist = arglist.Trim();
 
+                //Matcher function for generic regex matches. Useful for words, users, etc.
                 Action<string, Action<Match>> genericMatch = (r, a) =>
                 {
                     var regex = new Regex(r, RegexOptions.Compiled | RegexOptions.IgnoreCase);
                     var match = regex.Match(arglist);
 
+                    //An argument of a given type must ALWAYS be a pure match.
                     if(!match.Success)
                         throw new InvalidOperationException($"Parse error in argument '{argInfo.name}', not of type '{argInfo.type}'");
                     
+                    //Get rid of the argument from the remaining arglist
                     arglist = regex.Replace(arglist, "");
 
+                    //Try to do whatever the user wanted (probably adding to existingArgs)
                     try
                     {
                         a(match);
@@ -259,6 +267,7 @@ namespace contentapi.Services.Implementations
                     }
                 };
 
+                //Parse arguments differently based on type
                 switch(argInfo.type)
                 {                       
                     case "user":
@@ -290,9 +299,7 @@ namespace contentapi.Services.Implementations
             {
                 //By DEFAULT, we call the default function with whatever is leftover in the arglist
                 var cmdfuncname = config.DefaultFunction;
-                List<object> scriptArgs = new List<object> { requester.userId };
-
-                //Func<DynValue> callScript = () => mod.script.Call(mod.script.Globals[cmdfuncname], requester.userId, arglist);
+                List<object> scriptArgs = new List<object> { requester.userId }; //Args always includes the calling user first
 
                 //There is a subcommand variable and we passed args which could be read as a subcommand (don't know if it's the right format or anything)
                 if (arglist != null && mod.script.Globals.Keys.Any(x => x.String == config.SubcommandVariable))
@@ -318,9 +325,10 @@ namespace contentapi.Services.Implementations
                             else
                                 cmdfuncname = config.DefaultSubcommandPrepend + subarg;
 
-                            //Check args and parse here, altering "callScript"
+                            //Now see if we're parsing arguments on behalf of the lua script, or if we're just dumping the whole line in
                             var argInfos = GetArgumentInfo(subcommand);
 
+                            //Arguments were defined! From this point on, we're being VERY strict with parsing! This could throw exceptions!
                             if(argInfos != null)
                                 ParseArgs(argInfos, arglist, scriptArgs);
                         }
