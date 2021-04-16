@@ -1,14 +1,9 @@
-using System;
-using System.Collections.Generic;
 using AutoMapper;
 using contentapi.Configs;
 using contentapi.Services.Constants;
-using contentapi.Views;
 using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.DependencyInjection;
-using Microsoft.Extensions.Logging;
 using Microsoft.Extensions.Options;
-using Randomous.EntitySystem;
 
 namespace contentapi.Services.Implementations
 {
@@ -46,11 +41,6 @@ namespace contentapi.Services.Implementations
             //TODO: eventually, make this configurable? But how, not all the cache will be good!
             services.AddSingleton<CacheServiceConfig>();
             services.AddSingleton(typeof(CacheService<,>));
-            //services.AddSingleton<CacheService<string, List<CategoryView>>>();
-            //services.AddSingleton<CacheService<string, List<ModuleView>>>();
-            //services.AddSingleton<CacheService<string, UserGroupHideData>>();
-            //services.AddSingleton<CacheService<long, CommentView>>();
-            //services.AddSingleton<CacheService<long, ModuleView>>();
 
             services.AddTransient<BaseViewSourceServices>();
 
@@ -133,7 +123,6 @@ namespace contentapi.Services.Implementations
             AddConfiguration<ModuleServiceConfig>(services, config);
             AddConfiguration<RelationListenerServiceConfig>(services, config);
             AddConfiguration<SimpleCodeTimerConfig>(services, config);
-            //AddConfiguration<DocumentationConfig>(services, config);
             services.AddSingleton<HashConfig>();
         }
     }

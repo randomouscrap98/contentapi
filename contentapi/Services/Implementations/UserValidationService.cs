@@ -1,5 +1,4 @@
 using System.Collections.Generic;
-using System.Threading;
 
 namespace contentapi.Services.Implementations
 {
@@ -31,13 +30,5 @@ namespace contentapi.Services.Implementations
                 userValidation[userId]++;
             }
         }
-
-        //public bool Validateuser(long userId, string token)
-        //{
-        //    lock(validationLock)
-        //    {
-
-        //    }
-        //}
     }
 }
