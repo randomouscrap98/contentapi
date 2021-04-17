@@ -21,6 +21,14 @@ namespace contentapi.Controllers
         }
     }
 
+    public class GCData
+    {
+        public bool blocking {get;set;}
+        public long memoryBefore {get;set;}
+        public long memoryAfter {get;set;}
+    }
+
+
     [Route("api/[controller]")]
     [ApiController]
     public class TestController : BaseSimpleController
@@ -99,13 +107,6 @@ namespace contentapi.Controllers
         public ActionResult<long> GetMemory()
         {
             return GC.GetTotalMemory(false);
-        }
-
-        public class GCData
-        {
-            public bool blocking {get;set;}
-            public long memoryBefore {get;set;}
-            public long memoryAfter {get;set;}
         }
 
         [HttpGet("gc")]
