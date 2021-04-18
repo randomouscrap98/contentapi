@@ -188,7 +188,7 @@ namespace contentapi.Services.Implementations
                      (x.type == Keys.WatchUpdate ||
                       x.type == Keys.WatchDelete) && x.value.StartsWith($"{listenId.userId}_") ||
                      x.type.StartsWith(Keys.ActivityKey) || 
-                     x.type.StartsWith(Keys.ModuleMessageKey) && (x.entityId2 == 0 || x.entityId2 == -requester.userId) ||
+                     x.type.StartsWith(Keys.ModuleMessageKey) && (x.entityId2 == 0 || x.entityId2 == -listenId.userId) ||
                      x.type.StartsWith(Keys.CommentDeleteHack) ||
                      x.type.StartsWith(Keys.CommentHistoryHack)) && 
                     x.id > listenConfig.lastId),

@@ -156,7 +156,8 @@ namespace contentapi.Services.Implementations
                     sendUserId = mod.currentUser,
                     receiveUserId = uid,
                     message = message,
-                    module = module.name
+                    module = module.name,
+                    createDate = DateTime.Now
                 });
             });
 
@@ -301,37 +302,47 @@ namespace contentapi.Services.Implementations
                 var cmdfuncname = config.DefaultFunction;
                 List<object> scriptArgs = new List<object> { requester.userId }; //Args always includes the calling user first
 
-                //There is a subcommand variable and we passed args which could be read as a subcommand (don't know if it's the right format or anything)
-                if (arglist != null && mod.script.Globals.Keys.Any(x => x.String == config.SubcommandVariable))
+                //This will NOT be null if there is a subcommands variable that is a table
+                var subcommands = mod.script.Globals.Get(config.SubcommandVariable)?.Table;
+
+                //There is a subcommand variable, which means we may need to parse the input and call
+                //a different function than the default!
+                if (subcommands != null)
                 {
-                    var subcommands = mod.script.Globals.Get(config.SubcommandVariable).Table;
-                    var match = Regex.Match(arglist, @"^\s*(\w+)\s*(.*)$");
+                    string subarg = "";
 
-                    //The subcommands is in the right format and our arglist indicates we have the ability to get a subcommand
-                    if(subcommands != null && match.Success)
+                    //Can only check for subcommands if there's an argument list!
+                    if(arglist != null)
                     {
-                        var subarg = match.Groups[1].Value;
-                        arglist = match.Groups[2].Value.Trim();
+                        var match = Regex.Match(arglist, @"^\s*(\w+)\s*(.*)$");
 
-                        //NOTE: Currently case sensitive!
-                        //There is a subcommand defined for the subcommand we pulled from the arglist. 
-                        if (subcommands.Keys.Any(x => x.String == subarg))
+                        //NOTE: Subcommand currently case sensitive!
+                        //First, try to match the first word against the array. If this
+                        //works, this should ALWAYS be our first go. If this DOESN'T work, we
+                        //fall back to the empty subarg, which is our defined default.
+                        if(match.Success && subcommands.Keys.Any(x => x.String == match.Groups[1].Value))
                         {
-                            var subcommand = subcommands.Get(subarg).Table;
-
-                            //The function to call at this point is either the default subcommand naming scheme or the user's requested function
-                            if (subcommand != null && subcommand.Keys.Any(x => x.String == config.SubcommandFunctionKey))
-                                cmdfuncname = subcommand.Get(config.SubcommandFunctionKey).String;
-                            else
-                                cmdfuncname = config.DefaultSubcommandPrepend + subarg;
-
-                            //Now see if we're parsing arguments on behalf of the lua script, or if we're just dumping the whole line in
-                            var argInfos = GetArgumentInfo(subcommand);
-
-                            //Arguments were defined! From this point on, we're being VERY strict with parsing! This could throw exceptions!
-                            if(argInfos != null)
-                                ParseArgs(argInfos, arglist, scriptArgs);
+                            //It's OK to modify arglist because we know we're in the clear
+                            subarg = match.Groups[1].Value;
+                            arglist = match.Groups[2].Value.Trim();
                         }
+                    }
+
+                    var subcommand = subcommands.Get(subarg)?.Table;
+
+                    //Ah, SOMETHING finally matched all the way! Go all in on calling this subcommand
+                    if(subcommand != null)
+                    {
+                        //The command is either defined in the subcommand definition, or we use the default.
+                        cmdfuncname = subcommand.Get(config.SubcommandFunctionKey)?.String ??
+                            config.DefaultSubcommandPrepend + subarg;
+
+                        //Now see if we're parsing arguments on behalf of the lua script, or if we're just dumping the whole line in
+                        var argInfos = GetArgumentInfo(subcommand);
+
+                        //Arguments were defined! From this point on, we're being VERY strict with parsing! This could throw exceptions!
+                        if(argInfos != null)
+                            ParseArgs(argInfos, arglist, scriptArgs);
                     }
                 }
 

@@ -72,7 +72,7 @@ namespace contentapi.test
         {
             //The subcommands variable exists but is the wrong type, the module system shouldn't care
             var modview = new ModuleView() { name = "test", code = @"
-                subcommands = {wow="""" }
+                subcommands = {[""wow""]={} }
                 function command_wow(uid, data)
                     return ""Id: "" .. uid .. "" Data: "" .. data
                 end" 
