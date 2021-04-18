@@ -3,7 +3,9 @@ using System.Collections.Concurrent;
 using System.Collections.Generic;
 using System.Linq;
 using System.Text.RegularExpressions;
+using System.Threading.Tasks;
 using contentapi.Views;
+using contentapi.Services.Extensions;
 using Microsoft.Data.Sqlite;
 using Microsoft.Extensions.Logging;
 using MoonSharp.Interpreter;
@@ -33,12 +35,15 @@ namespace contentapi.Services.Implementations
         protected ILogger logger;
         protected ModuleServiceConfig config;
         protected ModuleMessageAdder addMessage;
+        protected UserViewSource userSource;
 
-        public ModuleService(ModuleServiceConfig config, ILogger<ModuleService> logger, ModuleMessageAdder addMessage)//Action<ModuleMessageView> addMessage)
+        public ModuleService(ModuleServiceConfig config, ILogger<ModuleService> logger, ModuleMessageAdder addMessage,
+            UserViewSource userSource)//Action<ModuleMessageView> addMessage)
         {
             this.config = config;
             this.logger = logger;
             this.addMessage = addMessage;
+            this.userSource = userSource;
         }
 
         public LoadedModule GetModule(string name)
@@ -264,7 +269,7 @@ namespace contentapi.Services.Implementations
                     }
                     catch(Exception ex)
                     {
-                        throw new InvalidOperationException($"Parse error in argument '{argInfo.name}' of type '{argInfo.type}', type conversion error", ex);
+                        throw new InvalidOperationException($"{ex.Message} (Parse error in argument '{argInfo.name}' of type '{argInfo.type}')", ex);
                     }
                 };
 
@@ -272,7 +277,15 @@ namespace contentapi.Services.Implementations
                 switch(argInfo.type)
                 {                       
                     case "user":
-                        genericMatch(@"^([0-9]+)(\([^\s]+\))?", m => { existingArgs.Add(long.Parse(m.Groups[1].Value)); });
+                        genericMatch(@"^([0-9]+)(\([^\s]+\))?", m => { 
+                            //Check if user exists!
+                            var uid = long.Parse(m.Groups[1].Value);
+                            //Yes this is BLOCKING, this entire module system is blocking because lua/etc
+                            var users = userSource.SimpleSearchAsync(new UserSearch() { Ids = new List<long>{uid}}).Result;
+                            if(!users.Any(x => x.id == uid))
+                                throw new InvalidOperationException($"User not found: {uid}");
+                            existingArgs.Add(uid);
+                        });
                         break;
                     case "word":
                         genericMatch(@"^([^\s]+)", m => { existingArgs.Add(m.Groups[1].Value); });

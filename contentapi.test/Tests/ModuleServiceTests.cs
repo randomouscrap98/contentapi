@@ -11,6 +11,7 @@ namespace contentapi.test
     {
         protected override ModuleServiceConfig config => myConfig;
         protected ModuleMessageViewService moduleMessageService;
+        protected UserViewService userService;
 
         protected ModuleServiceConfig myConfig = new ModuleServiceConfig() { 
             ModuleDataConnectionString = "Data Source=moduledata;Mode=Memory;Cache=Shared"
@@ -24,6 +25,7 @@ namespace contentapi.test
             masterconnection.Open();
 
             moduleMessageService = CreateService<ModuleMessageViewService>();
+            userService = CreateService<UserViewService>();
         }
 
         ~ModuleServiceTests()
@@ -122,9 +124,12 @@ namespace contentapi.test
                     return ""Id: "" .. uid .. "" User1: "" .. user1 .. "" User2: "" .. user2
                 end" 
             };
+            //Fragile test, should inject a fake user service that always says the user is good. oh well
+            userService.WriteAsync(new UserViewFull() { username = "dude1"}, new Requester() { system = true }).Wait();
+            userService.WriteAsync(new UserViewFull() { username = "dude2"}, new Requester() { system = true }).Wait();
             var mod = service.UpdateModule(modview);
-            var result = service.RunCommand("test", "wow 11 144(lol_username!)", new Requester() {userId = 8});
-            Assert.Equal("Id: 8 User1: 11 User2: 144", result);
+            var result = service.RunCommand("test", "wow 1 2(lol_username!)", new Requester() {userId = 8});
+            Assert.Equal("Id: 8 User1: 1 User2: 2", result);
         }
 
         [Fact]
@@ -137,9 +142,10 @@ namespace contentapi.test
                     return ""Id: "" .. uid .. "" User: "" .. user .. "" Word: "" .. word .. "" Freeform: "" .. freeform
                 end" 
             };
+            userService.WriteAsync(new UserViewFull() { username = "dude1"}, new Requester() { system = true }).Wait();
             var mod = service.UpdateModule(modview);
-            var result = service.RunCommand("test", "wow 4(somebody) kills a lot of people", new Requester() {userId = 8});
-            Assert.Equal("Id: 8 User: 4 Word: kills Freeform: a lot of people", result);
+            var result = service.RunCommand("test", "wow 1(somebody) kills a lot of people", new Requester() {userId = 8});
+            Assert.Equal("Id: 8 User: 1 Word: kills Freeform: a lot of people", result);
         }
 
         [Fact]
