@@ -51,29 +51,29 @@ namespace contentapi.Controllers
             });
         }
 
-        ///// <summary>
-        ///// Allows you to POST either a new or updated module. The module service determines whether you have permission or not
-        ///// </summary>
-        ///// <param name="name"></param>
-        ///// <param name="module"></param>
-        ///// <returns></returns>
-        //[Authorize]
-        //[HttpPost()]
-        //public override Task<ActionResult<ModuleView>> PostAsync([FromBody]ModuleView module)
-        //{
-        //    return ThrowToAction(async () =>
-        //    {
-        //        //Go find by name first
-        //        var existing = await service.FindByNameAsync(module.name);
+        /// <summary>
+        /// Allows you to POST either a new or updated module. The module service determines whether you have permission or not
+        /// </summary>
+        /// <param name="name"></param>
+        /// <param name="module"></param>
+        /// <returns></returns>
+        [Authorize]
+        [HttpPost("byname")]
+        public Task<ActionResult<ModuleView>> PostByNameAsync([FromBody]ModuleView module)
+        {
+            return ThrowToAction(async () =>
+            {
+                //Go find by name first
+                var existing = await service.FindByNameAsync(module.name);
 
-        //        if(existing != null)
-        //            module.id = existing.Entity.id;
-        //        else
-        //            module.id = 0;
-        //        
-        //        return await service.WriteAsync(module, GetRequesterNoFail());
-        //    });
-        //}
+                if(existing != null)
+                    module.id = existing.Entity.id;
+                else
+                    module.id = 0;
+                
+                return await service.WriteAsync(module, GetRequesterNoFail());
+            });
+        }
 
         /// <summary>
         /// POST command data to a module. Assume all the arguments have been split already; modules work on arguments!
