@@ -16,7 +16,7 @@ namespace contentapi.Services.Implementations
         public string Keyword {get;set;}
         public string Type {get;set;}
         public List<string> NotTypes {get;set;} = new List<string>();
-        public bool IncludeAbout {get;set;} = false;
+        public List<string> IncludeAbout {get;set;} = null;
     }
 
     public class ContentViewSourceProfile : Profile

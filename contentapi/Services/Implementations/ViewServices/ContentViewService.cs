@@ -86,8 +86,13 @@ namespace contentapi.Services.Implementations
                 services.timer.EndTimer(t);
             }
 
-            if(baseIds.Count > 0 && search.IncludeAbout)
+            if(baseResult.Count == 0)
+                return baseResult;
+
+            if(search.IncludeAbout != null && search.IncludeAbout.Count > 0)
             {
+                var desired = search.IncludeAbout.Select(x => x.ToLower());
+
                 //TODO: STOP THIS MADNESS!!
                 commentSource.JoinPermissions = false;
                 watchSource.JoinPermissions = false;
@@ -95,59 +100,84 @@ namespace contentapi.Services.Implementations
 
                 try
                 {
-                    t = services.timer.StartTimer($"[{rid}] comment pull"); 
-                    var comments = await commentSource.GroupAsync<EntityRelation, long>(
-                        await commentSource.GetBaseQuery(new CommentSearch() { ParentIds = baseIds }), g=>g.relation, commentSource.PermIdSelector);
-                    services.timer.EndTimer(t);
+                    Dictionary<long, SimpleAggregateData> comments = null;
+                    Dictionary<long, SimpleAggregateData> watches = null;
+                    Dictionary<string, Dictionary<long, SimpleAggregateData>> votes = null;
+                    List<WatchView> userWatching = null;
+                    List<VoteView> userVotes = null;
 
-                    t = services.timer.StartTimer($"[{rid}] watch pull (both)"); 
-
-                    //This requires intimate knowledge of how watches work. it's increasing the complexity/dependency,
-                    //but at least... I don't know, it's way more performant. Come up with some system perhaps after
-                    //you see what you need in other instances.
-                    var watches = await watchSource.GroupAsync<EntityRelation, long>(
-                        await watchSource.SearchIds(new WatchSearch() { ContentIds = baseIds }), watchSource.PermIdSelector);
-
-                    var watchSearch = new WatchSearch();
-                    watchSearch.UserIds.Add(requester.userId);
-                    watchSearch.ContentIds.AddRange(baseIds);
-                    var userWatching = await watchSource.SimpleSearchAsync(watchSearch);
-
-                    services.timer.EndTimer(t);
-
-                    //THIS could be an intensive query! Make sure you check the CPU usage!
-                    t = services.timer.StartTimer($"[{rid}] vote pull"); 
-                    var voteSearch = new VoteSearch();
-                    voteSearch.UserIds.Add(requester.userId);
-                    voteSearch.ContentIds.AddRange(baseIds);
-                    var userVotes = await voteSource.SimpleSearchAsync(voteSearch);
-                    services.timer.EndTimer(t);
-
-                    t = services.timer.StartTimer($"[{rid}] vote aggregate"); 
-                    var votes = new Dictionary<string, Dictionary<long, SimpleAggregateData>>();
-                    foreach (var voteWeight in Votes.VoteWeights)
+                    if(desired.Any(x => x.StartsWith("comment")))
                     {
-                        votes.Add(voteWeight.Key, await voteSource.GroupAsync<EntityRelation, long>(
-                            await voteSource.SearchIds(new VoteSearch() { ContentIds = baseIds, Vote = voteWeight.Key }), voteSource.PermIdSelector)); //x => x.entityId2));
+                        t = services.timer.StartTimer($"[{rid}] comment pull");
+                        comments = await commentSource.GroupAsync<EntityRelation, long>(
+                            await commentSource.GetBaseQuery(new CommentSearch() { ParentIds = baseIds }), g => g.relation, commentSource.PermIdSelector);
+                        services.timer.EndTimer(t);
                     }
-                    services.timer.EndTimer(t);
+
+                    if(desired.Any(x => x.StartsWith("watch")))
+                    {
+                        t = services.timer.StartTimer($"[{rid}] watch pull (both)");
+
+                        //This requires intimate knowledge of how watches work. it's increasing the complexity/dependency,
+                        //but at least... I don't know, it's way more performant. Come up with some system perhaps after
+                        //you see what you need in other instances.
+                        watches = await watchSource.GroupAsync<EntityRelation, long>(
+                            await watchSource.SearchIds(new WatchSearch() { ContentIds = baseIds }), watchSource.PermIdSelector);
+
+                        var watchSearch = new WatchSearch();
+                        watchSearch.UserIds.Add(requester.userId);
+                        watchSearch.ContentIds.AddRange(baseIds);
+                        userWatching = await watchSource.SimpleSearchAsync(watchSearch);
+
+                        services.timer.EndTimer(t);
+                    }
+
+                    if(desired.Any(x => x.StartsWith("watch")))
+                    {
+                        //THIS could be an intensive query! Make sure you check the CPU usage!
+                        t = services.timer.StartTimer($"[{rid}] vote pull");
+                        var voteSearch = new VoteSearch();
+                        voteSearch.UserIds.Add(requester.userId);
+                        voteSearch.ContentIds.AddRange(baseIds);
+                        userVotes = await voteSource.SimpleSearchAsync(voteSearch);
+                        services.timer.EndTimer(t);
+
+                        t = services.timer.StartTimer($"[{rid}] vote aggregate");
+                        votes = new Dictionary<string, Dictionary<long, SimpleAggregateData>>();
+                        foreach (var voteWeight in Votes.VoteWeights)
+                        {
+                            votes.Add(voteWeight.Key, await voteSource.GroupAsync<EntityRelation, long>(
+                                await voteSource.SearchIds(new VoteSearch() { ContentIds = baseIds, Vote = voteWeight.Key }), voteSource.PermIdSelector)); //x => x.entityId2));
+                        }
+                        services.timer.EndTimer(t);
+                    }
 
                     baseResult.ForEach(x =>
                     {
-                        if (watches.ContainsKey(x.id))
-                            x.about.watches = watches[x.id];
-                        if (comments.ContainsKey(x.id))
-                            x.about.comments = comments[x.id];
-
-                        x.about.watching = userWatching.Any(y => y.contentId == x.id);
-                        x.about.myVote = userVotes.FirstOrDefault(y => y.contentId == x.id)?.vote;
-
-                        foreach (var voteWeight in Votes.VoteWeights)
+                        if(watches != null)
                         {
-                            x.about.votes.Add(voteWeight.Key, new SimpleAggregateData());
+                            if (watches.ContainsKey(x.id))
+                                x.about.watches = watches[x.id];
+                            x.about.watching = userWatching.Any(y => y.contentId == x.id);
+                        }
 
-                            if (votes[voteWeight.Key].ContainsKey(x.id))
-                                x.about.votes[voteWeight.Key] = votes[voteWeight.Key][x.id];
+                        if(comments != null)
+                        {
+                            if (comments.ContainsKey(x.id))
+                                x.about.comments = comments[x.id];
+                        }
+
+                        if(votes != null)
+                        {
+                            x.about.myVote = userVotes.FirstOrDefault(y => y.contentId == x.id)?.vote;
+
+                            foreach (var voteWeight in Votes.VoteWeights)
+                            {
+                                x.about.votes.Add(voteWeight.Key, new SimpleAggregateData());
+
+                                if (votes[voteWeight.Key].ContainsKey(x.id))
+                                    x.about.votes[voteWeight.Key] = votes[voteWeight.Key][x.id];
+                            }
                         }
                     });
                 }
@@ -158,7 +188,7 @@ namespace contentapi.Services.Implementations
                     voteSource.JoinPermissions = true;
                 }
             }
-            else if(!search.IncludeAbout)
+            else
             {
                 //Eventually, about is going away anyway
                 baseResult.ForEach(x =>
