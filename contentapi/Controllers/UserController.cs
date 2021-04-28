@@ -78,6 +78,17 @@ namespace contentapi.Controllers
             });
         }
 
+        [HttpGet("history")]
+        public Task<ActionResult<IList<UserView>>> GetHistoryAsync()
+        {
+            return ThrowToAction<IList<UserView>>(async () =>
+            {
+                var requester = GetRequesterNoFail();
+                var historicUsers = await service.GetRevisions(requester.userId, requester);
+                return historicUsers.Select(x => mapper.Map<UserView>(x)).ToList();
+            });
+        }
+
         [HttpGet("me")]
         [Authorize]
         public Task<ActionResult<UserView>> Me()
@@ -388,7 +399,7 @@ namespace contentapi.Controllers
                 var beginning = DateTime.Now - config.NameChangeRange;
 
                 //Need historic users 
-                var historicUsers = await service.GetRevisions(fullUser.id, requester);
+                var historicUsers = (await service.GetRevisions(fullUser.id, requester)).Where(x => x.editDate > beginning);
                 var usernames = historicUsers.Select(x => x.username).Append(fullUser.username).Append(change.username).Distinct();
 
                 if(usernames.Count() > config.NameChangesPerTime)
