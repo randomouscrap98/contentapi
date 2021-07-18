@@ -61,6 +61,8 @@ namespace contentapi.Services.Constants
         public const string AvatarKey = "sa";
         public const string UserSpecialKey = "sus";
         public const string UserHideKey ="suh";
+        public const string ReadonlyKeyKey = "sro";
+        public const string BucketKey = "sbu";
 
 
         public const string ModuleDescriptionKey = "md";

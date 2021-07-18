@@ -5,6 +5,7 @@ using System.IO;
 using System.Threading;
 using System.Threading.Tasks;
 using contentapi.Services;
+using contentapi.Services.Extensions;
 using contentapi.Services.Implementations;
 using contentapi.Views;
 using Microsoft.AspNetCore.Authorization;
@@ -30,8 +31,6 @@ namespace contentapi.Controllers
         protected FileViewService service;
         protected ILanguageService docService;
 
-        //protected ConcurrentDictionary<long, object> filelocks = new ConcurrentDictionary<long, object>();
-        //protected readonly object fileLock = new object();
         protected readonly SemaphoreSlim filelock = new SemaphoreSlim(1, 1);
 
         public FileController(BaseSimpleControllerServices services, FileControllerConfig config,
@@ -81,7 +80,8 @@ namespace contentapi.Controllers
 
         [HttpPost]
         [Authorize]
-        public Task<ActionResult<FileView>> UploadFile(IFormFile file = null, List<IFormFile> files = null, [FromQuery]bool tryresize = true)
+        public Task<ActionResult<FileView>> UploadFile(IFormFile file = null, List<IFormFile> files = null, 
+            [FromQuery]bool tryresize = true, [FromQuery]string bucket = null)
         {
             return ThrowToAction(async ()=>
             {
@@ -99,7 +99,7 @@ namespace contentapi.Controllers
                 
                 var requester = GetRequesterNoFail();
                 
-                var newView = new FileView();
+                var newView = new FileView() { bucket = bucket };
                 newView.permissions[0] = "R";
 
                 IImageFormat format = null;
@@ -218,7 +218,11 @@ namespace contentapi.Controllers
             }
             else
             {
-                fileData = await service.FindByIdAsync(id, requester);
+                fileData = (await service.SearchAsync(new FileSearch() { 
+                    Ids = new List<long>() { id },
+                    SearchAllBuckets = true 
+                }, requester)).OnlySingle(); 
+                //FindByIdAsync(id, requester);
             }
 
             if(fileData == null)
@@ -274,10 +278,7 @@ namespace contentapi.Controllers
 
                             using (var stream = System.IO.File.OpenWrite(finalPath))
                             {
-                                //if(modify.freeze && isGif)
-                                //    image.SaveAsPng(stream);
-                                //else
-                                    image.Save(stream, format);
+                                image.Save(stream, format);
                             }
                         }
                     });

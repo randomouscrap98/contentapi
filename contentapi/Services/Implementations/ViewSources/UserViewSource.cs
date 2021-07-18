@@ -3,6 +3,7 @@ using System.Collections.Generic;
 using System.Linq;
 using AutoMapper;
 using contentapi.Services.Constants;
+using contentapi.Services.Extensions;
 using contentapi.Views;
 using Microsoft.Extensions.Logging;
 using Randomous.EntitySystem;
@@ -72,38 +73,30 @@ namespace contentapi.Services.Implementations
             return result;
         }
 
-        public void SetGenericValue(EntityPackage package, string key, string value)
-        {
-            if(package.HasValue(key))
-                package.GetValue(key).value = value;
-            else
-                package.Add(NewValue(key, value));
-        }
-
         public void SetAvatar(EntityPackage package, UserViewFull user)
         {
-            SetGenericValue(package, Keys.AvatarKey, user.avatar.ToString());
+            package.SetGenericValue(Keys.AvatarKey, user.avatar.ToString());
         }
 
         public void SetSpecial(EntityPackage package, UserViewFull user)
         {                
-            SetGenericValue(package, Keys.UserSpecialKey, user.special);
+            package.SetGenericValue(Keys.UserSpecialKey, user.special);
         }
 
         public void SetEmail(EntityPackage package, UserViewFull user)
         {                
-            SetGenericValue(package, Keys.EmailKey, user.email);
+            package.SetGenericValue(Keys.EmailKey, user.email);
         }
 
         public void SetPassword(EntityPackage package, UserViewFull user)
         {                
-            SetGenericValue(package, Keys.PasswordSaltKey, user.salt);
-            SetGenericValue(package, Keys.PasswordHashKey, user.password);
+            package.SetGenericValue(Keys.PasswordSaltKey, user.salt);
+            package.SetGenericValue(Keys.PasswordHashKey, user.password);
         }
 
         public void SetHidelist(EntityPackage package, UserViewFull user)
         {
-            SetGenericValue(package, Keys.UserHideKey, string.Join(",", user.hidelist));
+            package.SetGenericValue(Keys.UserHideKey, string.Join(",", user.hidelist));
         }
 
         public override EntityPackage FromView(UserViewFull user)

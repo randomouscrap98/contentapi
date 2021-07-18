@@ -1,5 +1,6 @@
 using System.Collections.Generic;
 using Randomous.EntitySystem;
+using Randomous.EntitySystem.Extensions;
 
 namespace contentapi.Services.Extensions
 {
@@ -43,5 +44,23 @@ namespace contentapi.Services.Extensions
             FlattenPackage(package, result);
             return result;
         }
+
+        public static void SetGenericValue(this EntityPackage package, string key, string value)
+        {
+            if(package.HasValue(key))
+            {
+                package.GetValue(key).value = value;
+            }
+            else
+            {
+                package.Add(new EntityValue() 
+                {
+                    key = key, 
+                    value = value, 
+                    createDate = null 
+                });
+            }
+        }
+
     }
 }

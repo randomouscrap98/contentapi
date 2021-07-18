@@ -8,8 +8,11 @@ namespace contentapi.Views
         [MaxLength(128)]
         public string name {get;set;}
 
-        //This is ignored if changed by the user.
+        public string bucket {get;set;}
+
+        //These are ignored if changed by the user.
         public string fileType {get;set;}
+        //public string readonlyKey {get;set;}
 
         protected override bool EqualsSelf(object obj)
         {
