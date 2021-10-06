@@ -103,6 +103,7 @@ namespace contentapi.Services.Implementations
             {
                 //NO permissions check! All modules are readable!
                 baseResult = await converter.SimpleSearchAsync(search);
+                baseResult.ForEach(x => x.subcommands = moduleService.ParseAllSubcommands(moduleService.GetModule(x.name)));
                 cache.StoreItem(key, baseResult);
             }
 

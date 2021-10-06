@@ -29,22 +29,6 @@ namespace contentapi.Services.Implementations
 
     public delegate void ModuleMessageAdder (ModuleMessageView view);
 
-    /// <summary>
-    /// Describes a module command argument, parsed out of the argument list defined in the lua script
-    /// </summary>
-    public class ModuleArgumentInfo
-    {
-        public string name {get;set;}
-        public string type {get;set;}
-    }
-
-    public class ModuleSubcommandInfo
-    {
-        public List<ModuleArgumentInfo> Arguments {get;set;} = null; //new List<ModuleArgumentInfo>();
-        public string Description {get;set;}
-        public string FunctionName {get;set;}
-    }
-
 
     public class ModuleService : IModuleService
     {
@@ -252,8 +236,7 @@ namespace contentapi.Services.Implementations
         {
             var subcommands = module.script.Globals.Get(config.SubcommandVariable)?.Table;
 
-            //There is a subcommand variable, which means we may need to parse the input and call
-            //a different function than the default!
+            //No point continuing if there's no subcommands
             if (subcommands == null)
                 return null;
 
@@ -393,43 +376,45 @@ namespace contentapi.Services.Implementations
 
             arglist = arglist?.Trim();
 
-            lock(moduleLocks.GetOrAdd(module, s => new object()))
+            //By DEFAULT, we call the default function with whatever is leftover in the arglist
+            var cmdfuncname = config.DefaultFunction;
+            List<object> scriptArgs = new List<object> { requester.userId }; //Args always includes the calling user first
+
+            //Can only check for subcommands if there's an argument list!
+            if(arglist != null)
             {
-                //By DEFAULT, we call the default function with whatever is leftover in the arglist
-                var cmdfuncname = config.DefaultFunction;
-                List<object> scriptArgs = new List<object> { requester.userId }; //Args always includes the calling user first
+                var match = Regex.Match(arglist, @"^\s*(\w+)\s*(.*)$");
 
-                //Can only check for subcommands if there's an argument list!
-                if(arglist != null)
+                //NOTE: Subcommand currently case sensitive!
+                if(match.Success) 
                 {
-                    var match = Regex.Match(arglist, @"^\s*(\w+)\s*(.*)$");
+                    var subcommandInfo = ParseSubcommandInfo(mod, match.Groups[1].Value);
 
-                    //NOTE: Subcommand currently case sensitive!
-                    if(match.Success) 
+                    //There is a defined subcommand, which means we may need to parse the input and call
+                    //a different function than the default!
+                    if (subcommandInfo != null)
                     {
-                        var subcommandInfo = ParseSubcommandInfo(mod, match.Groups[1].Value);
+                        arglist = match.Groups[2].Value.Trim();
+                        cmdfuncname = subcommandInfo.FunctionName;
 
-                        //There is a defined subcommand, which means we may need to parse the input and call
-                        //a different function than the default!
-                        if (subcommandInfo != null)
-                        {
-                            arglist = match.Groups[2].Value.Trim();
-                            cmdfuncname = subcommandInfo.FunctionName;
-
-                            //Arguments were defined! From this point on, we're being VERY strict with parsing! This could throw exceptions!
-                            if (subcommandInfo.Arguments != null)
-                                ParseArgs(subcommandInfo, arglist, scriptArgs);
-                        }
+                        //Arguments were defined! From this point on, we're being VERY strict with parsing! This could throw exceptions!
+                        if (subcommandInfo.Arguments != null)
+                            ParseArgs(subcommandInfo, arglist, scriptArgs);
                     }
                 }
+            }
 
-                if(!mod.script.Globals.Keys.Any(x => x.String == cmdfuncname))
-                    throw new BadRequestException($"Command function '{cmdfuncname}' not found in module {module}");
+            if(!mod.script.Globals.Keys.Any(x => x.String == cmdfuncname))
+                throw new BadRequestException($"Command function '{cmdfuncname}' not found in module {module}");
 
-                //Oops, didn't fill up the arglist with anything! Careful, this is dangerous!
-                if(scriptArgs.Count == 1)
-                    scriptArgs.Add(arglist);
+            //Oops, didn't fill up the arglist with anything! Careful, this is dangerous!
+            if(scriptArgs.Count == 1)
+                scriptArgs.Add(arglist);
 
+            //We lock so nobody else can run commands while we're running them. This guarantees thread safety 
+            //within the modules so they don't have to worry about it.
+            lock(moduleLocks.GetOrAdd(module, s => new object()))
+            {
                 using(mod.dataConnection = new SqliteConnection(config.ModuleDataConnectionString))
                 {
                     mod.dataConnection.Open();

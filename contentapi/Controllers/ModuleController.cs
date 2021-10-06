@@ -50,6 +50,12 @@ namespace contentapi.Controllers
             });
         }
 
+        //[HttpGet("help")]
+        //public Task<ActionResult<Dictionary<string, Dictionary<string, ModuleSubcommandInfo>>>> GetHelp()
+        //{
+
+        //}
+
         /// <summary>
         /// Allows you to POST either a new or updated module. The module service determines whether you have permission or not
         /// </summary>

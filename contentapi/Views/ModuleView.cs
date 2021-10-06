@@ -1,28 +1,11 @@
 using System;
 using System.Collections.Generic;
 using System.ComponentModel.DataAnnotations;
-using System.Linq;
+using contentapi.Services;
 using contentapi.Services.Extensions;
 
 namespace contentapi.Views
 {
-    ///// <summary>
-    ///// A description of a module subcommand, which helps the module system 
-    ///// do automation. All subcommand definitions are optional.
-    ///// </summary>
-    //public class ModuleSubcommand : CompareBase
-    //{
-    //    public string function {get;set;}
-    //    public string description {get;set;}
-    //    public List<string> args {get;set;}
-
-    //    protected override bool EqualsSelf(object obj)
-    //    {
-    //        var o = (ModuleSubcommand)obj;
-    //        return base.EqualsSelf(obj) && args.SequenceEqual(o.args);
-    //    }
-    //}
-
     public class ModuleView : BaseView, IEditView, IValueView
     {
         [Required]
@@ -41,8 +24,9 @@ namespace contentapi.Views
 
         public Dictionary<string, string> values { get ; set ; } = new Dictionary<string, string>();
 
-        //Note: subcommands just have to go in the lua script itself, it's too much work to get this into the database
-        //public Dictionary<string, ModuleSubcommand> subcommands {get;set;} = new Dictionary<string, ModuleSubcommand>();
+        //Note: subcommands just have to go in the lua script itself, it's too much work to get this into the database. However,
+        //they are added in for module get (as in, you don't have to add those values in POST)
+        public Dictionary<string, ModuleSubcommandInfo> subcommands {get;set;}
 
         protected override bool EqualsSelf(object obj)
         {
