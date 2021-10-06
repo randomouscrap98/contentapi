@@ -87,7 +87,7 @@ namespace contentapi.test
         [Fact]
         public void SubcommandFunction()
         {
-            //The subcommands variable exists but is the wrong type, the module system shouldn't care
+            //The subcommands variable exists but has no argument list; we should still be able to redefine the function
             var modview = new ModuleView() { name = "test", code = @"
                 subcommands = {[""wow""]={[""function""]=""lolwut""} }
                 function lolwut(uid, data)

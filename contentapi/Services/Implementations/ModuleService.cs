@@ -24,9 +24,27 @@ namespace contentapi.Services.Implementations
         public string DefaultSubcommandPrepend {get;set;} = "command_";
         public string SubcommandFunctionKey {get;set;} = "function";
         public string ArgumentsKey {get;set;} = "arguments";
+        public string DescriptionKey {get;set;} = "description";
     }
 
     public delegate void ModuleMessageAdder (ModuleMessageView view);
+
+    /// <summary>
+    /// Describes a module command argument, parsed out of the argument list defined in the lua script
+    /// </summary>
+    public class ModuleArgumentInfo
+    {
+        public string name {get;set;}
+        public string type {get;set;}
+    }
+
+    public class ModuleSubcommandInfo
+    {
+        public List<ModuleArgumentInfo> Arguments {get;set;} = null; //new List<ModuleArgumentInfo>();
+        public string Description {get;set;}
+        public string FunctionName {get;set;}
+    }
+
 
     public class ModuleService : IModuleService
     {
@@ -184,46 +202,103 @@ namespace contentapi.Services.Implementations
         }
 
         /// <summary>
-        /// Describes a module command argument, parsed out of the argument list defined in the lua script
-        /// </summary>
-        public class ModuleArgumentInfo
-        {
-            public string name {get;set;}
-            public string type {get;set;}
-        }
-
-        /// <summary>
-        /// Using the given subcommand, retrieve the parsed argument information (NOT the values, just what the argument 'is')
+        /// Using the given subcommand, retrieve the parsed subcommand information (such as arguments. NOT the values, just what the argument 'is')
         /// </summary>
         /// <param name="subcommand"></param>
         /// <returns></returns>
-        public List<ModuleArgumentInfo> GetArgumentInfo(Table subcommand) //, string arglist) //, List<object> existingArgs)
+        public ModuleSubcommandInfo ParseSubcommandInfo(Table subcommand)
         {
-            //Do nothing, there are no args
-            if(!(subcommand != null && subcommand.Keys.Any(x => x.String == config.ArgumentsKey)))
+            if(subcommand == null)
                 return null;
-            
+
+            var result = new ModuleSubcommandInfo()
+            {
+                Arguments = new List<ModuleArgumentInfo>(),
+                Description = subcommand.Get(config.DescriptionKey)?.String,
+                FunctionName = subcommand.Get(config.SubcommandFunctionKey)?.String
+            };
+
             //Find the args
             var subcmdargs = subcommand.Get(config.ArgumentsKey).Table;
             
-            if(subcmdargs == null)
+            //Now we can REALLY parse the args!
+            if(subcmdargs != null)
+            {
+                foreach (var arg in subcmdargs.Values.Select(x => x.String))
+                {
+                    if (string.IsNullOrWhiteSpace(arg))
+                        throw new InvalidOperationException("Argument specifier was the wrong type! It needs to be a string!");
+
+                    var argparts = arg.Split("_".ToCharArray(), StringSplitOptions.RemoveEmptyEntries);
+
+                    if (argparts.Length != 2)
+                        throw new InvalidOperationException("Argument specifier not in the right format! name_type");
+
+                    //Remember: all we're doing is figuring out the information available from the argument list
+                    result.Arguments.Add(new ModuleArgumentInfo() { name = argparts[0], type = argparts[1] });
+                }
+            }
+
+            return result;
+        }
+
+        /// <summary>
+        /// Parse a single subcommand from a loaded module
+        /// </summary>
+        /// <param name="module"></param>
+        /// <param name="subkey"></param>
+        /// <returns></returns>
+        public ModuleSubcommandInfo ParseSubcommandInfo(LoadedModule module, string subkey)
+        {
+            var subcommands = module.script.Globals.Get(config.SubcommandVariable)?.Table;
+
+            //There is a subcommand variable, which means we may need to parse the input and call
+            //a different function than the default!
+            if (subcommands == null)
                 return null;
 
-            //Now we can REALLY parse the args!
-            var result = new List<ModuleArgumentInfo>();
+            var table = subcommands.Get(subkey)?.Table;
 
-            foreach(var arg in subcmdargs.Values.Select(x => x.String))
+            if(table == null)
             {
-                if(string.IsNullOrWhiteSpace(arg))
-                    throw new InvalidOperationException("Argument specifier was the wrong type! It needs to be a string!");
+                logger.LogWarning($"Key {subkey} in subcommands table didn't map to a value!");
+                return null;
+            }
 
-                var argparts = arg.Split("_".ToCharArray(), StringSplitOptions.RemoveEmptyEntries);
+            //This is interesting, because we want to return SOME module info if there was a valid subkey...
+            var subcommand = ParseSubcommandInfo(table) ?? new ModuleSubcommandInfo();
+            subcommand.FunctionName ??= config.DefaultSubcommandPrepend + subkey;
 
-                if(argparts.Length != 2)
-                    throw new InvalidOperationException("Argument specifier not in the right format! name_type");
+            return subcommand;
+        }
 
-                //Remember: all we're doing is figuring out the information available from the argument list
-                result.Add(new ModuleArgumentInfo() { name = argparts[0], type = argparts[1]});
+        /// <summary>
+        /// Retrieve a pre-parsed list of all subcommands for the given module
+        /// </summary>
+        /// <param name="module"></param>
+        /// <returns></returns>
+        public Dictionary<string, ModuleSubcommandInfo> ParseAllSubcommands(LoadedModule module)
+        {
+            var subcommands = module.script.Globals.Get(config.SubcommandVariable)?.Table;
+
+            //There is a subcommand variable, which means we may need to parse the input and call
+            //a different function than the default!
+            if (subcommands == null)
+                return null;
+            
+            var result = new Dictionary<string, ModuleSubcommandInfo>();
+
+            foreach(var key in subcommands.Keys)
+            {
+                var subname = key.String;
+
+                if(subname == null)
+                {
+                    logger.LogWarning($"Key {key} in subcommands table wasn't string value!");
+                    continue;
+                }
+
+                result.Add(subname, ParseSubcommandInfo(module, subname));
             }
 
             return result;
@@ -235,11 +310,11 @@ namespace contentapi.Services.Implementations
         /// <param name="argumentInfos"></param>
         /// <param name="arglist"></param>
         /// <param name="existingArgs"></param>
-        public void ParseArgs(List<ModuleArgumentInfo> argumentInfos, string arglist, List<object> existingArgs)
+        public void ParseArgs(ModuleSubcommandInfo subcommandInfo, string arglist, List<object> existingArgs)
         {
             var forcedFinal = false;
 
-            foreach(var argInfo in argumentInfos)
+            foreach(var argInfo in subcommandInfo.Arguments)
             {
                 //forcedFinal is specifically for "freeform" arguments, which MUST come at the end! It just 
                 //eats up the rest of the input
@@ -300,6 +375,15 @@ namespace contentapi.Services.Implementations
             }
         }
 
+        /// <summary>
+        /// Run the given argument list (as taken directly from a request) with the given module for the given requester. Parses the arglist, 
+        /// finds the module, runs the command and returns the output. Things like sending messages to other users is also performed, but
+        /// against the database and in the background  
+        /// </summary>
+        /// <param name="module"></param>
+        /// <param name="arglist"></param>
+        /// <param name="requester"></param>
+        /// <returns></returns>
         public string RunCommand(string module, string arglist, Requester requester)
         {
             LoadedModule mod = null;
@@ -315,47 +399,27 @@ namespace contentapi.Services.Implementations
                 var cmdfuncname = config.DefaultFunction;
                 List<object> scriptArgs = new List<object> { requester.userId }; //Args always includes the calling user first
 
-                //This will NOT be null if there is a subcommands variable that is a table
-                var subcommands = mod.script.Globals.Get(config.SubcommandVariable)?.Table;
-
-                //There is a subcommand variable, which means we may need to parse the input and call
-                //a different function than the default!
-                if (subcommands != null)
+                //Can only check for subcommands if there's an argument list!
+                if(arglist != null)
                 {
-                    string subarg = "";
+                    var match = Regex.Match(arglist, @"^\s*(\w+)\s*(.*)$");
 
-                    //Can only check for subcommands if there's an argument list!
-                    if(arglist != null)
+                    //NOTE: Subcommand currently case sensitive!
+                    if(match.Success) 
                     {
-                        var match = Regex.Match(arglist, @"^\s*(\w+)\s*(.*)$");
+                        var subcommandInfo = ParseSubcommandInfo(mod, match.Groups[1].Value);
 
-                        //NOTE: Subcommand currently case sensitive!
-                        //First, try to match the first word against the array. If this
-                        //works, this should ALWAYS be our first go. If this DOESN'T work, we
-                        //fall back to the empty subarg, which is our defined default.
-                        if(match.Success && subcommands.Keys.Any(x => x.String == match.Groups[1].Value))
+                        //There is a defined subcommand, which means we may need to parse the input and call
+                        //a different function than the default!
+                        if (subcommandInfo != null)
                         {
-                            //It's OK to modify arglist because we know we're in the clear
-                            subarg = match.Groups[1].Value;
                             arglist = match.Groups[2].Value.Trim();
+                            cmdfuncname = subcommandInfo.FunctionName;
+
+                            //Arguments were defined! From this point on, we're being VERY strict with parsing! This could throw exceptions!
+                            if (subcommandInfo.Arguments != null)
+                                ParseArgs(subcommandInfo, arglist, scriptArgs);
                         }
-                    }
-
-                    var subcommand = subcommands.Get(subarg)?.Table;
-
-                    //Ah, SOMETHING finally matched all the way! Go all in on calling this subcommand
-                    if(subcommand != null)
-                    {
-                        //The command is either defined in the subcommand definition, or we use the default.
-                        cmdfuncname = subcommand.Get(config.SubcommandFunctionKey)?.String ??
-                            config.DefaultSubcommandPrepend + subarg;
-
-                        //Now see if we're parsing arguments on behalf of the lua script, or if we're just dumping the whole line in
-                        var argInfos = GetArgumentInfo(subcommand);
-
-                        //Arguments were defined! From this point on, we're being VERY strict with parsing! This could throw exceptions!
-                        if(argInfos != null)
-                            ParseArgs(argInfos, arglist, scriptArgs);
                     }
                 }
 
