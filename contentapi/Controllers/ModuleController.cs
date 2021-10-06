@@ -81,7 +81,7 @@ namespace contentapi.Controllers
         }
 
         /// <summary>
-        /// POST command data to a module. Assume all the arguments have been split already; modules work on arguments!
+        /// POST command data to a module. The arguments need not be parsed; just the full argument list as given (including subcommand)
         /// </summary>
         /// <param name="name"></param>
         /// <param name="command"></param>

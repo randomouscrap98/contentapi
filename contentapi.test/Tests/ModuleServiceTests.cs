@@ -115,6 +115,21 @@ namespace contentapi.test
         }
 
         [Fact]
+        public void EmptySubcommandKey()
+        {
+            //The subcommands variable exists but is the wrong type, the module system shouldn't care
+            var modview = new ModuleView() { name = "test", code = @"
+                subcommands = {[""""]={[""arguments""]={""first_word"",""second_word""}} }
+                function command_(uid, word1, word2)
+                    return ""Id: "" .. uid .. "" Word1: "" .. word1 .. "" Word2: "" .. word2
+                end" 
+            };
+            var mod = service.UpdateModule(modview);
+            var result = service.RunCommand("test", "whatever stop", new Requester() {userId = 99});
+            Assert.Equal("Id: 99 Word1: whatever Word2: stop", result);
+        }
+
+        [Fact]
         public void SubcommandArguments_User()
         {
             //The subcommands variable exists but is the wrong type, the module system shouldn't care

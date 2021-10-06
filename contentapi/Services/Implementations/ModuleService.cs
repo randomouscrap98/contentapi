@@ -391,13 +391,21 @@ namespace contentapi.Services.Implementations
                 //NOTE: Subcommand currently case sensitive!
                 if(match.Success) 
                 {
+                    var newArglist = match.Groups[2].Value.Trim();
                     var subcommandInfo = ParseSubcommandInfo(mod, match.Groups[1].Value);
+
+                    //Special re-check: sometimes, we can have commands that have NO subcommand name, or the "blank" subcommand. Try that one.
+                    if(subcommandInfo == null)
+                    {
+                        newArglist = arglist; //undo the parsing
+                        subcommandInfo = ParseSubcommandInfo(mod, "");
+                    }
 
                     //There is a defined subcommand, which means we may need to parse the input and call
                     //a different function than the default!
                     if (subcommandInfo != null)
                     {
-                        arglist = match.Groups[2].Value.Trim();
+                        arglist = newArglist;
                         cmdfuncname = subcommandInfo.FunctionName;
 
                         //Arguments were defined! From this point on, we're being VERY strict with parsing! This could throw exceptions!
