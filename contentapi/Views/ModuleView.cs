@@ -27,6 +27,7 @@ namespace contentapi.Views
         //Note: subcommands just have to go in the lua script itself, it's too much work to get this into the database. However,
         //they are added in for module get (as in, you don't have to add those values in POST)
         public Dictionary<string, ModuleSubcommandInfo> subcommands {get;set;}
+        public bool Loaded {get;set;}
 
         protected override bool EqualsSelf(object obj)
         {

@@ -262,6 +262,9 @@ namespace contentapi.Services.Implementations
         /// <returns></returns>
         public Dictionary<string, ModuleSubcommandInfo> ParseAllSubcommands(LoadedModule module)
         {
+            if(module == null)
+                return null;
+
             var subcommands = module.script.Globals.Get(config.SubcommandVariable)?.Table;
 
             //There is a subcommand variable, which means we may need to parse the input and call
