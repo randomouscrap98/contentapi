@@ -158,7 +158,7 @@ namespace contentapi.Services.Implementations
             mod.script.Globals["getvaluenum"] = getValueNum;
             mod.script.Globals["prntdbg"] = new Action<string>((m) => 
             {
-                mod.debug.Enqueue($"[{mod.currentUser}:{mod.currentFunction}|{string.Join(",", mod.currentArgs)}] {m}");
+                mod.debug.Enqueue($"[{mod.currentUser}:{mod.currentFunction}|{string.Join(",", mod.currentArgs)}] {m} ({DateTime.Now})");
 
                 while(mod.debug.Count > config.MaxDebugSize)
                     mod.debug.Dequeue();
@@ -350,7 +350,7 @@ namespace contentapi.Services.Implementations
 
                     //An argument of a given type must ALWAYS be a pure match.
                     if(!match.Success)
-                        throw new InvalidOperationException($"Parse error in argument '{argInfo.name}', not of type '{argInfo.type}'");
+                        throw new BadRequestException($"Parse error in argument '{argInfo.name}', not of type '{argInfo.type}'");
                     
                     //Get rid of the argument from the remaining arglist
                     arglist = regex.Replace(arglist, "");
@@ -362,7 +362,7 @@ namespace contentapi.Services.Implementations
                     }
                     catch(Exception ex)
                     {
-                        throw new InvalidOperationException($"{ex.Message} (Parse error in argument '{argInfo.name}' of type '{argInfo.type}')", ex);
+                        throw new BadRequestException($"{ex.Message} (Parse error in argument '{argInfo.name}' of type '{argInfo.type}')", ex);
                     }
                 };
 
@@ -376,7 +376,7 @@ namespace contentapi.Services.Implementations
                             //Yes this is BLOCKING, this entire module system is blocking because lua/etc
                             var users = userSource.SimpleSearchAsync(new UserSearch() { Ids = new List<long>{uid}}).Result;
                             if(!users.Any(x => x.id == uid))
-                                throw new InvalidOperationException($"User not found: {uid}");
+                                throw new BadRequestException($"User not found: {uid}");
                             existingArgs.Add(uid);
                         });
                         break;

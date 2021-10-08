@@ -166,7 +166,7 @@ namespace contentapi.test
 
         [Theory]
         [InlineData(0, "Moments ago")]
-        [InlineData(30.4, "30 seconds ago")]
+        [InlineData(30, "30 seconds ago")]
         [InlineData(90, "1 minute ago")]
         [InlineData(601, "10 minutes ago")]
         [InlineData(7000, "1 hour ago")] //this is special, as it's close to 2 hours. We expect it (currently) to round down
@@ -246,7 +246,7 @@ namespace contentapi.test
 
             Assert.Equal(allmessages.Length, mod.debug.Count);
             for(int i = 0; i < allmessages.Length; i++)
-                Assert.Equal($"[8:default|{allmessages[i]}] Logging here!", mod.debug.ElementAt(i));
+                Assert.Equal($"[8:default|{allmessages[i]}] Logging here!", mod.debug.ElementAt(i).Substring(0, mod.debug.ElementAt(i).IndexOf("(") - 1));
         }
 
         [Fact]
