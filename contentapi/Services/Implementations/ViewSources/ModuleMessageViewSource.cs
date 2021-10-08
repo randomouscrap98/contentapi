@@ -7,7 +7,6 @@ using System.Threading.Tasks;
 using AutoMapper;
 using contentapi.Services.Constants;
 using contentapi.Views;
-using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.Logging;
 using Randomous.EntitySystem;
 

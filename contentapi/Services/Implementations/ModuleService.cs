@@ -125,7 +125,7 @@ namespace contentapi.Services.Implementations
                 using (var reader = command.ExecuteReader())
                 {
                     while (reader.Read())
-                        result[reader.GetString(0)] = reader.GetString(1);
+                        result[reader.GetString(0)] = reader.IsDBNull(1) ? null : reader.GetString(1);
                 }
                 return result;
             });
@@ -142,9 +142,16 @@ namespace contentapi.Services.Implementations
             mod.script.Globals["setdata"] = new Action<string, string>((k,v) =>
             {
                 var command = mod.dataConnection.CreateCommand();
-                command.CommandText = $"INSERT OR REPLACE INTO {module.name} (key, value) values($key, $value)";
+                var vtext = "$value";
+
                 command.Parameters.AddWithValue("$key", k);
-                command.Parameters.AddWithValue("$value", v);
+
+                if(v != null)
+                    command.Parameters.AddWithValue("$value", v);
+                else
+                    vtext = "NULL";
+
+                command.CommandText = $"INSERT OR REPLACE INTO {module.name} (key, value) values($key, {vtext})";
                 command.ExecuteNonQuery();
             });
             mod.script.Globals["getvalue"] = getValue;
@@ -166,6 +173,31 @@ namespace contentapi.Services.Implementations
                     module = module.name,
                     createDate = DateTime.Now
                 });
+            });
+
+            var pluralize = new Func<int, string, string>((i, s) => s + (i == 1 ? "" : "s"));
+            var agoize = new Func<double, string, string>((d,s) => (int)d + " " + pluralize((int)d, s) + " ago");
+
+            mod.script.Globals["pluralize"] = pluralize;
+            mod.script.Globals["gettimestamp"] = new Func<string>(() => DateTime.Now.ToString());
+            mod.script.Globals["timesincetimestamp"] = new Func<string, string>((t) =>
+            {
+                TimeSpan diff = DateTime.Now - Convert.ToDateTime(t);
+
+                if(diff.TotalSeconds < 10)
+                    return "Moments ago";
+                else if(diff.TotalSeconds < 60)
+                    return agoize(diff.TotalSeconds, "second");
+                else if(diff.TotalMinutes < 60)
+                    return agoize(diff.TotalMinutes, "minute");
+                else if(diff.TotalHours < 24)
+                    return agoize(diff.TotalHours, "hour");
+                else if(diff.TotalDays < 30)
+                    return agoize(diff.TotalDays, "day");
+                else if(diff.TotalDays < 365)
+                    return agoize(diff.TotalDays / 30, "month");
+                else
+                    return agoize(diff.TotalDays / 365, "year");
             });
 
             SetupDatabaseForModule(module.name);
@@ -347,6 +379,10 @@ namespace contentapi.Services.Implementations
                                 throw new InvalidOperationException($"User not found: {uid}");
                             existingArgs.Add(uid);
                         });
+                        break;
+                    case "int":
+                        // This will throw an exception on error, not telling the user much
+                        genericMatch(@"^([0-9]+)(\([^\s]+\))?", m => { existingArgs.Add(long.Parse(m.Groups[1].Value)); });
                         break;
                     case "word":
                         genericMatch(@"^([^\s]+)", m => { existingArgs.Add(m.Groups[1].Value); });

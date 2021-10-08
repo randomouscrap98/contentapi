@@ -1,3 +1,4 @@
+using System;
 using System.Collections.Generic;
 using System.Linq;
 using contentapi.Services.Implementations;
@@ -161,6 +162,91 @@ namespace contentapi.test
             var mod = service.UpdateModule(modview);
             var result = service.RunCommand("test", "wow 1(somebody) kills a lot of people", new Requester() {userId = 8});
             Assert.Equal("Id: 8 User: 1 Word: kills Freeform: a lot of people", result);
+        }
+
+        [Theory]
+        [InlineData(0, "Moments ago")]
+        [InlineData(30.4, "30 seconds ago")]
+        [InlineData(90, "1 minute ago")]
+        [InlineData(601, "10 minutes ago")]
+        [InlineData(7000, "1 hour ago")] //this is special, as it's close to 2 hours. We expect it (currently) to round down
+        [InlineData(19000, "5 hours ago")] 
+        [InlineData(3600 * 24 + 5, "1 day ago")] 
+        [InlineData(3600 * 24 * 7 + 50, "7 days ago")] //Assume we don't have weeks
+        [InlineData(3600 * 24 * 32 + 50, "1 month ago")] //Assume months are at least 30 days
+        [InlineData(3600 * 24 * 31 * 11 + 50, "11 months ago")] 
+        [InlineData(3600 * 24 * 365 * 8 + 50, "8 years ago")]  //Ah boy, years
+        public void TimeSinceTimestamp(double subtractSeconds, string expected)
+        {
+            //The subcommands variable exists but is the wrong type, the module system shouldn't care
+            var modview = new ModuleView() { name = "test", code = @"
+                function default(uid, time)
+                    return timesincetimestamp(time)
+                end" 
+            };
+            userService.WriteAsync(new UserViewFull() { username = "dude1"}, new Requester() { system = true }).Wait();
+            var mod = service.UpdateModule(modview);
+            var result = service.RunCommand("test", DateTime.Now.Subtract(TimeSpan.FromSeconds(subtractSeconds)).ToString(), new Requester() {userId = 8});
+            Assert.Equal(expected, result);
+        }
+
+        [Theory]
+        [InlineData("abc")]
+        [InlineData("Some random string")]
+        [InlineData("")]
+        [InlineData(null)]
+        public void SetGetData_Arbitrary(string data)
+        {
+            //The subcommands variable exists but is the wrong type, the module system shouldn't care
+            var modview = new ModuleView() { name = "test", code = @"
+                function default(uid, data)
+                    setdata(""key"", data)
+                    return getdata(""key"")
+                end" 
+            };
+            userService.WriteAsync(new UserViewFull() { username = "dude1"}, new Requester() { system = true }).Wait();
+            var mod = service.UpdateModule(modview);
+            var result = service.RunCommand("test", data, new Requester() {userId = 8});
+            Assert.Equal(data, result);
+        }
+
+        [Theory]
+        [InlineData("word", "abc", "string")]
+        [InlineData("word", "123", "string")]
+        [InlineData("int", "123", "number")]
+        public void ArgTyping(string type, string data, string expected)
+        {
+            //The subcommands variable exists but is the wrong type, the module system shouldn't care
+            var modview = new ModuleView() { name = "test", code = @"
+                subcommands = {[""wow""]={[""arguments""]={""first_" + type + @"""}} }
+                function command_wow(uid, data)
+                    return type(data)
+                end" 
+            };
+            userService.WriteAsync(new UserViewFull() { username = "dude1"}, new Requester() { system = true }).Wait();
+            var mod = service.UpdateModule(modview);
+            var result = service.RunCommand("test", "wow " + data, new Requester() {userId = 8});
+            Assert.Equal(expected, result);
+        }
+
+        [Theory]
+        [InlineData("First test")]
+        [InlineData("Second test", "Another line")]
+        [InlineData("", "And then!!", "OMG SO MUCH LOGGING")]
+        public void PrntDbg(params string[] allmessages)
+        {
+            var modview = new ModuleView() { name = "test", code = @"
+                function default(uid, data)
+                    prntdbg(""Logging here!"")
+                end" 
+            };
+            var mod = service.UpdateModule(modview);
+            foreach(var message in allmessages)
+                service.RunCommand("test", message, new Requester() {userId = 8});
+
+            Assert.Equal(allmessages.Length, mod.debug.Count);
+            for(int i = 0; i < allmessages.Length; i++)
+                Assert.Equal($"[8:default|{allmessages[i]}] Logging here!", mod.debug.ElementAt(i));
         }
 
         [Fact]
