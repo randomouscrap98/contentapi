@@ -201,6 +201,8 @@ namespace contentapi.Services.Implementations
             });
 
             SetupDatabaseForModule(module.name);
+            mod.subcommands = ParseAllSubcommands(mod) ?? new Dictionary<string, ModuleSubcommandInfo>();
+            
             UpdateLoadedModule(module.name, mod);
 
             return mod;
@@ -408,9 +410,9 @@ namespace contentapi.Services.Implementations
         /// <returns></returns>
         public string RunCommand(string module, string arglist, Requester requester)
         {
-            LoadedModule mod = null;
+            LoadedModule mod = GetModule(module);
 
-            if(!loadedModules.TryGetValue(module, out mod))
+            if(mod == null)
                 throw new BadRequestException($"No module with name {module}");
 
             arglist = arglist?.Trim();
@@ -428,18 +430,20 @@ namespace contentapi.Services.Implementations
                 if(match.Success) 
                 {
                     var newArglist = match.Groups[2].Value.Trim();
-                    var subcommandInfo = ParseSubcommandInfo(mod, match.Groups[1].Value);
+                    ModuleSubcommandInfo subcommandInfo = null;
+                    mod.subcommands.TryGetValue(match.Groups[1].Value, out subcommandInfo); //ParseSubcommandInfo(mod, match.Groups[1].Value);
 
                     //Special re-check: sometimes, we can have commands that have NO subcommand name, or the "blank" subcommand. Try that one.
-                    if(subcommandInfo == null)
+                    if(subcommandInfo == null) //subcommandExists == true)
                     {
                         newArglist = arglist; //undo the parsing
-                        subcommandInfo = ParseSubcommandInfo(mod, "");
+                        mod.subcommands.TryGetValue("", out subcommandInfo);
+                        //subcommandInfo = ParseSubcommandInfo(mod, "");
                     }
 
                     //There is a defined subcommand, which means we may need to parse the input and call
                     //a different function than the default!
-                    if (subcommandInfo != null)
+                    if (subcommandInfo != null) //subcommandExists == true) //subcommandInfo != null)
                     {
                         arglist = newArglist;
                         cmdfuncname = subcommandInfo.FunctionName;

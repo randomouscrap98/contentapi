@@ -11,6 +11,7 @@ namespace contentapi.Services
     public class LoadedModule
     {
         public Script script {get;set;}
+        public Dictionary<string, ModuleSubcommandInfo> subcommands {get;set;}
         public Queue<string> debug {get;set;} = new Queue<string>();
 
         public string currentFunction = "";

@@ -45,7 +45,16 @@ namespace contentapi.Services.Implementations
         {
             var modules = await SearchAsync(new ModuleSearch(), new Requester() { system = true });
             foreach(var module in modules)
-                moduleService.UpdateModule(module, false);
+            {
+                try
+                {
+                    moduleService.UpdateModule(module, false);
+                }
+                catch
+                {
+                    logger.LogCritical($"Couldn't load module {module.name} during ModuleView setup! This is a critical error that must be addressed!");
+                }
+            }
         }
 
         /// <summary>
@@ -107,7 +116,7 @@ namespace contentapi.Services.Implementations
                 {
                     var mod = moduleService.GetModule(m.name);
                     m.Loaded = mod != null;
-                    m.subcommands = moduleService.ParseAllSubcommands(mod);
+                    m.subcommands = mod?.subcommands; //moduleService.ParseAllSubcommands(mod);
                 }
                 cache.StoreItem(key, baseResult);
             }
