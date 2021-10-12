@@ -236,5 +236,28 @@ namespace contentapi.test
             }
         }
 
+        [Fact]
+        public void NoCommentsInModuleResults()
+        {
+            //First, add a comment to common room
+            var comment = commentService.WriteAsync(new CommentView() { createUserId = unit.commonUser.id, parentId = unit.commonContent.id, content = "this is the comment"},
+                commonRequester).Result;
+
+            Assert.True(comment.id > 0);
+
+            //Next, search for that particular comment in the module system
+            var messages = service.SearchAsync(new UnifiedModuleMessageViewSearch() { Ids = new List<long>() { comment.id }}, commonRequester).Result;
+            Assert.Empty(messages);
+
+            //Now, search for the comment. This should cache it?
+            var comments = commentService.SearchAsync(new CommentSearch(){Ids = new List<long>() {comment.id}}, commonRequester).Result;
+            Assert.Single(comments);
+            Assert.Equal(comment, comments.First());
+
+            //Now, search the modules again. There should be NO module messages!!
+            messages = service.SearchAsync(new UnifiedModuleMessageViewSearch() { Ids = new List<long>() { comment.id }}, commonRequester).Result;
+            Assert.Empty(messages);
+        }
+
     }
 }

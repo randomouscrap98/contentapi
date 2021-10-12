@@ -205,6 +205,8 @@ namespace contentapi.Services.Implementations
                     return agoize(diff.TotalDays / 365, "year");
             });
 
+            mod.script.Globals["getbroadcastid"] = new Func<long>(() => mod.currentParentId);
+
             SetupDatabaseForModule(module.name);
             mod.subcommands = ParseAllSubcommands(mod) ?? new Dictionary<string, ModuleSubcommandInfo>();
             

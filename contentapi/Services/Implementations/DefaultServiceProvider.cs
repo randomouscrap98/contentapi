@@ -3,6 +3,7 @@ using contentapi.Configs;
 using contentapi.Services.Constants;
 using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.DependencyInjection;
+using Microsoft.Extensions.Logging;
 using Microsoft.Extensions.Options;
 
 namespace contentapi.Services.Implementations
@@ -41,6 +42,7 @@ namespace contentapi.Services.Implementations
             //TODO: eventually, make this configurable? But how, not all the cache will be good!
             services.AddSingleton<CacheServiceConfig>();
             services.AddSingleton(typeof(CacheService<,>));
+            services.AddSingleton<SpecialModuleCacheService>();
 
             services.AddTransient<BaseViewSourceServices>();
 
@@ -56,6 +58,15 @@ namespace contentapi.Services.Implementations
             services.AddTransient<ModuleViewService>();
             services.AddTransient<ModuleMessageViewService>();
             services.AddTransient<ModuleRoomMessageViewService>();
+            //services.AddTransient<ModuleRoomMessageViewService>((p) => 
+            //{
+            //    return new ModuleRoomMessageViewService(
+            //        p.GetService<ViewServicePack>(), 
+            //        p.GetService<ILogger<CommentViewService>>(), 
+            //        p.GetService<ModuleRoomMessageViewSource>(),
+            //        p.GetSer
+            //    );
+            //});
             services.AddTransient<UnifiedModuleMessageViewService>();
 
             //Special services

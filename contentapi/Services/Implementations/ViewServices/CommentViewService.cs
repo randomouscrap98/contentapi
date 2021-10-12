@@ -86,7 +86,7 @@ namespace contentapi.Services.Implementations
             //Have to go find existing.
             var existing = await provider.FindRelationByIdAsync(id);
 
-            if (existing == null || !existing.type.StartsWith(Keys.CommentHack) || existing.entityId2 == 0)
+            if (existing == null || !existing.type.StartsWith(converter.EntityType) || existing.entityId2 == 0)
                 throw new NotFoundException($"Couldn't find comment with id {id}");
 
             return existing;
