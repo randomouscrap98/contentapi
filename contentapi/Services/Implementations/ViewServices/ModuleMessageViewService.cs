@@ -20,6 +20,11 @@ namespace contentapi.Services.Implementations
             this.singlecache = singlecache;
         }
 
+        public void SetUsersInMessage(ModuleMessageView view)
+        {
+            moduleMessageSource.SetUsersInMessage(view);
+        }
+
         public override async Task<List<ModuleMessageView>> PreparedSearchAsync(ModuleMessageViewSearch search, Requester requester)
         {
             List<ModuleMessageView> result = null;

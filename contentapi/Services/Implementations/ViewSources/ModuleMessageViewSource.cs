@@ -41,6 +41,11 @@ namespace contentapi.Services.Implementations
         public ModuleMessageViewSource(ILogger<ModuleMessageViewSource> logger, BaseViewSourceServices services)
             : base(logger, services) {}
 
+        public void SetUsersInMessage(ModuleMessageView view)
+        {
+            view.usersInMessage = userMatch.Matches(view.message).Select(x => long.Parse(x.Groups[1].Value)).ToList();
+        }
+
         public override ModuleMessageView ToView(EntityRelation relation)
         {
             var view = new ModuleMessageView();
@@ -50,10 +55,11 @@ namespace contentapi.Services.Implementations
             //NOTE: A patch for older module messages, or if someone accidentally sends to "0" uid
             if(view.receiveUserId == 0) view.receiveUserId = view.sendUserId;
             view.message = relation.value;
-            view.usersInMessage = userMatch.Matches(view.message).Select(x => long.Parse(x.Groups[1].Value)).ToList(); //x.Value.Trim("%".ToCharArray()))).ToList();
             view.module = relation.type.Substring(EntityType.Length);
+            SetUsersInMessage(view);
             return view;
         }
+
 
         public override EntityRelation FromView(ModuleMessageView view)
         {

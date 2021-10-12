@@ -176,6 +176,30 @@ namespace contentapi.test
             entity = service.CanUserDoOnParent(unit.specialContent.id, Services.Constants.Keys.ReadAction, specialRequester).Result;
         }
 
+        [Fact]
+        public void UsersInUserMessage()
+        {
+            //Send a self message
+            var baseMessage = GetUserMessage(unit.commonUser.id, unit.commonUser.id);
+            baseMessage.message = "%47% is %9%'s nothing";
+            var result = service.AddMessageAsync(baseMessage, commonRequester).Result;
+            var messages = service.SearchAsync(new UnifiedModuleMessageViewSearch(), commonRequester).Result;
+            Assert.Single(messages);
+            Assert.True(messages.First().usersInMessage.SequenceEqual(new[]{47L, 9L}));
+        }
+
+        [Fact]
+        public void UsersInRoomMessage()
+        {
+            //Send a self message
+            var baseMessage = GetRoomMessage(unit.commonContent.id, unit.commonUser.id);
+            baseMessage.message = "And %47% is %9%'s nothing";
+            var result = service.AddMessageAsync(baseMessage, commonRequester).Result;
+            var messages = service.SearchAsync(new UnifiedModuleMessageViewSearch(), commonRequester).Result;
+            Assert.Single(messages);
+            Assert.True(messages.First().usersInMessage.SequenceEqual(new[]{47L, 9L}));
+        }
+
         [Theory]
         //0 = common USER, 1 = special USER, 2 = commonroom, 3 = specialroom
         [InlineData(false, 0, false, true)]     //user sends to self, should be able to read

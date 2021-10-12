@@ -90,7 +90,12 @@ namespace contentapi.Services.Implementations
             result.AddRange(uresult.Select(x => services.mapper.Map<UnifiedModuleMessageView>(x)));
 
             var rresult = await moduleRoomMessageService.SearchAsync(services.mapper.Map<CommentSearch>(search), requester);
-            result.AddRange(rresult.Select(x => services.mapper.Map<UnifiedModuleMessageView>(x)));
+            result.AddRange(rresult.Select(x => 
+            {   
+                var result = services.mapper.Map<UnifiedModuleMessageView>(x);
+                moduleMessageService.SetUsersInMessage(result);
+                return result;
+            }));
 
             return result;
         }

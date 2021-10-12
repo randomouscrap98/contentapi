@@ -180,12 +180,12 @@ namespace contentapi.test
             //The subcommands variable exists but is the wrong type, the module system shouldn't care
             var modview = new ModuleView() { name = "test", code = @"
                 function default(uid, time)
-                    return timesincetimestamp(time)
+                    return timesincetimestamp(tonumber(time))
                 end" 
             };
             userService.WriteAsync(new UserViewFull() { username = "dude1"}, new Requester() { system = true }).Wait();
             var mod = service.UpdateModule(modview);
-            var result = service.RunCommand("test", DateTime.Now.Subtract(TimeSpan.FromSeconds(subtractSeconds)).ToString(), new Requester() {userId = 8});
+            var result = service.RunCommand("test", DateTime.Now.Subtract(TimeSpan.FromSeconds(subtractSeconds)).Ticks.ToString(), new Requester() {userId = 8});
             Assert.Equal(expected, result);
         }
 

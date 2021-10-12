@@ -184,10 +184,10 @@ namespace contentapi.Services.Implementations
             var agoize = new Func<double, string, string>((d,s) => (int)d + " " + pluralize((int)d, s) + " ago");
 
             mod.script.Globals["pluralize"] = pluralize;
-            mod.script.Globals["gettimestamp"] = new Func<string>(() => DateTime.Now.ToString());
-            mod.script.Globals["timesincetimestamp"] = new Func<string, string>((t) =>
+            mod.script.Globals["gettimestamp"] = new Func<long>(() => DateTime.Now.Ticks);
+            mod.script.Globals["timesincetimestamp"] = new Func<long, string>((t) =>
             {
-                TimeSpan diff = DateTime.Now - Convert.ToDateTime(t);
+                TimeSpan diff = DateTime.Now - new DateTime(t);
 
                 if(diff.TotalSeconds < 10)
                     return "Moments ago";
