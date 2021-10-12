@@ -184,6 +184,7 @@ namespace contentapi.Services.Implementations
             var results = await provider.ListenAsync<EntityRelation>(listenId, (q) => 
                 q.Where(x => 
                     (x.type == Keys.CommentHack || 
+                     x.type == Keys.ModuleHack ||
                      x.type == Keys.WatchRelation && x.entityId1 == listenId.userId ||
                      (x.type == Keys.WatchUpdate ||
                       x.type == Keys.WatchDelete) && x.value.StartsWith($"{listenId.userId}_") ||
