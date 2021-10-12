@@ -19,7 +19,7 @@ namespace contentapi.test.Implementations
         public Dictionary<string, ModuleSubcommandInfo> ParseAllSubcommands(LoadedModule module) { return null; }
 
         public bool RemoveModule(string name) { return true; }
-        public string RunCommand(string module, string arglist, Requester requester) { return "Not implemented"; }
+        public string RunCommand(string module, string arglist, Requester requester, long parentId = 0) { return "Not implemented"; }
         public LoadedModule UpdateModule(ModuleView module, bool force) { return null; }
     }
 }

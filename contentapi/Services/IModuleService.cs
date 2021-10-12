@@ -16,7 +16,7 @@ namespace contentapi.Services
 
         public string currentFunction = "";
         public string currentArgs = "";
-        public long currentUser = 0;
+        public Requester currentRequester = null;
         public long currentParentId = 0;
         public SqliteConnection dataConnection = null;
     }
@@ -47,7 +47,7 @@ namespace contentapi.Services
         LoadedModule GetModule(string name);
         bool RemoveModule(string name) ;
 
-        string RunCommand(string module, string arglist, Requester requester) ;
+        string RunCommand(string module, string arglist, Requester requester, long parentId = 0) ;
 
         /// <summary>
         /// Discover all internal subcommands and associated info and parse it into a dictionary (based on lua code) 

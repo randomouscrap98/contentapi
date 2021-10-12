@@ -88,15 +88,15 @@ namespace contentapi.Controllers
         /// <param name="data"></param>
         /// <returns></returns>
         [Authorize]
-        [HttpPost("{name}")]
-        public Task<ActionResult<string>> RunCommand([FromRoute]string name, [FromBody]string arguments)
+        [HttpPost("{name}/{parentId}")]
+        public Task<ActionResult<string>> RunCommand([FromRoute]string name, [FromBody]string arguments, [FromRoute]long parentId)
         {
             return ThrowToAction(async () =>
             {
                 var requester = GetRequesterNoFail();
                 string result = null;
                 //RunCommand should be thread safe, so just... run it async!
-                await Task.Run(() => result = moduleService.RunCommand(name, arguments, requester));
+                await Task.Run(() => result = moduleService.RunCommand(name, arguments, requester, parentId));
                 return result;
             });
         }
@@ -108,7 +108,7 @@ namespace contentapi.Controllers
         /// <returns></returns>
         [Authorize]
         [HttpGet("messages")]
-        public Task<ActionResult<List<UnifiedModuleMessageView>>> GetMessagesAsync([FromQuery]ModuleMessageViewSearch search)
+        public Task<ActionResult<List<UnifiedModuleMessageView>>> GetMessagesAsync([FromQuery]UnifiedModuleMessageViewSearch search)
         {
             return ThrowToAction(() =>
             {

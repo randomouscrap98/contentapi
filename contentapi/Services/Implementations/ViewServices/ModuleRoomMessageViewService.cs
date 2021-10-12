@@ -10,7 +10,7 @@ namespace contentapi.Services.Implementations
         //WARN: uses the same cache as comments! if we get a lot of module room messages, they could push out the
         //comments, which are arguably more important!
         public ModuleRoomMessageViewService(ViewServicePack services, ILogger<CommentViewService> logger,
-            CommentViewSource converter, WatchViewSource watchSource, BanViewSource banSource, 
+            ModuleRoomMessageViewSource converter, WatchViewSource watchSource, BanViewSource banSource, 
             ContentViewSource contentSource, ICodeTimer timer, CacheService<long, CommentView> singlecache) : 
             base(services, logger, converter, watchSource, banSource, contentSource, timer, singlecache) {}
     }

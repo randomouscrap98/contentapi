@@ -62,14 +62,14 @@ namespace contentapi.Services.Implementations
             services.AddTransient<RelationListenerService>();
             services.AddTransient<ChainService>();
             services.AddSingleton<IModuleService, ModuleService>();
-            services.AddSingleton<ModuleMessageAdder>((p) => (m) =>
+            services.AddSingleton<ModuleMessageAdder>((p) => (m, r) =>
             {
                 //This is EXCEPTIONALLY inefficient: a new database context (not to mention other services)
                 //will need to be created EVERY TIME someone sends a module message. That is awful...
                 //I mean it's not MUCH worse IF the module is only sending a single message... eh, if you
                 //notice bad cpu usage, go fix this.
                 var creator = p.CreateScope().ServiceProvider.GetService<UnifiedModuleMessageViewService>();
-                creator.AddMessageAsync(m).Wait();
+                creator.AddMessageAsync(m, r).Wait();
             });
 
             services.AddTransient<ActivityViewSource>();

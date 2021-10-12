@@ -27,7 +27,7 @@ namespace contentapi.Services.Implementations
         public string DescriptionKey {get;set;} = "description";
     }
 
-    public delegate void ModuleMessageAdder (UnifiedModuleMessageView view);
+    public delegate void ModuleMessageAdder (UnifiedModuleMessageView view, Requester requester);
 
 
     public class ModuleService : IModuleService
@@ -134,13 +134,13 @@ namespace contentapi.Services.Implementations
             {
                 addMessage(new UnifiedModuleMessageView()
                 {
-                    sendUserId = mod.currentUser,
+                    sendUserId = mod.currentRequester.userId,
                     parentId = room,
                     receiveUserId = uid,
                     message = message,
                     module = module.name,
                     createDate = DateTime.Now
-                });
+                }, mod.currentRequester);
             });
 
             mod.script.Globals["getdata"] = new Func<string, string>((k) =>
@@ -171,7 +171,7 @@ namespace contentapi.Services.Implementations
             mod.script.Globals["getvaluenum"] = getValueNum;
             mod.script.Globals["prntdbg"] = new Action<string>((m) => 
             {
-                mod.debug.Enqueue($"[{mod.currentUser}:{mod.currentFunction}|{string.Join(",", mod.currentArgs)}] {m} ({DateTime.Now})");
+                mod.debug.Enqueue($"[{mod.currentRequester.userId}:{mod.currentFunction}|{string.Join(",", mod.currentArgs)}] {m} ({DateTime.Now})");
 
                 while(mod.debug.Count > config.MaxDebugSize)
                     mod.debug.Dequeue();
@@ -413,7 +413,7 @@ namespace contentapi.Services.Implementations
         /// <param name="arglist"></param>
         /// <param name="requester"></param>
         /// <returns></returns>
-        public string RunCommand(string module, string arglist, Requester requester)
+        public string RunCommand(string module, string arglist, Requester requester, long parentId = 0)
         {
             LoadedModule mod = GetModule(module);
 
@@ -474,8 +474,9 @@ namespace contentapi.Services.Implementations
                 using(mod.dataConnection = new SqliteConnection(config.ModuleDataConnectionString))
                 {
                     mod.dataConnection.Open();
-                    mod.currentUser = requester.userId;
+                    mod.currentRequester = requester;
                     mod.currentFunction = cmdfuncname;
+                    mod.currentParentId = parentId;
                     mod.currentArgs = arglist;
                     DynValue res = mod.script.Call(mod.script.Globals[cmdfuncname], scriptArgs.ToArray());
                     return res.String;
