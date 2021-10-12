@@ -2,7 +2,6 @@ using System.Collections.Generic;
 using System.Linq;
 using System.Threading.Tasks;
 using AutoMapper;
-using contentapi.Services.Extensions;
 using contentapi.Views;
 using Microsoft.Extensions.Logging;
 using Randomous.EntitySystem;
@@ -34,12 +33,6 @@ namespace contentapi.Services.Implementations
                 .ForMember(x => x.sendUserId, o => o.MapFrom(s => s.createUserId))
                 .ForMember(x => x.module, o => o.MapFrom(s => s.content.Substring(0, s.content.IndexOf(ModuleNameSplitChar))))
                 .ForMember(x => x.message, o => o.MapFrom(s => s.content.Substring(s.content.IndexOf(ModuleNameSplitChar) + ModuleNameSplitChar.Length)));
-                //.ForMember(x => x.parentId, o => o.MapFrom(s => s.parentId))
-                //.ReverseMap();
-
-            //Need maps for: 
-            // unifiedmodulemessageviewsearch to commentsearch (and back?),
-            // unifiedmodulemessageview to commentview (and back)
 
             //Probably don't need this transitive mapping:
             //CreateMap<A, C>()
@@ -51,7 +44,7 @@ namespace contentapi.Services.Implementations
         }
     }
 
-    public class UnifiedModuleMessageViewService : /*BaseViewServices<ModuleMessageView, ModuleMessageViewSearch>,*/ IViewReadService<UnifiedModuleMessageView, UnifiedModuleMessageViewSearch>
+    public class UnifiedModuleMessageViewService : IViewReadService<UnifiedModuleMessageView, UnifiedModuleMessageViewSearch>
     {
         protected ILogger logger;
         protected ViewServicePack services;
@@ -62,7 +55,6 @@ namespace contentapi.Services.Implementations
         public UnifiedModuleMessageViewService(ViewServicePack services, ILogger<UnifiedModuleMessageViewService> logger, 
             ModuleMessageViewSource moduleMessageSource, ModuleMessageViewService moduleMessageService,
             ModuleRoomMessageViewService moduleRoomMessageService)
-            //: base(services, logger) 
         { 
             this.logger = logger;
             this.services = services;
@@ -92,16 +84,15 @@ namespace contentapi.Services.Implementations
 
         public async Task<List<UnifiedModuleMessageView>> SearchAsync(UnifiedModuleMessageViewSearch search, Requester requester)
         {
-            if(search.ParentIds.Count == 0)
-            {
-                var result = await moduleMessageService.SearchAsync(search, requester);
-                return result.Select(x => services.mapper.Map<UnifiedModuleMessageView>(x)).ToList();
-            }
-            else
-            {
-                var result = await moduleRoomMessageService.SearchAsync(services.mapper.Map<CommentSearch>(search), requester);
-                return result.Select(x => services.mapper.Map<UnifiedModuleMessageView>(x)).ToList();
-            }
+            var result = new List<UnifiedModuleMessageView>();
+
+            var uresult = await moduleMessageService.SearchAsync(search, requester);
+            result.AddRange(uresult.Select(x => services.mapper.Map<UnifiedModuleMessageView>(x)));
+
+            var rresult = await moduleRoomMessageService.SearchAsync(services.mapper.Map<CommentSearch>(search), requester);
+            result.AddRange(rresult.Select(x => services.mapper.Map<UnifiedModuleMessageView>(x)));
+
+            return result;
         }
     }
 }

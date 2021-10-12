@@ -300,5 +300,25 @@ namespace contentapi.test
             Assert.Equal(requester.userId, messages.First().sendUserId);
         }
 
+        //[Fact]
+        //public void ReadRoomMessagesInstant()
+        //{
+        //    var modview = new ModuleView() { name = "test", code = @"
+        //        function default(uid, data)
+        //            broadcastmessage(""hey"")
+        //            broadcastmessage(uid + 1, ""hey NO"")
+        //        end" 
+        //    };
+        //    var requester = new Requester() { userId = 9 };
+        //    var mod = service.UpdateModule(modview);
+        //    var result = service.RunCommand("test", "whatever", requester, );
+        //    var messages = moduleMessageService.SearchAsync(new ModuleMessageViewSearch(), requester).Result; //service.ListenAsync(-1, requester, TimeSpan.FromSeconds(1), CancellationToken.None).Result;
+        //    Assert.Single(messages);
+        //    Assert.Equal("hey", messages.First().message);
+        //    Assert.Equal("test", messages.First().module);
+        //    Assert.Equal(requester.userId, messages.First().receiveUserId);
+        //    Assert.Equal(requester.userId, messages.First().sendUserId);
+        //}
+
     }
 }

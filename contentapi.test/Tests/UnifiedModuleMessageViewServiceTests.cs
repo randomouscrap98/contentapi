@@ -1,6 +1,7 @@
 using System;
 using System.Collections.Generic;
 using System.Linq;
+using System.Threading.Tasks;
 using AutoMapper;
 using contentapi.Services.Implementations;
 using contentapi.Views;
@@ -139,15 +140,40 @@ namespace contentapi.test
             var comments = commentService.SearchAsync(new CommentSearch(), commonRequester).Result;
             Assert.Empty(comments);
 
-            //This kind of search would be searching for users, and you should get nothing
-            var messages = service.SearchAsync(new UnifiedModuleMessageViewSearch() { ReceiverIds = new List<long>() { unit.commonUser.id }}, commonRequester).Result;
-            Assert.Empty(messages);
 
+            //This kind of search would be searching for users, and you should still get your room messages!
+            var messages = service.SearchAsync(new UnifiedModuleMessageViewSearch() { ReceiverIds = new List<long>() { unit.commonUser.id }}, commonRequester).Result;
+
+            var checkResult = new Action(() =>
+            {
+                Assert.Single(messages);
+                Assert.Equal(baseMessage.message, messages.First().message);
+                Assert.Equal(baseMessage.module, messages.First().module);
+                Assert.Equal(result.id, messages.First().id);
+            });
+            
+            checkResult();
+
+            //And this is by room, meaning you should still get it.
             messages = service.SearchAsync(new UnifiedModuleMessageViewSearch() { ParentIds = new List<long>() { unit.commonContent.id }}, commonRequester).Result;
-            Assert.Single(messages);
-            Assert.Equal(baseMessage.message, messages.First().message);
-            Assert.Equal(baseMessage.module, messages.First().module);
-            Assert.Equal(result.id, messages.First().id);
+            checkResult();
+
+            //And this is just all of them
+            messages = service.SearchAsync(new UnifiedModuleMessageViewSearch() { ParentIds = new List<long>() { unit.commonContent.id }}, commonRequester).Result;
+            checkResult();
+        }
+
+        [Fact]
+        public void BasicPermissions()
+        {
+            //Common SHOULD be able read common content
+            var entity = service.CanUserDoOnParent(unit.commonContent.id, Services.Constants.Keys.ReadAction, commonRequester).Result;
+
+            //Can't read special
+            Task check = service.CanUserDoOnParent(unit.specialContent.id, Services.Constants.Keys.ReadAction, commonRequester);
+            AssertWaitThrows<ForbiddenException>(check);
+
+            entity = service.CanUserDoOnParent(unit.specialContent.id, Services.Constants.Keys.ReadAction, specialRequester).Result;
         }
     }
 }
