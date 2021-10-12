@@ -17,6 +17,7 @@ namespace contentapi.Services
         public string currentFunction = "";
         public string currentArgs = "";
         public long currentUser = 0;
+        public long currentParentId = 0;
         public SqliteConnection dataConnection = null;
     }
 

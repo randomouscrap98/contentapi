@@ -13,9 +13,9 @@ namespace contentapi.Controllers
     {
         protected IModuleService moduleService;
         protected IPermissionService permissionService;
-        protected ModuleMessageViewService moduleMessageService;
+        protected UnifiedModuleMessageViewService moduleMessageService;
 
-        public ModuleController(BaseSimpleControllerServices services, ModuleViewService service, ModuleMessageViewService moduleMessageService,
+        public ModuleController(BaseSimpleControllerServices services, ModuleViewService service, UnifiedModuleMessageViewService moduleMessageService,
             IPermissionService permissionService, IModuleService moduleService)//UserViewService service, IPermissionService permissionService) 
             : base(services, service) 
         {
@@ -108,7 +108,7 @@ namespace contentapi.Controllers
         /// <returns></returns>
         [Authorize]
         [HttpGet("messages")]
-        public Task<ActionResult<List<ModuleMessageView>>> GetMessagesAsync([FromQuery]ModuleMessageViewSearch search)
+        public Task<ActionResult<List<UnifiedModuleMessageView>>> GetMessagesAsync([FromQuery]ModuleMessageViewSearch search)
         {
             return ThrowToAction(() =>
             {

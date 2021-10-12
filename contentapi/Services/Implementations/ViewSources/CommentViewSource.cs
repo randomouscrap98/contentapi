@@ -119,7 +119,7 @@ namespace contentapi.Services.Implementations
             }
         }
 
-        public async Task<List<EntityRelationPackage>> LinkAsync(List<EntityRelation> relations)
+        public virtual async Task<List<EntityRelationPackage>> LinkAsync(List<EntityRelation> relations)
         {
             if (relations.Count > 0)
             {

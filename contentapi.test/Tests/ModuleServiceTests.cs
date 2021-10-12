@@ -1,5 +1,4 @@
 using System;
-using System.Collections.Generic;
 using System.Linq;
 using contentapi.Services.Implementations;
 using contentapi.Views;
@@ -286,8 +285,8 @@ namespace contentapi.test
         {
             var modview = new ModuleView() { name = "test", code = @"
                 function default(uid, data)
-                    sendmessage(uid, ""hey"")
-                    sendmessage(uid + 1, ""hey NO"")
+                    usermessage(uid, ""hey"")
+                    usermessage(uid + 1, ""hey NO"")
                 end" 
             };
             var requester = new Requester() { userId = 9 };

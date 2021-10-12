@@ -1,5 +1,6 @@
 using System;
 using System.Collections.Generic;
+using AutoMapper;
 
 namespace contentapi.Views
 {
@@ -13,4 +14,10 @@ namespace contentapi.Views
         public long receiveUserId {get;set;} = -1;
         public long sendUserId {get;set;} = -1;
     }
+
+    public class UnifiedModuleMessageView: ModuleMessageView
+    {
+        public long parentId {get;set;} = 0;
+    }
+
 }

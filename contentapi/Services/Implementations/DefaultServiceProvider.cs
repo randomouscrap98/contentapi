@@ -55,6 +55,8 @@ namespace contentapi.Services.Implementations
             services.AddTransient<VoteViewService>();
             services.AddTransient<ModuleViewService>();
             services.AddTransient<ModuleMessageViewService>();
+            services.AddTransient<ModuleRoomMessageViewService>();
+            services.AddTransient<UnifiedModuleMessageViewService>();
 
             //Special services
             services.AddTransient<RelationListenerService>();
@@ -66,7 +68,7 @@ namespace contentapi.Services.Implementations
                 //will need to be created EVERY TIME someone sends a module message. That is awful...
                 //I mean it's not MUCH worse IF the module is only sending a single message... eh, if you
                 //notice bad cpu usage, go fix this.
-                var creator = p.CreateScope().ServiceProvider.GetService<ModuleMessageViewService>();
+                var creator = p.CreateScope().ServiceProvider.GetService<UnifiedModuleMessageViewService>();
                 creator.AddMessageAsync(m).Wait();
             });
 
@@ -80,6 +82,7 @@ namespace contentapi.Services.Implementations
             services.AddTransient<WatchViewSource>();
             services.AddTransient<VoteViewSource>();
             services.AddTransient<ModuleViewSource>();
+            services.AddTransient<ModuleRoomMessageViewSource>();
             services.AddTransient<ModuleMessageViewSource>();
 
             services.AddTransient((p) => new ChainServices()
@@ -94,7 +97,7 @@ namespace contentapi.Services.Implementations
                 vote = p.GetService<VoteViewService>(),
                 module = p.GetService<ModuleViewService>(),
                 ban = p.GetService<BanViewService>(),
-                modulemessage = p.GetService<ModuleMessageViewService>()
+                modulemessage = p.GetService<UnifiedModuleMessageViewService>()
             });
 
             //We need automapper for our view services

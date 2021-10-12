@@ -72,6 +72,7 @@ namespace contentapi.Services.Constants
         public const string CommentHack = "Zcc";
         public const string CommentHistoryHack ="Zcu";
         public const string CommentDeleteHack ="Zcd";
+        public const string ModuleHack ="Zmm";
 
 
         //Chaining?

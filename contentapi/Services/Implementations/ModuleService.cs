@@ -27,7 +27,7 @@ namespace contentapi.Services.Implementations
         public string DescriptionKey {get;set;} = "description";
     }
 
-    public delegate void ModuleMessageAdder (ModuleMessageView view);
+    public delegate void ModuleMessageAdder (UnifiedModuleMessageView view);
 
 
     public class ModuleService : IModuleService
@@ -129,6 +129,19 @@ namespace contentapi.Services.Implementations
                 }
                 return result;
             });
+            
+            var sendRawMessage = new Action<long, long, string>((uid, room, message) =>
+            {
+                addMessage(new UnifiedModuleMessageView()
+                {
+                    sendUserId = mod.currentUser,
+                    parentId = room,
+                    receiveUserId = uid,
+                    message = message,
+                    module = module.name,
+                    createDate = DateTime.Now
+                });
+            });
 
             mod.script.Globals["getdata"] = new Func<string, string>((k) =>
             {
@@ -163,17 +176,9 @@ namespace contentapi.Services.Implementations
                 while(mod.debug.Count > config.MaxDebugSize)
                     mod.debug.Dequeue();
             });
-            mod.script.Globals["sendmessage"] = new Action<long, string>((uid, message) =>
-            {
-                addMessage(new ModuleMessageView()
-                {
-                    sendUserId = mod.currentUser,
-                    receiveUserId = uid,
-                    message = message,
-                    module = module.name,
-                    createDate = DateTime.Now
-                });
-            });
+            mod.script.Globals["sendrawmessage"] = sendRawMessage;
+            mod.script.Globals["usermessage"] = new Action<long, string>((uid, message) => sendRawMessage(uid, 0, message));
+            mod.script.Globals["broadcastmessage"] = new Action<string>((message) => sendRawMessage(0, mod.currentParentId, message));
 
             var pluralize = new Func<int, string, string>((i, s) => s + (i == 1 ? "" : "s"));
             var agoize = new Func<double, string, string>((d,s) => (int)d + " " + pluralize((int)d, s) + " ago");

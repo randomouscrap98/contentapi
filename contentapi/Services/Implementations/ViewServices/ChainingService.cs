@@ -32,7 +32,7 @@ namespace contentapi.Services.Implementations
         public WatchViewService watch {get;set;}
         public VoteViewService vote {get;set;}
         public ModuleViewService module {get;set;}
-        public ModuleMessageViewService modulemessage {get;set;}
+        public UnifiedModuleMessageViewService modulemessage {get;set;}
         public BanViewService ban {get;set;}
     }
 

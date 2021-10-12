@@ -1,13 +1,9 @@
-using System;
-using System.Linq;
-using System.Threading;
 using contentapi.Configs;
 using contentapi.Services;
 using contentapi.Services.Implementations;
 using contentapi.test.Implementations;
 //using contentapi.test.Implementations;
 using contentapi.Views;
-using Microsoft.Data.Sqlite;
 using Microsoft.Extensions.DependencyInjection;
 using Xunit;
 

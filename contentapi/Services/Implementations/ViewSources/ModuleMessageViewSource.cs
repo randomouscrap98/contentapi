@@ -47,6 +47,8 @@ namespace contentapi.Services.Implementations
             this.ApplyToBaseView(relation, view);
             view.sendUserId = relation.entityId1;
             view.receiveUserId = -relation.entityId2;
+            //NOTE: A patch for older module messages, or if someone accidentally sends to "0" uid
+            if(view.receiveUserId == 0) view.receiveUserId = view.sendUserId;
             view.message = relation.value;
             view.usersInMessage = userMatch.Matches(view.message).Select(x => long.Parse(x.Groups[1].Value)).ToList(); //x.Value.Trim("%".ToCharArray()))).ToList();
             view.module = relation.type.Substring(EntityType.Length);
