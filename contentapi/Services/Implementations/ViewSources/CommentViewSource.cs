@@ -60,7 +60,7 @@ namespace contentapi.Services.Implementations
         {
             var relation = new EntityRelation();
             this.ApplyFromBaseView(view, relation);
-            relation.type = Keys.CommentHack;
+            relation.type = EntityType;
             relation.value = view.content;
             relation.entityId1 = view.parentId;
             relation.entityId2 = -view.createUserId;
