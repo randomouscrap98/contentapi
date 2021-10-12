@@ -1,5 +1,7 @@
+using System.Threading.Tasks;
 using contentapi.Views;
 using Microsoft.Extensions.Logging;
+using Randomous.EntitySystem;
 
 namespace contentapi.Services.Implementations
 {
@@ -13,6 +15,11 @@ namespace contentapi.Services.Implementations
             ModuleRoomMessageViewSource converter, WatchViewSource watchSource, BanViewSource banSource, 
             ContentViewSource contentSource, ICodeTimer timer, CacheService<long, CommentView> singlecache) : 
             base(services, logger, converter, watchSource, banSource, contentSource, timer, singlecache) {}
+
+        public Task<EntityPackage> CanUserDoOnParent(long parentId, string action, Requester requester)
+        {
+            return FullParentCheckAsync(parentId, action, requester);
+        }
     }
 
 }

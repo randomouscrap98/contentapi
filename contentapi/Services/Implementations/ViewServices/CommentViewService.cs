@@ -38,7 +38,7 @@ namespace contentapi.Services.Implementations
             this.singlecache = singlecache;
         }
 
-        protected async Task<EntityPackage> BasicParentCheckAsync(long parentId, Requester requester)
+        protected virtual async Task<EntityPackage> BasicParentCheckAsync(long parentId, Requester requester)
         {
             var parent = await provider.FindByIdAsync(parentId);
 

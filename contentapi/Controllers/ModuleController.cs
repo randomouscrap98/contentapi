@@ -94,6 +94,8 @@ namespace contentapi.Controllers
             return ThrowToAction(async () =>
             {
                 var requester = GetRequesterNoFail();
+                //The user MUST be able to create content in the given parent ID in order to run module commands there. 
+                await moduleMessageService.CanUserDoOnParent(parentId, Services.Constants.Keys.CreateAction, requester);
                 string result = null;
                 //RunCommand should be thread safe, so just... run it async!
                 await Task.Run(() => result = moduleService.RunCommand(name, arguments, requester, parentId));

@@ -34,11 +34,13 @@ namespace contentapi.Controllers
     {
         protected ILogger logger;
         protected UserValidationService userValidation;
+        protected BaseSimpleControllerServices services;
 
         public BaseSimpleController(BaseSimpleControllerServices services) //ILogger<BaseSimpleController> logger, UserValidationService userValidation)
         {
             this.logger = services.logger;
             this.userValidation = services.userValidation;
+            this.services = services;
         }
 
         protected virtual Task SetupAsync() { return Task.CompletedTask; } 

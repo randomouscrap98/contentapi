@@ -5,6 +5,7 @@ using AutoMapper;
 using contentapi.Services.Extensions;
 using contentapi.Views;
 using Microsoft.Extensions.Logging;
+using Randomous.EntitySystem;
 
 namespace contentapi.Services.Implementations
 {
@@ -15,10 +16,26 @@ namespace contentapi.Services.Implementations
 
     public class UnifiedModuleMessageViewServiceProfile : Profile
     {
+        public const string ModuleNameSplitChar = "|";
+
         public UnifiedModuleMessageViewServiceProfile()
         {
             CreateMap<ModuleMessageView, UnifiedModuleMessageView>().ReverseMap();
             CreateMap<UnifiedModuleMessageViewSearch, ModuleMessageViewSearch>().ReverseMap();
+
+            CreateMap<UnifiedModuleMessageViewSearch, CommentSearch>()
+                .ForMember(x => x.ContentLike, o => o.MapFrom(s => s.ModuleLike)) //Module messages that are comments start with the module name anyway, so this... might be safe?
+                .ReverseMap();
+
+            CreateMap<UnifiedModuleMessageView, CommentView>()
+                .ForMember(x => x.createUserId, o => o.MapFrom(s => s.sendUserId))
+                .ForMember(x => x.content, o => o.MapFrom(s => $"{s.module}{ModuleNameSplitChar}{s.message}"));
+            CreateMap<CommentView, UnifiedModuleMessageView>()
+                .ForMember(x => x.sendUserId, o => o.MapFrom(s => s.createUserId))
+                .ForMember(x => x.module, o => o.MapFrom(s => s.content.Substring(0, s.content.IndexOf(ModuleNameSplitChar))))
+                .ForMember(x => x.message, o => o.MapFrom(s => s.content.Substring(s.content.IndexOf(ModuleNameSplitChar) + ModuleNameSplitChar.Length)));
+                //.ForMember(x => x.parentId, o => o.MapFrom(s => s.parentId))
+                //.ReverseMap();
 
             //Need maps for: 
             // unifiedmodulemessageviewsearch to commentsearch (and back?),
@@ -66,6 +83,11 @@ namespace contentapi.Services.Implementations
             {
                 return services.mapper.Map<UnifiedModuleMessageView>(await moduleRoomMessageService.WriteAsync(services.mapper.Map<CommentView>(basic), requester));
             }
+        }
+
+        public Task<EntityPackage> CanUserDoOnParent(long parentId, string action, Requester requester)
+        {
+            return moduleRoomMessageService.CanUserDoOnParent(parentId, action, requester);
         }
 
         public async Task<List<UnifiedModuleMessageView>> SearchAsync(UnifiedModuleMessageViewSearch search, Requester requester)
