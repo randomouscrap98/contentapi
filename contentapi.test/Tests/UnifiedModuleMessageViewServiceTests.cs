@@ -175,5 +175,66 @@ namespace contentapi.test
 
             entity = service.CanUserDoOnParent(unit.specialContent.id, Services.Constants.Keys.ReadAction, specialRequester).Result;
         }
+
+        [Theory]
+        //0 = common USER, 1 = special USER, 2 = commonroom, 3 = specialroom
+        [InlineData(false, 0, false, true)]     //user sends to self, should be able to read
+        [InlineData(false, 1, false, false)]    //user sends to special, should NOT be able to read
+        [InlineData(false, 1, true, true)]      //user sends to special, THEY should be able to read
+        [InlineData(true, 1, true, true)]       //special sends to self, should be able to read
+        [InlineData(true, 0, true, false)]      //even if they're special, messages sent to common should not be readable
+        [InlineData(true, 0, false, true)]      //special user messages sent to common readable by common
+        [InlineData(false, 2, false, true, true)]       //Now for room stuff, common allowed to write to common
+        [InlineData(false, 3, false, false, false)]     //But common write should fail to special room
+        [InlineData(false, 2, true, true, true)]        //The special user should be able to get the broadcast message too
+        [InlineData(true, 2, true, true, true)]         //Special user writing to special room, can read and write
+        [InlineData(true, 3, true, true, true)]         //Special user writing to special room, can read and write
+        [InlineData(true, 3, false, false, true)]       //Special user writing to special room, common can't read (IMPORTANT!!!)
+        [InlineData(true, 2, false, true, true)]        //Special user writing to common room, common user can read
+        public void TestReadable(bool writeUserSpecial, int receiveUserSpecialBroadcast, bool readUserSpecial, bool allowed, bool writeAllowed = true)
+        {
+            var receiveUser = receiveUserSpecialBroadcast == 0 ? unit.commonUser : receiveUserSpecialBroadcast == 1 ? unit.specialUser : null;
+            var receiveRoom = receiveUserSpecialBroadcast == 2 ? unit.commonContent : receiveUserSpecialBroadcast == 3 ? unit.specialContent : null;
+            var writeUser = writeUserSpecial ? unit.specialUser : unit.commonUser;
+            var readUser = readUserSpecial ? unit.specialUser : unit.commonUser;
+            //var = service.AddMessageAsync(baseMessage, new Requester() { userId = writeUser.id } ).Result;
+            UnifiedModuleMessageView baseMessage = null;
+
+            if(receiveUser != null)
+                baseMessage = GetUserMessage(receiveUser.id, writeUser.id);// unit.commonContent.id, unit.commonUser.id);
+            else
+                baseMessage = GetRoomMessage(receiveRoom.id, writeUser.id);
+
+            //None of the add message routines should fail
+            UnifiedModuleMessageView result = null;
+
+            try
+            {
+                result = service.AddMessageAsync(baseMessage, new Requester() { userId = writeUser.id } ).Result;
+                Assert.True(writeAllowed);
+            }
+            catch(Exception ex)
+            {
+                Assert.False(writeAllowed);
+                Assert.True(ex is ForbiddenException || ex.InnerException is ForbiddenException);
+                return;
+            }
+        
+            //This shouldn't fail either, just the amount of stuff we get!
+            var messages = service.SearchAsync(new UnifiedModuleMessageViewSearch(), new Requester() { userId = readUser.id }).Result;
+
+            if(allowed)
+            {
+                Assert.Single(messages);
+                Assert.Equal(baseMessage.message, messages.First().message);
+                Assert.Equal(baseMessage.module, messages.First().module);
+                Assert.Equal(result.id, messages.First().id);
+            }
+            else
+            {
+                Assert.Empty(messages);
+            }
+        }
+
     }
 }

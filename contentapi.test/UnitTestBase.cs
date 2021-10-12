@@ -14,8 +14,7 @@ using Xunit;
 
 //[assembly: CollectionBehavior(MaxParallelThreads = 1)] //this broke EVERYTHING, it MIGHT set the threadpool for .NET ENTIRELY to 1!!!
 //[assembly: CollectionBehavior(DisableTestParallelization = true)]
-//[assembly: CollectionBehavior(DisableTestParallelization = true)]
-
+[assembly: CollectionBehavior(DisableTestParallelization = true)]
 namespace contentapi.test
 {
     [CollectionDefinition("ASYNC", DisableParallelization = true)]
