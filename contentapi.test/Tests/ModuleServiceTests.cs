@@ -180,12 +180,12 @@ namespace contentapi.test
             //The subcommands variable exists but is the wrong type, the module system shouldn't care
             var modview = new ModuleView() { name = "test", code = @"
                 function default(uid, time)
-                    return timesincetimestamp(tonumber(time))
+                    return timesincetimestamp(time)
                 end" 
             };
             userService.WriteAsync(new UserViewFull() { username = "dude1"}, new Requester() { system = true }).Wait();
             var mod = service.UpdateModule(modview);
-            var result = service.RunCommand("test", DateTime.Now.Subtract(TimeSpan.FromSeconds(subtractSeconds)).Ticks.ToString(), new Requester() {userId = 8});
+            var result = service.RunCommand("test", DateTime.Now.Subtract(TimeSpan.FromSeconds(subtractSeconds)).ToString(), new Requester() {userId = 8});
             Assert.Equal(expected, result);
         }
 
@@ -260,6 +260,50 @@ namespace contentapi.test
             var mod = service.UpdateModule(modview);
             var result = service.RunCommand("test", "whatever", new Requester() {userId = 8});
             Assert.Equal("something", result);
+        }
+
+        [Theory]
+        [InlineData("Just a regular string")]
+        [InlineData("But NOW, we have the dreaded /")]
+        [InlineData("// all day / baybe //")]
+        [InlineData("OK but then / yeah")]
+        [InlineData("You. Really/really?! Need == to !!! !/!/! ANCD091823 and then / \\ \" '' /' badstuff")]
+        [InlineData("😜😋 hahaha 16 bit nope 🤨🤙")]
+        [InlineData("t̵̡̧̲̥̘̀͗͐̂i̶̡̛̮̦̝̳̾̊͐̉̌͊̓͘͘͝m̵̬̔͂̾̌̽e̷̢̧͇̬̩͎͙̼͕̻̘̳͖͇̙̊̈̅͑̄͑̒̎̓̑͂͋͋͋͝ ̵̡̙̪̪̫̬̮͇͎̝̆̓̔̅̀t̶͎͊̒̄̍̓̾ǫ̶̳͚̝̺͔͔̘̦̤̤̩͕͓̈̉͋͋̓̔̃̐̕ͅ ̷̡̖̘͈̭̞͖̯̗̗̹͊̈́͆̽̉͝ͅf̶̨̛͓͓̦̘̖̟͇̦̩͔̰͇̆͂̊́̓͗͜r̶̨̘̹̻͚̰͈̘͔̲͙̂͛̔̊̅̔̈́̂͌̔̾͠ͅͅy̶̢̡̥̜̠̗͍͔̓")]
+        public void Base64Transparent(string test)
+        {
+            var modview = new ModuleView() { name = "test", code = @"
+                function default(uid, data)
+                    return b64decode(b64encode(data))
+                end" 
+            };
+            var mod = service.UpdateModule(modview);
+            var result = service.RunCommand("test", test, new Requester() {userId = 8});
+            Assert.Equal(test, result);
+        }
+
+        [Theory]
+        [InlineData("Just a regular string")]
+        [InlineData("But NOW, we have the dreaded /")]
+        [InlineData("// all day / baybe //")]
+        [InlineData("OK but then / yeah")]
+        [InlineData("You. Really/really?! Need == to !!! !/!/! ANCD091823 and then / \\ \" '' /' badstuff")]
+        [InlineData("😜😋 hahaha 16 bit nope 🤨🤙")]
+        [InlineData("t̵̡̧̲̥̘̀͗͐̂i̶̡̛̮̦̝̳̾̊͐̉̌͊̓͘͘͝m̵̬̔͂̾̌̽e̷̢̧͇̬̩͎͙̼͕̻̘̳͖͇̙̊̈̅͑̄͑̒̎̓̑͂͋͋͋͝ ̵̡̙̪̪̫̬̮͇͎̝̆̓̔̅̀t̶͎͊̒̄̍̓̾ǫ̶̳͚̝̺͔͔̘̦̤̤̩͕͓̈̉͋͋̓̔̃̐̕ͅ ̷̡̖̘͈̭̞͖̯̗̗̹͊̈́͆̽̉͝ͅf̶̨̛͓͓̦̘̖̟͇̦̩͔̰͇̆͂̊́̓͗͜r̶̨̘̹̻͚̰͈̘͔̲͙̂͛̔̊̅̔̈́̂͌̔̾͠ͅͅy̶̢̡̥̜̠̗͍͔̓")]
+        public void Base64JsonTransparent(string test)
+        {
+            var modview = new ModuleView() { name = "test", code = @"
+                function default(uid, data)
+                    local tbl = { [""thing""] = data }
+                    tbl.thing = b64encode(tbl.thing)
+                    local serial = json.serialize(tbl)
+                    local tbl2 = json.parse(serial)
+                    return b64decode(tbl2.thing)
+                end" 
+            };
+            var mod = service.UpdateModule(modview);
+            var result = service.RunCommand("test", test, new Requester() {userId = 8});
+            Assert.Equal(test, result);
         }
 
         [Fact]

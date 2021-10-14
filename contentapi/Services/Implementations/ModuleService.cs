@@ -9,6 +9,8 @@ using contentapi.Services.Extensions;
 using Microsoft.Data.Sqlite;
 using Microsoft.Extensions.Logging;
 using MoonSharp.Interpreter;
+using Newtonsoft.Json;
+using MoonSharp.Interpreter.Serialization;
 
 namespace contentapi.Services.Implementations
 {
@@ -184,10 +186,10 @@ namespace contentapi.Services.Implementations
             var agoize = new Func<double, string, string>((d,s) => (int)d + " " + pluralize((int)d, s) + " ago");
 
             mod.script.Globals["pluralize"] = pluralize;
-            mod.script.Globals["gettimestamp"] = new Func<long>(() => DateTime.Now.Ticks);
-            mod.script.Globals["timesincetimestamp"] = new Func<long, string>((t) =>
+            mod.script.Globals["gettimestamp"] = new Func<string>(() => DateTime.Now.ToString());
+            mod.script.Globals["timesincetimestamp"] = new Func<string, string>((t) =>
             {
-                TimeSpan diff = DateTime.Now - new DateTime(t);
+                TimeSpan diff = DateTime.Now - Convert.ToDateTime(t);
 
                 if(diff.TotalSeconds < 10)
                     return "Moments ago";
@@ -204,6 +206,26 @@ namespace contentapi.Services.Implementations
                 else
                     return agoize(diff.TotalDays / 365, "year");
             });
+            mod.script.Globals["b64encode"] = new Func<string, string>(s =>
+            {
+                if(s == null) return null;
+                var plainTextBytes = System.Text.Encoding.UTF8.GetBytes(s);
+                return System.Convert.ToBase64String(plainTextBytes).Replace('/', '!');
+            });
+            mod.script.Globals["b64decode"] = new Func<string, string>(s =>
+            {
+                if(s == null) return null;
+                var base64EncodedBytes = System.Convert.FromBase64String(s.Replace('!', '/'));
+                return System.Text.Encoding.UTF8.GetString(base64EncodedBytes);
+            });
+            //mod.script.Globals["serializetable"] = new Func<Table, string>((t) =>
+            //{
+            //    return t.Serialize();
+            //});
+            //`mod.script.Globals["newtonjsondeserialize"] = new Func<string, Table>((s) =>
+            //`{
+            //`    return ;//Deserialize(); JsonConvert.DeserializeObject<Table>(o);
+            //`});
 
             mod.script.Globals["getbroadcastid"] = new Func<long>(() => mod.currentParentId);
 
