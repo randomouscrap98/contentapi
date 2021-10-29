@@ -5,8 +5,10 @@ To use:
 - Install some IDE (I use vscode): https://code.visualstudio.com/download
 - git checkout whatever
 
-* Need a default appsettings.json, I'll get that set up somewhere
-* Need an SQLITE database, IDR if that's even in the repo
+* Need to modify the default appsettings.example.json in /contentapi, rename to appsettings.json and set up values
+  * Anything with <thing> needs to be replaced, especially the JWT SecretKey
+* Need to set up the entity database, use the 'fullEntityCreate' sql in the root of this repo: https://github.com/randomouscrap98/entitysystem
+  * Database can be mysql or sqlite, see appsettings.example.json. Just run the appropriate fullEntityCreate sql against your database.
 
 If using vscode, run "code ." in the root directory.
 Should be able to just start debugging at any point.
