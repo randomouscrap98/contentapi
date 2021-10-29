@@ -3,7 +3,6 @@ using System.Threading.Tasks;
 using contentapi.Services.Implementations;
 using contentapi.Views;
 using Microsoft.AspNetCore.Mvc;
-using Microsoft.Extensions.Logging;
 
 namespace contentapi.Controllers
 {
@@ -12,7 +11,6 @@ namespace contentapi.Controllers
         protected ActivityViewService service;
 
         public ActivityController(BaseSimpleControllerServices services, ActivityViewService service) : base(services)
-        //ILogger<BaseSimpleController> logger,
         {
             this.service = service;
         }

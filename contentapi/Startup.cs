@@ -3,7 +3,6 @@ using System.Text;
 using AspNetCoreRateLimit;
 using contentapi.Configs;
 using contentapi.Controllers;
-using contentapi.Middleware;
 using contentapi.Services;
 using contentapi.Services.Implementations;
 using Microsoft.AspNetCore.Authentication.JwtBearer;
@@ -17,7 +16,6 @@ using Microsoft.IdentityModel.Tokens;
 using Microsoft.OpenApi.Models;
 using Randomous.EntitySystem.Implementations;
 using Serilog;
-using System.Threading;
 using System;
 
 namespace contentapi
@@ -73,16 +71,7 @@ namespace contentapi
             contentApiDefaultProvider.AddConfiguration<UserControllerConfig>(services, Configuration);
 
             //Also a singleton for the token system which we'll use for websockets
-            services.AddSingleton<ITempTokenService<long>, TempTokenService<long>>();
-
-            //A special case for websockets: we determine what the websockets will handle right here and now
-            services.AddSingleton<WebSocketMiddlewareConfig>((p) =>
-            {
-                var websocketConfig = new WebSocketMiddlewareConfig();
-                var echoer = (WebSocketEcho)ActivatorUtilities.GetServiceOrCreateInstance(p, typeof(WebSocketEcho));
-                websocketConfig.RouteHandlers.Add("testecho", echoer.Echo);
-                return websocketConfig;
-            });
+            //services.AddSingleton<ITempTokenService<long>, TempTokenService<long>>();
 
             services.AddTransient<BaseSimpleControllerServices>();
 
@@ -212,9 +201,11 @@ namespace contentapi
                 endpoints.MapControllers();
             });
 
-            app.UseWebSockets();
-
-            app.UseMiddleware<WebSocketMiddleware>();
+            app.UseWebSockets(new WebSocketOptions()
+            {
+                //Make this configurable later?
+                KeepAliveInterval = TimeSpan.FromSeconds(15)
+            });
 
             //Swagger is the API documentation
             app.UseSwagger();
