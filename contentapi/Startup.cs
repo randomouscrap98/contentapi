@@ -196,15 +196,17 @@ namespace contentapi
             app.UseAuthentication();    
             app.UseAuthorization();
 
-            app.UseEndpoints(endpoints =>
-            {
-                endpoints.MapControllers();
-            });
-
+            //MUST COME BEFORE USE ENDPOINTS 
+            //https://www.koskila.net/httpcontext-websockets-iswebsocketrequest-always-null-in-your-net-core-code/
             app.UseWebSockets(new WebSocketOptions()
             {
                 //Make this configurable later?
                 KeepAliveInterval = TimeSpan.FromSeconds(15)
+            });
+
+            app.UseEndpoints(endpoints =>
+            {
+                endpoints.MapControllers();
             });
 
             //Swagger is the API documentation
