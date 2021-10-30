@@ -112,19 +112,6 @@ namespace contentapi.Controllers
             {
                 logger.LogTrace("Websocket Listen started");
 
-                //OK, the things we need to do are:
-                //1) Loop over listener calls, ONLY IF there is a request object AND an auth object
-                //2) Any request object is acceptable even if the token isn't valid. Always be open for reads from that
-                //3) If the read is a token, set up the token
-                //4) If the listener doesn't have a token, return some kind of message that states there's no token
-
-                // All reads are the same object, just update based on if certain fields are set.
-                // - If token is set, update user token
-                // - If actions are set, update request object
-                // - If ANY reads are received, cancel listener request
-                
-                // 
-
                 return await ThrowToAction(async () =>
                 {
                     using var socket = await HttpContext.WebSockets.AcceptWebSocketAsync();
