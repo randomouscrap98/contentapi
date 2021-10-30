@@ -43,6 +43,19 @@ namespace contentapi.Services.Implementations
             }
         }
 
+        public int InvalidateTokens(T id)
+        {
+            lock(tokenLock)
+            {
+                var removals = tokens.Where(x => x.Key.Equals(id));
+
+                foreach(var removal in removals)
+                    tokens.Remove(removal.Key);
+                
+                return removals.Count();
+            }
+        }
+
         public string GetToken(T id)
         {
             CleanDictionary();

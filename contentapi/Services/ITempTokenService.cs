@@ -6,7 +6,10 @@ namespace contentapi.Services
     {
         TimeSpan TokenLifetime {get;}
 
+        int InvalidateTokens(T id);
         string GetToken(T id);
         T ValidateToken(string token);
     }
+
+    //public interface IUserTempTokenService : ITempTokenService<long>{}
 }

@@ -25,9 +25,11 @@ namespace contentapi.Controllers
         protected ChainServiceConfig serviceConfig;
         protected RelationListenerService relationListenerService;
         protected IMapper mapper;
+        protected ITempTokenService<long> tokenService;
 
         public ReadController(BaseSimpleControllerServices services, ILanguageService docService, ChainService service, 
-            RelationListenerService relationListenerService, IMapper mapper, ChainServiceConfig serviceConfig)
+            RelationListenerService relationListenerService, IMapper mapper, ChainServiceConfig serviceConfig,
+            ITempTokenService<long> tokenService)
             : base(services)
         {
             this.docService = docService;
@@ -35,6 +37,7 @@ namespace contentapi.Controllers
             this.relationListenerService = relationListenerService;
             this.mapper = mapper;
             this.serviceConfig = serviceConfig;
+            this.tokenService = tokenService;
         }
 
         protected override Task SetupAsync() { return service.SetupAsync(); }
@@ -90,6 +93,13 @@ namespace contentapi.Controllers
 
                 return result;
             });
+        }
+
+        [HttpGet("auth")]
+        [Authorize]
+        public ActionResult<string> GetAuth()
+        {
+            return tokenService.GetToken(GetRequesterUid());
         }
 
         [HttpGet("wslisten")]
@@ -158,6 +168,10 @@ namespace contentapi.Controllers
                                 await socket.SendAsync(
                                     System.Text.Encoding.UTF8.GetBytes(JsonConvert.SerializeObject(listenResult)), 
                                     WebSocketMessageType.Text, true, token);
+                                //Update the original request so it continues to work
+                                lrequest.actions.lastId = listenResult.lastId;
+                                if(listenResult.listeners != null) 
+                                    lrequest.listeners.lastListeners = listenResult.listeners;
                                 //Reset the task so we can restart it
                                 listenTask = null;
                             }

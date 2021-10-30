@@ -38,13 +38,15 @@ namespace contentapi.Controllers
         protected IMapper mapper;
         protected UserViewService service;
         protected IDecayer<PasswordReset> passwordResets;
+        protected ITempTokenService<long> tempTokenService;
 
         protected UserControllerConfig config;
 
 
         public UserController(BaseSimpleControllerServices services, IHashService hashService,
             ITokenService tokenService, ILanguageService languageService, IEmailService emailService,
-            UserControllerConfig config, UserViewService service, IMapper mapper, IDecayer<PasswordReset> passwordResets)
+            UserControllerConfig config, UserViewService service, IMapper mapper, IDecayer<PasswordReset> passwordResets,
+            ITempTokenService<long> tempTokenService)
             :base(services)
         { 
             this.hashService = hashService;
@@ -55,6 +57,7 @@ namespace contentapi.Controllers
             this.service = service;
             this.mapper = mapper;
             this.passwordResets = passwordResets;
+            this.tempTokenService = tempTokenService;
         }
 
         protected async Task<UserViewFull> GetCurrentUser()
@@ -420,6 +423,7 @@ namespace contentapi.Controllers
         {
             var requester = GetRequesterNoFail();
             userValidation.NewValidation(requester.userId);
+            tempTokenService.InvalidateTokens(requester.userId);
             return Ok("All login tokens invalidated, you will need to login again");
         }
     }

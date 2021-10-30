@@ -71,7 +71,7 @@ namespace contentapi
             contentApiDefaultProvider.AddConfiguration<UserControllerConfig>(services, Configuration);
 
             //Also a singleton for the token system which we'll use for websockets
-            //services.AddSingleton<ITempTokenService<long>, TempTokenService<long>>();
+            services.AddSingleton<ITempTokenService<long>, TempTokenService<long>>();
 
             services.AddTransient<BaseSimpleControllerServices>();
 
