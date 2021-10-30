@@ -70,10 +70,8 @@ namespace contentapi.Controllers
             catch(InvalidOperationException) { return -1; }
         }
 
-        protected Requester GetRequesterNoFail()
-        {
-            return new Requester() { userId = GetRequesterUidNoFail() };
-        }
+        protected Requester GetRequesterNoFail() { return new Requester() { userId = GetRequesterUidNoFail() }; }
+        protected Requester GetRequester() { return new Requester() { userId = GetRequesterUid() }; }
 
         protected async Task<ActionResult<T>> ThrowToAction<T>(Func<Task<T>> action)
         {
