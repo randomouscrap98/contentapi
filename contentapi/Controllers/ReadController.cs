@@ -69,16 +69,6 @@ namespace contentapi.Controllers
             return ThrowToAction(() => Task.FromResult(docService.GetString("doc.read.chain", "en")));
         }
 
-        /// <summary>
-        /// The configuration for the listen endpoints. Useful for websocket
-        /// </summary>
-        public class ListenRequest
-        {
-            public Dictionary<string, List<string>> fields {get;set;}
-            public ListenerChainConfig listeners {get;set;}
-            public RelationListenChainConfig actions {get;set;}
-        }
-
         [HttpGet("listen")]
         [Authorize]
         public Task<ActionResult<ListenResult>> ListenAsync([FromQuery]Dictionary<string, List<string>> fields, 
@@ -95,7 +85,18 @@ namespace contentapi.Controllers
             });
         }
 
-        [HttpGet("auth")]
+        /// <summary>
+        /// The configuration for the listen endpoints. Useful for websocket
+        /// </summary>
+        public class ListenRequest
+        {
+            public string Auth {get;set;}
+            public Dictionary<string, List<string>> fields {get;set;}
+            public ListenerChainConfig listeners {get;set;}
+            public RelationListenChainConfig actions {get;set;}
+        }
+
+        [HttpGet("wsauth")]
         [Authorize]
         public ActionResult<string> GetAuth()
         {
@@ -103,7 +104,6 @@ namespace contentapi.Controllers
         }
 
         [HttpGet("wslisten")]
-        [Authorize]
         public async Task<ActionResult<string>> WebSocketListenAsync()
         {
             //I have NO idea if returning an action from a websocket request makes any sense, or 
@@ -111,6 +111,19 @@ namespace contentapi.Controllers
             if (HttpContext.WebSockets.IsWebSocketRequest)
             {
                 logger.LogTrace("Websocket Listen started");
+
+                //OK, the things we need to do are:
+                //1) Loop over listener calls, ONLY IF there is a request object AND an auth object
+                //2) Any request object is acceptable even if the token isn't valid. Always be open for reads from that
+                //3) If the read is a token, set up the token
+                //4) If the listener doesn't have a token, return some kind of message that states there's no token
+
+                // All reads are the same object, just update based on if certain fields are set.
+                // - If token is set, update user token
+                // - If actions are set, update request object
+                // - If ANY reads are received, cancel listener request
+                
+                // 
 
                 return await ThrowToAction(async () =>
                 {
@@ -130,16 +143,16 @@ namespace contentapi.Controllers
                         var tokenSource = new CancellationTokenSource();
                         var token = tokenSource.Token;
 
-                        //ALWAYS check the requester. Again and again.
-                        var requester = GetRequester();
-                        logger.LogDebug($"Received {result.Count} bytes in websocket listener for uid {requester.userId}");
-
                         //At this point, we ALWAYS have a result!! The outer loop loops on legit receives!
                         //If the user sends crap to us, we just fail immediately. Whatever
                         var lrequest = JsonConvert.DeserializeObject<ListenRequest>(await reader.ReadToEndAsync());
 
-                        //Now start the next read request! But don't await it, we need to do our 
-                        //listen service work!
+                        //ALWAYS check the token. Again and again.
+                        var uid = tokenService.ValidateToken(lrequest.Auth);
+                        var requester = new Requester() { userId = uid };
+                        logger.LogDebug($"Received {result.Count} bytes in websocket listener for uid {uid}");
+
+                        //Now start the next read request! But don't await it, we need to do our listen service work!
                         memStream.SetLength(0);
                         var wsTask = socket.ReceiveAsync(memStream, CancellationToken.None);
                         Task<ListenResult> listenTask = null;
