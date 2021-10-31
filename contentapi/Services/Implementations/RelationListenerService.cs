@@ -140,12 +140,8 @@ namespace contentapi.Services.Implementations
 
                 var users = result.Values.SelectMany(x => x.Keys).ToList();
 
-                //foreach(var hideval in await provider.GetEntityValuesAsync(new EntityValueSearch() { EntityIds = users, KeyLike = Keys.UserHideKey }))
                 foreach(var hideval in (await userService.GetUserHideDataAsync(users)).hides)
                 {
-                    //Parse the actual hide values for this user.
-                    //var hides = hideval.value.Split(",", StringSplitOptions.RemoveEmptyEntries).Select(x => long.Parse(x));
-
                     //Now loop through the rooms and completely remove users from lists if they're hiding there
                     foreach(var room in result)
                     {

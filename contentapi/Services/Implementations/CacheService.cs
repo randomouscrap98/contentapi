@@ -73,7 +73,8 @@ namespace contentapi.Services.Implementations
                 {
                     if(Cache.ContainsKey(key))
                     {
-                        logger.LogDebug($"Using cached {typeof(V).Name} result ({Cache[key].Id}) for key {key}");
+                        var t = typeof(V);
+                        logger.LogDebug($"Using cached {t.Name}{string.Join(",", t.GenericTypeArguments.Select(x => x.Name))} result ({Cache[key].Id}) for key {key}");
                         Cache[key].LastAccess = DateTime.Now;
                         result.Add(Cache[key].Value);
                     }

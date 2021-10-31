@@ -51,6 +51,12 @@ namespace contentapi.Services.Implementations
             
             if(search.Sort != null)
                 search.Sort = search.Sort.ToLower().Trim();
+            
+            if(search.Ids != null && search.Ids.Count > 0)
+                search.Ids = search.Ids.Distinct().OrderBy(x => x).ToList();
+
+            if(search.NotIds != null && search.NotIds.Count > 0)
+                search.NotIds = search.NotIds.Distinct().OrderBy(x => x).ToList();
 
             //This is the same, trust me (or it better be!). IDs are much faster
             if(search.Sort == "createdate")

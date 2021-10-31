@@ -88,7 +88,10 @@ namespace contentapi.Services.Implementations
             string key = JsonSerializer.Serialize(search) + JsonSerializer.Serialize(requester); 
             List<ContentView> baseResult = null;
 
-            if(cache.GetValue(key, ref baseResult))
+            bool includeAbout = search.IncludeAbout != null && search.IncludeAbout.Count > 0;
+            bool useCache = !includeAbout;
+
+            if(useCache && cache.GetValue(key, ref baseResult))
                 return baseResult;
 
             List<long> baseIds = null;
@@ -108,10 +111,7 @@ namespace contentapi.Services.Implementations
                 services.timer.EndTimer(t);
             }
 
-            if(baseResult.Count == 0)
-                return baseResult;
-
-            if(search.IncludeAbout != null && search.IncludeAbout.Count > 0)
+            if(includeAbout && baseResult.Count > 0)
             {
                 var desired = search.IncludeAbout.Select(x => x.ToLower());
 
@@ -219,7 +219,9 @@ namespace contentapi.Services.Implementations
                 });
             }
 
-            cache.StoreItem(key, baseResult);
+            if(useCache)
+                cache.StoreItem(key, baseResult);
+
             return baseResult;
         }
     }
