@@ -90,7 +90,7 @@ namespace contentapi.Controllers
         /// </summary>
         public class ListenRequest
         {
-            public string Auth {get;set;}
+            public string auth {get;set;}
             public Dictionary<string, List<string>> fields {get;set;}
             public ListenerChainConfig listeners {get;set;}
             public RelationListenChainConfig actions {get;set;}
@@ -106,15 +106,20 @@ namespace contentapi.Controllers
         [HttpGet("wslisten")]
         public async Task<ActionResult<string>> WebSocketListenAsync()
         {
+            logger.LogDebug("wslisten METHOD: " + HttpContext.Request.Method + ", HEADERS: " +
+                JsonConvert.SerializeObject(HttpContext.Request.Headers, 
+                    Formatting.None, new JsonSerializerSettings() { ReferenceLoopHandling = ReferenceLoopHandling.Ignore }));
+
             //I have NO idea if returning an action from a websocket request makes any sense, or 
             //if the middleware gets completely wrecked or something!
             if (HttpContext.WebSockets.IsWebSocketRequest)
             {
-                logger.LogTrace("Websocket Listen started");
+                logger.LogInformation("wslisten Websocket starting!");
 
-                return await ThrowToAction(async () =>
+                using var socket = await HttpContext.WebSockets.AcceptWebSocketAsync();
+
+                try
                 {
-                    using var socket = await HttpContext.WebSockets.AcceptWebSocketAsync();
                     using var memStream = new MemoryStream();
                     using var reader = new StreamReader(memStream);
 
@@ -129,13 +134,15 @@ namespace contentapi.Controllers
                         //pre-empted by the websocket read
                         var tokenSource = new CancellationTokenSource();
                         var token = tokenSource.Token;
+                        memStream.Position = 0;
+                        var sendMessage = await reader.ReadToEndAsync();
 
                         //At this point, we ALWAYS have a result!! The outer loop loops on legit receives!
                         //If the user sends crap to us, we just fail immediately. Whatever
-                        var lrequest = JsonConvert.DeserializeObject<ListenRequest>(await reader.ReadToEndAsync());
+                        var lrequest = JsonConvert.DeserializeObject<ListenRequest>(sendMessage);
 
                         //ALWAYS check the token. Again and again.
-                        var uid = tokenService.ValidateToken(lrequest.Auth);
+                        var uid = tokenService.ValidateToken(lrequest.auth);
                         var requester = new Requester() { userId = uid };
                         logger.LogDebug($"Received {result.Count} bytes in websocket listener for uid {uid}");
 
@@ -188,12 +195,18 @@ namespace contentapi.Controllers
 
                     await socket.CloseAsync(result, CancellationToken.None);
                     return "Complete";
-                });
+                }
+                catch(Exception ex)
+                {
+                    logger.LogError("Exception in websocket: " + ex.ToString());
+                    await socket.CloseAsync(WebSocketCloseStatus.InternalServerError, ex.Message, CancellationToken.None);
+                    return ex.Message;
+                }
             }
             else
             {
+                logger.LogWarning("wslisten not recognized as a websocket connection!");
                 return BadRequest("You must send a websocket connection to this endpoint!");
-                //HttpContext.Response.StatusCode = (int)HttpStatusCode.BadRequest;
             }
         }
 
