@@ -1,5 +1,6 @@
 using System.Collections.Generic;
 using System.Linq;
+using System.Text.Json;
 using System.Threading;
 using System.Threading.Tasks;
 using contentapi.Services.Constants;
@@ -20,6 +21,7 @@ namespace contentapi.Services.Implementations
         protected ContentViewSource contentSource;
         protected WatchViewSource watchSource;
         protected VoteViewSource voteSource;
+        protected CacheService<string, List<ContentView>> cache;
         
         protected Dictionary<long, List<long>> cachedSupers = null;
 
@@ -27,6 +29,7 @@ namespace contentapi.Services.Implementations
 
         public ContentViewService(ViewServicePack services, ILogger<ContentViewService> logger, 
             CategoryViewService categoryService, ContentViewSource converter,
+            CacheService<string, List<ContentView>> cacheService,
             CommentViewSource commentSource, WatchViewSource watchSource, VoteViewSource voteSource, BanViewSource banSource) 
             : base(services, logger, converter, banSource) 
         { 
@@ -35,6 +38,7 @@ namespace contentapi.Services.Implementations
             this.watchSource = watchSource;
             this.contentSource = converter;
             this.voteSource = voteSource;
+            this.cache = cacheService;
         }
 
         public override string EntityType => Keys.ContentType;
@@ -66,9 +70,27 @@ namespace contentapi.Services.Implementations
             return result;
         }
 
+        //Track writes and deletes. ANY write/delete causes us to flush the full in-memory 
+        public override Task<ContentView> WriteAsync(ContentView view, Requester requester)
+        {
+            cache.PurgeCache();
+            return base.WriteAsync(view, requester);
+        }
+
+        public override Task<ContentView> DeleteAsync(long entityId, Requester requester)
+        {
+            cache.PurgeCache();
+            return base.DeleteAsync(entityId, requester);
+        }
+
         public override async Task<List<ContentView>> PreparedSearchAsync(ContentSearch search, Requester requester)
         {
+            string key = JsonSerializer.Serialize(search) + JsonSerializer.Serialize(requester); 
             List<ContentView> baseResult = null;
+
+            if(cache.GetValue(key, ref baseResult))
+                return baseResult;
+
             List<long> baseIds = null;
 
             Interlocked.Increment(ref rid);
@@ -197,6 +219,7 @@ namespace contentapi.Services.Implementations
                 });
             }
 
+            cache.StoreItem(key, baseResult);
             return baseResult;
         }
     }
