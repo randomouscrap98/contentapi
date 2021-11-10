@@ -18,9 +18,11 @@ namespace contentapi.Services.Implementations
 
         public IdLimiter ContentLimit {get;set;} = new IdLimiter();
 
-        public List<string> ActivityTypes {get;set;} = new List<string>();
+        //Can only be singular because reasons
+        public string ActivityType {get;set;}
+        public string ContentType {get;set;}
+
         public List<string> NotActivityTypes {get;set;} = new List<string>();
-        public List<string> ContentTypes {get;set;} = new List<string>();
         public List<string> NotContentTypes {get;set;} = new List<string>();
         //public string Type {get;set;}
         public bool IncludeAnonymous {get;set;} //This is queried in the SERVICE, eventually move it to HERE! 
@@ -91,7 +93,7 @@ namespace contentapi.Services.Implementations
             relation.entityId1 = view.userId;
             relation.entityId2 = -view.contentId; //It has to be NEGATIVE because we don't want them linked to content
             relation.createDate = view.date;
-            relation.type = Keys.ActivityKey + (Keys.TypeNames.ToList().FirstOrDefault(x => x.Value == view.type).Key ?? "??") + (view.contentType ?? ""); 
+            relation.type = Keys.ActivityKey + ActivityTypeToRelation(view.type) + (view.contentType ?? ""); 
             relation.value = view.action;
             relation.id = view.id;
 
@@ -101,30 +103,35 @@ namespace contentapi.Services.Implementations
             return relation;
         }
 
+        protected string ActivityTypeToRelation(string type) //, bool includeInitialKey = true)
+        {
+            return (Keys.TypeNames.ToList().FirstOrDefault(x => x.Value == type).Key ?? "??");
+        }
+
         public override EntityRelationSearch CreateSearch(ActivitySearch search)
         {
             var es = base.CreateSearch(search);
-            es.TypeLike += "%"; //(search.Type ?? "%");
+            es.TypeLike += (search.ActivityType == null ? new string('_', TypeLength) : ActivityTypeToRelation(search.ActivityType)) + (search.ContentType ?? "") + "%"; //(search.Type ?? "%");
             return es;
-        }
-
-        protected string ActivityTypeToRelationSearch(string type)
-        {
-            return Keys.ActivityKey + (Keys.TypeNames.Values.FirstOrDefault(x => x == type) ?? "??");
         }
 
 
         public override async Task<IQueryable<long>> FinalizeQuery(IQueryable<EntityGroup> query, ActivitySearch search)  
         {
             //Activity limits... 
-            foreach(var s in search.ActivityTypes.Select(x => ActivityTypeToRelationSearch(x)))
-                query = query.Where(x => x.relation.type.StartsWith(s));
-            foreach(var s in search.ContentTypes.Select(x => ActivityTypeToRelationSearch(Keys.ContentType) + x))
-                query = query.Where(x => x.relation.type.StartsWith(s));
+            //var activityTypes = search.ActivityTypes.Select(x => ActivityTypeToRelationSearch(x)).ToList();
 
-            foreach(var s in search.NotActivityTypes.Select(x => ActivityTypeToRelationSearch(x)))
+            //if(activityTypes.Count > 0)
+                //query = query.Where(x => activityTypes.Any(y => x.relation.type.StartsWith(y)));
+            //foreach(var s in search.ActivityTypes.Select(x => ActivityTypeToRelationSearch(x)))
+                //query = query.Where(x => x.relation.type.StartsWith(s));
+            //foreach(var s in search.ContentTypes.Select(x => ActivityTypeToRelationSearch(Keys.ContentType) + x))
+                //query = query.Where(x => x.relation.type.StartsWith(s));
+
+            //The "not" queries are additive
+            foreach(var s in search.NotActivityTypes.Select(x => Keys.ActivityKey + ActivityTypeToRelation(x)))
                 query = query.Where(x => !x.relation.type.StartsWith(s));
-            foreach(var s in search.NotContentTypes.Select(x => ActivityTypeToRelationSearch(Keys.ContentType) + x))
+            foreach(var s in search.NotContentTypes.Select(x => Keys.ActivityKey + ActivityTypeToRelation(Keys.ContentType) + x))
                 query = query.Where(x => !x.relation.type.StartsWith(s));
 
             if(search.ContentLimit.Limit.Count > 0)

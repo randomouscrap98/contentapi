@@ -3,7 +3,6 @@ using System.Collections.Generic;
 using System.Linq;
 using System.Threading;
 using System.Threading.Tasks;
-using contentapi.Configs;
 using contentapi.Services.Extensions;
 using contentapi.Services.Implementations;
 using contentapi.Views;
@@ -11,7 +10,7 @@ using Xunit;
 
 namespace contentapi.test
 {
-    [Collection("ASYNC")]
+   [Collection("ASYNC")]
     public class RelationListenerTests : ReadTestBaseExtra
     {
         protected RelationListenerService listener;
