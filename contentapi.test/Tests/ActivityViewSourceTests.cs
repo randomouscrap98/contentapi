@@ -45,7 +45,6 @@ namespace contentapi.test
       public void FindOnlyType()
       {
          var search = new ActivitySearch() { ActivityType = Keys.TypeNames[Keys.ContentType]};
-         //search.ActivityTypes.Add(Keys.TypeNames[Keys.ContentType]);
 
          var result = service.SimpleSearchAsync(search).Result;
          Assert.Equal(2, result.Count);
@@ -71,6 +70,44 @@ namespace contentapi.test
 
          result = service.SimpleSearchAsync(search).Result;
          Assert.Empty(result);
+      }
+
+      [Fact]
+      public void FindNotType()
+      {
+         var search = new ActivitySearch();
+         search.NotActivityTypes.Add(Keys.TypeNames[Keys.UserType]);
+
+         var result = service.SimpleSearchAsync(search).Result;
+         Assert.Equal(2, result.Count);
+         Assert.Equal(2, result.Count(x => x.type != Keys.TypeNames[Keys.UserType]));
+
+         search.NotActivityTypes.Add(Keys.TypeNames[Keys.ContentType]);
+
+         result = service.SimpleSearchAsync(search).Result;
+         Assert.Empty(result);
+
+         search.NotActivityTypes.Remove(Keys.TypeNames[Keys.UserType]);
+         result = service.SimpleSearchAsync(search).Result;
+         Assert.Equal(2, result.Count);
+         Assert.Equal(2, result.Count(x => x.type != Keys.TypeNames[Keys.ContentType]));
+      }
+
+      [Fact]
+      public void FindNotContentType()
+      {
+         var search = new ActivitySearch();
+         search.NotContentTypes.Add("somethingRandom");
+
+         var result = service.SimpleSearchAsync(search).Result;
+         Assert.Equal(4, result.Count);
+         Assert.Equal(4, result.Count(x => x.contentType != "somethingRandom"));
+
+         search.NotContentTypes.Add(unit.commonContent.type);
+
+         result = service.SimpleSearchAsync(search).Result;
+         Assert.Equal(2, result.Count);
+         Assert.Equal(2, result.Count(x => x.contentType != unit.commonContent.type));
       }
 
       [Fact]

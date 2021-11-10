@@ -118,20 +118,10 @@ namespace contentapi.Services.Implementations
 
         public override async Task<IQueryable<long>> FinalizeQuery(IQueryable<EntityGroup> query, ActivitySearch search)  
         {
-            //Activity limits... 
-            //var activityTypes = search.ActivityTypes.Select(x => ActivityTypeToRelationSearch(x)).ToList();
-
-            //if(activityTypes.Count > 0)
-                //query = query.Where(x => activityTypes.Any(y => x.relation.type.StartsWith(y)));
-            //foreach(var s in search.ActivityTypes.Select(x => ActivityTypeToRelationSearch(x)))
-                //query = query.Where(x => x.relation.type.StartsWith(s));
-            //foreach(var s in search.ContentTypes.Select(x => ActivityTypeToRelationSearch(Keys.ContentType) + x))
-                //query = query.Where(x => x.relation.type.StartsWith(s));
-
             //The "not" queries are additive
             foreach(var s in search.NotActivityTypes.Select(x => Keys.ActivityKey + ActivityTypeToRelation(x)))
                 query = query.Where(x => !x.relation.type.StartsWith(s));
-            foreach(var s in search.NotContentTypes.Select(x => Keys.ActivityKey + ActivityTypeToRelation(Keys.ContentType) + x))
+            foreach(var s in search.NotContentTypes.Select(x => Keys.ActivityKey + Keys.ContentType + x))
                 query = query.Where(x => !x.relation.type.StartsWith(s));
 
             if(search.ContentLimit.Limit.Count > 0)
