@@ -26,10 +26,11 @@ namespace contentapi.Controllers
         protected RelationListenerService relationListenerService;
         protected IMapper mapper;
         protected ITempTokenService<long> tokenService;
+        protected Action<Newtonsoft.Json.JsonSerializerSettings> jsonOptionAction;
 
         public ReadController(BaseSimpleControllerServices services, ILanguageService docService, ChainService service, 
             RelationListenerService relationListenerService, IMapper mapper, ChainServiceConfig serviceConfig,
-            ITempTokenService<long> tokenService)
+            ITempTokenService<long> tokenService, Action<Newtonsoft.Json.JsonSerializerSettings> jsonOptionAction)
             : base(services)
         {
             this.docService = docService;
@@ -38,6 +39,7 @@ namespace contentapi.Controllers
             this.mapper = mapper;
             this.serviceConfig = serviceConfig;
             this.tokenService = tokenService;
+            this.jsonOptionAction = jsonOptionAction;
         }
 
         protected override Task SetupAsync() { return service.SetupAsync(); }
@@ -109,7 +111,7 @@ namespace contentapi.Controllers
             logger.LogDebug("wslisten METHOD: " + HttpContext.Request.Method + ", HEADERS: " +
                 JsonConvert.SerializeObject(HttpContext.Request.Headers, 
                     Formatting.None, new JsonSerializerSettings() { ReferenceLoopHandling = ReferenceLoopHandling.Ignore }));
-
+            
             //I have NO idea if returning an action from a websocket request makes any sense, or 
             //if the middleware gets completely wrecked or something!
             if (HttpContext.WebSockets.IsWebSocketRequest)
@@ -145,6 +147,11 @@ namespace contentapi.Controllers
                         var uid = tokenService.ValidateToken(lrequest.auth);
                         var requester = new Requester() { userId = uid };
                         logger.LogDebug($"Received {result.Count} bytes in websocket listener for uid {uid}");
+
+                        //Tell the user we successfully processed their thing
+                        await socket.SendAsync(
+                            System.Text.Encoding.UTF8.GetBytes("accepted:" + sendMessage), 
+                            WebSocketMessageType.Text, true, CancellationToken.None);
 
                         //Now start the next read request! But don't await it, we need to do our listen service work!
                         memStream.SetLength(0);

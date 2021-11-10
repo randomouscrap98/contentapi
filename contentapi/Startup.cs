@@ -17,6 +17,7 @@ using Microsoft.OpenApi.Models;
 using Randomous.EntitySystem.Implementations;
 using Serilog;
 using System;
+using Newtonsoft.Json;
 
 namespace contentapi
 {
@@ -82,14 +83,21 @@ namespace contentapi
             services.Configure<IpRateLimitOptions>(Configuration.GetSection("IpRateLimiting"));
             services.AddSingleton<IIpPolicyStore, MemoryCacheIpPolicyStore>();
             services.AddSingleton<IRateLimitCounterStore, MemoryCacheRateLimitCounterStore>();
+            Action<Newtonsoft.Json.JsonSerializerSettings> setupJsonOptions = options =>
+            {
+                options.Converters.Add(new CustomDateTimeConverter());
+                options.Converters.Add(new Newtonsoft.Json.Converters.StringEnumConverter());
+            };
+            services.AddSingleton(setupJsonOptions);
+            JsonConvert.DefaultSettings = () => {
+                var settings = new JsonSerializerSettings();
+                setupJsonOptions(settings);
+                return settings;
+            };
 
             services.AddCors();
             services.AddControllers()
-                    .AddNewtonsoftJson(options =>
-                    {
-                        options.SerializerSettings.Converters.Add(new CustomDateTimeConverter());
-                        options.SerializerSettings.Converters.Add(new Newtonsoft.Json.Converters.StringEnumConverter());
-                    });
+                    .AddNewtonsoftJson(options => setupJsonOptions(options.SerializerSettings));
 
             //other rate limiting stuff
             services.AddSingleton<IHttpContextAccessor, HttpContextAccessor>();

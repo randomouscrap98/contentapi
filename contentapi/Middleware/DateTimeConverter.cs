@@ -7,24 +7,6 @@ using Newtonsoft.Json.Converters;
 
 namespace contentapi
 {
-    ////Taken directly from https://stackoverflow.com/a/58284103/1066474
-    ///// <summary>
-    ///// Makes timespans display properly in views, configured in startup
-    ///// </summary>
-    //public class DateTimeConverter : JsonConverter<DateTime>
-    //{
-    //    public override DateTime Read(ref Utf8JsonReader reader, Type typeToConvert, JsonSerializerOptions options)
-    //    {
-    //        var value = reader.GetString();
-    //        return DateTime.Parse(value, CultureInfo.InvariantCulture); //TimeSpan.Parse(value, CultureInfo.InvariantCulture);
-    //    }
-
-    //    public override void Write(Utf8JsonWriter writer, DateTime value, JsonSerializerOptions options)
-    //    {
-    //        writer.WriteStringValue(value.ToUniversalTime().ToString("YYYY-MM-ddTHH:mm:ss.ffZ", CultureInfo.InvariantCulture));
-    //    }
-    //}
-
     /// <summary>
     /// Custom DateTime JSON serializer/deserializer
     /// </summary>
