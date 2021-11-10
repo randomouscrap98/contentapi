@@ -17,7 +17,12 @@ namespace contentapi.Services.Implementations
         public List<long> ContentIds {get;set;} = new List<long>();
 
         public IdLimiter ContentLimit {get;set;} = new IdLimiter();
-        public string Type {get;set;}
+
+        public List<string> ActivityTypes {get;set;} = new List<string>();
+        public List<string> NotActivityTypes {get;set;} = new List<string>();
+        public List<string> ContentTypes {get;set;} = new List<string>();
+        public List<string> NotContentTypes {get;set;} = new List<string>();
+        //public string Type {get;set;}
         public bool IncludeAnonymous {get;set;} //This is queried in the SERVICE, eventually move it to HERE! 
     }
 
@@ -58,7 +63,7 @@ namespace contentapi.Services.Implementations
                 contentId = entity.id,
                 action = action,
                 extra = extra,
-                type = trimmedType.Substring(0, TypeLength), //Assume all types are same length!
+                type = Keys.TypeNames.GetValueOrDefault(trimmedType.Substring(0, TypeLength), "???"), //Assume all types are same length!
                 contentType = trimmedType.Substring(TypeLength),
                 date = DateTime.Now
             });
@@ -72,7 +77,7 @@ namespace contentapi.Services.Implementations
             view.date = (DateTime)relation.createDateProper();
             view.userId = relation.entityId1;
             view.contentId = -relation.entityId2;
-            view.type = relation.type.Substring(Keys.ActivityKey.Length, TypeLength);
+            view.type = Keys.TypeNames.GetValueOrDefault(relation.type.Substring(Keys.ActivityKey.Length, TypeLength), "???");
             view.contentType = relation.type.Substring(Keys.ActivityKey.Length + TypeLength); //Skip the actual activity type, it starts the type field
             view.action = relation.value.Substring(0, 2); //Assume it's 1 character, but skip first
             view.extra = relation.value.Substring(2);
@@ -86,7 +91,7 @@ namespace contentapi.Services.Implementations
             relation.entityId1 = view.userId;
             relation.entityId2 = -view.contentId; //It has to be NEGATIVE because we don't want them linked to content
             relation.createDate = view.date;
-            relation.type = Keys.ActivityKey + view.type + (view.contentType ?? ""); 
+            relation.type = Keys.ActivityKey + (Keys.TypeNames.ToList().FirstOrDefault(x => x.Value == view.type).Key ?? "??") + (view.contentType ?? ""); 
             relation.value = view.action;
             relation.id = view.id;
 
@@ -99,12 +104,29 @@ namespace contentapi.Services.Implementations
         public override EntityRelationSearch CreateSearch(ActivitySearch search)
         {
             var es = base.CreateSearch(search);
-            es.TypeLike += (search.Type ?? "%");
+            es.TypeLike += "%"; //(search.Type ?? "%");
             return es;
         }
 
+        protected string ActivityTypeToRelationSearch(string type)
+        {
+            return Keys.ActivityKey + (Keys.TypeNames.Values.FirstOrDefault(x => x == type) ?? "??");
+        }
+
+
         public override async Task<IQueryable<long>> FinalizeQuery(IQueryable<EntityGroup> query, ActivitySearch search)  
         {
+            //Activity limits... 
+            foreach(var s in search.ActivityTypes.Select(x => ActivityTypeToRelationSearch(x)))
+                query = query.Where(x => x.relation.type.StartsWith(s));
+            foreach(var s in search.ContentTypes.Select(x => ActivityTypeToRelationSearch(Keys.ContentType) + x))
+                query = query.Where(x => x.relation.type.StartsWith(s));
+
+            foreach(var s in search.NotActivityTypes.Select(x => ActivityTypeToRelationSearch(x)))
+                query = query.Where(x => !x.relation.type.StartsWith(s));
+            foreach(var s in search.NotContentTypes.Select(x => ActivityTypeToRelationSearch(Keys.ContentType) + x))
+                query = query.Where(x => !x.relation.type.StartsWith(s));
+
             if(search.ContentLimit.Limit.Count > 0)
                 return await SimpleMultiLimit(query, search.ContentLimit.Limit, (e) => -e.entityId2);
 

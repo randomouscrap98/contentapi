@@ -157,7 +157,7 @@ namespace contentapi.test
                 id = 99,
                 contentId = 5,
                 userId = 6,
-                type = "tc",
+                type = Keys.TypeNames[Keys.CategoryType],
                 contentType = "pansu",
                 date = DateTime.Now,
                 extra = "yeah yeah ok",

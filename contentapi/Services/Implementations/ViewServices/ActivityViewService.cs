@@ -40,16 +40,16 @@ namespace contentapi.Services.Implementations
             {
                 x.action = x.action.Substring(1);
 
-                if(x.type == Keys.ContentType)
-                    x.type = "content";
-                else if(x.type == Keys.CategoryType)
-                    x.type = "category";
-                else if(x.type == Keys.UserType)
-                    x.type = "user";
-                else if(x.type == Keys.FileType)
-                    x.type = "file";
-                else if (x.type == Keys.ModuleType)
-                    x.type = "module";
+                //if(x.type == Keys.ContentType)
+                //    x.type = "content";
+                //else if(x.type == Keys.CategoryType)
+                //    x.type = "category";
+                //else if(x.type == Keys.UserType)
+                //    x.type = "user";
+                //else if(x.type == Keys.FileType)
+                //    x.type = "file";
+                //else if (x.type == Keys.ModuleType)
+                //    x.type = "module";
             });
 
             return result;

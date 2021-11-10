@@ -1,4 +1,5 @@
 using System;
+using System.Collections.Generic;
 using System.Linq;
 using System.Reflection;
 
@@ -52,6 +53,14 @@ namespace contentapi.Services.Constants
         public const string FileType = "tf";
         public const string ModuleType = "tm";
 
+        public static Dictionary<string, string> TypeNames = new Dictionary<string, string>()
+        {
+            { Keys.ContentType, "content"},
+            { Keys.CategoryType,  "category" },
+            { Keys.UserType,  "user" },
+            { Keys.FileType,  "file" },
+            { Keys.ModuleType,  "module"}
+        };
 
         //User stuff  (keys for entity values)
         public const string EmailKey = "se";

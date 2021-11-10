@@ -23,7 +23,7 @@ namespace contentapi.test
             var relation = service.MakeActivity(NewEntity(5, Keys.ContentType + "@wow.yeah"), 8, Keys.CreateAction, "myextra");
             var activity = service.ToView(relation);
 
-            Assert.Equal(Keys.ContentType, activity.type);
+            Assert.Equal(Keys.TypeNames[Keys.ContentType], activity.type);
             Assert.Equal("@wow.yeah", activity.contentType);
         }
 
@@ -33,7 +33,7 @@ namespace contentapi.test
             var relation = service.MakeActivity(NewEntity(5, Keys.FileType), 8, Keys.CreateAction, "myextra");
             var activity = service.ToView(relation);
 
-            Assert.Equal(Keys.FileType, activity.type);
+            Assert.Equal(Keys.TypeNames[Keys.FileType], activity.type);
             Assert.True(string.IsNullOrWhiteSpace(activity.contentType));
         }
     }
