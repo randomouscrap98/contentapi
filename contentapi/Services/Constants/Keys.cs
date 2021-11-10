@@ -72,6 +72,7 @@ namespace contentapi.Services.Constants
         public const string UserHideKey ="suh";
         public const string ReadonlyKeyKey = "sro";
         public const string BucketKey = "sbu";
+        public const string QuantizationKey = "sqn";
 
 
         public const string ModuleDescriptionKey = "md";

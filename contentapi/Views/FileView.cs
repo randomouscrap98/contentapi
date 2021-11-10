@@ -12,7 +12,7 @@ namespace contentapi.Views
 
         //These are ignored if changed by the user.
         public string fileType {get;set;}
-        //public string readonlyKey {get;set;}
+        public int quantization {get;set;}
 
         protected override bool EqualsSelf(object obj)
         {

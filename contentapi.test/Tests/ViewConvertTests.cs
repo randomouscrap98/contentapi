@@ -100,6 +100,28 @@ namespace contentapi.test
         }
 
         [Fact]
+        public void TestFileConvert_Complex()
+        {
+            var service = CreateService<FileViewSource>();
+
+            //Just some standard content view
+            var view = new FileView()
+            {
+                fileType = "sys/wow",
+                name = "filesHaveNamesQuestionMark",
+                bucket = "ThisIs%*($)%8)MyBucket",
+                quantization = 99
+            };
+
+            FillPermissionView(view);
+
+            var temp = service.FromView(view);
+            var view2 = service.ToView(temp);
+
+            Assert.Equal(view, view2);
+        }
+
+        [Fact]
         public void TestUserConvert()
         {
             var service = CreateService<UserViewSource>();

@@ -3,6 +3,7 @@ using contentapi.Services.Constants;
 using contentapi.Views;
 using Microsoft.Extensions.Logging;
 using Randomous.EntitySystem;
+using Randomous.EntitySystem.Extensions;
 
 namespace contentapi.Services.Implementations
 {
@@ -18,9 +19,11 @@ namespace contentapi.Services.Implementations
         public override async Task<FileView> CleanViewUpdateAsync(FileView view, EntityPackage existing, Requester requester)
         {
             var result = await base.CleanViewUpdateAsync(view, existing, requester);
+            var existingView = converter.ToView(existing);
 
             //Always restore the filetype, you can't change uploaded files anyway.
-            result.fileType = existing.Entity.content;
+            result.fileType = existingView.fileType; //.Entity.content;
+            result.quantization = existingView.quantization; //.GetValue();
 
             return result;
         }
