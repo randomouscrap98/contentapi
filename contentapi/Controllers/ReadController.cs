@@ -176,16 +176,22 @@ namespace contentapi.Controllers
                             //If the listener completed, that means we have data to send out!
                             if(completedTask == listenTask)
                             {
-                                //Get the data from the completed task
-                                var listenResult = await listenTask;
-                                //Send the data out as a simple json string 
-                                await socket.SendAsync(
-                                    System.Text.Encoding.UTF8.GetBytes(JsonConvert.SerializeObject(listenResult)), 
-                                    WebSocketMessageType.Text, true, token);
-                                //Update the original request so it continues to work
-                                lrequest.actions.lastId = listenResult.lastId;
-                                if(listenResult.listeners != null) 
-                                    lrequest.listeners.lastListeners = listenResult.listeners;
+                                //Sometimes, the task completed by timing out, which is technically a cancellation?
+                                try
+                                { 
+                                    //Get the data from the completed task
+                                    var listenResult = await listenTask;
+                                    //Send the data out as a simple json string 
+                                    await socket.SendAsync(
+                                        System.Text.Encoding.UTF8.GetBytes(JsonConvert.SerializeObject(listenResult)), 
+                                        WebSocketMessageType.Text, true, token);
+                                    //Update the original request so it continues to work
+                                    lrequest.actions.lastId = listenResult.lastId;
+                                    if(listenResult.listeners != null) 
+                                        lrequest.listeners.lastListeners = listenResult.listeners;
+                                }
+                                //If it's a cancellation, just ignore this update and continue, there's nothing for us to use.
+                                catch(TaskCanceledException) {}
                                 //Reset the task so we can restart it
                                 listenTask = null;
                             }
