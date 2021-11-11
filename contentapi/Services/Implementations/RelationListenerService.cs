@@ -56,9 +56,16 @@ namespace contentapi.Services.Implementations
         }
     }
 
+    public class RelationListenResult
+    {
+        public List<EntityRelation> Relations {get;set;}
+        public long lastId {get;set;}
+    }
+
     public class RelationListenerServiceConfig
     {
         public TimeSpan ListenerPollingInterval = TimeSpan.FromSeconds(2);
+        public int MaxLookahead {get;set;} = 1000;
     }
 
     //When registering this, make it a singleton
@@ -160,8 +167,13 @@ namespace contentapi.Services.Implementations
             throw new TimeoutException("Ran out of time waiting for listeners");
         }
 
-        public async Task<List<EntityRelation>> ListenAsync(RelationListenConfig listenConfig, Requester requester, CancellationToken token)
+        public async Task<RelationListenResult> ListenAsync(RelationListenConfig listenConfig, Requester requester, CancellationToken token)
         {
+            var result = new RelationListenResult()
+            {
+                lastId = listenConfig.lastId
+            };
+
             var listenId = new RelationListener() 
             { 
                 userId = requester.userId,
@@ -170,14 +182,12 @@ namespace contentapi.Services.Implementations
 
             var maxId = await provider.GetMaxAsync(await provider.GetQueryableAsync<EntityRelation>(), x => x.id);
 
-            if(listenConfig.lastId <= 0)
-                listenConfig.lastId = maxId + listenConfig.lastId; //plus because negative
-            else if(maxId - listenConfig.lastId > 1000)
-                throw new BadRequestException($"LastID too far back! Perhaps restart your listener! System current max: {maxId}");
+            if(result.lastId <= 0)
+                result.lastId = maxId + result.lastId; //plus because negative
 
             //This SERIOUSLY requires INTIMATE knowledge of how each of these systems works, like what entityId1 means etc.
             //That's bad.
-            var results = await provider.ListenAsync<EntityRelation>(listenId, (q) => 
+            result.Relations = await provider.ListenAsync<EntityRelation>(listenId, (q) => 
                 q.Where(x => 
                     (x.type == Keys.CommentHack || 
                      x.type == Keys.ModuleHack ||
@@ -188,10 +198,17 @@ namespace contentapi.Services.Implementations
                      x.type.StartsWith(Keys.ModuleMessageKey) && (x.entityId2 == 0 || x.entityId2 == -listenId.userId) ||
                      x.type.StartsWith(Keys.CommentDeleteHack) ||
                      x.type.StartsWith(Keys.CommentHistoryHack)) && 
-                    x.id > listenConfig.lastId),
+                    x.id > result.lastId &&
+                    x.id < result.lastId + config.MaxLookahead),
             systemConfig.ListenTimeout, token);
 
-            return results; 
+            //If the read exited with NOTHING, there's nothing in our range. Need to record that
+            //so we don't check that range again. This will ALMOST NEVER EVER happen, but it's good to handle the situation.
+            //Yes, the listener will have to wait for the full timeout value to get anything, but... well it should be ok.
+            if(result.Relations == null || result.Relations.Count == 0)
+                result.lastId += config.MaxLookahead;
+
+            return result; 
         }
     }
 }

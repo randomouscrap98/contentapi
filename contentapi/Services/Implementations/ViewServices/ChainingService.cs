@@ -139,7 +139,7 @@ namespace contentapi.Services.Implementations
     /// <summary>
     /// The results from listening in the chaining service
     /// </summary>
-    public class ListenResult
+    public class ChainListenResult
     {
         public Dictionary<long, Dictionary<long, string>> listeners {get;set;}
         public Dictionary<string, List<ExpandoObject>> chains {get;set;}
@@ -629,10 +629,10 @@ namespace contentapi.Services.Implementations
             public List<long> listeners {get;set;}
         }
 
-        public async Task<ListenResult> ListenAsync(Dictionary<string, List<string>> fields, ListenerChainConfig listeners, RelationListenChainConfig actions, 
+        public async Task<ChainListenResult> ListenAsync(Dictionary<string, List<string>> fields, ListenerChainConfig listeners, RelationListenChainConfig actions, 
             Requester requester, CancellationToken cancelToken)
         {
-            var result = new ListenResult();
+            var result = new ChainListenResult();
 
             //Assume nothing changed in the result (it may just be a listener update), and better to send the same than to send nothing.
             if(actions != null)
@@ -710,14 +710,19 @@ namespace contentapi.Services.Implementations
 
                             while (true) //I'm RELYING on the fact that OTHER tasks SHOULD have the proper long-polling timeout
                             {
-                                var relations = await relationService.ListenAsync(actions, requester, linkedCts.Token);
+                                var relationResult = await relationService.ListenAsync(actions, requester, linkedCts.Token);
+
+                                //Immediately update these. One is the one we return to the user, and the other is what
+                                //we use to re-do the listen if nothing happened. 
+                                result.lastId = relationResult.lastId; 
+                                actions.lastId = relationResult.lastId;
 
                                 //We can't use the results as-is. Some relations are actually SPECIAL; consider using services for this 
                                 //later in case the meaning of the fields change!!
                                 var baseViews = new List<BaseView>();
                                 var clearContents = new List<long>();
 
-                                foreach(var r in relations)
+                                foreach(var r in relationResult.Relations)
                                 {
                                     BaseView v = null;
 
@@ -752,18 +757,13 @@ namespace contentapi.Services.Implementations
                                 //Inefficient, but I NEED to clear the notifications BEFORE chaining. This MIGHT be called WAY TOO OFTEN so...
                                 //hopefully tracking the contents make it better
                                 await clearNotifications(actions.clearNotifications.Intersect(clearContents));
-                                result.lastId = relations.Max(x => x.id);
-
                                 await chainer(actions.chains, baseViews); 
 
                                 //That where statement ignores autoclears for the desired... well, content ids. A 0 signal id
-                                //means we did it "fast", so it should definitely be a fake clear.
+                                //means we did it "fast", so it should definitely be a fake clear. Basically:
+                                //quit if we got anything worth returning
                                 if (chainResults.Where(x => x.Key != Keys.ChainWatchUpdate || x.Value.Any(y => y.id != 0)).Sum(x => x.Value.Count()) > 0)
                                     break;
-                                else
-                                    actions.lastId = result.lastId;
-                                //the "else" makes it so we don't loop indefinitely getting the same instant completion 
-                                //when nothing was chained, but is this OK logic?
                             }
                         }; 
                         waiters.Add(run());

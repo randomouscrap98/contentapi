@@ -33,7 +33,7 @@ namespace contentapi.test
             //OK NOW it should complete
             var comment = commentService.WriteAsync(new CommentView() { content = "WOW", parentId = unit.commonContent.id }, requester).Result;
 
-            var result = AssertWait(listen);
+            var result = AssertWait(listen).Relations;
 
             Assert.Single(result);
             Assert.Equal(comment.id, result.First().id);
@@ -49,7 +49,7 @@ namespace contentapi.test
             Task.Delay(50).ContinueWith((t)  => 
             {
                 var watch = watchService.WriteAsync(new WatchView() { contentId = unit.commonContent.id }, requester).Result;
-                var result = AssertWait(listen);
+                var result = AssertWait(listen).Relations;
                 Assert.Single(result);
                 Assert.Equal(watch.id, result.First().id);
             }).Wait();
@@ -86,7 +86,7 @@ namespace contentapi.test
                     watch = watchService.WriteAsync(watch, requester).Result;
                 }
 
-                var result = AssertWait(listen);
+                var result = AssertWait(listen).Relations;
 
                 Assert.Single(result);
                 Assert.Equal(watch.id, result.First().entityId1); //INTIMATE KNOWLEDGE OF INNER WORKINGS~! oh well

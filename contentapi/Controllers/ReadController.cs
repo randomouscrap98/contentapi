@@ -73,7 +73,7 @@ namespace contentapi.Controllers
 
         [HttpGet("listen")]
         [Authorize]
-        public Task<ActionResult<ListenResult>> ListenAsync([FromQuery]Dictionary<string, List<string>> fields, 
+        public Task<ActionResult<ChainListenResult>> ListenAsync([FromQuery]Dictionary<string, List<string>> fields, 
             [FromQuery]string listeners, [FromQuery]string actions, CancellationToken cancelToken)
         {
             //HttpContext.
@@ -156,7 +156,7 @@ namespace contentapi.Controllers
                         //Now start the next read request! But don't await it, we need to do our listen service work!
                         memStream.SetLength(0);
                         var wsTask = socket.ReceiveAsync(memStream, CancellationToken.None);
-                        Task<ListenResult> listenTask = null;
+                        Task<ChainListenResult> listenTask = null;
                         Task completedTask = null;
 
                         //This inner loop keeps performing listens based on the current listen request object.

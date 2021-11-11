@@ -1,19 +1,15 @@
 using System;
 using System.Collections.Generic;
 using System.Linq;
-using System.Threading;
 using System.Threading.Tasks;
-using contentapi.Configs;
 using contentapi.Services.Constants;
-using contentapi.Services.Extensions;
 using contentapi.Services.Implementations;
 using contentapi.Views;
-using Microsoft.Extensions.DependencyInjection;
 using Xunit;
 
 namespace contentapi.test
 {
-    [Collection("ASYNC")]
+   [Collection("ASYNC")]
     public class ReadTestListen : ReadTestBaseExtra
     {
         protected ChainService chainer;
@@ -23,7 +19,7 @@ namespace contentapi.test
             chainer = CreateService<ChainService>(true);
         }
 
-        public Task<ListenResult> BasicListen(ListenerChainConfig lConfig, RelationListenChainConfig rConfig, long requesterId)
+        public Task<ChainListenResult> BasicListen(ListenerChainConfig lConfig, RelationListenChainConfig rConfig, long requesterId)
         {
             return chainer.ListenAsync(null, lConfig, rConfig, /*null,*/ new Requester() { userId = requesterId }, cancelToken);
         }
@@ -33,13 +29,13 @@ namespace contentapi.test
             return new List<string>() { "comment.0id" };
         }
 
-        public Tuple<Func<CommentView>, Action<Task<ListenResult>>> GenSimpleCommentThroughput()
+        public Tuple<Func<CommentView>, Action<Task<ChainListenResult>>> GenSimpleCommentThroughput()
         {
             //This is "captured" by the functions + actions
             CommentView comment = null;
 
             Func<CommentView> create = () => comment = commentService.WriteAsync(new CommentView() { content = "hello", parentId = unit.commonContent.id }, new Requester() { userId = unit.specialUser.id}).Result;
-            Action<Task<ListenResult>> check = (listen) =>
+            Action<Task<ChainListenResult>> check = (listen) =>
             {
                 //Ensure the other completed
                 var complete = AssertWait(listen);

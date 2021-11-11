@@ -85,7 +85,8 @@ namespace contentapi.Controllers
       [HttpPost]
       [Authorize]
       public Task<ActionResult<FileView>> UploadFile(IFormFile file = null, List<IFormFile> files = null,
-          [FromQuery] bool tryresize = true, [FromQuery] string bucket = null, [FromQuery]int quantize = -1)
+          [FromQuery] bool tryresize = true, [FromQuery] string bucket = null, [FromQuery]int quantize = -1,
+          [FromQuery] string name = null)
       {
          return ThrowToAction(async () =>
          {
@@ -103,7 +104,7 @@ namespace contentapi.Controllers
 
             var requester = GetRequesterNoFail();
 
-            var newView = new FileView() { bucket = bucket };
+            var newView = new FileView() { bucket = bucket, name = name };
             newView.permissions[0] = "R";
 
             IImageFormat format = null;
