@@ -22,8 +22,11 @@ namespace contentapi.Services.Implementations
             var existingView = converter.ToView(existing);
 
             //Always restore the filetype, you can't change uploaded files anyway.
-            result.fileType = existingView.fileType; //.Entity.content;
-            result.quantization = existingView.quantization; //.GetValue();
+            if(!requester.system)
+            {
+                result.fileType = existingView.fileType; //.Entity.content;
+                result.quantization = existingView.quantization; //.GetValue();
+            }
 
             return result;
         }

@@ -85,7 +85,7 @@ namespace contentapi.Controllers
       [HttpPost]
       [Authorize]
       public Task<ActionResult<FileView>> UploadFile(IFormFile file = null, List<IFormFile> files = null,
-          [FromQuery] bool tryresize = true, [FromQuery] string bucket = null, [FromQuery] int quantize = -1)
+          [FromQuery] bool tryresize = true, [FromQuery] string bucket = null, [FromQuery]int quantize = -1)
       {
          return ThrowToAction(async () =>
          {
@@ -162,7 +162,7 @@ namespace contentapi.Controllers
 
                   //OK the quantization step
                   if (quantize > 0)
-                     newView = await TryQuantize(quantize, newView, finalLocation, requester);
+                     await TryQuantize(quantize, newView, finalLocation, requester);
                }
                finally
                {
@@ -182,14 +182,12 @@ namespace contentapi.Controllers
       }
 
       /// <summary>
-      /// Attempt an image quantization to the given amount of colors. Physically overwrites the file. DOES NOT LOCK ON FILELOCK
+      /// Returns whether or not the quantization is acceptable.
       /// </summary>
-      /// <param name="quantize"></param>
       /// <param name="newView"></param>
-      /// <param name="fileLocation"></param>
-      /// <param name="requester"></param>
+      /// <param name="quantize"></param>
       /// <returns></returns>
-      protected async Task<FileView> TryQuantize(int quantize, FileView newView, string fileLocation, Requester requester)
+      protected bool CheckQuantize(FileView newView, int quantize)
       {
          if (newView.fileType.ToLower() != "image/png")
          {
@@ -205,23 +203,52 @@ namespace contentapi.Controllers
          }
          else
          {
+            return true;
+         }
+
+         return false;
+      }
+
+      /// <summary>
+      /// Attempt an image quantization to the given amount of colors. Physically overwrites the file. DOES NOT LOCK ON FILELOCK
+      /// </summary>
+      /// <param name="quantize"></param>
+      /// <param name="newView"></param>
+      /// <param name="fileLocation"></param>
+      /// <param name="requester"></param>
+      /// <returns></returns>
+      protected async Task<FileView> TryQuantize(int quantize, FileView newView, string fileLocation, Requester requester)
+      {
+         if(CheckQuantize(newView, quantize))
+         {
             try
             {
-               var quantizeParams = $"{quantize} {fileLocation}";
+               var tempLocation = fileLocation + "_quantized";
+               var quantizeParams = $"{quantize} {fileLocation} --output {tempLocation}";
+               var command = $"{config.QuantizerProgram} {quantizeParams}";
                var proc = Process.Start(config.QuantizerProgram, quantizeParams);
-               if (!proc.WaitForExit((int)config.QuantizeTimeout.TotalMilliseconds))
-                  throw new TimeoutException($"Timed out while waiting for quantization program '{config.QuantizerProgram} {quantizeParams}'");
 
-               //Store the requested quantization since it worked
+               //No use setting up multiple await/async etc
+               var completed = await Task.Run(() => proc.WaitForExit((int)config.QuantizeTimeout.TotalMilliseconds));
+
+               if (!completed)
+                  throw new TimeoutException($"Timed out while waiting for quantization program '{command}'");
+               if (proc.ExitCode != 0)
+                  throw new InvalidOperationException($"Quantize program '{command}' exited with code {proc.ExitCode}");
+
+               System.IO.File.Delete(fileLocation);               //Delete the old file
+               System.IO.File.Move(tempLocation, fileLocation);   //Rename the new file
+   
+               logger.LogInformation($"Quantized {fileLocation} to {quantize} colors using '{config.QuantizerProgram} {quantizeParams}'");
+
                newView.quantization = quantize;
-               newView = await service.WriteAsync(newView, requester);
+               await service.WriteAsync(newView, new Requester() { system = true });
             }
             catch (Exception ex)
             {
                logger.LogError($"ERROR DURING IMAGE {newView.id} QUANTIZATION TO {quantize}: {ex}");
             }
          }
-
          return newView;
       }
 
