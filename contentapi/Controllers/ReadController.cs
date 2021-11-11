@@ -206,7 +206,13 @@ namespace contentapi.Controllers
                 catch(Exception ex)
                 {
                     logger.LogError("Exception in websocket: " + ex.ToString());
-                    await socket.CloseAsync(WebSocketCloseStatus.InternalServerError, ex.Message, CancellationToken.None);
+                    await socket.SendAsync(
+                        System.Text.Encoding.UTF8.GetBytes("error:"+ex.ToString()), 
+                        WebSocketMessageType.Text, true, CancellationToken.None);
+                    //Do NOT close with error! We want to reserve websocket errors for network errors and whatever. If 
+                    //the SYSTEM encounters an error, we will tell you about it!
+                    await socket.CloseAsync(WebSocketCloseStatus.NormalClosure, ex.Message, CancellationToken.None);
+                    //await socket.CloseAsync(WebSocketCloseStatus.InternalServerError, ex.Message, CancellationToken.None);
                     return ex.Message;
                 }
             }

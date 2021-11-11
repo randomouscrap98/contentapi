@@ -207,6 +207,8 @@ namespace contentapi.Services.Implementations
             //Yes, the listener will have to wait for the full timeout value to get anything, but... well it should be ok.
             if(result.Relations == null || result.Relations.Count == 0)
                 result.lastId += config.MaxLookahead;
+            else
+                result.lastId = result.Relations.Max(x => x.id);
 
             return result; 
         }

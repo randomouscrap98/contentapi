@@ -83,6 +83,10 @@ namespace contentapi.test
             actions.Item2(listen);
         }
 
+        /// <summary>
+        /// NOTE ON THIS TEST: This test ACTUALLY tests to see whether or not the listener loop gets stuck in an infinite loop
+        /// due to poor lastId configuration! In an infinite loop, there's never a chance for the canceltoken to work!
+        /// </summary>
         [Fact]
         public void SimpleInstantSecret()
         {
