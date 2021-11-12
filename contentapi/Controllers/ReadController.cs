@@ -203,6 +203,7 @@ namespace contentapi.Controllers
                         tokenSource.Cancel(); //Cancel other stuff we're doing, user reads are more important
                         try { await listenTask; }
                         catch(TaskCanceledException) {}
+                        catch(OperationCanceledException) {}
                         tokenSource.Dispose();
                         result = await wsTask;
                     }
