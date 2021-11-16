@@ -1,8 +1,9 @@
 <Project Sdk="Microsoft.NET.Sdk.Web">
 
   <PropertyGroup>
-    <Version>2.4.1.199</Version>
+    <Version>2.4.1.202</Version>
     <TargetFramework>netcoreapp3.1</TargetFramework>
+    <ServerGarbageCollection>false</ServerGarbageCollection> 
   </PropertyGroup>
 
   <ItemGroup>

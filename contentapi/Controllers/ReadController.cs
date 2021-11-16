@@ -193,6 +193,7 @@ namespace contentapi.Controllers
                                 //If it's a cancellation, just ignore this update and continue, there's nothing for us to use.
                                 catch(TaskCanceledException) {}
                                 catch(OperationCanceledException) {}
+                                catch(TimeoutException) {}
                                 //Reset the task so we can restart it
                                 listenTask = null;
                             }
@@ -204,6 +205,7 @@ namespace contentapi.Controllers
                         try { await listenTask; }
                         catch(TaskCanceledException) {}
                         catch(OperationCanceledException) {}
+                        catch(TimeoutException) {}
                         tokenSource.Dispose();
                         result = await wsTask;
                     }

@@ -32,11 +32,11 @@ fi
 # rsync='rsync -zz -${rdf}vh -e "ssh -p $port"' 
 postinstallscript="postinstall.sh"
 postinstallargs=""
-pubcountfile="pubcount"
 
 # Stuff for dotnet
 mtype=linux-x64      # The architecture of the target machine
 corev=3.1            # The version of dotnet core we're using
+projfile=contentapi.csproj
 
 # My places!
 lpfolder="./bin/Release/netcoreapp$corev/$mtype/publish/"   # The LOCAL location to retrieve binaries
@@ -49,10 +49,7 @@ hostrsync()
    rsync -zz -${rdf}vh -e "ssh -p $port" "$1" "$phost:$2"
 }
 
-pubcountorig=`cat ${pubcountfile}`
-pubcount=`expr "${pubcountorig}" + "1"`
-sed -i -E "s/(<Version>[0-9]+\.[0-9]+\.[0-9]+\.)[0-9]+(<\/Version>)/\1${pubcount}\2/" contentapi.csproj
-echo "${pubcount}" > "${pubcountfile}"
+sed -i "s/<Version>[0-9]*[0-9]\.[0-9]*[0-9]\.[0-9]*[0-9]\.[0-9]*[0-9]/&@/g;:a {s/0@/1/g;s/1@/2/g;s/2@/3/g;s/3@/4/g;s/4@/5/g;s/5@/6/g;s/6@/7/g;s/7@/8/g;s/8@/9/g;s/9@/@0/g;t a};s/@/1/g" ${projfile}
 
 # The project itself. Delete the old folder (probably).
 # We REMOVE the local publish folder to get rid of old, no longer needed files
@@ -61,7 +58,7 @@ echo "${pubcount}" > "${pubcountfile}"
 # doesn't include our personal extras (it probably could though)
 rm -rf "$lpfolder"
 # WARN: DON'T PUBLISH SINGLE! IT FILLS THE TEMP DIRECTORY!!
-dotnet publish -r $mtype -c Release # -p:PublishSingleFile=true
+dotnet publish -r $mtype -c Release
 
 # You need these, and they're likely to be the same all the time on every system
 cp -r LanguageFiles "$lpfolder"
