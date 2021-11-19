@@ -49,3 +49,4 @@ uploads
 .vscode_old
 moduledata.db
 profiler.txt
+*.done
