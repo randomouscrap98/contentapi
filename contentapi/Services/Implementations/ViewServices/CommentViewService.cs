@@ -207,20 +207,22 @@ namespace contentapi.Services.Implementations
 
         public async Task<List<CommentAggregateView>> SearchAggregateAsync(CommentSearch search, Requester requester)
         {
-            IQueryable<long> ids = null;
-            await OptimizedCommentSearch(search, requester, async (f) => ids = await converter.SearchIds(search, f));
+            return new List<CommentAggregateView>();
 
-            var groups = await converter.GroupAsync<EntityRelation,TempGroup>(ids, x => new TempGroup(){ userId = -x.entityId2, contentId = x.entityId1});
+            //IQueryable<long> ids = null;
+            //await OptimizedCommentSearch(search, requester, async (f) => ids = await converter.SearchIds(search, f));
 
-            return groups.ToLookup(x => x.Key.contentId).Select(x => new CommentAggregateView()
-            {
-                id = x.Key,
-                count = x.Sum(y => y.Value.count),
-                lastDate = x.Max(y => y.Value.lastDate),
-                firstDate = x.Min(y => y.Value.firstDate),
-                lastId = x.Max(y => y.Value.lastId),
-                userIds = x.Select(y => y.Key.userId).Distinct().ToList()
-            }).ToList();
+            //var groups = await converter.GroupAsync<EntityRelation,TempGroup>(ids, x => new TempGroup(){ userId = -x.entityId2, contentId = x.entityId1});
+
+            //return groups.ToLookup(x => x.Key.contentId).Select(x => new CommentAggregateView()
+            //{
+            //    id = x.Key,
+            //    count = x.Sum(y => y.Value.count),
+            //    lastDate = x.Max(y => y.Value.lastDate),
+            //    firstDate = x.Min(y => y.Value.firstDate),
+            //    lastId = x.Max(y => y.Value.lastId),
+            //    userIds = x.Select(y => y.Key.userId).Distinct().ToList()
+            //}).ToList();
         }
 
         public async Task<CommentView> WriteAsync(CommentView view, Requester requester)

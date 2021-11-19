@@ -63,23 +63,25 @@ namespace contentapi.Services.Implementations
 
         public async Task<List<ActivityAggregateView>> SearchAggregateAsync(ActivitySearch search, Requester requester)
         {
-            //Repeat code, be careful. This finds the appropriate ids to place in search.ContentLimit when only "Watches" is requested.
-            //It ONLY fills the limiter (search.ContentLimit) with ids!
-            await FixWatchLimits(watchSource, requester, search.ContentLimit);
+            return new List<ActivityAggregateView>();
 
-            var ids = await activity.SearchIds(search, q => services.permissions.PermissionWhere(q, requester, Keys.ReadAction));
+            ////Repeat code, be careful. This finds the appropriate ids to place in search.ContentLimit when only "Watches" is requested.
+            ////It ONLY fills the limiter (search.ContentLimit) with ids!
+            //await FixWatchLimits(watchSource, requester, search.ContentLimit);
 
-            var groups = await activity.GroupAsync<EntityRelation,TempGroup>(ids, x => new TempGroup(){ userId = x.entityId1, contentId = -x.entityId2 });
+            //var ids = await activity.SearchIds(search, q => services.permissions.PermissionWhere(q, requester, Keys.ReadAction));
 
-            return groups.ToLookup(x => x.Key.contentId).Select(x => new ActivityAggregateView()
-            {
-                id = x.Key,
-                count = x.Sum(y => y.Value.count),
-                lastDate = x.Max(y => y.Value.lastDate),
-                firstDate = x.Min(y => y.Value.firstDate),
-                lastId = x.Max(y => y.Value.lastId),
-                userIds = x.Select(y => y.Key.userId).Distinct().ToList()
-            }).ToList();
+            //var groups = await activity.GroupAsync<EntityRelation,TempGroup>(ids, x => new TempGroup(){ userId = x.entityId1, contentId = -x.entityId2 });
+
+            //return groups.ToLookup(x => x.Key.contentId).Select(x => new ActivityAggregateView()
+            //{
+            //    id = x.Key,
+            //    count = x.Sum(y => y.Value.count),
+            //    lastDate = x.Max(y => y.Value.lastDate),
+            //    firstDate = x.Min(y => y.Value.firstDate),
+            //    lastId = x.Max(y => y.Value.lastId),
+            //    userIds = x.Select(y => y.Key.userId).Distinct().ToList()
+            //}).ToList();
         }
     }
 }
