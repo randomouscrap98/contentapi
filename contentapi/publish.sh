@@ -34,7 +34,7 @@ postinstallscript="postinstall.sh"
 postinstallargs=""
 projectdata="../projectData"
 copyfolders="$projectdata/LanguageFiles $projectdata/dbmigrate.sh $projectdata/dbMigrations"
-removefiles="content.db newcontent.db"
+removefiles="content.db newcontent.db dbMigrations/*.done"
 
 # Stuff for dotnet
 mtype=linux-x64      # The architecture of the target machine

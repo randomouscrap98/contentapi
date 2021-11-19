@@ -1,7 +1,7 @@
 <Project Sdk="Microsoft.NET.Sdk.Web">
 
   <PropertyGroup>
-    <Version>2.4.1.208</Version>
+    <Version>2.4.1.212</Version>
     <TargetFramework>netcoreapp3.1</TargetFramework>
   </PropertyGroup>
 
@@ -24,7 +24,7 @@
     <Exec Command="xcopy ..\projectData\* &quot;$(ProjectDir)*&quot; /s /d /y" />
   </Target>-->
   <Target Name="CopyFiles" BeforeTargets="AfterBuild">
-    <Exec Command="xcopy ..\projectData\LanguageFiles &quot;$(ProjectDir)&quot; /s /d /y" />
+    <Exec Command="xcopy ..\projectData\LanguageFiles &quot;$(ProjectDir)\LanguageFiles&quot; /s /d /y" />
   </Target>
 
   <!--<ItemGroup>
