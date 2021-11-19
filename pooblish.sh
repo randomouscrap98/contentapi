@@ -2,5 +2,5 @@
 
 set -e
 
-dotnet test
+# dotnet test
 cd contentapi && sh publish.sh "$1"

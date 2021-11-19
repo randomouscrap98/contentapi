@@ -32,6 +32,9 @@ fi
 # rsync='rsync -zz -${rdf}vh -e "ssh -p $port"' 
 postinstallscript="postinstall.sh"
 postinstallargs=""
+projectdata="../projectData"
+copyfolders="$projectdata/LanguageFiles $projectdata/dbmigrate.sh $projectdata/dbMigrations"
+removefiles="content.db newcontent.db"
 
 # Stuff for dotnet
 mtype=linux-x64      # The architecture of the target machine
@@ -61,11 +64,17 @@ rm -rf "$lpfolder"
 dotnet publish -r $mtype -c Release
 
 # You need these, and they're likely to be the same all the time on every system
-cp -r LanguageFiles "$lpfolder"
+for cpfl in $copyfolders
+do
+   cp -r $cpfl "$lpfolder"
+done
 
 # I ACCIDENTALLY MADE A MISTAKE ONE TIME AND A BLANK CONTENT.DB GOT INTO
 # THE PUBLISH! I DON'T EVER WANT THAT TO HAPPEN AGAIN, this is safety
-rm -f "$lpfolder/content.db"
+for rmfl in $removefiles
+do
+   rm -rf "$lpfolder/$rmfl"
+done
 
 # Now put the stuff on the server! A simple direct copy
 hostrsync "$lpfolder" "$pfolder"
