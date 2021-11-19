@@ -1,7 +1,7 @@
-#!/bin/sh
+#!/bin/bash
 
 DB=${1:-newcontent.db}
-DBMIGRATIONS=${2:-dbmigrations}
+DBMIGRATIONS=${2:-dbMigrations}
 
 for f in $DBMIGRATIONS/*.sql
 do

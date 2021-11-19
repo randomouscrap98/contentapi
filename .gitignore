@@ -50,3 +50,4 @@ uploads
 moduledata.db
 profiler.txt
 *.done
+contentapi/dbmigrate.sh
