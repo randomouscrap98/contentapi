@@ -38,8 +38,6 @@ namespace contentapi.Views
 
         public string type {get;set;}
 
-        public List<string> keywords {get;set;} = new List<string>();
-
         protected override bool EqualsSelf(object obj)
         {
             var o = (ContentView)obj;

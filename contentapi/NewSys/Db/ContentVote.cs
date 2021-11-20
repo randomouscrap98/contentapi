@@ -1,3 +1,4 @@
+using System;
 using Dapper.Contrib.Extensions;
 
 namespace contentapi.Db
@@ -10,6 +11,6 @@ namespace contentapi.Db
         public long contentId {get;set;}
         public long userId {get;set;}
         public VoteType vote {get;set;}
-        public string value {get;set;}
+        public DateTime createDate {get;set;}
     }
 }

@@ -9,6 +9,7 @@ namespace contentapi.Db
         [ExplicitKey]
         public long id {get;set;}
         public bool deleted {get;set;}
+        public long createUserId {get;set;}
         public DateTime createDate {get;set;}
         public InternalContentType internalType {get;set;}
         public string publicType {get;set;}

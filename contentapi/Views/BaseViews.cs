@@ -45,5 +45,7 @@ namespace contentapi.Views
 
         [IgnoreCompare]
         public string myPerms { get; set; }
+
+        public List<string> keywords {get;set;} = new List<string>();
     }
 }
