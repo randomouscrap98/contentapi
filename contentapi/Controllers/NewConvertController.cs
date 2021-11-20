@@ -84,73 +84,79 @@ namespace contentapi.Controllers
         [HttpGet("users")]
         public async Task<string> ConvertUsersAsync()
         {
-            try
+            newdb.Open();
+            using (var trs = newdb.BeginTransaction())
             {
-                Log("Starting user convert");
-                var users = await userSource.SimpleSearchAsync(new UserSearch());
-                Log($"{users.Count} users found");
-                foreach(var user in users)
+                try
                 {
-                    var newUser = mapper.Map<Db.User>(user);
-                    //User dapper to store?
-                    var id = await newdb.InsertAsync(newUser);
-                    Log($"Inserted user {newUser.username}({id})");
-                }
-                var count = newdb.ExecuteScalar<int>("SELECT COUNT(*) FROM users");
-                Log($"Successfully inserted users, {count} in table");
+                    Log("Starting user convert");
+                    var users = await userSource.SimpleSearchAsync(new UserSearch());
+                    Log($"{users.Count} users found");
+                    foreach (var user in users)
+                    {
+                        var newUser = mapper.Map<Db.User>(user);
+                        //User dapper to store?
+                        var id = await newdb.InsertAsync(newUser);
+                        Log($"Inserted user {newUser.username}({id})");
+                    }
+                    var count = newdb.ExecuteScalar<int>("SELECT COUNT(*) FROM users");
+                    Log($"Successfully inserted users, {count} in table");
 
-                Log("Starting ban convert");
-                var bans = await banSource.SimpleSearchAsync(new BanSearch());
-                Log($"{bans.Count} bans found");
-                foreach(var ban in bans)
-                {
-                    var newban = mapper.Map<Db.Ban>(ban);
-                    //User dapper to store?
-                    var id = await newdb.InsertAsync(newban);
-                    Log($"Inserted ban for {newban.bannedUserId}({id})");
-                }
-                count = newdb.ExecuteScalar<int>("SELECT COUNT(*) FROM bans");
-                Log($"Successfully inserted bans, {count} in table");
+                    Log("Starting ban convert");
+                    var bans = await banSource.SimpleSearchAsync(new BanSearch());
+                    Log($"{bans.Count} bans found");
+                    foreach (var ban in bans)
+                    {
+                        var newban = mapper.Map<Db.Ban>(ban);
+                        //User dapper to store?
+                        var id = await newdb.InsertAsync(newban);
+                        Log($"Inserted ban for {newban.bannedUserId}({id})");
+                    }
+                    count = newdb.ExecuteScalar<int>("SELECT COUNT(*) FROM bans");
+                    Log($"Successfully inserted bans, {count} in table");
 
-                Log("Starting user variable convert");
-                //var realKeys = keys.Select(x => Keys.VariableKey + x);
+                    Log("Starting user variable convert");
+                    //var realKeys = keys.Select(x => Keys.VariableKey + x);
 
-                var evs = await entityProvider.GetQueryableAsync<EntityValue>();
-                var ens = await entityProvider.GetQueryableAsync<Entity>();
+                    var evs = await entityProvider.GetQueryableAsync<EntityValue>();
+                    var ens = await entityProvider.GetQueryableAsync<Entity>();
 
-                var query = 
-                    from v in evs
-                    where EF.Functions.Like(v.key, $"{Keys.VariableKey}%")
+                    var query =
+                        from v in evs
+                        where EF.Functions.Like(v.key, $"{Keys.VariableKey}%")
                     //where EF.Functions.Like(v.key, Keys.VariableKey + key) && v.entityId == -uid
                     join e in ens on -v.entityId equals e.id
-                    where EF.Functions.Like(e.type, $"{Keys.UserType}%")
-                    select v;
-                
-                var uvars = await query.ToListAsync();
-                Log($"{uvars.Count} user variables found");
+                        where EF.Functions.Like(e.type, $"{Keys.UserType}%")
+                        select v;
 
-                foreach(var uvar in uvars)
-                {
-                    var newvar = new UserVariable()
+                    var uvars = await query.ToListAsync();
+                    Log($"{uvars.Count} user variables found");
+
+                    foreach (var uvar in uvars)
                     {
-                        id = uvar.id,
-                        userId = -uvar.entityId ,
-                        createDate = uvar.createDate ?? DateTime.Now,
-                        editCount = 0,
-                        key = uvar.key.Substring(Keys.VariableKey.Length),
-                        value = uvar.value
-                    };//mapper.Map<Db.Ban>(ban);
-                    newvar.editDate = newvar.createDate;
-                    var id = await newdb.InsertAsync(newvar);
-                    Log($"Inserted uservariable {newvar.key} for {newvar.userId}({id})");
-                }
+                        var newvar = new UserVariable()
+                        {
+                            id = uvar.id,
+                            userId = -uvar.entityId,
+                            createDate = uvar.createDate ?? DateTime.Now,
+                            editCount = 0,
+                            key = uvar.key.Substring(Keys.VariableKey.Length),
+                            value = uvar.value
+                        };//mapper.Map<Db.Ban>(ban);
+                        newvar.editDate = newvar.createDate;
+                        var id = await newdb.InsertAsync(newvar);
+                        Log($"Inserted uservariable {newvar.key} for {newvar.userId}({id})");
+                    }
 
-                count = newdb.ExecuteScalar<int>("SELECT COUNT(*) FROM user_variables");
-                Log($"Successfully inserted user variables, {count} in table");
-            }
-            catch(Exception ex)
-            {
-                Log($"EXCEPTION: {ex}");
+                    count = newdb.ExecuteScalar<int>("SELECT COUNT(*) FROM user_variables");
+                    Log($"Successfully inserted user variables, {count} in table");
+                    trs.Commit();
+                }
+                catch (Exception ex)
+                {
+                    Log($"EXCEPTION: {ex}");
+                    trs.Rollback();
+                }
             }
 
             return DumpLog();
@@ -162,14 +168,12 @@ namespace contentapi.Controllers
             var tn = typeof(T);
             Log($"Starting {tn.Name} convert");
             var content = await producer();
-            //var content = await contentSource.SimpleSearchAsync(new ContentSearch());
             foreach (var ct in content)
             {
                 var nc = mapper.Map<Db.Content>(ct);
                 nc.deleted = false;
                 if(modify != null)
                     nc = modify(nc, ct);
-                //User dapper to store?
                 var id = await newdb.InsertAsync(nc);
                 Log($"Inserted {tn.Name} '{nc.name}'({id})");
 
@@ -188,6 +192,7 @@ namespace contentapi.Controllers
                     key = x.Key,
                     value = x.Value
                 }).ToList();
+
                 lcnt = await newdb.InsertAsync(vls); //IDK if the list version has async
                 Log($"Inserted {lcnt} values for '{nc.name}'");
 
@@ -218,61 +223,67 @@ namespace contentapi.Controllers
         [HttpGet("content")]
         public async Task<string> ConvertContentAsync()
         {
-            try
+            newdb.Open();
+            using (var trs = newdb.BeginTransaction())
             {
-                var ids = await ConvertCt(() => contentSource.SimpleSearchAsync(new ContentSearch()));
+                try
+                {
+                    var ids = await ConvertCt(() => contentSource.SimpleSearchAsync(new ContentSearch()));
 
-                //Need to get votes and watches ONLY for real content
-                Log("Starting vote convert");
-                var votes = await voteSource.SimpleSearchAsync(new VoteSearch()
-                {
-                    ContentIds = ids
-                });
-                Log($"{votes.Count} votes found");
-                foreach(var v in votes)
-                {
-                    var newVote = mapper.Map<ContentVote>(v);
-                     var vt = v.vote.ToLower();
-                     if(vt == "b") newVote.vote = VoteType.bad;
-                     if(vt == "o") newVote.vote = VoteType.ok;
-                     if(vt == "g") newVote.vote = VoteType.good;
-                    //User dapper to store?
-                    var id = await newdb.InsertAsync(newVote);
-                    Log($"Inserted vote {newVote.userId}-{newVote.contentId}({id})");
+                    //Need to get votes and watches ONLY for real content
+                    Log("Starting vote convert");
+                    var votes = await voteSource.SimpleSearchAsync(new VoteSearch()
+                    {
+                        ContentIds = ids
+                    });
+                    Log($"{votes.Count} votes found");
+                    foreach (var v in votes)
+                    {
+                        var newVote = mapper.Map<ContentVote>(v);
+                        var vt = v.vote.ToLower();
+                        if (vt == "b") newVote.vote = VoteType.bad;
+                        if (vt == "o") newVote.vote = VoteType.ok;
+                        if (vt == "g") newVote.vote = VoteType.good;
+                        //User dapper to store?
+                        var id = await newdb.InsertAsync(newVote);
+                        Log($"Inserted vote {newVote.userId}-{newVote.contentId}({id})");
+                    }
+                    var count = newdb.ExecuteScalar<int>("SELECT COUNT(*) FROM content_votes");
+                    Log($"Successfully inserted votes, {count} in table");
+
+                    Log("Starting watch convert");
+                    var watches = await watchSource.SimpleSearchAsync(new WatchSearch()
+                    {
+                        ContentIds = ids
+                    });
+                    Log($"{watches.Count} watches found");
+                    foreach (var w in watches)
+                    {
+                        var neww = mapper.Map<ContentWatch>(w);
+                        //User dapper to store?
+                        var id = await newdb.InsertAsync(neww);
+                        Log($"Inserted watch {neww.userId}-{neww.contentId}({id})");
+                    }
+                    count = newdb.ExecuteScalar<int>("SELECT COUNT(*) FROM content_watches");
+                    Log($"Successfully inserted watches, {count} in table");
+
+                    await ConvertCt(() => fileSource.SimpleSearchAsync(new FileSearch()), (n, o) =>
+                    {
+                        o.values.Add("quantization", o.quantization.ToString());
+                        return n;
+                    });
+                    await ConvertCt(() => categorySource.SimpleSearchAsync(new CategorySearch()), (n, o) =>
+                    {
+                        o.values.Add("localSupers", string.Join(",", o.localSupers));
+                        return n;
+                    });
+                    trs.Commit();
                 }
-                var count = newdb.ExecuteScalar<int>("SELECT COUNT(*) FROM content_votes");
-                Log($"Successfully inserted votes, {count} in table");
-
-                Log("Starting watch convert");
-                var watches = await watchSource.SimpleSearchAsync(new WatchSearch()
+                catch (Exception ex)
                 {
-                    ContentIds = ids
-                });
-                Log($"{watches.Count} watches found");
-                foreach(var w in watches )
-                {
-                    var neww = mapper.Map<ContentWatch>(w);
-                    //User dapper to store?
-                    var id = await newdb.InsertAsync(neww);
-                    Log($"Inserted watch {neww.userId}-{neww.contentId}({id})");
+                    trs.Rollback();
+                    Log($"EXCEPTION: {ex}");
                 }
-                count = newdb.ExecuteScalar<int>("SELECT COUNT(*) FROM content_watches");
-                Log($"Successfully inserted watches, {count} in table");
-
-                await ConvertCt(() => fileSource.SimpleSearchAsync(new FileSearch()), (n,o) =>
-                {
-                    o.values.Add("quantization", o.quantization.ToString());
-                    return n;
-                });
-                await ConvertCt(() => categorySource.SimpleSearchAsync(new CategorySearch()), (n,o) =>
-                {
-                    o.values.Add("localSupers", string.Join(",", o.localSupers));
-                    return n;
-                });
-            }
-            catch(Exception ex)
-            {
-                Log($"EXCEPTION: {ex}");
             }
 
             return DumpLog();
