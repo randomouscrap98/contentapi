@@ -54,7 +54,7 @@ create table if not exists content (
     publicType text not null,
     `name` text not null,
     content text not null,
-    parentId int -- each content can only physically exist in one parent
+    parentId int not null default 0 -- each content can only physically exist in one parent
 );
 
 create index if not exists idx_content_internalType on content(internalType, deleted);

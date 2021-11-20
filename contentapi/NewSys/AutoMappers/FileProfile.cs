@@ -9,8 +9,10 @@ namespace contentapi
         public FileProfile()
         {
             CreateMap<FileView, Db.Content>()
+            .ForMember(x => x.name, 
+                 opt => opt.MapFrom(src => src.name ?? "")) //Basically, a description of the file
             .ForMember(x => x.publicType, //For optimization, public type HAS TO be the bucket. There's an index!
-                 opt => opt.MapFrom(src => src.bucket))
+                 opt => opt.MapFrom(src => src.bucket ?? ""))
             .ForMember(x => x.content, 
                  opt => opt.MapFrom(src => src.fileType)) //Basically, a description of the file
             .ForMember(x => x.internalType, 

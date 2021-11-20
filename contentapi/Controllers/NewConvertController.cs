@@ -171,7 +171,7 @@ namespace contentapi.Controllers
                     nc = modify(nc, ct);
                 //User dapper to store?
                 var id = await newdb.InsertAsync(nc);
-                Log($"Inserted {tn.Name} {nc.name}({id})");
+                Log($"Inserted {tn.Name} '{nc.name}'({id})");
 
                 //Now grab the keywords and permissions and values
                 var kws = ct.keywords.Select(x => new ContentKeyword()
@@ -180,7 +180,7 @@ namespace contentapi.Controllers
                     value = x
                 }).ToList();
                 var lcnt = await newdb.InsertAsync(kws); //IDK if the list version has async
-                Log($"Inserted {lcnt} keywords for {nc.name}");
+                Log($"Inserted {lcnt} keywords for '{nc.name}'");
 
                 var vls = ct.values.Select(x => new ContentValue()
                 {
@@ -189,20 +189,20 @@ namespace contentapi.Controllers
                     value = x.Value
                 }).ToList();
                 lcnt = await newdb.InsertAsync(vls); //IDK if the list version has async
-                Log($"Inserted {lcnt} values for {nc.name}");
+                Log($"Inserted {lcnt} values for '{nc.name}'");
 
                 var pms = ct.permissions.Select(x => new ContentPermission()
                 {
                     contentId = id,
                     userId = x.Key,
-                    create = x.Value.ToLower().Contains(Keys.CreateAction.ToLower()),
-                    read = x.Value.ToLower().Contains(Keys.ReadAction.ToLower()),
-                    update = x.Value.ToLower().Contains(Keys.UpdateAction.ToLower()),
-                    delete= x.Value.ToLower().Contains(Keys.DeleteAction.ToLower())
+                    create = x.Value.ToLower().Contains(Actions.KeyMap[Keys.CreateAction].ToLower()),
+                    read = x.Value.ToLower().Contains(Actions.KeyMap[Keys.ReadAction].ToLower()),
+                    update = x.Value.ToLower().Contains(Actions.KeyMap[Keys.UpdateAction].ToLower()),
+                    delete= x.Value.ToLower().Contains(Actions.KeyMap[Keys.DeleteAction].ToLower())
                 }).ToList();
 
                 lcnt = await newdb.InsertAsync(pms); //IDK if the list version has async
-                Log($"Inserted {lcnt} permissions for {nc.name}");
+                Log($"Inserted {lcnt} permissions for '{nc.name}'");
 
                 //And might as well go out and get the watches and votes, since i think
                 //those COULD be tied to bad/old content... or something.
@@ -232,7 +232,6 @@ namespace contentapi.Controllers
                 foreach(var v in votes)
                 {
                     var newVote = mapper.Map<ContentVote>(v);
-                    newVote.vote = VoteType.none;
                      var vt = v.vote.ToLower();
                      if(vt == "b") newVote.vote = VoteType.bad;
                      if(vt == "o") newVote.vote = VoteType.ok;
@@ -277,6 +276,18 @@ namespace contentapi.Controllers
             }
 
             return DumpLog();
+        }
+
+        [HttpGet("all")]
+        public async Task<string> ConvertAll()
+        {
+            var sb = new StringBuilder();
+
+            sb.AppendLine(await ConvertUsersAsync());
+            sb.AppendLine("---------------");
+            sb.AppendLine(await ConvertContentAsync());
+
+            return sb.ToString();
         }
     }
 }

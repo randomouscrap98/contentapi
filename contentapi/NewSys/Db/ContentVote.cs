@@ -3,7 +3,7 @@ using Dapper.Contrib.Extensions;
 
 namespace contentapi.Db
 {
-    [Table("content_values")]
+    [Table("content_votes")]
     public class ContentVote
     {
         [Key]

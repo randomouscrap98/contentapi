@@ -9,8 +9,8 @@ namespace contentapi
     {
         public VoteProfile()
         {
-            CreateMap<VoteView, Db.ContentVote>();
-            //.ForMember(x => x.vote, 
+            CreateMap<VoteView, Db.ContentVote>()
+            .ForMember(x => x.vote, opt => opt.MapFrom(src => VoteType.none));
             //     opt => opt.MapFrom(src => 
             //     {
             //         var v = src.vote.ToLower();

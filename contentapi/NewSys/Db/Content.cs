@@ -15,6 +15,6 @@ namespace contentapi.Db
         public string publicType {get;set;}
         public string name {get;set;}
         public string content {get;set;}
-        public long? parentId {get;set;}
+        public long parentId {get;set;}
     }
 }
