@@ -16,6 +16,10 @@ namespace contentapi.Db
         public DateTime? editDate {get;set;}
         public long? editUserId {get;set;}
 
+        //module messages are just comments. You can search for comments by finding
+        //null modules
+        public string module {get;set;} 
+
         //Store something in here which can be parsed to see
         //who has done what on this comment, just for admin purposes.
         //Don't need to restore or any of that.

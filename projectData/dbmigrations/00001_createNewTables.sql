@@ -153,8 +153,19 @@ create table if not exists comments(
     `text` text not null,
     editUserId int default null,
     editDate text default null,
+    module text default null,
     history text default null, -- most comments will NOT be edited, so this should be fine
     deleted int not null default 0
 );
 
+-- TRY TO LIMIT INDEXES ON COMMENTS! I'm worried about the insert speed.
+-- This index is useful for massive comment searches within particularly rooms.
+-- Don't need to search EVERY comment in existence for values...
 create index if not exists idx_comment_contentId on comments(contentId, deleted);
+
+-- IF READ PERFORMANCE BECOMES AN ISSUE AGAIN: index on createDate and deleted
+
+--ONLY add the module index if you think you need it! Querying for module messages
+--will GENERALLY be limited by date or id or something, so the table will be linearly
+--scanned anyway. 
+--create index if not exists idx_comment_module on comments(module, deleted);
