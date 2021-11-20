@@ -35,7 +35,7 @@ create table if not exists content (
     createDate text not null,
     createUserId int not null,
     internalType int not null, --page, file, module, category etc (use an enum)
-    publicType int not null,
+    publicType text not null,
     `name` text not null,
     content text not null,
     parentId int -- each content can only physically exist in one parent
