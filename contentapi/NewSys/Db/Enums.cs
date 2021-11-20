@@ -23,4 +23,12 @@ namespace contentapi.Db
         update = 4,
         delete = 8
     }
+
+    public enum VoteType
+    {
+        none = 0,
+        bad = 1,
+        ok = 2,
+        good = 3
+    }
 }

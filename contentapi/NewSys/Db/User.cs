@@ -5,9 +5,10 @@ using Dapper.Contrib.Extensions;
 
 namespace contentapi.Db
 {
+    [Table("users")]
     public class User
     {
-        [Key]
+        [ExplicitKey] //This is only during conversion!
         public long id {get;set;}
         public string username {get;set;}
         public long avatar {get;set;}

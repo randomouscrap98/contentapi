@@ -1,9 +1,12 @@
 using System;
+using Dapper.Contrib.Extensions;
 
 namespace contentapi.Db
 {
+    [Table("comments")]
     public class Comment
     {
+        [ExplicitKey]
         public long id {get;set;}
         public long contentId {get;set;}
         public long createUserId {get;set;}

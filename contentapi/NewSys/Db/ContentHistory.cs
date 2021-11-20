@@ -1,9 +1,12 @@
 using System;
+using Dapper.Contrib.Extensions;
 
 namespace contentapi.Db
 {
+    [Table("content_history")]
     public class ContentHistory
     {
+        [ExplicitKey]
         public long id {get;set;}
         public long contentId {get;set;}
         public UserAction action {get;set;}

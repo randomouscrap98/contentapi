@@ -3,12 +3,13 @@ using Dapper.Contrib.Extensions;
 namespace contentapi.Db
 {
     [Table("content_values")]
-    public class ContentValue
+    public class ContentVote
     {
         [Key]
         public long id {get;set;}
         public long contentId {get;set;}
-        public string key {get;set;}
+        public long userId {get;set;}
+        public VoteType vote {get;set;}
         public string value {get;set;}
     }
 }

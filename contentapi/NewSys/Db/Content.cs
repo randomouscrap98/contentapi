@@ -1,9 +1,12 @@
 using System;
+using Dapper.Contrib.Extensions;
 
 namespace contentapi.Db
 {
+    [Table("content")]
     public class Content
     {
+        [ExplicitKey]
         public long id {get;set;}
         public bool deleted {get;set;}
         public DateTime createDate {get;set;}

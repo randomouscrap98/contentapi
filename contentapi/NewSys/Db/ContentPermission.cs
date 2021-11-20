@@ -1,7 +1,11 @@
+using Dapper.Contrib.Extensions;
+
 namespace contentapi.Db
 {
+    [Table("content_permissions")]
     public class ContentPermission
     {
+        [Key]
         public long id {get;set;}
         public long contentId {get;set;}
         public long userId {get;set;}
