@@ -17,6 +17,22 @@ create table if not exists users (
     registrationKey text
 );
 
+-- To simplify, we're not letting content values be edited. as such, the
+-- content's modify date will become the value date
+create table if not exists user_variables(
+    id integer primary key,
+    userId int not null,
+    createDate text not null,
+    editDate text,
+    editCount int not null default 0,
+    `key` text not null,
+    `value` text
+);
+
+-- This COULD become a performance concern if people keep updating their user variables...
+-- but tbf it's just the key so...
+create index if not exists idx_user_variables_userId on user_variables(userId, key);
+
 create table if not exists bans (
     id integer primary key,
     createDate text not null,
@@ -58,6 +74,17 @@ create table if not exists content_values (
 
 create index if not exists idx_content_values_contentId on content_values(contentId);
 create index if not exists idx_content_values_key on content_values(`key`);
+
+-- Even though keywords could technically be stored in the values table, I
+-- DON'T want any more performance issues. We can index this table BY the keyword
+create table if not exists content_keywords (
+    id integer primary key,
+    contentId int not null,
+    `value` text not null
+);
+
+create index if not exists idx_content_keywords_contentId on content_keywords(contentId);
+create index if not exists idx_content_keywords_value on content_keywords(`value`, contentId);
 
 -- Again, the user permissions are tied directly to the content. Edits
 -- and such completely remove all old values and insert the new ones, but
