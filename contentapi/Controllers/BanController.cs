@@ -4,7 +4,6 @@ using contentapi.Services.Implementations;
 using contentapi.Views;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
-using Microsoft.Extensions.Logging;
 
 namespace contentapi.Controllers
 {
