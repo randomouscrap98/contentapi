@@ -205,9 +205,10 @@ namespace contentapi.Services.Implementations
             public long contentId {get;set;}
         }
 
-        public async Task<List<CommentAggregateView>> SearchAggregateAsync(CommentSearch search, Requester requester)
+        //public async Task<List<CommentAggregateView>> SearchAggregateAsync(CommentSearch search, Requester requester)
+        public Task<List<CommentAggregateView>> SearchAggregateAsync(CommentSearch search, Requester requester)
         {
-            return new List<CommentAggregateView>();
+            return Task.FromResult(new List<CommentAggregateView>());
 
             //IQueryable<long> ids = null;
             //await OptimizedCommentSearch(search, requester, async (f) => ids = await converter.SearchIds(search, f));

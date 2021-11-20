@@ -14,4 +14,7 @@ namespace contentapi.Db
             this.ChangeTracker.QueryTrackingBehavior = QueryTrackingBehavior.NoTracking;
         }
     }
+
+    //OK but what we really wanted was
+    public class ContentApiDbConnection : DisposableDbConnectionWrapper {}
 }

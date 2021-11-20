@@ -61,9 +61,10 @@ namespace contentapi.Services.Implementations
             public long contentId {get;set;}
         }
 
-        public async Task<List<ActivityAggregateView>> SearchAggregateAsync(ActivitySearch search, Requester requester)
+        //public async Task<List<ActivityAggregateView>> SearchAggregateAsync(ActivitySearch search, Requester requester)
+        public Task<List<ActivityAggregateView>> SearchAggregateAsync(ActivitySearch search, Requester requester)
         {
-            return new List<ActivityAggregateView>();
+            return Task.FromResult(new List<ActivityAggregateView>());
 
             ////Repeat code, be careful. This finds the appropriate ids to place in search.ContentLimit when only "Watches" is requested.
             ////It ONLY fills the limiter (search.ContentLimit) with ids!

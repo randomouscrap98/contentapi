@@ -1,11 +1,13 @@
 using System;
 using System.Collections.Generic;
 using System.Linq;
+using Dapper.Contrib.Extensions;
 
 namespace contentapi.Db
 {
     public class User
     {
+        [Key]
         public long id {get;set;}
         public string username {get;set;}
         public long avatar {get;set;}
@@ -19,6 +21,7 @@ namespace contentapi.Db
         public string salt {get;set;}
         public string registrationKey {get;set;}
 
+        [Write(false)]
         public List<long> hideListParsed => 
             hidelist.Split(",".ToCharArray(), StringSplitOptions.RemoveEmptyEntries).Select(x => long.Parse(x.Trim())).ToList();
     }

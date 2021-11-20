@@ -1,5 +1,5 @@
 create table if not exists users (
-    id int primary key,
+    id integer primary key,
     username text not null,
     avatar int not null default 0,
     createDate text not null,
@@ -18,7 +18,7 @@ create table if not exists users (
 );
 
 create table if not exists bans (
-    id int primary key,
+    id integer primary key,
     createDate text not null,
     expireDate text not null,
     createUserId int not null,
@@ -30,7 +30,7 @@ create table if not exists bans (
 -- Note: Only create indexes if you NEED them!
 
 create table if not exists content (
-    id int primary key,
+    id integer primary key,
     deleted int not null default 0, -- deleting removes the id, don't want that.
     createDate text not null,
     createUserId int not null,
@@ -50,7 +50,7 @@ create index if not exists idx_content_parentId on content(parentId, deleted);
 -- To simplify, we're not letting content values be edited. as such, the
 -- content's modify date will become the value date
 create table if not exists content_values (
-    id int primary key,
+    id integer primary key,
     contentId int not null,
     `key` text not null,
     `value` text not null
@@ -63,7 +63,7 @@ create index if not exists idx_content_values_key on content_values(`key`);
 -- and such completely remove all old values and insert the new ones, but
 -- a snapshot is made before that happens
 create table if not exists content_permissions (
-    id int primary key,
+    id integer primary key,
     contentId int not null,
     userId int not null,
     `create` int not null, -- split for optimized searching
@@ -76,7 +76,7 @@ create index if not exists idx_content_permissions_contentId on content_permissi
 create index if not exists idx_content_permissions_userread on content_permissions(userId, read);
 
 create table if not exists content_votes (
-    id int primary key,
+    id integer primary key,
     contentId int not null,
     userId int not null,
     vote int not null, -- again an enum
@@ -87,7 +87,7 @@ create table if not exists content_votes (
 create index if not exists idx_content_votes_contentId on content_votes(contentId);
 
 create table if not exists content_watches (
-    id int primary key,
+    id integer primary key,
     contentId int not null,
     userId int not null,
     lastCommentId int not null, -- The last seen comment id
@@ -103,7 +103,7 @@ create index if not exists idx_content_watches_userId on content_watches(userId)
 -- creates into here... well if you save EVERY bit of history as well as the
 -- currently expanded... yes this could work. Just make it even
 create table if not exists content_history(
-    id int primary key,
+    id integer primary key,
     contentId int not null,
     action int not null, -- an enum, create read update delete
     `snapshot` text not null, -- some formatted thing which represents the entire page data (hopefully compressed)
@@ -118,7 +118,7 @@ create index if not exists idx_content_history_createDate on content_history(cre
 -- To make comment searches more simple and performant(?), put the edit
 -- data right in the comment. no linking
 create table if not exists comments(
-    id int primary key,
+    id integer primary key,
     contentId int not null,
     createUserId int not null,
     createDate text not null,

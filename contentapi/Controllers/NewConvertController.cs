@@ -1,9 +1,13 @@
 using System;
+using System.Data;
 using System.Text;
 using System.Threading.Tasks;
+using AutoMapper;
 using contentapi.Db;
 using contentapi.Services.Extensions;
 using contentapi.Services.Implementations;
+using Dapper;
+using Dapper.Contrib.Extensions;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.Extensions.Logging;
 
@@ -24,14 +28,17 @@ namespace contentapi.Controllers
         protected  WatchViewSource watchSource;
         protected  CommentViewSource commentSource;
         protected  ActivityViewSource activitySource;
-        protected  ContentApiDbContext ctapiContext;
+        //protected  ContentApiDbContext ctapiContext;
+        protected IMapper mapper;
+        protected IDbConnection newdb;
 
 
         public NewConvertController(ILogger<NewConvertController> logger, UserViewSource userSource, BanViewSource banSource,
             ModuleViewSource moduleViewSource, FileViewSource fileViewSource, ContentViewSource contentViewSource, 
             CategoryViewSource categoryViewSource, VoteViewSource voteViewSource, WatchViewSource watchViewSource, 
             CommentViewSource commentViewSource, ActivityViewSource activityViewSource, 
-            ContentApiDbContext ctapiContext)
+            ContentApiDbConnection cdbconnection,
+            /*ContentApiDbContext ctapiContext,*/ IMapper mapper)
         {
             this.logger = logger;
             this.userSource = userSource;
@@ -44,7 +51,9 @@ namespace contentapi.Controllers
             this.watchSource = watchViewSource;
             this.commentSource = commentViewSource;
             this.activitySource = activityViewSource;
-            this.ctapiContext = ctapiContext;
+            //this.ctapiContext = ctapiContext;
+            this.mapper = mapper;
+            this.newdb = cdbconnection.Connection;
         }
 
 
@@ -72,7 +81,15 @@ namespace contentapi.Controllers
                 Log("Starting user convert");
                 var users = await userSource.SimpleSearchAsync(new UserSearch());
                 Log($"{users.Count} users found");
-                //Need to map userview to user database object, then store them. 
+                foreach(var user in users)
+                {
+                    var newUser = mapper.Map<Db.User>(user);
+                    //User dapper to store?
+                    var id = await newdb.InsertAsync(newUser);
+                    Log($"Inserted user {newUser.username}({id})");
+                }
+                var count = newdb.ExecuteScalar<int>("SELECT COUNT(*) FROM users");
+                Log($"Successfully inserted users, {count} in table");
             }
             catch(Exception ex)
             {

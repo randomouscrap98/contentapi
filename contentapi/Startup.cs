@@ -18,6 +18,8 @@ using Randomous.EntitySystem.Implementations;
 using Serilog;
 using System;
 using Newtonsoft.Json;
+using contentapi.Db;
+using Microsoft.Data.Sqlite;
 
 namespace contentapi
 {
@@ -75,6 +77,10 @@ namespace contentapi
             services.AddSingleton<ITempTokenService<long>, TempTokenService<long>>();
 
             services.AddTransient<BaseSimpleControllerServices>();
+
+            services.AddTransient<ContentApiDbConnection>(ctx => new ContentApiDbConnection() {
+                Connection = new SqliteConnection("Data Source=newcontent.db")
+            });
 
             //The rest is http stuff I think
 
