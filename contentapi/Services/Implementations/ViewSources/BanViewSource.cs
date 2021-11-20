@@ -4,6 +4,7 @@ using System.Linq;
 using System.Linq.Expressions;
 using System.Threading.Tasks;
 using AutoMapper;
+using contentapi.Db;
 using contentapi.Services.Constants;
 using contentapi.Services.Extensions;
 using contentapi.Views;

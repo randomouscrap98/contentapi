@@ -72,7 +72,7 @@ namespace contentapi.Controllers
             return result;
         }
 
-
+        //Includes bans
         [HttpGet("users")]
         public async Task<string> ConvertUsersAsync()
         {
@@ -90,6 +90,19 @@ namespace contentapi.Controllers
                 }
                 var count = newdb.ExecuteScalar<int>("SELECT COUNT(*) FROM users");
                 Log($"Successfully inserted users, {count} in table");
+
+                Log("Starting ban convert");
+                var bans = await banSource.SimpleSearchAsync(new BanSearch());
+                Log($"{bans.Count} bans found");
+                foreach(var ban in bans)
+                {
+                    var newban = mapper.Map<Db.Ban>(ban);
+                    //User dapper to store?
+                    var id = await newdb.InsertAsync(newban);
+                    Log($"Inserted ban for {newban.bannedUserId}({id})");
+                }
+                count = newdb.ExecuteScalar<int>("SELECT COUNT(*) FROM bans");
+                Log($"Successfully inserted bans, {count} in table");
             }
             catch(Exception ex)
             {

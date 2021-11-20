@@ -3,6 +3,7 @@ using System.Collections.Generic;
 using System.Linq;
 using System.Text.Json;
 using System.Threading.Tasks;
+using contentapi.Db;
 using contentapi.Services.Constants;
 using contentapi.Services.Extensions;
 using contentapi.Views;
