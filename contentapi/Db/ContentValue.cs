@@ -8,6 +8,6 @@ public class ContentValue
     [Key]
     public long id { get; set; }
     public long contentId { get; set; }
-    public string key { get; set; }
-    public string value { get; set; }
+    public string key { get; set; } = "";
+    public string value { get; set; } = "";
 }

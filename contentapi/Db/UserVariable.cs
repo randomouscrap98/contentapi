@@ -11,6 +11,6 @@ public class UserVariable
     public DateTime createDate { get; set; }
     public DateTime? editDate { get; set; }
     public long editCount { get; set; }
-    public string key { get; set; }
-    public string value { get; set; }
+    public string key { get; set; } = "";
+    public string? value { get; set; } //allow null user variables
 }

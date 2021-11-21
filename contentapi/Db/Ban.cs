@@ -11,6 +11,6 @@ public class Ban
     public DateTime expireDate {get;set;}
     public long createUserId {get;set;}
     public long bannedUserId {get;set;}
-    public string message {get;set;}
+    public string? message {get;set;} //message is nullable!
     public BanType type {get;set;}
 }

@@ -14,7 +14,7 @@ public class ContentHistory
     //posts, since it will be duplicated, but it's just easier to
     //keep a copy of every "revision" made than try to optimize
     //for the single active one
-    public byte[] snapshot { get; set; }
+    public byte[] snapshot { get; set; } = new byte[0];
     public int snapshotVersion { get; set; }
 
     // The user that did the actions and when
