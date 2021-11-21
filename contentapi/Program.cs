@@ -1,3 +1,4 @@
+using contentapi.AutoMapping;
 using contentapi.Db;
 using contentapi.Setup;
 using Microsoft.Data.Sqlite;
@@ -8,6 +9,7 @@ var builder = WebApplication.CreateBuilder(args);
 
 // System.Text STILL does not do what I want it to do
 builder.Services.AddControllers().AddNewtonsoftJson();
+builder.Services.AddAutoMapper(typeof(ContentSnapshotProfile)); //You can pick ANY profile, it just needs some type from the binary
 
 // We only use defaults for our regular runtime stuff! Overriding defaults is for testing
 // or special deploys or whatever.
