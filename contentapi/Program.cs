@@ -1,5 +1,6 @@
-using contentapi;
+using contentapi.Db;
 using contentapi.Setup;
+using Microsoft.Data.Sqlite;
 
 var builder = WebApplication.CreateBuilder(args);
 
@@ -10,6 +11,10 @@ builder.Services.AddControllers();
 // We only use defaults for our regular runtime stuff! Overriding defaults is for testing
 // or special deploys or whatever.
 DefaultSetup.AddDefaultServices(builder.Services);
+
+//The default setup doesn't set up our database provider though
+builder.Services.AddTransient<ContentApiDbConnection>(ctx => 
+    new ContentApiDbConnection(new SqliteConnection("Data Source=newcontent.db")));
 
 // Learn more about configuring Swagger/OpenAPI at https://aka.ms/aspnetcore/swashbuckle
 builder.Services.AddEndpointsApiExplorer();
