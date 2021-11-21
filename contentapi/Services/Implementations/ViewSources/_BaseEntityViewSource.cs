@@ -11,16 +11,16 @@ using Randomous.EntitySystem.Extensions;
 
 namespace contentapi.Services.Implementations
 {
-    public abstract class BaseEntityViewSource<V,T,E,S> : BaseViewSource<V,T,E,S>
-        where V : BaseView where E : EntityGroup, new() where S : BaseHistorySearch, IConstrainedSearcher where T : EntityPackage
+    public abstract class BaseEntityViewSource<V,E,S> : BaseViewSource<V,EntityPackage,E,S>
+        where V : BaseView where E : EntityGroup, new() where S : BaseHistorySearch, IConstrainedSearcher //where T : EntityPackage
     {
-        public BaseEntityViewSource(ILogger<BaseViewSource<V,T,E,S>> logger, BaseViewSourceServices services)
+        public BaseEntityViewSource(ILogger<BaseViewSource<V,EntityPackage,E,S>> logger, BaseViewSourceServices services)
             : base(logger, services) { }
         
         public abstract string EntityType {get;}
         public override Expression<Func<E, long>> MainIdSelector => x => x.entity.id;
 
-        public override async Task<List<T>> RetrieveAsync(IQueryable<long> ids)
+        public override async Task<List<EntityPackage>> RetrieveAsync(IQueryable<long> ids)
         {
             var ct = services.timer.StartTimer($"GetByIds:{GetType().Name}");
             var entities = await GetByIds<Entity>(ids);
@@ -29,8 +29,17 @@ namespace contentapi.Services.Implementations
             var linked = await services.provider.LinkAsync(entities);
             ct.Name += $"({linked.Count})";
             services.timer.EndTimer(ct);
-            return linked.Cast<T>().ToList();
+            return linked;//linked.Cast<EntityPackage>().ToList();
         }
+
+        public async Task<List<V>> GetRevisions(long id)
+        {
+            var search = new EntitySearch();
+            search.Ids = await services.history.GetRevisionIdsAsync(id);
+            var packages = await services.provider.GetEntityPackagesAsync(search);
+            return packages.OrderBy(x => x.Entity.id).Select(x => ToView(services.history.ConvertHistoryToUpdate(x))).ToList();
+        }
+
         
         public virtual EntitySearch CreateSearch(S search) //where S : BaseSearch
         {

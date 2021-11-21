@@ -27,7 +27,7 @@ namespace contentapi.Services.Implementations
         }
     }
 
-    public class UserViewSource : BaseEntityViewSource<UserViewFull, EntityPackage, EntityGroup, UserSearch>
+    public class UserViewSource : BaseEntityViewSource<UserViewFull, EntityGroup, UserSearch>
     {
         protected IPermissionService service;
         protected BanViewSource banSource;

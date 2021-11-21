@@ -78,6 +78,7 @@ namespace contentapi
             services.AddSingleton<ITempTokenService<long>, TempTokenService<long>>();
 
             services.AddTransient<BaseSimpleControllerServices>();
+            services.AddTransient<IContentHistoryConverter, ContentHistoryConverter>();
 
             services.AddTransient<ContentApiDbConnection>(ctx => new ContentApiDbConnection() {
                 Connection = new SqliteConnection("Data Source=newcontent.db")

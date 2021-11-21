@@ -16,6 +16,7 @@ using Randomous.EntitySystem;
 using contentapi.Services.Constants;
 using contentapi.Views;
 using System.Collections.Generic;
+using contentapi.Services;
 
 namespace contentapi.Controllers
 {
@@ -45,7 +46,9 @@ namespace contentapi.Controllers
         protected IMapper mapper;
         protected IDbConnection newdb;
         protected IEntityProvider entityProvider;
+        protected IHistoryService historyService;
         protected NewConvertControllerConfig config;
+        protected IContentHistoryConverter historyConverter;
 
 
         public NewConvertController(ILogger<NewConvertController> logger, UserViewSource userSource, BanViewSource banSource,
@@ -56,6 +59,8 @@ namespace contentapi.Controllers
             ModuleMessageViewSource moduleMessageViewSource,
             ModuleRoomMessageViewSource moduleRoomMessageViewSource,
             NewConvertControllerConfig config,
+            IHistoryService historyService,
+            IContentHistoryConverter historyConverter,
             /*ContentApiDbContext ctapiContext,*/ IMapper mapper)
         {
             this.logger = logger;
@@ -76,6 +81,8 @@ namespace contentapi.Controllers
             this.moduleMessageSource = moduleMessageViewSource;
             this.moduleRMessageSource = moduleRoomMessageViewSource;
             this.config = config;
+            this.historyService = historyService;
+            this.historyConverter = historyConverter;
         }
 
 
@@ -179,7 +186,7 @@ namespace contentapi.Controllers
             return DumpLog();
         }
 
-        protected async Task<List<long>> ConvertCt<T>(Func<Task<List<T>>> producer, Func<Db.Content, T, Db.Content> modify = null) where T : StandardView
+        protected async Task<List<long>> ConvertCt<T>(Func<Task<List<T>>> producer, Func<long, Task<List<T>>> historyProducer, Func<Db.Content, T, Db.Content> modify = null) where T : StandardView
         {
             var ids = new List<long>();
             var tn = typeof(T);
@@ -226,6 +233,40 @@ namespace contentapi.Controllers
                 lcnt = await newdb.InsertAsync(pms); //IDK if the list version has async
                 Log($"Inserted {lcnt} permissions for '{nc.name}'");
 
+                //This one is a bit tricky: get the history
+                var revisions = await historyProducer(id); //contentSource.GetRevisions(id);
+                var activity = await activitySource.SimpleSearchAsync(new ActivitySearch(){
+                    ContentIds = new List<long>() { id },
+                    Sort = "id"
+                });
+                //Just append ourselves to the end, that's how the history works in this system
+                revisions.Add(ct);
+
+                //If revisions and activity don't line up, we can't save the history
+                if(revisions.Count != activity.Count)
+                {
+                    Log($"WARN: Couldn't produce history for {id}: {revisions.Count} revisions (plus current) but {activity.Count} activity");
+                }
+                else
+                {
+                    for(int i = 0; i < revisions.Count; i++)
+                    {
+                        var sn = mapper.Map<ContentSnapshot>(nc);
+                        sn.values = vls;
+                        sn.permissions = pms;
+                        sn.keywords = kws;
+                        var action = UserAction.update;
+                        switch(activity[i].action)
+                        {
+                            case "c" : action = UserAction.create; break;
+                            case "d" : action = UserAction.delete; break;
+                        };
+                        var history = await historyConverter.ContentToHistoryAsync(sn, activity[i].userId, action);
+                        await newdb.InsertAsync(history);
+                        Log($"Inserted history {history.createUserId}-{action} for '{nc.name}'");
+                    }
+                }
+
                 //And might as well go out and get the watches and votes, since i think
                 //those COULD be tied to bad/old content... or something.
                 //if(extra != null)
@@ -247,7 +288,9 @@ namespace contentapi.Controllers
             {
                 try
                 {
-                    var ids = await ConvertCt(() => contentSource.SimpleSearchAsync(new ContentSearch()));
+                    var ids = await ConvertCt(
+                        () => contentSource.SimpleSearchAsync(new ContentSearch()),
+                        (id) => contentSource.GetRevisions(id));
 
                     //Need to get votes and watches ONLY for real content
                     Log("Starting vote convert");
@@ -286,22 +329,31 @@ namespace contentapi.Controllers
                     count = newdb.ExecuteScalar<int>("SELECT COUNT(*) FROM content_watches");
                     Log($"Successfully inserted watches, {count} in table");
 
-                    await ConvertCt(() => fileSource.SimpleSearchAsync(new FileSearch()), (n, o) =>
-                    {
-                        o.values.Add("quantization", o.quantization.ToString());
-                        return n;
-                    });
-                    await ConvertCt(() => categorySource.SimpleSearchAsync(new CategorySearch()), (n, o) =>
-                    {
-                        o.values.Add("localSupers", string.Join(",", o.localSupers));
-                        return n;
-                    });
-                    await ConvertCt(() => moduleSource.SimpleSearchAsync(new ModuleSearch()), (n, o) =>
-                    {
-                        o.values.Add("description", o.description ?? "");
-                        o.permissions.Add(0, "CR"); //Create lets people... comment on modules?? cool?
-                        return n;
-                    });
+                    await ConvertCt(
+                        () => fileSource.SimpleSearchAsync(new FileSearch()), 
+                        (id) => fileSource.GetRevisions(id) ,
+                        (n, o) =>
+                        {
+                            o.values.Add("quantization", o.quantization.ToString());
+                            return n;
+                        });
+                    await ConvertCt(
+                        () => categorySource.SimpleSearchAsync(new CategorySearch()), 
+                        (id) => categorySource.GetRevisions(id),
+                        (n, o) =>
+                        {
+                            o.values.Add("localSupers", string.Join(",", o.localSupers));
+                            return n;
+                        });
+                    await ConvertCt(
+                        () => moduleSource.SimpleSearchAsync(new ModuleSearch()), 
+                        (id) => moduleSource.GetRevisions(id),
+                        (n, o) =>
+                        {
+                            o.values.Add("description", o.description ?? "");
+                            o.permissions.Add(0, "CR"); //Create lets people... comment on modules?? cool?
+                            return n;
+                        });
                     trs.Commit();
                 }
                 catch (Exception ex)

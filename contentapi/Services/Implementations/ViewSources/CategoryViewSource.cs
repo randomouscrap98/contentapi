@@ -14,7 +14,7 @@ namespace contentapi.Services.Implementations
         public bool ComputeExtras {get;set;}
     }
 
-    public class CategoryViewSource : BaseStandardViewSource<CategoryView, EntityPackage, EntityGroup, CategorySearch>
+    public class CategoryViewSource : BaseStandardViewSource<CategoryView, EntityGroup, CategorySearch>
     {
         public override string EntityType => Keys.CategoryType;
 

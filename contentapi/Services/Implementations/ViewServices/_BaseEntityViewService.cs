@@ -134,14 +134,6 @@ namespace contentapi.Services.Implementations
             return view;
         }
 
-        public async Task<List<V>> GetRevisions(long id, Requester requester)
-        {
-            var search = new EntitySearch();
-            search.Ids = await services.history.GetRevisionIdsAsync(id);
-            var packages = await provider.GetEntityPackagesAsync(search);
-            return packages.Select(x => converter.ToView(services.history.ConvertHistoryToUpdate(x))).ToList();
-        }
-
         /// <summary>
         /// Check the entity for deletion. Throw exception if can't
         /// </summary>

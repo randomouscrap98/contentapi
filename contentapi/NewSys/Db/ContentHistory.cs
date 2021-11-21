@@ -16,6 +16,7 @@ namespace contentapi.Db
         //keep a copy of every "revision" made than try to optimize
         //for the single active one
         public byte[] snapshot {get;set;}
+        public int snapshotVersion {get;set;}
 
         // The user that did the actions and when
         public long createUserId {get;set;}

@@ -133,6 +133,7 @@ create table if not exists content_history(
     id integer primary key,
     contentId int not null,
     action int not null, -- an enum, create read update delete
+    snapshotVersion int not null,
     `snapshot` blob not null, -- some formatted thing which represents the entire page data (hopefully compressed)
     createUserId int not null, -- this tells us the edit user and date
     createDate text not null

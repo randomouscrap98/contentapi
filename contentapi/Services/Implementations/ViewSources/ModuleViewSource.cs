@@ -22,7 +22,7 @@ namespace contentapi.Services.Implementations
         }
     }
 
-    public class ModuleViewSource : BaseEntityViewSource<ModuleView, EntityPackage, EntityGroup, ModuleSearch>
+    public class ModuleViewSource : BaseEntityViewSource<ModuleView, EntityGroup, ModuleSearch>
     {
         public override string EntityType => Keys.ModuleType;
 

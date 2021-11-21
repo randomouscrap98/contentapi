@@ -21,7 +21,7 @@ namespace contentapi.Services.Implementations
         public bool SearchAllBuckets = false;
     }
 
-    public class FileViewSource : BaseStandardViewSource<FileView, EntityPackage, EntityGroup, FileSearch>
+    public class FileViewSource : BaseStandardViewSource<FileView, EntityGroup, FileSearch>
     {
         public override string EntityType => Keys.FileType;
 

@@ -37,6 +37,7 @@ namespace contentapi.Controllers
         protected IEmailService emailService;
         protected IMapper mapper;
         protected UserViewService service;
+        protected UserViewSource source;
         protected IDecayer<PasswordReset> passwordResets;
         protected ITempTokenService<long> tempTokenService;
 
@@ -46,7 +47,8 @@ namespace contentapi.Controllers
         public UserController(BaseSimpleControllerServices services, IHashService hashService,
             ITokenService tokenService, ILanguageService languageService, IEmailService emailService,
             UserControllerConfig config, UserViewService service, IMapper mapper, IDecayer<PasswordReset> passwordResets,
-            ITempTokenService<long> tempTokenService)
+            ITempTokenService<long> tempTokenService,
+            UserViewSource source)
             :base(services)
         { 
             this.hashService = hashService;
@@ -58,6 +60,7 @@ namespace contentapi.Controllers
             this.mapper = mapper;
             this.passwordResets = passwordResets;
             this.tempTokenService = tempTokenService;
+            this.source = source;
         }
 
         protected async Task<UserViewFull> GetCurrentUser()
@@ -87,7 +90,7 @@ namespace contentapi.Controllers
             return ThrowToAction<IList<UserView>>(async () =>
             {
                 var requester = GetRequesterNoFail();
-                var historicUsers = await service.GetRevisions(requester.userId, requester);
+                var historicUsers = await source.GetRevisions(requester.userId);
                 return historicUsers.Select(x => mapper.Map<UserView>(x)).ToList();
             });
         }
@@ -402,7 +405,7 @@ namespace contentapi.Controllers
                 var beginning = DateTime.Now - config.NameChangeRange;
 
                 //Need historic users 
-                var historicUsers = (await service.GetRevisions(fullUser.id, requester)).Where(x => x.editDate > beginning);
+                var historicUsers = (await source.GetRevisions(fullUser.id)).Where(x => x.editDate > beginning);
                 var usernames = historicUsers.Select(x => x.username).Append(fullUser.username).Append(change.username).Distinct();
 
                 if(usernames.Count() > config.NameChangesPerTime)
