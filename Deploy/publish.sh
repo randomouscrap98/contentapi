@@ -3,16 +3,16 @@
 cd ..
 
 name="contentapi"
-phost=random@oboy.smilebasicsource.com   # The default server (development) (and user to connect)
-pfolder="/storage/random/${name}"            # The REMOTE location to PLACE all files
+pfolder="/var/www/${name}"                  # The REMOTE location to PLACE all files
+phost=publisher@oboy.smilebasicsource.com   # The default server (development) (and user to connect)
+pfolder="/storage/random/${name}"           # The REMOTE location to PLACE all files
 rdf="rl"
 port=240
 
 if [ "$1" = "production" ]
 then
     echo "WARN: PUBLISHING PRODUCTION"
-    phost=csanchez@smilebasicsource.com   # The default server (development) (and user to connect)
-    pfolder="/var/www/${name}"            # The REMOTE location to PLACE all files
+    phost=publisher@smilebasicsource.com   # The default server (development) (and user to connect)
     port=22
 fi
 

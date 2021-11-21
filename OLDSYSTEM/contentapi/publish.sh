@@ -19,12 +19,12 @@ port=240
 if [ "$1" = "production" ]
 then
    echo "WARN: PUBLISHING PRODUCTION"
-   phost=csanchez@smilebasicsource.com # The production server (and user to connect)
+   phost=publisher@smilebasicsource.com # The production server (and user to connect)
    port=22
    pfolder="/var/www/contentapi"                        # The REMOTE location to PLACE all files
    rdf="rl"
 else
-   phost=random@oboy.smilebasicsource.com # The production server (and user to connect)
+   phost=publisher@oboy.smilebasicsource.com # The production server (and user to connect)
    pfolder="/storage/random/contentapi"                        # The REMOTE location to PLACE all files
    rdf="a"
 fi
