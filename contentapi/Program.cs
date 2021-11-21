@@ -1,10 +1,15 @@
 using contentapi;
+using contentapi.Setup;
 
 var builder = WebApplication.CreateBuilder(args);
 
 // Add services to the container.
 
 builder.Services.AddControllers();
+
+// We only use defaults for our regular runtime stuff! Overriding defaults is for testing
+// or special deploys or whatever.
+DefaultSetup.AddDefaultServices(builder.Services);
 
 // Learn more about configuring Swagger/OpenAPI at https://aka.ms/aspnetcore/swashbuckle
 builder.Services.AddEndpointsApiExplorer();

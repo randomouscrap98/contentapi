@@ -7,19 +7,26 @@ namespace contentapi.Controllers;
 public class StatusController
 {
     protected ILogger logger;
+    protected IWebHostEnvironment environment;
+    protected IRuntimeInformation runtimeInformation;
 
-    public StatusController(ILogger<StatusController> logger)
+
+    public StatusController(ILogger<StatusController> logger, IWebHostEnvironment environment, IRuntimeInformation rinfo)
     {
         this.logger = logger;
+        this.environment = environment;
+        this.runtimeInformation = rinfo;
     }
 
     [HttpGet()]
-    public async Task<object> GetGeneralStatusAsync()
+    public object GetGeneralStatus()
     {
         return new {
             version = GetType().Assembly.GetName().Version?.ToString(),
-            //processStart = StaticRuntime.ProcessStart,
-            //runtime = DateTime.Now - StaticRuntime.ProcessStart 
+            appname = environment.ApplicationName,
+            environment = environment.EnvironmentName,
+            processStart = runtimeInformation.ProcessStart,
+            runtime = runtimeInformation.ProcessRuntime
         };
     }
 
