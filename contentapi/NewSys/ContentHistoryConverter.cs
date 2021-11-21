@@ -10,7 +10,7 @@ namespace contentapi
 {
     public interface IContentHistoryConverter
     {
-        Task<ContentHistory> ContentToHistoryAsync(ContentSnapshot content, long userId, UserAction action);
+        Task<ContentHistory> ContentToHistoryAsync(ContentSnapshot content, long userId, UserAction action, DateTime? specificTime = null);
     }
 
     public class ContentHistoryConverter : IContentHistoryConverter
@@ -22,12 +22,12 @@ namespace contentapi
             this.logger = logger;
         }
 
-        public async Task<ContentHistory> ContentToHistoryAsync(ContentSnapshot content, long user, UserAction action)
+        public async Task<ContentHistory> ContentToHistoryAsync(ContentSnapshot content, long user, UserAction action, DateTime? specificTime)
         {
             var history = new ContentHistory()
             {
                 action = action, 
-                createDate = DateTime.Now,
+                createDate = specificTime ?? DateTime.Now,
                 createUserId = user,
                 contentId = content.id,
                 snapshotVersion = 1,

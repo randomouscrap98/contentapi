@@ -1,5 +1,7 @@
 #!/bin/bash
 
+set -e
+
 DB=${1:-newcontent.db}
 DBMIGRATIONS=${2:-dbMigrations}
 

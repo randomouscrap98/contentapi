@@ -49,6 +49,8 @@ namespace contentapi.Services.Implementations
         {
             var search = new EntitySearch();
             search.Ids = await entityServices.history.GetRevisionIdsAsync(id);
+            if(search.Ids.Count == 0)
+                return new List<V>();
             var packages = await entityServices.provider.GetEntityPackagesAsync(search);
             return packages.OrderBy(x => x.Entity.id).Select(x => ToView(entityServices.history.ConvertHistoryToUpdate(x))).ToList();
         }

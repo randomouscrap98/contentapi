@@ -258,10 +258,10 @@ namespace contentapi.Controllers
                         var action = UserAction.update;
                         switch(activity[i].action)
                         {
-                            case "c" : action = UserAction.create; break;
-                            case "d" : action = UserAction.delete; break;
+                            case "c" : case "!c": action = UserAction.create; break;
+                            case "d" : case "!d": action = UserAction.delete; break;
                         };
-                        var history = await historyConverter.ContentToHistoryAsync(sn, activity[i].userId, action);
+                        var history = await historyConverter.ContentToHistoryAsync(sn, activity[i].userId, action, activity[i].date);
                         await newdb.InsertAsync(history);
                         Log($"Inserted history {history.createUserId}-{action} for '{nc.name}'");
                     }
