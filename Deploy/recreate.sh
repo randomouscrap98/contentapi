@@ -2,7 +2,10 @@
 
 set -e
 
+DB=content.db
+
+# WARN: THIS RESETS YOUR LOCAL DATABASE! NOT MEANT FOR PRODUCTION SERVERS!!!
 rm -f dbMigrations/*.done
-rm -f content.db
-./dbmigrate.sh
-cp content.db ../contentapi
+rm -f $DB
+./dbmigrate.sh $DB
+cp $DB ../contentapi

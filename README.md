@@ -16,7 +16,7 @@ There are a couple things to note:
 1. Run the `Deploy/recreate.sh` script IN the `Deploy` directory. This will create the database and copy it into the appropriate location
    for running in VS Code (`contentapi/content.db`)
 2. Start debugging the app. Use defaults for launch settings in VS Code. 
- - Note that the included "appsettings.json" should be enough to get you going... most likely
+   - Note that the included `appsettings.json` should be enough to get you going... most likely
 3. Navigate to wherever it tries to tell you the endpoint is and visit /status. You should see some server information in json form.
 
 If you have issues, please let me know. Open a github issue if you like, I want this to be easily runnable.
@@ -32,12 +32,12 @@ Again, modify to your desired use case. Don't forget to run `sudo systemctl enab
 with it, so the service is active. You run `sudo systemctl daemon-reload` to refresh the system after editing the file AFTER
 enabling it.
 
-*So the basic steps:*
+**Full steps:**
 1. Set up the directory on your server/wherever which will house the binaries, settings, and sqlite database. You probably don't want global read on this folder...
 2. Set up a `postinstall.sh` script in that same folder. The post install script will be called after the app is installed. 
- - I use it to set permissions and groups on all the files, and run the dbmigrations. 
- - To run the dbmigrations, just call `./dbmigrate.sh`. It can be run as many times as you want, it keeps track of which sql has been run already.
-   It also makes a backup, but only once per call, each call overwrites the last backup. Be careful!
+   - I use it to set permissions and groups on all the files, and run the dbmigrations. 
+   - To run the dbmigrations, just call `./dbmigrate.sh`. It can be run as many times as you want, it keeps track of which sql has been run already.
+     It also makes a backup, but only once per call, each call overwrites the last backup. Be careful!
 3. Run the `Deploy/publish.sh` script to get the files onto the server. This also copies resource files and the dbmigrations scripts (sql and sh)
 4. After modifying to suit your needs, copy the service file to `/etc/systemd/system`, then as a first time install, run
    `sudo systemctl enable contentapi`
@@ -48,6 +48,6 @@ enabling it.
 7. Check if it's running by going to your proxied (or whatever) endpoint and going to /status. You should see json output with information
    on the server.
 
-*To RE-publish:*
+**To RE-publish:**
 1. Run the `Deploy/publish.sh` script
 2. `sudo systemctl restart contentapi`

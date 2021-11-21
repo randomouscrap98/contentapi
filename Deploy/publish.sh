@@ -35,7 +35,6 @@ postinstallargs=""
 
 # My places!
 lpfolder="./bin/${bconfig}/net$corev/$mtype/publish/"   # The LOCAL location to retrieve binaries
-cwd="`pwd`"
 
 echo "Publishing to $phost:$pfolder"
 
