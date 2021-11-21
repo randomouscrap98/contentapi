@@ -10,6 +10,8 @@
 
   <ItemGroup>
     <PackageReference Include="Dapper.Contrib" Version="2.0.78" />
+    <PackageReference Include="Moonsharp" Version="2.0.0" />
+    <PackageReference Include="SixLabors.ImageSharp" Version="1.0.4" />
     <PackageReference Include="Swashbuckle.AspNetCore" Version="6.2.3" />
   </ItemGroup>
 

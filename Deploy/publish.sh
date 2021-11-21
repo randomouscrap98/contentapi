@@ -17,8 +17,12 @@ then
 fi
 
 # space separated
-copyfolders=""
+deploy="Deploy"
+copyfolders="$deploy/dbmigrate.sh $deploy/dbMigrations"
 removefiles="ignore uploads content.db dbMigrations/*.done"
+
+# Eventually, may include some kind of language system
+# copyfolders="$deploy/LanguageFiles $deploy/dbmigrate.sh $projectdata/dbMigrations"
 
 # Stuff for dotnet
 mtype=linux-x64         # The architecture of the target machine
