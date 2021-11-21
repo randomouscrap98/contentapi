@@ -251,7 +251,8 @@ namespace contentapi.Controllers
                 {
                     for(int i = 0; i < revisions.Count; i++)
                     {
-                        var sn = mapper.Map<ContentSnapshot>(nc);
+                        var rv = mapper.Map<Db.Content>(revisions[i]);
+                        var sn = mapper.Map<ContentSnapshot>(rv);
                         sn.values = vls;
                         sn.permissions = pms;
                         sn.keywords = kws;

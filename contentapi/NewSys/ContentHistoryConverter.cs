@@ -42,13 +42,14 @@ namespace contentapi
             //Snapshot this time is a simple compressed json object.
             var jsonString = JsonConvert.SerializeObject(content);
             var jsonBytes = System.Text.Encoding.UTF8.GetBytes(jsonString);
-            using(var memstream = new MemoryStream(jsonBytes))
+            using(var memstream = new MemoryStream())
             {
-                using(var gzip = new GZipStream(memstream, CompressionLevel.Optimal))
+                using(var gzip = new GZipStream(memstream, CompressionLevel.Fastest, true))
                 {
                     await gzip.WriteAsync(jsonBytes, 0, jsonBytes.Length);
-                    return memstream.ToArray();
                 }
+                //Apparently you HAVE to do it afterwards? IDK
+                return memstream.ToArray();
             }
         }
     }
