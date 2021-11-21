@@ -72,6 +72,7 @@ namespace contentapi
             contentApiDefaultProvider.AddServiceConfigurations(services, Configuration);
             contentApiDefaultProvider.AddConfiguration<FileControllerConfig>(services, Configuration);
             contentApiDefaultProvider.AddConfiguration<UserControllerConfig>(services, Configuration);
+            contentApiDefaultProvider.AddConfiguration<NewConvertControllerConfig>(services, Configuration);
 
             //Also a singleton for the token system which we'll use for websockets
             services.AddSingleton<ITempTokenService<long>, TempTokenService<long>>();

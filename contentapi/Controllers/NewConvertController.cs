@@ -356,6 +356,25 @@ namespace contentapi.Controllers
                     }
                     count = newdb.ExecuteScalar<int>("SELECT COUNT(*) FROM comments");
                     Log($"Successfully inserted modulemessages 2, {count} in table");
+
+                    Log("Starting comment convert!!!");
+                    var cmnts = await commentSource.SimpleSearchAsync(new CommentSearch());
+                    Log($"{cmnts.Count} comments found");
+                    var cmids = new List<long>();
+                    foreach (var cmnt in cmnts)
+                    {
+                        var ncmnt = mapper.Map<Db.Comment>(cmnt);
+                        //User dapper to store?
+                        cmids.Add(await newdb.InsertAsync(ncmnt));
+                        if(cmids.Count >= 1000)
+                        {
+                            Log($"Inserted comments: {string.Join(",", cmids)}");
+                            cmids.Clear();
+                        }
+                    }
+                    count = newdb.ExecuteScalar<int>("SELECT COUNT(*) FROM comments");
+                    Log($"Successfully inserted comments!!!, {count} in table");
+
                     trs.Commit();
                 }
                 catch (Exception ex)

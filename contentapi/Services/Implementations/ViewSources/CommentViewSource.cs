@@ -8,6 +8,7 @@ using contentapi.Services.Constants;
 using contentapi.Views;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.Logging;
+using Newtonsoft.Json;
 using Randomous.EntitySystem;
 
 namespace contentapi.Services.Implementations
@@ -70,9 +71,20 @@ namespace contentapi.Services.Implementations
         public override CommentView ToView(EntityRelationPackage package)
         {
             var view = ToViewSimple(package.Main);
-            var orderedRelations = package.Related.OrderBy(x => x.id);
-            var lastEdit = orderedRelations.LastOrDefault(x => x.type.StartsWith(Keys.CommentHistoryHack));
-            var last = orderedRelations.LastOrDefault();
+            var orderedRelations = package.Related.OrderByDescending(x => x.id);
+            var lastEdit = orderedRelations.FirstOrDefault(x => x.type.StartsWith(Keys.CommentHistoryHack));
+            var last = orderedRelations.FirstOrDefault();
+
+            if(orderedRelations.Count() > 0)
+            {
+                view.history = JsonConvert.SerializeObject(orderedRelations.Select(x => new
+                {
+                    userId = -x.entityId1,
+                    action = x.type.StartsWith(Keys.CommentDeleteHack) ? Db.UserAction.delete : Db.UserAction.update,
+                    editDate = (DateTime)x.createDateProper(),
+                    previous = x.value
+                }).ToList());
+            }
 
             if(lastEdit != null)
             {

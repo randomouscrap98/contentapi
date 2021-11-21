@@ -19,6 +19,8 @@ namespace contentapi.Views
         [StringLength(4096, MinimumLength=2)]
         public string content {get;set;}
 
+        public string history {get;set;}
+
         public bool deleted {get;set;}
     }
 
