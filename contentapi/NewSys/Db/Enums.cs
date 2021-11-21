@@ -12,8 +12,8 @@ namespace contentapi.Db
         none = 0,
         page = 1,
         module = 2,
-        file = 3,
-        category = 4
+        file = 3
+        //category = 4
     }
 
     public enum UserAction

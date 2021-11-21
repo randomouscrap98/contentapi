@@ -296,6 +296,12 @@ namespace contentapi.Controllers
                         o.values.Add("localSupers", string.Join(",", o.localSupers));
                         return n;
                     });
+                    await ConvertCt(() => moduleSource.SimpleSearchAsync(new ModuleSearch()), (n, o) =>
+                    {
+                        o.values.Add("description", o.description ?? "");
+                        o.permissions.Add(0, "CR"); //Create lets people... comment on modules?? cool?
+                        return n;
+                    });
                     trs.Commit();
                 }
                 catch (Exception ex)

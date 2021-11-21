@@ -6,7 +6,7 @@ using contentapi.Services.Extensions;
 
 namespace contentapi.Views
 {
-    public class ModuleView : BaseView, IEditView, IValueView
+    public class ModuleView : StandardView, IEditView, IValueView
     {
         [Required]
         [StringLength(32, MinimumLength = 1)]
@@ -17,12 +17,12 @@ namespace contentapi.Views
 
         public string description {get;set;}
 
-        public DateTime editDate { get ; set; }
-        public long createUserId { get ; set ; }
-        public long editUserId { get ; set ; }
-        public DateTime createDate { get ; set ; }
+        //public DateTime editDate { get ; set; }
+        //public long createUserId { get ; set ; }
+        //public long editUserId { get ; set ; }
+        //public DateTime createDate { get ; set ; }
 
-        public Dictionary<string, string> values { get ; set ; } = new Dictionary<string, string>();
+        //public Dictionary<string, string> values { get ; set ; } = new Dictionary<string, string>();
 
         //Note: subcommands just have to go in the lua script itself, it's too much work to get this into the database. However,
         //they are added in for module get (as in, you don't have to add those values in POST)

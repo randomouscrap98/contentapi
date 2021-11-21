@@ -10,11 +10,11 @@ namespace contentapi
         {
             CreateMap<CategoryView, Db.Content>()
             .ForMember(x => x.publicType, 
-                 opt => opt.MapFrom(src => ""))
+                 opt => opt.MapFrom(src => "category")) //We're not using categories anymore
             .ForMember(x => x.content, 
                  opt => opt.MapFrom(src => src.description))
             .ForMember(x => x.internalType, 
-                 opt => opt.MapFrom(src => InternalContentType.category))
+                 opt => opt.MapFrom(src => InternalContentType.page))
                  ;
         }
     }
