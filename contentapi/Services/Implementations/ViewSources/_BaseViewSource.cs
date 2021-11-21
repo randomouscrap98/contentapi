@@ -16,16 +16,13 @@ namespace contentapi.Services.Implementations
     {
         public IMapper mapper {get;set;}
         public IEntityProvider provider {get;set;}
-        public IHistoryService history {get;set;}
         public ICodeTimer timer {get;set;}
 
-        public BaseViewSourceServices(IMapper mapper, IEntityProvider provider, ICodeTimer timer,
-            IHistoryService history)
+        public BaseViewSourceServices(IMapper mapper, IEntityProvider provider, ICodeTimer timer)
         {
             this.mapper = mapper;
             this.provider = provider;
             this.timer = timer;
-            this.history = history;
         }
     }
 

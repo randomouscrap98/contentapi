@@ -3,6 +3,7 @@ using System.Collections.Generic;
 using System.Linq;
 using System.Linq.Expressions;
 using System.Threading.Tasks;
+using AutoMapper;
 using contentapi.Services.Constants;
 using contentapi.Views;
 using Microsoft.Extensions.Logging;
@@ -11,14 +12,26 @@ using Randomous.EntitySystem.Extensions;
 
 namespace contentapi.Services.Implementations
 {
+    public class BaseEntityViewSourceServices : BaseViewSourceServices
+    {
+        public IHistoryService history {get;set;}
+
+        public BaseEntityViewSourceServices(IMapper mapper, IEntityProvider provider, ICodeTimer timer,
+            IHistoryService history) : base(mapper, provider, timer)
+        {
+            this.history = history;
+        }
+    }
+
     public abstract class BaseEntityViewSource<V,E,S> : BaseViewSource<V,EntityPackage,E,S>
         where V : BaseView where E : EntityGroup, new() where S : BaseHistorySearch, IConstrainedSearcher //where T : EntityPackage
     {
-        public BaseEntityViewSource(ILogger<BaseViewSource<V,EntityPackage,E,S>> logger, BaseViewSourceServices services)
+        public BaseEntityViewSource(ILogger<BaseViewSource<V,EntityPackage,E,S>> logger, BaseEntityViewSourceServices services)
             : base(logger, services) { }
         
         public abstract string EntityType {get;}
         public override Expression<Func<E, long>> MainIdSelector => x => x.entity.id;
+        protected BaseEntityViewSourceServices entityServices => (BaseEntityViewSourceServices)services;
 
         public override async Task<List<EntityPackage>> RetrieveAsync(IQueryable<long> ids)
         {
@@ -35,9 +48,9 @@ namespace contentapi.Services.Implementations
         public async Task<List<V>> GetRevisions(long id)
         {
             var search = new EntitySearch();
-            search.Ids = await services.history.GetRevisionIdsAsync(id);
-            var packages = await services.provider.GetEntityPackagesAsync(search);
-            return packages.OrderBy(x => x.Entity.id).Select(x => ToView(services.history.ConvertHistoryToUpdate(x))).ToList();
+            search.Ids = await entityServices.history.GetRevisionIdsAsync(id);
+            var packages = await entityServices.provider.GetEntityPackagesAsync(search);
+            return packages.OrderBy(x => x.Entity.id).Select(x => ToView(entityServices.history.ConvertHistoryToUpdate(x))).ToList();
         }
 
         

@@ -33,7 +33,7 @@ namespace contentapi.Services.Implementations
     {
         public override string EntityType => Keys.ContentType;
 
-        public ContentViewSource(ILogger<ContentViewSource> logger, BaseViewSourceServices services)
+        public ContentViewSource(ILogger<ContentViewSource> logger, BaseEntityViewSourceServices services)
             : base(logger, services) { }
 
         public override EntityPackage FromView(ContentView view)

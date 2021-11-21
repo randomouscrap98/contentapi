@@ -1,4 +1,5 @@
 using System;
+using System.Collections.Generic;
 using System.Linq;
 using System.Threading.Tasks;
 using AutoMapper;
@@ -6,13 +7,14 @@ using contentapi.Services.Constants;
 using contentapi.Views;
 using Microsoft.Extensions.Logging;
 using Randomous.EntitySystem;
+using Randomous.EntitySystem.Extensions;
 
 namespace contentapi.Services.Implementations
 {
     public abstract class BaseStandardViewSource<V,E,S> : BaseEntityViewSource<V,E,S>
         where V : StandardView where E : EntityGroup, new() where S : BaseContentSearch, IConstrainedSearcher // where T : EntityPackage
     {
-        protected BaseStandardViewSource(ILogger<BaseStandardViewSource<V,E,S>> logger, BaseViewSourceServices services)
+        protected BaseStandardViewSource(ILogger<BaseStandardViewSource<V,E,S>> logger, BaseEntityViewSourceServices services)
             : base(logger, services) {}
         
         public override async Task<IQueryable<E>> ModifySearch(IQueryable<E> query, S search)

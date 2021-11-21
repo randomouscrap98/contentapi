@@ -25,7 +25,7 @@ namespace contentapi.Services.Implementations
     {
         public override string EntityType => Keys.FileType;
 
-        public FileViewSource(ILogger<FileViewSource> logger, BaseViewSourceServices services)
+        public FileViewSource(ILogger<FileViewSource> logger, BaseEntityViewSourceServices services)
             : base(logger, services) {}
 
         public override EntityPackage FromView(FileView view)

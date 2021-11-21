@@ -18,7 +18,7 @@ namespace contentapi.Services.Implementations
     {
         public override string EntityType => Keys.CategoryType;
 
-        public CategoryViewSource(ILogger<CategoryViewSource> logger, BaseViewSourceServices services)
+        public CategoryViewSource(ILogger<CategoryViewSource> logger, BaseEntityViewSourceServices services)
             : base(logger, services) { }
 
         public override EntityPackage FromView(CategoryView view)

@@ -45,6 +45,7 @@ namespace contentapi.Services.Implementations
             services.AddSingleton<SpecialModuleCacheService>();
 
             services.AddTransient<BaseViewSourceServices>();
+            services.AddTransient<BaseEntityViewSourceServices>();
 
             services.AddTransient<ActivityViewService>();
             services.AddTransient<BanViewService>();
