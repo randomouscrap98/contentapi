@@ -15,7 +15,7 @@ namespace contentapi.Db
         //posts, since it will be duplicated, but it's just easier to
         //keep a copy of every "revision" made than try to optimize
         //for the single active one
-        public string snapshot {get;set;}
+        public byte[] snapshot {get;set;}
 
         // The user that did the actions and when
         public long createUserId {get;set;}

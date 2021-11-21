@@ -133,7 +133,7 @@ create table if not exists content_history(
     id integer primary key,
     contentId int not null,
     action int not null, -- an enum, create read update delete
-    `snapshot` text not null, -- some formatted thing which represents the entire page data (hopefully compressed)
+    `snapshot` blob not null, -- some formatted thing which represents the entire page data (hopefully compressed)
     createUserId int not null, -- this tells us the edit user and date
     createDate text not null
 );
@@ -149,7 +149,7 @@ create table if not exists comments(
     contentId int not null,
     createUserId int not null,
     createDate text not null,
-    receiveUserId int default null, -- sometimes comments can be directly linked to a recipient
+    receiveUserId int not null default 0, -- sometimes comments can be directly linked to a recipient
     `text` text not null,
     editUserId int default null,
     editDate text default null,

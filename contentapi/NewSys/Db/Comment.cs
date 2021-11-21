@@ -11,7 +11,7 @@ namespace contentapi.Db
         public long contentId {get;set;}
         public long createUserId {get;set;}
         public DateTime createDate {get;set;}
-        public long? receiveUserId {get;set;}
+        public long receiveUserId {get;set;}
         public string text {get;set;}
         public DateTime? editDate {get;set;}
         public long? editUserId {get;set;}

@@ -19,6 +19,11 @@ using System.Collections.Generic;
 
 namespace contentapi.Controllers
 {
+    public class NewConvertControllerConfig
+    {
+        public string SecretKey {get;set;}
+    }
+
     [Route("api/[controller]")]
     [ApiController]
     public class NewConvertController : Controller
@@ -33,11 +38,14 @@ namespace contentapi.Controllers
         protected  VoteViewSource voteSource;
         protected  WatchViewSource watchSource;
         protected  CommentViewSource commentSource;
+        protected ModuleMessageViewSource moduleMessageSource;
+        protected ModuleRoomMessageViewSource moduleRMessageSource;
         protected  ActivityViewSource activitySource;
         //protected  ContentApiDbContext ctapiContext;
         protected IMapper mapper;
         protected IDbConnection newdb;
         protected IEntityProvider entityProvider;
+        protected NewConvertControllerConfig config;
 
 
         public NewConvertController(ILogger<NewConvertController> logger, UserViewSource userSource, BanViewSource banSource,
@@ -45,6 +53,9 @@ namespace contentapi.Controllers
             CategoryViewSource categoryViewSource, VoteViewSource voteViewSource, WatchViewSource watchViewSource, 
             CommentViewSource commentViewSource, ActivityViewSource activityViewSource, 
             ContentApiDbConnection cdbconnection, IEntityProvider entityProvider,
+            ModuleMessageViewSource moduleMessageViewSource,
+            ModuleRoomMessageViewSource moduleRoomMessageViewSource,
+            NewConvertControllerConfig config,
             /*ContentApiDbContext ctapiContext,*/ IMapper mapper)
         {
             this.logger = logger;
@@ -62,6 +73,9 @@ namespace contentapi.Controllers
             this.mapper = mapper;
             this.newdb = cdbconnection.Connection;
             this.entityProvider = entityProvider;
+            this.moduleMessageSource = moduleMessageViewSource;
+            this.moduleRMessageSource = moduleRoomMessageViewSource;
+            this.config = config;
         }
 
 
@@ -82,8 +96,11 @@ namespace contentapi.Controllers
 
         //Includes bans, uservariables
         [HttpGet("users")]
-        public async Task<string> ConvertUsersAsync()
+        public async Task<string> ConvertUsersAsync([FromQuery]string secret)
         {
+            if(secret != config.SecretKey)
+                throw new InvalidOperationException("Need the secret");
+
             newdb.Open();
             using (var trs = newdb.BeginTransaction())
             {
@@ -221,8 +238,10 @@ namespace contentapi.Controllers
         }
 
         [HttpGet("content")]
-        public async Task<string> ConvertContentAsync()
+        public async Task<string> ConvertContentAsync([FromQuery]string secret)
         {
+            if(secret != config.SecretKey)
+                throw new InvalidOperationException("Need the secret");
             newdb.Open();
             using (var trs = newdb.BeginTransaction())
             {
@@ -289,14 +308,76 @@ namespace contentapi.Controllers
             return DumpLog();
         }
 
+        //Includes bans, uservariables
+        [HttpGet("messages")]
+        public async Task<string> ConvertMessagesAsync([FromQuery]string secret)
+        {
+            if(secret != config.SecretKey)
+                throw new InvalidOperationException("Need the secret");
+            newdb.Open();
+            using (var trs = newdb.BeginTransaction())
+            {
+                try
+                {
+                    Log("Starting modulemessage convert");
+                    var mms = await moduleMessageSource.SimpleSearchAsync(new ModuleMessageViewSearch());
+                    Log($"{mms.Count} module messages found");
+                    var mmids = new List<long>();
+                    foreach (var mm in mms)
+                    {
+                        var umm = mapper.Map<UnifiedModuleMessageView>(mm);
+                        var nmm = mapper.Map<Db.Comment>(umm);
+                        //User dapper to store?
+                        mmids.Add(await newdb.InsertAsync(nmm));
+                        if(mmids.Count >= 1000)
+                        {
+                            Log($"Inserted messages: {string.Join(",", mmids)}");
+                            mmids.Clear();
+                        }
+                    }
+                    var count = newdb.ExecuteScalar<int>("SELECT COUNT(*) FROM comments");
+                    Log($"Successfully inserted modulemessages, {count} in table");
+
+                    Log("Starting modulemessage2 convert");
+                    var cms = await moduleRMessageSource.SimpleSearchAsync(new CommentSearch());
+                    Log($"{cms.Count} module messages 2 found");
+                    mmids = new List<long>();
+                    foreach (var mm in cms)
+                    {
+                        var umm = mapper.Map<UnifiedModuleMessageView>(mm);
+                        var nmm = mapper.Map<Db.Comment>(umm);
+                        //User dapper to store?
+                        mmids.Add(await newdb.InsertAsync(nmm));
+                        if(mmids.Count >= 1000)
+                        {
+                            Log($"Inserted messages: {string.Join(",", mmids)}");
+                            mmids.Clear();
+                        }
+                    }
+                    count = newdb.ExecuteScalar<int>("SELECT COUNT(*) FROM comments");
+                    Log($"Successfully inserted modulemessages 2, {count} in table");
+                    trs.Commit();
+                }
+                catch (Exception ex)
+                {
+                    trs.Rollback();
+                    Log($"EXCEPTION: {ex}");
+                }
+            }
+            return DumpLog();
+        }
+
+
         [HttpGet("all")]
-        public async Task<string> ConvertAll()
+        public async Task<string> ConvertAll([FromQuery]string secret)
         {
             var sb = new StringBuilder();
 
-            sb.AppendLine(await ConvertUsersAsync());
+            sb.AppendLine(await ConvertUsersAsync(secret));
             sb.AppendLine("---------------");
-            sb.AppendLine(await ConvertContentAsync());
+            sb.AppendLine(await ConvertContentAsync(secret));
+            sb.AppendLine("---------------");
+            sb.AppendLine(await ConvertMessagesAsync(secret));
 
             return sb.ToString();
         }
