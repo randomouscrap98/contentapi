@@ -17,7 +17,7 @@ DefaultSetup.AddDefaultServices(builder.Services);
 
 //The default setup doesn't set up our database provider though
 builder.Services.AddTransient<ContentApiDbConnection>(ctx => 
-    new ContentApiDbConnection(new SqliteConnection("Data Source=newcontent.db")));
+    new ContentApiDbConnection(new SqliteConnection(builder.Configuration.GetConnectionString("contentapi"))));
 
 // Learn more about configuring Swagger/OpenAPI at https://aka.ms/aspnetcore/swashbuckle
 builder.Services.AddEndpointsApiExplorer();
