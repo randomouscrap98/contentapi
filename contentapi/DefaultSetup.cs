@@ -18,7 +18,11 @@ public static class DefaultSetup
         services.AddSingleton<IRuntimeInformation>(new MyRuntimeInformation(DateTime.Now));
         services.AddSingleton<ITypeInfoService, CachedTypeInfoService>();
         services.AddTransient<IGenericSearch, GenericSearcher>();
+        services.AddSingleton<IAuthTokenService<long>, JwtAuthTokenService<long>>();
+
+        //Configs
         services.AddSingleton<GenericSearcherConfig>();
+        services.AddSingleton<JwtAuthTokenServiceConfig>();
     }
 
     /// <summary>

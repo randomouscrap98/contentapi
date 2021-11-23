@@ -50,7 +50,8 @@ public class GenericSearcher : IGenericSearch
     };
 
     protected readonly Dictionary<(RequestType, string),string> ModifiedFields = new Dictionary<(RequestType, string), string> {
-        { (RequestType.content, "lastPostDate"), $"(select createDate from comments where {MainAlias}.id = contentId order by id desc limit 1) as lastPostDate" }
+        { (RequestType.content, "lastPostDate"), $"(select createDate from comments where {MainAlias}.id = contentId order by id desc limit 1) as lastPostDate" },
+        { (RequestType.user, "registered"), $"(registrationKey IS NULL) as registered" }
     };
 
     public GenericSearcher(ILogger<GenericSearcher> logger, ContentApiDbConnection connection,

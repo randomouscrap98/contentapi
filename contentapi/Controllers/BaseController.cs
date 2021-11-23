@@ -2,16 +2,31 @@ using Microsoft.AspNetCore.Mvc;
 
 namespace contentapi.Controllers;
 
+public class BaseControllerServices
+{
+    public ILogger<BaseController> logger;
+    public IAuthTokenService<long> authService;
+
+    public BaseControllerServices(ILogger<BaseController> logger, IAuthTokenService<long> authService)
+    {
+        this.logger = logger;
+        this.authService = authService;
+    }
+}
+
 [ApiController]
 [Route("[controller]")]
 public class BaseController : Controller
 {
-    protected ILogger logger;
+    protected BaseControllerServices services;
 
-    public BaseController(ILogger logger)
+    public BaseController(BaseControllerServices services)
     {
-        this.logger = logger;
+        this.services = services;
     }
+
+    protected long? GetUserId() => services.authService.GetUserId(User.Claims);
+    protected bool IsUserLoggedIn() => GetUserId() != null;
 
     protected async Task<ActionResult<T>> MatchExceptions<T>(Func<Task<T>> perform)
     {

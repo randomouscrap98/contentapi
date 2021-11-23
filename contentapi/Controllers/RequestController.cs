@@ -8,6 +8,7 @@ public class RequestResponse
     public SearchRequests search {get;set;} = new SearchRequests();
     public Dictionary<string, object> data {get;set;} = new Dictionary<string, object>();
     public double time {get;set;}
+    public bool loggedIn {get;set;}
 }
 
 [ApiController]
@@ -16,7 +17,7 @@ public class RequestController : BaseController
 {
     protected IGenericSearch searcher;
 
-    public RequestController(ILogger<RequestController> logger, IGenericSearch search) : base(logger)
+    public RequestController(BaseControllerServices services, IGenericSearch search) : base(services)
     {
         this.searcher = search;
     }
@@ -36,7 +37,8 @@ public class RequestController : BaseController
             {
                 search = search,
                 data = data,
-                time = sw.Elapsed.TotalMilliseconds
+                time = sw.Elapsed.TotalMilliseconds,
+                loggedIn = IsUserLoggedIn()
             };
         });
     }

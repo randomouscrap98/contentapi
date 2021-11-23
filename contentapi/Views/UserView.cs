@@ -18,5 +18,6 @@ public class UserView
     public DateTime createDate {get;set;}
 
     [Searchable]
+    [FromField("")] //Not a field you can select
     public bool registered {get;set;}
 }

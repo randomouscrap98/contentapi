@@ -1,5 +1,6 @@
 using System.Text;
 using contentapi.AutoMapping;
+using contentapi.Controllers;
 using contentapi.Db;
 using contentapi.Implementations;
 using contentapi.Setup;
@@ -17,11 +18,20 @@ builder.Services.AddAutoMapper(typeof(ContentSnapshotProfile)); //You can pick A
 // or special deploys or whatever.
 DefaultSetup.AddDefaultServices(builder.Services);
 DefaultSetup.AddConfigBinding<GenericSearcherConfig>(builder.Services, builder.Configuration);
+builder.Services.AddTransient<BaseControllerServices>();
+
+const string secretKey = "pleasechangethis";
 
 //The default setup doesn't set up our database provider though
 builder.Services.AddTransient<ContentApiDbConnection>(ctx => 
     new ContentApiDbConnection(new SqliteConnection(builder.Configuration.GetConnectionString("contentapi"))));
 
+//Not sure if this is ok
+builder.Services.AddSingleton(
+    new SigningCredentials(
+        new SymmetricSecurityKey(System.Text.Encoding.ASCII.GetBytes(secretKey)), 
+        SecurityAlgorithms.HmacSha256Signature)
+);
 builder.Services.AddCors();
 
 //This section sets up(?) jwt authentication
@@ -36,7 +46,7 @@ builder.Services.AddAuthentication(x =>
     x.TokenValidationParameters = new TokenValidationParameters()
     {
         ValidateIssuerSigningKey = true,
-        IssuerSigningKey = new SymmetricSecurityKey(Encoding.UTF8.GetBytes("pleasereplacethis")),
+        IssuerSigningKey = new SymmetricSecurityKey(Encoding.UTF8.GetBytes(secretKey)),
             //tokenSection.GetValue<string>("SecretKey"))),
         ValidateIssuer = false,
         ValidateAudience = false

@@ -1,19 +1,19 @@
+using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
 
 namespace contentapi.Controllers;
 
 [ApiController]
 [Route("[controller]")]
-public class StatusController
+public class StatusController : BaseController
 {
-    protected ILogger logger;
     protected IWebHostEnvironment environment;
     protected IRuntimeInformation runtimeInformation;
 
 
-    public StatusController(ILogger<StatusController> logger, IWebHostEnvironment environment, IRuntimeInformation rinfo)
+    public StatusController(BaseControllerServices services, IWebHostEnvironment environment, IRuntimeInformation rinfo) 
+        : base(services)
     {
-        this.logger = logger;
         this.environment = environment;
         this.runtimeInformation = rinfo;
     }
@@ -27,6 +27,15 @@ public class StatusController
             environment = environment.EnvironmentName,
             processStart = runtimeInformation.ProcessStart,
             runtime = runtimeInformation.ProcessRuntime
+        };
+    }
+
+    [HttpGet("token")]
+    [Authorize]
+    public object GetAboutToken()
+    {
+        return new {
+            userId = GetUserId()
         };
     }
 
