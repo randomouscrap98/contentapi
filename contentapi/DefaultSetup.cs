@@ -1,4 +1,5 @@
 using contentapi.Implementations;
+using Microsoft.Extensions.DependencyInjection.Extensions;
 using Microsoft.Extensions.Options;
 
 namespace contentapi.Setup;
@@ -16,6 +17,8 @@ public static class DefaultSetup
     {
         services.AddSingleton<IRuntimeInformation>(new MyRuntimeInformation(DateTime.Now));
         services.AddSingleton<ITypeInfoService, CachedTypeInfoService>();
+        services.AddTransient<IGenericSearch, GenericSearcher>();
+        services.AddSingleton<GenericSearcherConfig>();
     }
 
     /// <summary>
@@ -24,8 +27,16 @@ public static class DefaultSetup
     /// <typeparam name="T"></typeparam>
     public static void AddConfigBinding<T>(IServiceCollection services, IConfiguration config) where T : class
     {
-        var name = typeof(T).Name;
+        var ct = typeof(T);
+        var name = ct.Name;
         services.Configure<T>(config.GetSection(name));
-        services.AddSingleton<T>(p => (p.GetService<IOptionsMonitor<T>>() ?? throw new InvalidOperationException($"Mega config failure on {name}!")).CurrentValue);
+        var generator = new Func<IServiceProvider, T>(p => (p.GetService<IOptionsMonitor<T>>() ?? throw new InvalidOperationException($"Mega config failure on {name}!")).CurrentValue);
+
+        //If it already exists (maybe with default values), replace it. They clearly 
+        //actually want it from the config
+        if(services.Any(x => x.ServiceType == ct))
+            services.Replace(ServiceDescriptor.Singleton<T>(generator));
+        else
+            services.AddSingleton<T>(generator);
     }
 }

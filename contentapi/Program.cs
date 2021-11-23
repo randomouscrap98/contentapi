@@ -1,5 +1,6 @@
 using contentapi.AutoMapping;
 using contentapi.Db;
+using contentapi.Implementations;
 using contentapi.Setup;
 using Microsoft.Data.Sqlite;
 
@@ -14,6 +15,7 @@ builder.Services.AddAutoMapper(typeof(ContentSnapshotProfile)); //You can pick A
 // We only use defaults for our regular runtime stuff! Overriding defaults is for testing
 // or special deploys or whatever.
 DefaultSetup.AddDefaultServices(builder.Services);
+DefaultSetup.AddConfigBinding<GenericSearcherConfig>(builder.Services, builder.Configuration);
 
 //The default setup doesn't set up our database provider though
 builder.Services.AddTransient<ContentApiDbConnection>(ctx => 

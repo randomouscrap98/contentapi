@@ -1,6 +1,4 @@
-using Dapper.Contrib.Extensions;
-
-namespace contentapi.Db;
+namespace contentapi.Views;
 
 public class ContentView
 {

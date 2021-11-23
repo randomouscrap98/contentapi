@@ -1,25 +1,34 @@
 using Microsoft.AspNetCore.Mvc;
 
-namespace contentapi;
+namespace contentapi.Controllers;
+
+public class RequestResponse
+{
+    public SearchRequests search {get;set;} = new SearchRequests();
+    public Dictionary<string, object> data {get;set;} = new Dictionary<string, object>();
+}
 
 [ApiController]
 [Route("[controller]")]
-public class RequestController
+public class RequestController : BaseController
 {
-    protected ILogger logger;
+    protected IGenericSearch searcher;
 
-
-    public RequestController(ILogger<RequestController> logger)
+    public RequestController(ILogger<RequestController> logger, IGenericSearch search) : base(logger)
     {
-        this.logger = logger;
+        this.searcher = search;
     }
 
     [HttpPost()]
-    public async Task<object> RequestAsync([FromBody]SearchRequests search)
+    public Task<ActionResult<RequestResponse>> RequestAsync([FromBody]SearchRequests search)
     {
-        return new {
-            count = search.requests.Count,
-            search = search
-        };
+        return MatchExceptions(async () =>
+        {
+            return new RequestResponse()
+            {
+                search = search,
+                data = await searcher.Search(search)
+            };
+        });
     }
 }
