@@ -15,6 +15,7 @@ public static class DefaultSetup
     public static void AddDefaultServices(IServiceCollection services)
     {
         services.AddSingleton<IRuntimeInformation>(new MyRuntimeInformation(DateTime.Now));
+        services.AddSingleton<ITypeInfoService, CachedTypeInfoService>();
     }
 
     /// <summary>
