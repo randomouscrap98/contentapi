@@ -1,3 +1,4 @@
+using System.Diagnostics;
 using Microsoft.AspNetCore.Mvc;
 
 namespace contentapi.Controllers;
@@ -6,6 +7,7 @@ public class RequestResponse
 {
     public SearchRequests search {get;set;} = new SearchRequests();
     public Dictionary<string, object> data {get;set;} = new Dictionary<string, object>();
+    public double time {get;set;}
 }
 
 [ApiController]
@@ -24,10 +26,17 @@ public class RequestController : BaseController
     {
         return MatchExceptions(async () =>
         {
+            var sw = new Stopwatch();
+
+            sw.Start();
+            var data = await searcher.Search(search);
+            sw.Stop();
+
             return new RequestResponse()
             {
                 search = search,
-                data = await searcher.Search(search)
+                data = data,
+                time = sw.Elapsed.TotalMilliseconds
             };
         });
     }

@@ -20,6 +20,7 @@ public class GenericSearcherConfig
 {
     public string NameRegex {get;set;} = "^[a-zA-Z0-9_]+$";
     public string ParameterRegex {get;set;} = "^@[a-zA-Z0-9_\\.]+$";
+    public int MaxIndividualResultSet {get;set;} = 1000;
 }
 
 //This should probably move out at some point
@@ -38,6 +39,8 @@ public class GenericSearcher : IGenericSearch
     protected IMapper mapper;
 
     public const string MainAlias = "main";
+    public const string DescendingAppend = "_desc";
+    public const string SystemPrepend = "_sys";
     
     //Should this be configurable? I don't care for now
     protected readonly Dictionary<RequestType, Type> StandardSelect = new Dictionary<RequestType, Type> {
@@ -60,6 +63,11 @@ public class GenericSearcher : IGenericSearch
         this.mapper = mapper;
     }
 
+    public string SystemKey(SearchRequestPlus request, string field)
+    {
+        return $"{SystemPrepend}_{request.name}_{field}";
+    }
+
     //Throw exceptions on any funky business we can quickly report
     public void RequestPrecheck(SearchRequests requests)
     {
@@ -69,7 +77,7 @@ public class GenericSearcher : IGenericSearch
         {
             //Oops, unknown type
             if(!acceptedTypes.Contains(request.type))
-                throw new ArgumentException($"Unknown request type: {request.type}");
+                throw new ArgumentException($"Unknown request type: {request.type} in request {request.name}");
             
             //Oops, please name your requests appropriately for linking
             if(!Regex.IsMatch(request.name, config.NameRegex))
@@ -91,7 +99,7 @@ public class GenericSearcher : IGenericSearch
             else if (ModifiedFields.ContainsKey(modifiedTuple))
                 return ModifiedFields[modifiedTuple];
             else
-                    throw new InvalidOperationException($"No field handler for {r.requestType}.{fieldName}");
+                throw new InvalidOperationException($"No field handler for {r.requestType}.{fieldName} in request {r.name}");
         }
         else
         {
@@ -117,8 +125,45 @@ public class GenericSearcher : IGenericSearch
         queryStr.Append("SELECT ");
         queryStr.Append(string.Join(",", fieldSelect));
         queryStr.Append(" FROM ");
-        queryStr.Append(r.typeInfo.database ?? throw new InvalidOperationException($"Standard select {r.type} doesn't map to database table!"));
+        queryStr.Append(r.typeInfo.database ?? throw new InvalidOperationException($"Standard select {r.type} doesn't map to database table in request {r.name}!"));
         queryStr.Append($" AS {MainAlias} ");
+    }
+
+    public void BasicFinalLimit(StringBuilder queryStr, SearchRequestPlus r, Dictionary<string, object> parameters)
+    {
+        if(!string.IsNullOrEmpty(r.order))
+        {
+            var order = r.order;
+            var descending = false;
+
+            if(r.order.EndsWith(DescendingAppend))
+            {
+                descending = true;
+                order = r.order.Substring(0, r.order.Length - DescendingAppend.Length);
+            }
+
+            if(!r.typeInfo.queryableFields.Contains(order))
+                throw new ArgumentException($"Unknown order field {order} for request {r.name}");
+
+            //Can't parameterize the column... inserting directly; scary
+            queryStr.Append($"ORDER BY {order} ");
+
+            if(descending)
+                queryStr.Append("DESC ");
+        }
+
+        //ALWAYS need limit if you're doing offset, just easier to include it. -1 is magic
+        var limit = Math.Min(r.limit > 0 ? r.limit : int.MaxValue, config.MaxIndividualResultSet);
+        var limitKey = SystemKey(r, "limit");
+        queryStr.Append($"LIMIT @{limitKey} ");//{limit} ");
+        parameters.Add(limitKey, limit);
+
+        if (r.skip > 0)
+        {
+            var skipKey = SystemKey(r, "skip");
+            queryStr.Append($"OFFSET @{skipKey} ");
+            parameters.Add(skipKey, limit);
+        }
     }
 
     //All searches are reads, don't need to open the connection OR set up transactions, wow.
@@ -148,16 +193,16 @@ public class GenericSearcher : IGenericSearch
                 throw new NotImplementedException($"Sorry, {request.type} isn't ready yet!");
             }
 
-            var limit = request.limit > 0 ? request.limit : -1;
+            //Add the order and limit and whatever
+            BasicFinalLimit(queryStr, request, modifiedValues);
 
-            //ALWAYS need limit if you're doing offset, just easier to include it. -1 is magic
-            queryStr.Append($"LIMIT {request.limit} ");
-            
-            if(request.skip > 0)
-                queryStr.Append($"OFFSET {request.skip} ");
-            
+            var sql = queryStr.ToString();
+            logger.LogDebug($"Running SQL for {request.type}({request.name}): {sql}");
+
             var dp = new DynamicParameters(modifiedValues);
-            var qresult = await dbcon.QueryAsync(queryStr.ToString(), dp);
+            var qresult = await dbcon.QueryAsync(sql, dp);
+
+
             result.Add(request.name, qresult);
             modifiedValues.Add(request.name, qresult);
         }

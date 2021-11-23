@@ -45,6 +45,7 @@ mytemp
 secrets.json
 appsettings.json
 appsettings.Development.json
+appsettings.Production.json
 uploads
 .vscode_old
 moduledata.db
