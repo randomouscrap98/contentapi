@@ -49,8 +49,8 @@ public class GenericSearcher : IGenericSearch
         { RequestType.content, typeof(ContentView) }
     };
 
-    protected readonly Dictionary<Tuple<RequestType, string>,string> ModifiedFields = new Dictionary<Tuple<RequestType, string>, string> {
-        { Tuple.Create(RequestType.content, "lastPostDate"), $"(select createDate from comments where {MainAlias}.id = contentId order by id desc limit 1) as lastPostDate" }
+    protected readonly Dictionary<(RequestType, string),string> ModifiedFields = new Dictionary<(RequestType, string), string> {
+        { (RequestType.content, "lastPostDate"), $"(select createDate from comments where {MainAlias}.id = contentId order by id desc limit 1) as lastPostDate" }
     };
 
     public GenericSearcher(ILogger<GenericSearcher> logger, ContentApiDbConnection connection,
@@ -89,22 +89,17 @@ public class GenericSearcher : IGenericSearch
     //remap, or the remap is complex and we need a specialized modified field.
     public string StandardFieldRemap(string fieldName, SearchRequestPlus r)
     {
-        if (r.typeInfo.fieldRemap.ContainsKey(fieldName))
-        {
-            var remap = r.typeInfo.fieldRemap[fieldName];
-            var modifiedTuple = Tuple.Create(r.requestType, fieldName);
+        //var modifiedTuple = Tuple.Create(r.requestType, fieldName);
 
-            if (!string.IsNullOrEmpty(remap))
-                return remap;
-            else if (ModifiedFields.ContainsKey(modifiedTuple))
-                return ModifiedFields[modifiedTuple];
-            else
-                throw new InvalidOperationException($"No field handler for {r.requestType}.{fieldName} in request {r.name}");
-        }
+        //Our personal field modifiers always override all
+        if (ModifiedFields.ContainsKey((r.requestType, fieldName)))
+            return ModifiedFields[(r.requestType, fieldName)];
+        //Return whatever's in the fieldmap, EVEN if it's empty (if it's empty, we remove it from the selector)
+        else if (r.typeInfo.fieldRemap.ContainsKey(fieldName))
+            return r.typeInfo.fieldRemap[fieldName];
+        //Just a basic fieldname replacement
         else
-        {
             return fieldName;
-        }
     }
 
     public void AddStandardSelect(StringBuilder queryStr, SearchRequestPlus r)
@@ -120,7 +115,7 @@ public class GenericSearcher : IGenericSearch
             if (!r.typeInfo.queryableFields.Contains(field))
                 throw new ArgumentException($"Unknown field {field} in request {r.name}");
 
-        var fieldSelect = fields.Select(x => StandardFieldRemap(x, r)).ToList();
+        var fieldSelect = fields.Select(x => StandardFieldRemap(x, r)).Where(x => !string.IsNullOrEmpty(x)).ToList();
 
         queryStr.Append("SELECT ");
         queryStr.Append(string.Join(",", fieldSelect));

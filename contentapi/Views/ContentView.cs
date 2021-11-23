@@ -29,8 +29,12 @@ public class ContentView
     [Searchable]
     public long parentId { get; set; }
 
+    [Searchable]
+    [FromField("")]
+    public DateTime lastPostDate {get;set;}
+
     //These are all fields you can request, but they are special additions.
-    [FromField("")] //Empty field means something special, this is an additional query.
+    [FromField("")] //Empty field means something special, these are removed from standard searches
     public Dictionary<string, string> values {get;set;} = new Dictionary<string, string>();
 
     [FromField("")]
