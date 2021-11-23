@@ -11,7 +11,7 @@ public class UnitTestBase
     protected IServiceCollection baseCollection;
     protected IServiceProvider baseProvider;
 
-    public UnitTestBase(Action<IServiceCollection>? modify = null)
+    public UnitTestBase()//Action<IServiceCollection>? modify = null)
     {
         baseCollection = new ServiceCollection();
         DefaultSetup.AddDefaultServices(baseCollection);
@@ -20,12 +20,10 @@ public class UnitTestBase
             builder.AddDebug();
         });
 
-        if(modify != null)
-            modify(baseCollection);
-
         baseProvider = baseCollection.BuildServiceProvider();
         logger = GetService<ILogger<UnitTestBase>>();
     }
+
 
     public void UpdateServices(Action<IServiceCollection> modify)
     {

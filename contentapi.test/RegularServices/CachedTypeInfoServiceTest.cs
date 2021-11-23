@@ -1,5 +1,4 @@
 using contentapi.Implementations;
-using contentapi.Views;
 using Xunit;
 
 namespace contentapi.test;
@@ -13,11 +12,27 @@ public class CachedTypeInfoServiceTest : UnitTestBase
         service = GetService<CachedTypeInfoService>();//new CachedTypeInfoService();
     }
 
+    public class TestView
+    {
+        public long queryableFieldLong {get;set;}
+
+        [Searchable]
+        public string searchableFieldString {get;set;} = "";
+
+        [Computed]
+        public double computedField {get;}
+    }
+
     [Fact] 
     public void GetUserType()
     {
-        var typeInfo = service.GetTypeInfo<UserView>();
-        Assert.Equal(typeof(UserView), typeInfo.type);
-        Assert.Contains("id", typeInfo.searchableFields);
+        var typeInfo = service.GetTypeInfo<TestView>();
+        Assert.Equal(typeof(TestView), typeInfo.type);
+        Assert.Contains("queryableFieldLong", typeInfo.queryableFields);
+        Assert.DoesNotContain("queryableFieldLong", typeInfo.searchableFields);
+        Assert.Contains("searchableFieldString", typeInfo.queryableFields);
+        Assert.Contains("searchableFieldString", typeInfo.searchableFields);
+        Assert.DoesNotContain("computedField", typeInfo.queryableFields);
+        Assert.DoesNotContain("computedField", typeInfo.searchableFields);
     }
 }

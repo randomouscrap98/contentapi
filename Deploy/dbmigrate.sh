@@ -3,7 +3,7 @@
 set -e
 
 DB=${1:-content.db}
-DBMIGRATIONS=${2:-dbMigrations}
+DBMIGRATIONS=${2:-dbmigrations}
 
 # Make a backup of the current db, if it exists
 if [ -e $db ]

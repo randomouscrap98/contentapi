@@ -24,4 +24,8 @@
     <ProjectReference Include="..\contentapi\contentapi.csproj" />
   </ItemGroup>
 
+  <Target Name="CopyFiles" BeforeTargets="AfterBuild">
+    <Exec Command="xcopy ..\Deploy\dbmigrations &quot;$(OutDir)\dbMigrations\&quot; /s /d /y" />
+  </Target>
+
 </Project>

@@ -24,6 +24,7 @@ public class CachedTypeInfoService : ITypeInfoService
                 var props = t.GetProperties().Where(x => !Attribute.IsDefined(x, compattr));
                 result.queryableFields = props.Select(x => x.Name).ToList();
                 result.searchableFields = props.Where(x => Attribute.IsDefined(x, searchattr)).Select(x => x.Name).ToList();
+                result.fieldTypes = props.ToDictionary(k => k.Name, v => v.PropertyType);
                 logger.LogInformation($"Added type {t.Name} to cached type service");
                 cachedTypes.Add(t, result);
             }
