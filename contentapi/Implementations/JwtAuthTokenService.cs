@@ -71,14 +71,6 @@ public class JwtAuthTokenService<T> : IAuthTokenService<T> where T : struct
         var handler = new JwtSecurityTokenHandler();
         SecurityToken rawToken;
         var principal = handler.ValidateToken(token, validationParameters, out rawToken);
-        //new TokenValidationParameters()
-        //{
-        //    ValidateIssuer = true,
-        //    ValidateLifetime = true,
-        //    RequireExpirationTime = true,
-        //    ValidateAudience = true,
-        //    IssuerSigningKey = new SymmetricSecurityKey(credentials) //System.Text.Encoding.UTF8.GetBytes()),
-        //}, out rawToken);
         return principal; //not sure if we need the token...
     }
 

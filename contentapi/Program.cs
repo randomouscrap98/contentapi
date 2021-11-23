@@ -26,12 +26,8 @@ const string secretKey = "pleasechangethis";
 builder.Services.AddTransient<ContentApiDbConnection>(ctx => 
     new ContentApiDbConnection(new SqliteConnection(builder.Configuration.GetConnectionString("contentapi"))));
 
-//Not sure if this is ok
-builder.Services.AddSingleton(
-    new SigningCredentials(
-        new SymmetricSecurityKey(System.Text.Encoding.ASCII.GetBytes(secretKey)), 
-        SecurityAlgorithms.HmacSha256Signature)
-);
+//Not sure if this is ok, but adding security stuff to the service collection.
+//It's just me using it, and I need this stuff in multiple places
 var validationParameters = new TokenValidationParameters()
 {
     ValidateIssuerSigningKey = true,
@@ -39,9 +35,14 @@ var validationParameters = new TokenValidationParameters()
     IssuerSigningKey = new SymmetricSecurityKey(Encoding.UTF8.GetBytes(secretKey)),
     ValidateIssuer = false,
     ValidateAudience = false
-        //tokenSection.GetValue<string>("SecretKey"))),
 };
 builder.Services.AddSingleton(validationParameters);
+builder.Services.AddSingleton(
+    new SigningCredentials(
+        new SymmetricSecurityKey(System.Text.Encoding.ASCII.GetBytes(secretKey)), 
+        SecurityAlgorithms.HmacSha256Signature)
+);
+
 builder.Services.AddCors();
 
 //This section sets up(?) jwt authentication
@@ -54,14 +55,6 @@ builder.Services.AddAuthentication(x =>
     x.RequireHttpsMetadata = false;
     x.SaveToken = true;
     x.TokenValidationParameters = validationParameters; 
-    //new TokenValidationParameters()
-    //{
-    //    ValidateIssuerSigningKey = true,
-    //    IssuerSigningKey = new SymmetricSecurityKey(Encoding.UTF8.GetBytes(secretKey)),
-    //        //tokenSection.GetValue<string>("SecretKey"))),
-    //    ValidateIssuer = false,
-    //    ValidateAudience = false
-    //};
 });
 
 // System.Text STILL does not do what I want it to do

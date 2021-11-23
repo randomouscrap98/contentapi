@@ -1,3 +1,4 @@
+using System;
 using System.Collections.Generic;
 using contentapi.Implementations;
 using Microsoft.Extensions.Logging;
@@ -13,9 +14,14 @@ public class JwtAuthTokenServiceTest : UnitTestBase
 
     public JwtAuthTokenServiceTest()
     {
-        service = new JwtAuthTokenService<long>(GetService<ILogger<JwtAuthTokenService<long>>>(), 
-            new JwtAuthTokenServiceConfig(), GetNewCredentials(DefaultSecretKey),
-            GetNewValidationParameters(DefaultSecretKey));
+        service = GetService(DefaultSecretKey);
+    }
+
+    protected JwtAuthTokenService<long> GetService(string key)
+    {
+        return new JwtAuthTokenService<long>(GetService<ILogger<JwtAuthTokenService<long>>>(), 
+            new JwtAuthTokenServiceConfig(), GetNewCredentials(key),
+            GetNewValidationParameters(key));
     }
 
     protected SigningCredentials GetNewCredentials(string secretKey)
@@ -55,5 +61,54 @@ public class JwtAuthTokenServiceTest : UnitTestBase
         Assert.NotNull(claims);
         var userId = service.GetUserId(claims.Claims);
         Assert.Equal(55, userId);
+    }
+
+    [Fact]
+    public void GetNewTokenTest_ValuesStored()
+    {
+        var key = service.GetNewToken(55, new Dictionary<string, string>()
+        {
+            { "key1",  "hahakey" },
+            { "thing", "bunnies" }
+        });
+        var principal = service.ValidateToken(key);
+        Assert.NotEmpty(principal.Claims);
+        var values = service.GetValuesFromClaims(principal.Claims);
+        Assert.Equal("hahakey", values["key1"]);
+        Assert.Equal("bunnies", values["thing"]);
+    }
+
+    [Fact]
+    public void GetUserId_NotModifiable()
+    {
+        var service2 = GetService("someOtherKeyThatIsNoTTHESAME");
+        var key = service.GetNewToken(55, new Dictionary<string, string>());
+        var key2 = service2.GetNewToken(56, new Dictionary<string, string>());
+        //The bad claims
+        Assert.ThrowsAny<Exception>(() => service2.ValidateToken(key));
+        Assert.ThrowsAny<Exception>(() => service.ValidateToken(key2));
+        //var claims = service2.ValidateToken(key);
+        //var claims2 = service.ValidateToken(key2);
+        //Assert.Empty(claims.Claims);
+        //Assert.Empty(claims2.Claims);
+        //The good claims
+        //var claims = service.ValidateToken(key);
+        //var claims2 = service2.ValidateToken(key2);
+        //Assert.NotEmpty(claims.Claims);
+        //Assert.NotEmpty(claims2.Claims);
+        //var userId = service2.GetUserId(claims.Claims);
+        //var userId2 = service.GetUserId(claims2.Claims);
+        //Assert.Null(userId);
+        //Assert.Null(userId2);
+    }
+
+    [Fact]
+    public void GetUserId_Invalidate()
+    {
+        var key = service.GetNewToken(55, new Dictionary<string, string>());
+        service.InvalidateAllTokens(55);
+        var claims = service.ValidateToken(key);
+        var userId = service.GetUserId(claims.Claims);
+        Assert.Null(userId);
     }
 }
