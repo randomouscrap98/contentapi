@@ -1,6 +1,7 @@
 using System.Data;
 using System.Text;
 using System.Text.RegularExpressions;
+using AutoMapper;
 using contentapi.Db;
 using contentapi.Views;
 using Dapper;
@@ -21,13 +22,23 @@ public class GenericSearcherConfig
     public string ParameterRegex {get;set;} = "^@[a-zA-Z0-9_\\.]+$";
 }
 
+//This should probably move out at some point
+public class SearchRequestPlus : SearchRequest
+{
+    public RequestType requestType {get;set;}
+    public TypeInfo typeInfo {get;set;} = new TypeInfo();
+}
+
 public class GenericSearcher : IGenericSearch
 {
     protected ILogger logger;
     protected IDbConnection dbcon;
     protected ITypeInfoService typeService;
     protected GenericSearcherConfig config;
+    protected IMapper mapper;
 
+    public const string MainAlias = "main";
+    
     //Should this be configurable? I don't care for now
     protected readonly Dictionary<RequestType, Type> StandardSelect = new Dictionary<RequestType, Type> {
         { RequestType.user, typeof(UserView) },
@@ -36,16 +47,17 @@ public class GenericSearcher : IGenericSearch
     };
 
     protected readonly Dictionary<Tuple<RequestType, string>,string> ModifiedFields = new Dictionary<Tuple<RequestType, string>, string> {
-        { Tuple.Create(RequestType.content, "lastPostDate"), "(select createDate from comments where main.id = contentId order by id desc limit 1) as lastPostDate" }
+        { Tuple.Create(RequestType.content, "lastPostDate"), $"(select createDate from comments where {MainAlias}.id = contentId order by id desc limit 1) as lastPostDate" }
     };
 
     public GenericSearcher(ILogger<GenericSearcher> logger, ContentApiDbConnection connection,
-        ITypeInfoService typeInfoService, GenericSearcherConfig config)
+        ITypeInfoService typeInfoService, GenericSearcherConfig config, IMapper mapper)
     {
         this.logger = logger;
         this.dbcon = connection.Connection;
         this.typeService = typeInfoService;
         this.config = config;
+        this.mapper = mapper;
     }
 
     //Throw exceptions on any funky business we can quickly report
@@ -67,19 +79,19 @@ public class GenericSearcher : IGenericSearch
 
     //MOST fields should work with this function, either it's the same name, it's a simple
     //remap, or the remap is complex and we need a specialized modified field.
-    public string StandardFieldRemap(string fieldName, RequestType reqType, TypeInfo td)
+    public string StandardFieldRemap(string fieldName, SearchRequestPlus r)
     {
-        if (td.fieldRemap.ContainsKey(fieldName))
+        if (r.typeInfo.fieldRemap.ContainsKey(fieldName))
         {
-            var remap = td.fieldRemap[fieldName];
-            var modifiedTuple = Tuple.Create(reqType, fieldName);
+            var remap = r.typeInfo.fieldRemap[fieldName];
+            var modifiedTuple = Tuple.Create(r.requestType, fieldName);
 
             if (!string.IsNullOrEmpty(remap))
                 return remap;
             else if (ModifiedFields.ContainsKey(modifiedTuple))
                 return ModifiedFields[modifiedTuple];
             else
-                    throw new InvalidOperationException($"No field handler for {reqType}.{fieldName}");
+                    throw new InvalidOperationException($"No field handler for {r.requestType}.{fieldName}");
         }
         else
         {
@@ -87,27 +99,26 @@ public class GenericSearcher : IGenericSearch
         }
     }
 
-    public void AddStandardSelect(StringBuilder queryStr, SearchRequest request, RequestType reqType)
+    public void AddStandardSelect(StringBuilder queryStr, SearchRequestPlus r)
     {
-        var td = typeService.GetTypeInfo(StandardSelect[reqType]);
-        var fields = request.fields.Split(",".ToCharArray(), StringSplitOptions.RemoveEmptyEntries).Select(x => x.Trim()).ToList(); 
+        var fields = r.fields.Split(",".ToCharArray(), StringSplitOptions.RemoveEmptyEntries).Select(x => x.Trim()).ToList(); 
 
         //Redo fieldlist if they asked for special formats
-        if (request.fields == "*")
-            fields = new List<string>(td.queryableFields);
+        if (r.fields == "*")
+            fields = new List<string>(r.typeInfo.queryableFields);
         
         //Check for bad fields
         foreach (var field in fields)
-            if (!td.queryableFields.Contains(field))
-                throw new ArgumentException($"Unknown field {field} in request {request.name}");
+            if (!r.typeInfo.queryableFields.Contains(field))
+                throw new ArgumentException($"Unknown field {field} in request {r.name}");
 
-        var fieldSelect = fields.Select(x => StandardFieldRemap(x, reqType, td)).ToList();
+        var fieldSelect = fields.Select(x => StandardFieldRemap(x, r)).ToList();
 
         queryStr.Append("SELECT ");
         queryStr.Append(string.Join(",", fieldSelect));
         queryStr.Append(" FROM ");
-        queryStr.Append(td.database ?? throw new InvalidOperationException($"Standard select {request.type} doesn't map to database table!"));
-        queryStr.Append(" ");
+        queryStr.Append(r.typeInfo.database ?? throw new InvalidOperationException($"Standard select {r.type} doesn't map to database table!"));
+        queryStr.Append($" AS {MainAlias} ");
     }
 
     //All searches are reads, don't need to open the connection OR set up transactions, wow.
@@ -121,20 +132,34 @@ public class GenericSearcher : IGenericSearch
         //Might look silly to do this loop twice but whatever, be nice to the users
         RequestPrecheck(requests);
 
-        foreach(var request in requests.requests)
+        foreach(var request in requests.requests.Select(x => mapper.Map<SearchRequestPlus>(x)))
         {
-            var reqType = Enum.Parse<RequestType>(request.type); //I know this will succeed
+            request.requestType = Enum.Parse<RequestType>(request.type); //I know this will succeed
+            request.typeInfo = typeService.GetTypeInfo(StandardSelect[request.requestType]);
             queryStr.Clear();
 
-            if(StandardSelect.ContainsKey(reqType))
+            if(StandardSelect.ContainsKey(request.requestType))
             {
-                AddStandardSelect(queryStr, request, reqType);
+                //Generates the "select from"
+                AddStandardSelect(queryStr, request);
             }
             else
             {
                 throw new NotImplementedException($"Sorry, {request.type} isn't ready yet!");
             }
+
+            var limit = request.limit > 0 ? request.limit : -1;
+
+            //ALWAYS need limit if you're doing offset, just easier to include it. -1 is magic
+            queryStr.Append($"LIMIT {request.limit} ");
+            
+            if(request.skip > 0)
+                queryStr.Append($"OFFSET {request.skip} ");
+            
             var dp = new DynamicParameters(modifiedValues);
+            var qresult = await dbcon.QueryAsync(queryStr.ToString(), dp);
+            result.Add(request.name, qresult);
+            modifiedValues.Add(request.name, qresult);
         }
 
         return result;
