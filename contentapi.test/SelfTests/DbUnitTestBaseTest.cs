@@ -7,9 +7,7 @@ namespace contentapi.test;
 
 public class DbUnitTestBaseTest : DbUnitTestBase
 {
-    public DbUnitTestBaseTest()
-    {
-    }
+    public DbUnitTestBaseTest() { }
 
     public IDbConnection GetConnection()
     {
