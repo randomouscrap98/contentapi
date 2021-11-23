@@ -1,5 +1,6 @@
 namespace contentapi.Views;
 
+[FromDb(typeof(Db.User))]
 public class UserView
 {
     [Searchable]

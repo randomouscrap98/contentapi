@@ -15,7 +15,11 @@ public class CachedTypeInfoService : ITypeInfoService
 
     public TypeInfo GetTypeInfo<T>()
     {
-        var t = typeof(T);
+        return GetTypeInfo(typeof(T));
+    }
+
+    public TypeInfo GetTypeInfo(Type t)
+    {
         lock(cacheLock)
         {
             if(!cachedTypes.ContainsKey(t))
@@ -23,8 +27,15 @@ public class CachedTypeInfoService : ITypeInfoService
                 var compattr = typeof(ComputedAttribute);
                 var searchattr = typeof(SearchableAttribute);
                 var ffattr = typeof(FromFieldAttribute);
+                var fdbattr = typeof(FromDbAttribute);
                 var result = new TypeInfo() { type = t };
                 var props = t.GetProperties().Where(x => !Attribute.IsDefined(x, compattr));
+
+                //Both of these could be null, and that's ok! If it's a complex type,
+                //we kind of expect it to be null
+                result.dbType = t.GetCustomAttribute<FromDbAttribute>()?.Type;
+                result.database = result.dbType?.GetCustomAttribute<Dapper.Contrib.Extensions.TableAttribute>()?.Name;
+
                 result.queryableFields = props.Select(x => x.Name).ToList();
                 result.searchableFields = props.Where(x => Attribute.IsDefined(x, searchattr)).Select(x => x.Name).ToList();
                 result.fieldTypes = props.ToDictionary(k => k.Name, v => v.PropertyType);

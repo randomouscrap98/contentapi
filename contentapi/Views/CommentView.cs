@@ -1,5 +1,6 @@
 namespace contentapi.Views;
 
+[FromDb(typeof(Db.Comment))]
 public class CommentView
 {
     [Searchable]

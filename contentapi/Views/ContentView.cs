@@ -1,5 +1,6 @@
 namespace contentapi.Views;
 
+[FromDb(typeof(Db.Content))]
 public class ContentView
 {
     [Searchable]
