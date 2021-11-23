@@ -32,6 +32,16 @@ builder.Services.AddSingleton(
         new SymmetricSecurityKey(System.Text.Encoding.ASCII.GetBytes(secretKey)), 
         SecurityAlgorithms.HmacSha256Signature)
 );
+var validationParameters = new TokenValidationParameters()
+{
+    ValidateIssuerSigningKey = true,
+    RequireExpirationTime = true,
+    IssuerSigningKey = new SymmetricSecurityKey(Encoding.UTF8.GetBytes(secretKey)),
+    ValidateIssuer = false,
+    ValidateAudience = false
+        //tokenSection.GetValue<string>("SecretKey"))),
+};
+builder.Services.AddSingleton(validationParameters);
 builder.Services.AddCors();
 
 //This section sets up(?) jwt authentication
@@ -43,14 +53,15 @@ builder.Services.AddAuthentication(x =>
 {
     x.RequireHttpsMetadata = false;
     x.SaveToken = true;
-    x.TokenValidationParameters = new TokenValidationParameters()
-    {
-        ValidateIssuerSigningKey = true,
-        IssuerSigningKey = new SymmetricSecurityKey(Encoding.UTF8.GetBytes(secretKey)),
-            //tokenSection.GetValue<string>("SecretKey"))),
-        ValidateIssuer = false,
-        ValidateAudience = false
-    };
+    x.TokenValidationParameters = validationParameters; 
+    //new TokenValidationParameters()
+    //{
+    //    ValidateIssuerSigningKey = true,
+    //    IssuerSigningKey = new SymmetricSecurityKey(Encoding.UTF8.GetBytes(secretKey)),
+    //        //tokenSection.GetValue<string>("SecretKey"))),
+    //    ValidateIssuer = false,
+    //    ValidateAudience = false
+    //};
 });
 
 // System.Text STILL does not do what I want it to do

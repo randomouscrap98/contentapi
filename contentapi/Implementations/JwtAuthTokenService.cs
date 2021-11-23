@@ -16,14 +16,19 @@ public class JwtAuthTokenService<T> : IAuthTokenService<T> where T : struct
 {
     public JwtAuthTokenServiceConfig config;
     protected SigningCredentials credentials;
+    protected TokenValidationParameters validationParameters;
+    protected ILogger logger;
 
     protected Dictionary<T, int> userTokenValidationTracking = new Dictionary<T, int>();
     protected readonly object validationLock = new object();
 
-    public JwtAuthTokenService(JwtAuthTokenServiceConfig config, SigningCredentials credentials)
+    public JwtAuthTokenService(ILogger<JwtAuthTokenService<T>> logger, JwtAuthTokenServiceConfig config, 
+        SigningCredentials credentials, TokenValidationParameters validationParameters)
     {
         this.config = config;
         this.credentials = credentials;
+        this.logger = logger;
+        this.validationParameters = validationParameters;
     }
 
     protected int GetUserValidationTracking(T userId)
@@ -59,6 +64,22 @@ public class JwtAuthTokenService<T> : IAuthTokenService<T> where T : struct
         var token = handler.CreateToken(descriptor);
         var tokenString = handler.WriteToken(token);
         return tokenString;
+    }
+
+    public ClaimsPrincipal ValidateToken(string token)
+    {
+        var handler = new JwtSecurityTokenHandler();
+        SecurityToken rawToken;
+        var principal = handler.ValidateToken(token, validationParameters, out rawToken);
+        //new TokenValidationParameters()
+        //{
+        //    ValidateIssuer = true,
+        //    ValidateLifetime = true,
+        //    RequireExpirationTime = true,
+        //    ValidateAudience = true,
+        //    IssuerSigningKey = new SymmetricSecurityKey(credentials) //System.Text.Encoding.UTF8.GetBytes()),
+        //}, out rawToken);
+        return principal; //not sure if we need the token...
     }
 
     public void InvalidateAllTokens(T userId)
