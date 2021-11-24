@@ -13,17 +13,11 @@ public class CheckpointTracker : ICheckpointTracker
 
     protected ConcurrentDictionary<string, CheckpointData> checkpoints = new ConcurrentDictionary<string, CheckpointData>();
     protected ILogger logger;
-    protected readonly object signalLock = new Object();
 
     public CheckpointTracker(ILogger<CheckpointTracker> logger)
     {
         this.logger = logger;
     }
-
-    //public int CurrentCheckpoint(string checkpointName)
-    //{
-    //    return checkpoints.GetOrAdd(checkpointName, s => new CheckpointData()).Checkpoint;
-    //}
 
     protected CheckpointData GetCheckpoint(string checkpointName)
     {
@@ -49,10 +43,6 @@ public class CheckpointTracker : ICheckpointTracker
             thisCheckpoint.Waiters.Clear();
 
             return thisCheckpoint.Checkpoint;
-            //var newValue = checkpoints.AddOrUpdate(checkpointName, 
-            //    (s) => new CheckpointData(), 
-            //    (s,v) => { Interlocked.Increment(ref v.Checkpoint); return v; }
-            //);
         }
     }
 
