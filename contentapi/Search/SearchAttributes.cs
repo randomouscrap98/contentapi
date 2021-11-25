@@ -1,4 +1,4 @@
-namespace contentapi;
+namespace contentapi.Search;
 
 [System.AttributeUsage(System.AttributeTargets.Property)]
 public class SearchableAttribute : System.Attribute  

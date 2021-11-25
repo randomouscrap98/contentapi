@@ -1,4 +1,5 @@
 using System.Diagnostics;
+using contentapi.Search;
 using Microsoft.AspNetCore.Mvc;
 
 namespace contentapi.Controllers;

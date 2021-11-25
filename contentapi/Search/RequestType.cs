@@ -1,4 +1,4 @@
-namespace contentapi;
+namespace contentapi.Search;
 
 public enum RequestType
 {

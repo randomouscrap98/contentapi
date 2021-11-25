@@ -1,4 +1,5 @@
 using contentapi.Implementations;
+using contentapi.Search;
 using Xunit;
 
 namespace contentapi.test;

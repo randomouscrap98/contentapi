@@ -6,7 +6,7 @@ using contentapi.Db;
 using contentapi.Views;
 using Dapper;
 
-namespace contentapi.Implementations;
+namespace contentapi.Search;
 
 /// <summary>
 /// Configuration for the generic searcher
@@ -18,8 +18,8 @@ namespace contentapi.Implementations;
 /// </remarks>
 public class GenericSearcherConfig
 {
-    public string NameRegex {get;set;} = "^[a-zA-Z0-9_]+$";
-    public string ParameterRegex {get;set;} = "^@[a-zA-Z0-9_\\.]+$";
+    public string NameRegex {get;set;} = "^[a-zA-Z_][a-zA-Z0-9_]*$";
+    public string ParameterRegex {get;set;} = "^@[a-zA-Z_][a-zA-Z0-9_\\.]*$";
     public int MaxIndividualResultSet {get;set;} = 1000;
 }
 

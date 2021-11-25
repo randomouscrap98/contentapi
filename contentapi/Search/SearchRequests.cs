@@ -1,4 +1,4 @@
-namespace contentapi;
+namespace contentapi.Search;
 
 /// <summary>
 /// A single search request, for retrieving data from the database (sometimes tailored)

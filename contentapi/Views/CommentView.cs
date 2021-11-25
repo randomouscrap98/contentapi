@@ -1,3 +1,5 @@
+using contentapi.Search;
+
 namespace contentapi.Views;
 
 [FromDb(typeof(Db.Comment))]
