@@ -14,6 +14,7 @@ public enum QueryToken
 
     [Lexeme("\\(")] LPAREN,
     [Lexeme("\\)")] RPAREN,
+
     [Lexeme("<")] LTHAN,
     [Lexeme("<=")] LTHANEQ,
     [Lexeme(">")] GTHAN,
@@ -22,6 +23,10 @@ public enum QueryToken
     [Lexeme("<>")] NOTEQUALS,
     [Lexeme("[iI][nN]")] IN,
     [Lexeme("[nN][oO][tT]")] NOT,
+    [Lexeme("[lL][iI][kK][eE]")] LIKE,
+
+    [Lexeme("[aA][nN][dD]")] AND,
+    [Lexeme("[oO][rR]")] OR,
 
     [Lexeme("[ \\t]+",isSkippable:true)] // the lexeme is marked isSkippable : it will not be sent to the parser and simply discarded.
     WS
