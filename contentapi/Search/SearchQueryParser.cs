@@ -18,11 +18,25 @@ public class SearchQueryParser : ISearchQueryParser
         parserInstance = new QueryExpressionParser(); 
 
         var builder = new ParserBuilder<QueryToken, string>();
-        parser = builder.BuildParser(parserInstance, ParserType.LL_RECURSIVE_DESCENT, "main").Result;
+        var buildResult = builder.BuildParser(parserInstance, ParserType.LL_RECURSIVE_DESCENT, "main");
+        if(buildResult.IsError)
+        {
+            var errors = buildResult.Errors?.Select(x => x.Message);
+            if(errors == null || errors.Count() == 0)
+                errors = new List<string> { "Unknown error" };
+            throw new InvalidOperationException("Couldn't construct parser: " + string.Join(",", errors));
+        }
+        parser = buildResult.Result;
     }
 
     public string ParseQuery(string query, Func<string, string> fieldConverter, Func<string, string> valueConverter)
     {
+        //I don't know how to handle blank stuff; it's allowed, but... egh can't get the
+        //grammar to work, having exceptions in their 'left recursion' checker that i don't
+        //think are due to left recursion... could be mistaken.
+        if(string.IsNullOrWhiteSpace(query))
+            return "";
+
         var oldFieldConv = parserInstance.HandleField;
         var oldValueConv = parserInstance.HandleValue;
 

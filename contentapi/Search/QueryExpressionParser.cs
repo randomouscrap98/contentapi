@@ -10,16 +10,22 @@ public class QueryExpressionParser
 
     [Production("op: LTHAN")]
     [Production("op: GTHAN")]
-    [Production("op: LTHANQ")]
-    [Production("op: GTHANQ")]
-    [Production("op: EQUAlS")]
-    [Production("op: NOTEQUAlS")]
+    [Production("op: LTHANEQ")]
+    [Production("op: GTHANEQ")]
+    [Production("op: EQUALS")]
+    [Production("op: NOTEQUALS")]
     [Production("op: IN")]
-    [Production("op: NOT IN")]
     [Production("op: LIKE")]
     public string Operator(Token<QueryToken> opToken)
     {
         return opToken.Value;
+    }
+
+    [Production("op: NOT LIKE")]
+    [Production("op: NOT IN")]
+    public string Operator2(Token<QueryToken> opToken1, Token<QueryToken> opToken2)
+    {
+        return $"{opToken1.Value} {opToken2.Value}";
     }
 
     [Production("filter: FIELD op VALUE")]
@@ -53,9 +59,9 @@ public class QueryExpressionParser
         return expr;
     }
 
-    [Production("main: ")]
-    public string MainEmpty()
-    {
-        return "";
-    }
+    //[Production("main: ")]
+    //public string MainEmpty(List<object> args)
+    //{
+    //    return "";
+    //}
 }
