@@ -1,8 +1,7 @@
 using System.IO.Compression;
-using contentapi.Db;
 using Newtonsoft.Json;
 
-namespace contentapi.Implementations;
+namespace contentapi.Db.History;
 
 public class ContentHistoryConverter : IContentHistoryConverter
 {

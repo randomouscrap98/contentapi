@@ -1,7 +1,6 @@
 using AutoMapper;
-using contentapi.Db;
 
-namespace contentapi.AutoMapping;
+namespace contentapi.Db.History;
 
 public class ContentSnapshotProfile : Profile
 {

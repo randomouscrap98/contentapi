@@ -1,6 +1,6 @@
 using contentapi.Db;
 
-namespace contentapi
+namespace contentapi.Db.History
 {
     public class ContentSnapshot : Content
     {

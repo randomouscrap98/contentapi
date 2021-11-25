@@ -1,8 +1,7 @@
 using System.Text;
-using contentapi.AutoMapping;
 using contentapi.Controllers;
 using contentapi.Db;
-using contentapi.Implementations;
+using contentapi.Db.History;
 using contentapi.Search;
 using contentapi.Setup;
 using Microsoft.AspNetCore.Authentication.JwtBearer;

@@ -1,6 +1,6 @@
 using System.Collections.Concurrent;
 
-namespace contentapi;
+namespace contentapi.Utilities;
 
 public class CheckpointTracker : ICheckpointTracker
 {

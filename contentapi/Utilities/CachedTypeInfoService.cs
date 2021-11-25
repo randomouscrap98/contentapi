@@ -1,7 +1,7 @@
 using System.Reflection;
 using contentapi.Search;
 
-namespace contentapi.Implementations;
+namespace contentapi.Utilities;
 
 public class CachedTypeInfoService : ITypeInfoService
 {

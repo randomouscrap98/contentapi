@@ -3,6 +3,7 @@ using System.Text;
 using System.Text.RegularExpressions;
 using AutoMapper;
 using contentapi.Db;
+using contentapi.Utilities;
 using contentapi.Views;
 using Dapper;
 
