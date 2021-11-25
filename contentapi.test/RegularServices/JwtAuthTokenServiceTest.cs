@@ -1,6 +1,5 @@
 using System;
 using System.Collections.Generic;
-using contentapi.Implementations;
 using Microsoft.Extensions.Logging;
 using Microsoft.IdentityModel.Tokens;
 using Xunit;

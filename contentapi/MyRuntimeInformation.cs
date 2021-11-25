@@ -1,4 +1,4 @@
-namespace contentapi.Implementations;
+namespace contentapi;
 
 public class MyRuntimeInformation : IRuntimeInformation
 {

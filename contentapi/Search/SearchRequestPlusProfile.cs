@@ -1,6 +1,6 @@
-
 using AutoMapper;
-using contentapi.Search;
+
+namespace contentapi.Search;
 
 public class SearchRequestPlusProfile : Profile
 {

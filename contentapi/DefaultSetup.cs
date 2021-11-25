@@ -1,4 +1,3 @@
-using contentapi.Implementations;
 using contentapi.Search;
 using contentapi.Utilities;
 using Microsoft.Extensions.DependencyInjection.Extensions;
