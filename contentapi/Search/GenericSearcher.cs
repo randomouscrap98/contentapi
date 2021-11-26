@@ -42,22 +42,20 @@ public class GenericSearcher : IGenericSearch
     public const string DescendingAppend = "_desc";
     public const string SystemPrepend = "_sys";
     
-    protected readonly Dictionary<RequestType, Type> basicTypes;
-    // = new Dictionary<RequestType, Type>();
     //Should this be configurable? I don't care for now
-    //protected readonly Dictionary<RequestType, Type> StandardSelect = new Dictionary<RequestType, Type> {
-    //    { RequestType.user, typeof(UserView) },
-    //    { RequestType.comment, typeof(CommentView) },
-    //    { RequestType.content, typeof(ContentView) },
-    //    { RequestType.page, typeof(PageView) },
-    //    { RequestType.module, typeof(ModuleView) },
-    //    { RequestType.file, typeof(FileView) }
-    //};
+    protected readonly Dictionary<RequestType, Type> StandardSelect = new Dictionary<RequestType, Type> {
+        { RequestType.user, typeof(UserView) },
+        { RequestType.comment, typeof(CommentView) },
+        { RequestType.content, typeof(ContentView) },
+        { RequestType.page, typeof(PageView) },
+        { RequestType.module, typeof(ModuleView) },
+        { RequestType.file, typeof(FileView) }
+    };
 
-    //protected readonly List<RequestType> ContentTypes = new List<RequestType>()
-    //{
-    //    RequestType.content, RequestType.file, RequestType.page, RequestType.module
-    //};
+    protected readonly List<RequestType> ContentTypes = new List<RequestType>()
+    {
+        RequestType.content, RequestType.file, RequestType.page, RequestType.module
+    };
 
     public const string LastPostDateField = nameof(ContentView.lastPostDate);
     public const string QuantizationField = nameof(FileView.quantization);
@@ -97,11 +95,6 @@ public class GenericSearcher : IGenericSearch
         ModifiedFields.Add((RequestType.file, LastPostDateField), lpdSelect);
         ModifiedFields.Add((RequestType.page, LastPostDateField), lpdSelect);
         ModifiedFields.Add((RequestType.module, LastPostDateField), lpdSelect);
-
-        foreach(var reqType in Enum.GetValues<RequestType>())
-        {
-
-        }
 
         foreach(var type in ContentTypes)
         {
