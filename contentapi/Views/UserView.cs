@@ -14,6 +14,9 @@ public class UserView
     [Searchable]
     public long avatar {get;set;}
 
+    [Searchable]
+    public bool super {get;set;}
+
     public string? special {get;set;}
 
     [Searchable]

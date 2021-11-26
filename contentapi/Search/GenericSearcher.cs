@@ -20,9 +20,24 @@ public class GenericSearcherConfig
 //This should probably move out at some point
 public class SearchRequestPlus : SearchRequest
 {
+    public Db.User requester {get;set;} = new Db.User();
     public RequestType requestType {get;set;}
     public TypeInfo typeInfo {get;set;} = new TypeInfo();
     public List<string> requestFields {get;set;} = new List<string>();
+    public Guid requestId = Guid.NewGuid();
+    public Guid globalRequestId {get;set;} = Guid.Empty;
+    public string UniqueRequestKey(string field)
+    {
+        return $"_req{requestId.ToString().Replace("-", "")}_{name}_{field}";
+    }
+    public string GlobalRequestKey(string field)
+    {
+        return $"_req{globalRequestId.ToString().Replace("-", "")}_{field}";
+    }
+    public string RequesterKey()
+    {
+        return GlobalRequestKey("requesterID");
+    }
 }
 
 public class GenericSearcher : IGenericSearch
@@ -36,10 +51,9 @@ public class GenericSearcher : IGenericSearch
 
     public const string MainAlias = "main";
     public const string DescendingAppend = "_desc";
-    public const string SystemPrepend = "_sys";
     
     //Should this be configurable? I don't care for now
-    protected readonly Dictionary<RequestType, Type> StandardViewRequests = new Dictionary<RequestType, Type> {
+    protected static readonly Dictionary<RequestType, Type> StandardViewRequests = new Dictionary<RequestType, Type> {
         { RequestType.user, typeof(UserView) },
         { RequestType.comment, typeof(CommentView) },
         { RequestType.content, typeof(ContentView) },
@@ -48,14 +62,13 @@ public class GenericSearcher : IGenericSearch
         { RequestType.file, typeof(FileView) }
     };
 
-    protected readonly List<RequestType> ContentRequestTypes = new List<RequestType>()
+    protected static readonly List<RequestType> ContentRequestTypes = new List<RequestType>()
     {
         RequestType.content, RequestType.file, RequestType.page, RequestType.module
     };
 
     public const string LastPostDateField = nameof(ContentView.lastPostDate);
     public const string LastPostIdField = nameof(ContentView.lastPostId);
-    //public const string KeywordField = nameof(ContentView.keywords);
     public const string QuantizationField = nameof(FileView.quantization);
     public const string DescriptionField = nameof(ModuleView.description);
     public const string InternalTypeStringField = nameof(ContentView.internalTypeString);
@@ -64,7 +77,6 @@ public class GenericSearcher : IGenericSearch
     protected readonly Dictionary<(RequestType, string),string> StandardModifiedFields = new Dictionary<(RequestType, string), string> {
         { (RequestType.content, LastPostDateField), $"(select createDate from comments where {MainAlias}.id = contentId order by id desc limit 1) as {LastPostDateField}" },
         { (RequestType.content, LastPostIdField), $"(select id from comments where {MainAlias}.id = contentId order by id desc limit 1) as {LastPostIdField}" },
-        //{ (RequestType.content, LastPostIdField), $"(select id from comments where {MainAlias}.id = contentId order by id desc limit 1) as {LastPostIdField}" },
         { (RequestType.file, QuantizationField), $"(select value from content_values where {MainAlias}.id = contentId and key='{QuantizationField}' limit 1) as {QuantizationField}" },
         { (RequestType.module, DescriptionField), $"(select value from content_values where {MainAlias}.id = contentId and key='{DescriptionField}' limit 1) as {DescriptionField}" },
         { (RequestType.user, "registered"), $"(registrationKey IS NULL) as registered" }
@@ -77,6 +89,38 @@ public class GenericSearcher : IGenericSearch
        { RequestType.module, $"internalType = {(int)InternalContentType.module}" },
        { RequestType.page, $"internalType = {(int)InternalContentType.page}" },
        { RequestType.comment, $"module IS NULL" } 
+    };
+
+    protected enum MacroArgumentType { field, value }
+
+    protected class MacroDescription
+    {
+        public List<MacroArgumentType> argumentTypes = new List<MacroArgumentType>();
+        public System.Reflection.MethodInfo macroMethod;
+        public List<RequestType> allowedTypes;
+
+        public MacroDescription(string argTypes, string methodName, List<RequestType> allowedTypes)
+        {
+            this.allowedTypes = allowedTypes;
+            foreach(var c in argTypes)
+            {
+                if(c == 'v')
+                    argumentTypes.Add(MacroArgumentType.value);
+                else if(c == 'f')
+                    argumentTypes.Add(MacroArgumentType.field);
+                else
+                    throw new InvalidOperationException($"Unknown arg type {c}");
+            }
+
+            macroMethod = typeof(GenericSearcher).GetMethod(methodName) ?? 
+                throw new InvalidOperationException($"Couldn't find macro definition {methodName}");
+        }
+    }
+
+    protected readonly Dictionary<string, MacroDescription> StandardMacros = new Dictionary<string, MacroDescription>()
+    {
+        { "keywordlike", new MacroDescription("v", "KeywordLike", ContentRequestTypes) },
+        { "valuelike", new MacroDescription("vv", "ValueLike", ContentRequestTypes) }
     };
 
     public GenericSearcher(ILogger<GenericSearcher> logger, ContentApiDbConnection connection,
@@ -109,19 +153,36 @@ public class GenericSearcher : IGenericSearch
         return $"CASE {fieldName} {string.Join(" ", whens)} ELSE 'unknown' END as {outputName}";
     }
 
-    public string SystemKey(SearchRequest request, string field)
-    {
-        return $"{SystemPrepend}_{request.name}_{field}";
-    }
-
     /// <summary>
     /// Throw exceptions on any funky business we can quickly report
     /// </summary>
     /// <param name="requests"></param>
-    public List<SearchRequestPlus> RequestPreparse(SearchRequests requests)
+    public async Task<List<SearchRequestPlus>> RequestPreparseAsync(SearchRequests requests, long requestUserId)
     {
         var acceptedTypes = Enum.GetNames<RequestType>();
         var result = new List<SearchRequestPlus>();
+        var globalId = Guid.NewGuid();
+        Db.User requester = new Db.User() //This is a default user, make SURE all the relevant fields are set!
+        {
+            id = 0,
+            super = false
+        };
+
+        //Do a (hopefully) quick lookup for the request user!
+        if(requestUserId != 0)
+        {
+            try
+            {
+                //This apparently throws an exception if it fails
+                requester = await dbcon.QuerySingleAsync<User>("select * from users where id = @requestUserId", 
+                    new { requestUserId = requestUserId });
+            }
+            catch(Exception ex)
+            {
+                logger.LogWarning($"Error while looking up requester: {ex}");
+                throw new ArgumentException($"Unknown request user {requestUserId}");
+            }
+        }
 
         foreach(var request in requests.requests)
         {
@@ -143,6 +204,8 @@ public class GenericSearcher : IGenericSearch
             reqplus.requestType = Enum.Parse<RequestType>(reqplus.type); //I know this will succeed
             reqplus.typeInfo = typeService.GetTypeInfo(StandardViewRequests[reqplus.requestType]);
             reqplus.requestFields = ComputeRealFields(reqplus);
+            reqplus.globalRequestId = globalId;
+            reqplus.requester = requester;
             result.Add(reqplus);
         }
 
@@ -197,22 +260,6 @@ public class GenericSearcher : IGenericSearch
         return baseQuery; 
     }
 
-    public void ThrowOnStandardFieldSearchableError(string field, SearchRequestPlus request)
-    {
-        if(!request.typeInfo.searchableFields.Contains(field))
-            throw new ArgumentException($"Field '{field}' not searchable yet in type '{request.type}'({request.name})!");
-
-        //Oops, this is a dangerous field, we can't just use it without requesting it because
-        //it's COMPUTED
-        if(StandardModifiedFields.ContainsKey((request.requestType, field)) || 
-            request.typeInfo.fieldRemap.ContainsKey(field))
-        {
-            if(!request.requestFields.Contains(field))
-                throw new ArgumentException($"Field '{field}' is a computed field for type '{request.type}' and must be included in the retrieved fieldlist ({request.name})");
-        }
-    }
-
-
     /// <summary>
     /// This method adds a 'standard' select for regular searches against simple
     /// single table queries. For instance, it might be "SELECT id,username FROM users "
@@ -230,6 +277,109 @@ public class GenericSearcher : IGenericSearch
         queryStr.Append($" AS {MainAlias} ");
     }
 
+    public string ParseField(string field, SearchRequestPlus request)
+    {
+        if(!request.typeInfo.searchableFields.Contains(field))
+            throw new ArgumentException($"Field '{field}' not searchable yet in type '{request.type}'({request.name})!");
+
+        //Oops, this is a dangerous field, we can't just use it without requesting it because
+        //it's COMPUTED
+        if(StandardModifiedFields.ContainsKey((request.requestType, field)) || 
+            request.typeInfo.fieldRemap.ContainsKey(field))
+        {
+            if(!request.requestFields.Contains(field))
+                throw new ArgumentException($"Field '{field}' is a computed field for type '{request.type}' and must be included in the retrieved fieldlist ({request.name})");
+        }
+
+        return field;
+    }
+
+    public string ParseValue(string value, SearchRequestPlus request, Dictionary<string, object> parameters)
+    {
+        var realValName = value.TrimStart('@');
+        if (!parameters.ContainsKey(realValName))
+        {
+            var dotParts = realValName.Split(".".ToCharArray(), StringSplitOptions.RemoveEmptyEntries);
+            var newName = realValName.Replace(".", "_");
+
+            if (dotParts.Length == 1)
+                throw new ArgumentException($"Value {value} not found for request {request.name}");
+
+            //For now, let's just assume when linking, they're going one deep
+            if (dotParts.Length != 2)
+                throw new ArgumentException($"For now, can only access 1 layer deep in results, fix {value} in {request.name}");
+
+            var resultName = dotParts[0];
+            var resultField = dotParts[1];
+
+            if (!parameters.ContainsKey(resultName))
+                throw new ArgumentException($"No base link {resultName} for {value} in {request.name}");
+
+            var testList = parameters[resultName];
+
+            if (!(testList is IEnumerable<IDictionary<string, object>>))
+                throw new ArgumentException($"Base link {resultName} improper type for {value} in {request.name}");
+
+            var valList = (IEnumerable<IDictionary<string, object>>)testList;
+
+            if (valList.Count() == 0)
+            {
+                //There's no results, so most things will fail, but whatever. In this case,
+                //we don't care about the field
+                parameters.Add(newName, new List<object>());
+                return $"@{newName}";
+            }
+
+            if (!valList.First().ContainsKey(resultField))
+                throw new ArgumentException($"Link result {resultName} has no field {resultField} for {value} in {request.name}");
+
+            //OK we finally have it, let's go
+            parameters.Add(newName, valList.Select(x => x[resultField]));
+            return $"@{newName}";
+        }
+        return value;
+    }
+    
+    public string ParseMacro(string m, string a, SearchRequestPlus request, Dictionary<string, object> parameters)
+    {
+        if(!StandardMacros.ContainsKey(m))
+            throw new ArgumentException($"Macro {m} not found for request '{request.name}'");
+        
+        var macDef = StandardMacros[m];
+        var args = a.Split(",", StringSplitOptions.RemoveEmptyEntries).Select(x => x.Trim()).ToList();
+
+        if(args.Count != macDef.argumentTypes.Count)
+            throw new ArgumentException($"Expected {macDef.argumentTypes.Count} arguments for macro {m} in '{request.name}', found {args.Count}");
+        
+        var argVals = new List<string>();
+
+        for(var i = 0; i < args.Count; i++)
+        {
+            var expArgType = macDef.argumentTypes[i];
+            var ex = new ArgumentException($"Argument #{i + 1} in macro {m} for request '{request.name}': expected {macDef.argumentTypes[i]} type");
+            if(expArgType == MacroArgumentType.value)
+            {
+                if(!args[i].StartsWith("@"))
+                    throw ex;
+                argVals.Add(ParseValue(args[i], request, parameters));
+            }
+            else if(expArgType == MacroArgumentType.field)
+            {
+                if(args[i].StartsWith("@"))
+                    throw ex;
+                argVals.Add(ParseField(args[i], request));
+            }
+            else
+            {
+                throw new InvalidOperationException($"Unknown macro argument type {macDef.argumentTypes[i]} in request {request.name}");
+            }
+        }
+
+        //At this point, we have the macro function info, so we can just call it
+        return (string)(macDef.macroMethod.Invoke(this, args.Cast<object?>().ToArray()) ?? 
+            throw new InvalidOperationException($""));
+    }
+
     /// <summary>
     /// This method performs a "standard" user-query parse and adds the generated sql to the 
     /// given queryStr, along with any missing parameters that were able to be computed.
@@ -242,55 +392,11 @@ public class GenericSearcher : IGenericSearch
         //Not sure if the "query" is generic enough to be placed outside of standard... mmm maybe
         try
         {
-            var parseResult = parser.ParseQuery(request.query, f =>
-            {
-                ThrowOnStandardFieldSearchableError(f, request);
-                return f;
-            }, v =>
-            {
-                var realValName = v.TrimStart('@');
-                if (!parameters.ContainsKey(realValName))
-                {
-                    var dotParts = realValName.Split(".".ToCharArray(), StringSplitOptions.RemoveEmptyEntries);
-                    var newName = realValName.Replace(".", "_");
-
-                    if(dotParts.Length == 1)
-                        throw new ArgumentException($"Value {v} not found for request {request.name}");
-
-                    //For now, let's just assume when linking, they're going one deep
-                    if(dotParts.Length != 2)
-                        throw new ArgumentException($"For now, can only access 1 layer deep in results, fix {v} in {request.name}");
-
-                    var resultName = dotParts[0];
-                    var resultField = dotParts[1];
-
-                    if(!parameters.ContainsKey(resultName))
-                        throw new ArgumentException($"No base link {resultName} for {v} in {request.name}");
-                    
-                    var testList = parameters[resultName];
-
-                    if(!(testList is IEnumerable<IDictionary<string, object>>))
-                        throw new ArgumentException($"Base link {resultName} improper type for {v} in {request.name}");
-                    
-                    var valList = (IEnumerable<IDictionary<string, object>>)testList;
-
-                    if(valList.Count() == 0)
-                    {
-                        //There's no results, so most things will fail, but whatever. In this case,
-                        //we don't care about the field
-                        parameters.Add(newName, new List<object>());
-                        return $"@{newName}";
-                    }
-
-                    if(!valList.First().ContainsKey(resultField))
-                        throw new ArgumentException($"Link result {resultName} has no field {resultField} for {v} in {request.name}");
-                    
-                    //OK we finally have it, let's go
-                    parameters.Add(newName, valList.Select(x => x[resultField]));
-                    return $"@{newName}";
-                }
-                return v;
-            });
+            var parseResult = parser.ParseQuery(request.query, 
+                f => ParseField(f, request),
+                v => ParseValue(v, request, parameters), 
+                (m, a) => ParseMacro(m, a, request, parameters)
+            );
 
             return parseResult;
 
@@ -341,28 +447,39 @@ public class GenericSearcher : IGenericSearch
 
         //ALWAYS need limit if you're doing offset, just easier to include it. -1 is magic
         var limit = Math.Min(r.limit > 0 ? r.limit : int.MaxValue, config.MaxIndividualResultSet);
-        var limitKey = SystemKey(r, "limit");
+        var limitKey = r.UniqueRequestKey("limit");
         queryStr.Append($"LIMIT @{limitKey} ");
         parameters.Add(limitKey, limit);
 
         if (r.skip > 0)
         {
-            var skipKey = SystemKey(r, "skip");
+            var skipKey = r.UniqueRequestKey("skip");
             queryStr.Append($"OFFSET @{skipKey} ");
             parameters.Add(skipKey, limit);
         }
     }
 
     //All searches are reads, don't need to open the connection OR set up transactions, wow.
-    public async Task<Dictionary<string, IEnumerable<IDictionary<string, object>>>> Search(SearchRequests requests)
+    public async Task<Dictionary<string, IEnumerable<IDictionary<string, object>>>> Search(SearchRequests requests, long 
+        requestUserId = 0)
     {
         var result = new Dictionary<string, IEnumerable<IDictionary<string, object>>>();
-        var modifiedValues = new Dictionary<string, object>(requests.values);
+        var parameterValues = new Dictionary<string, object>(requests.values);
         var queryStr = new StringBuilder();
 
         //Before wasting the user's time on useless junk, check some simple stuff
         //Might look silly to do this loop twice but whatever, be nice to the users
-        var requestsPlus = RequestPreparse(requests);
+        var requestsPlus = await RequestPreparseAsync(requests, requestUserId);
+
+        //Nothing to do!
+        if(requestsPlus.Count == 0)
+        {
+            logger.LogWarning($"User {requestUserId} sent empty search request!");
+            return result;
+        }
+
+        //Now add the requester to the parameter values!
+        parameterValues.Add(requestsPlus.First().RequesterKey(), requestUserId);
 
         foreach(var request in requestsPlus)
         {
@@ -374,13 +491,13 @@ public class GenericSearcher : IGenericSearch
                 AddStandardSelect(queryStr, request);                   
 
                 //Generate "where (x)"
-                var query = CreateStandardQuery(queryStr, request, modifiedValues);    
+                var query = CreateStandardQuery(queryStr, request, parameterValues);    
                 query = CombineQueryClause(query, StandardSearchModifiers.GetValueOrDefault(request.requestType, ""));
                 if (!string.IsNullOrWhiteSpace(query))
                     queryStr.Append($"WHERE {query} ");
 
                 //Generate "order by limit offset"
-                AddStandardFinalLimit(queryStr, request, modifiedValues);     
+                AddStandardFinalLimit(queryStr, request, parameterValues);     
             }
             else
             {
@@ -390,13 +507,13 @@ public class GenericSearcher : IGenericSearch
             var sql = queryStr.ToString();
             logger.LogDebug($"Running SQL for {request.type}({request.name}): {sql}");
 
-            var dp = new DynamicParameters(modifiedValues);
+            var dp = new DynamicParameters(parameterValues);
             var qresult = (await dbcon.QueryAsync(sql, dp)).Cast<IDictionary<string, object>>();
 
             //Add the results to the USER results, AND add it to our list of values so it can
             //be used in chaining. It's just a reference, don't worry about duplication or whatever.
             result.Add(request.name, qresult);
-            modifiedValues.Add(request.name, qresult);
+            parameterValues.Add(request.name, qresult);
         }
 
         return result;

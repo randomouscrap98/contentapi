@@ -37,7 +37,8 @@ public class SearchQueryParser : ISearchQueryParser
         return tokens != null && tokens.IsOk && tokens.Tokens.Count == 2 && tokens.Tokens.First().TokenID == QueryToken.FIELD;
     }
 
-    public string ParseQuery(string query, Func<string, string> fieldConverter, Func<string, string> valueConverter)
+    public string ParseQuery(string query, Func<string, string> fieldConverter, Func<string, string> valueConverter,
+        Func<string, string, string> macroHandler)
     {
         //I don't know how to handle blank stuff; it's allowed, but... egh can't get the
         //grammar to work, having exceptions in their 'left recursion' checker that i don't
@@ -54,11 +55,13 @@ public class SearchQueryParser : ISearchQueryParser
         {
             var oldFieldConv = parserInstance.HandleField;
             var oldValueConv = parserInstance.HandleValue;
+            var oldMacroHandler = parserInstance.HandleMacro;
 
             try
             {
                 parserInstance.HandleField = fieldConverter;
                 parserInstance.HandleValue = valueConverter;
+                parserInstance.HandleMacro = macroHandler;
 
                 var result = parser.Parse(query);
 
@@ -78,6 +81,7 @@ public class SearchQueryParser : ISearchQueryParser
             {
                 parserInstance.HandleField = oldFieldConv;
                 parserInstance.HandleValue = oldValueConv;
+                parserInstance.HandleMacro= oldMacroHandler;
             }
         }
     }
