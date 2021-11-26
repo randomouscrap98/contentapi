@@ -123,6 +123,18 @@ public class SearchQueryParserTest : UnitTestBase, IClassFixture<SearchQueryPars
     [InlineData("!macro(value, value2)", "macro(value,value2)")]
     [InlineData("!macro(value, value2, _value_3)", "macro(value,value2,_value_3)")]
     [InlineData("!CRAZY_STUFF(WoWO_, ___, eys)", "CRAZY_STUFF(WoWO_,___,eys)")]
+    [InlineData("!not.macro(value)", null)]
+    [InlineData("!notmacro(value.value)", null)]
+    [InlineData("!yesmacro(@value)", "yesmacro(@value)")]
+    [InlineData("!yesmacro(@value.deeper)", "yesmacro(@value.deeper)")]
+    [InlineData("field > !notmacro(@value)", null)]
+    [InlineData("field and !notmacro(@value)", null)]
+    [InlineData("!notmacro(@value) and field", null)]
+    [InlineData("field = @value and !macro(@value)", "field = @value and macro(@value)")]
+    [InlineData("(field = @value) and (!macro(@value))", "(field = @value) and (macro(@value))")]
+    [InlineData("(field = @value) and !macro(@value)", "(field = @value) and macro(@value)")]
+    [InlineData("field = @value and (!macro(@value))", "field = @value and (macro(@value))")]
+    [InlineData("((field = @value) and (!macro(@value)))", "((field = @value) and (macro(@value)))")]
     public void SearchQueryParser_MacroCheck(string query, string? expected)
     {
         string result = "";

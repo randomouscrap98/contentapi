@@ -44,12 +44,14 @@ public class QueryExpressionParser
     }
 
     [Production("arglist: FIELD COMMA arglist")]
+    [Production("arglist: VALUE COMMA arglist")]
     public string ArglistList(Token<QueryToken> field, Token<QueryToken> comma, string rest)
     {
         return $"{field.Value}{comma.Value}{rest}";
     }
 
     [Production("arglist: FIELD")]
+    [Production("arglist: VALUE")]
     public string ArglistSingle(Token<QueryToken> field)
     {
         return field.Value;
