@@ -5,7 +5,7 @@ namespace contentapi.Db;
 [Table("users")]
 public class User
 {
-    [ExplicitKey] //This is only during conversion!
+    [Key]
     public long id { get; set; }
     public string username { get; set; } = "";
     public long avatar { get; set; }

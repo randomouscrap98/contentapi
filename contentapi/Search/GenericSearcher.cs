@@ -193,6 +193,39 @@ public class GenericSearcher : IGenericSearch
                 throw new NotImplementedException($"Sorry, {request.type} isn't ready yet!");
             }
 
+            //Not sure if the "query" is generic but... mmm maybe
+            try
+            {
+                var parseResult = parser.ParseQuery(request.query, f =>
+                {
+                    if(request.typeInfo.queryableFields.Contains(f))
+                        return f;
+                    else
+                        throw new ArgumentException($"No field {f} in type {request.type}({request.name})!");
+                }, v =>
+                {
+                    var realValName = v.TrimStart('@');
+                    if(!modifiedValues.ContainsKey(realValName))
+                    {
+                        //There are two options: one is that it's just deeper in, the other
+                        //is that it just doesn't exist. Keep going down and down through dot
+                        //operators until we reach the actual value, and if it exists, add
+                        //it with the full path (dots converted to underscores) to the values list
+                        throw new ArgumentException($"Unknown value {v} in {request.name}");
+                    }
+                    return v;
+                });
+
+                if(!string.IsNullOrWhiteSpace(parseResult))
+                    queryStr.Append($"WHERE {parseResult} ");
+            }
+            catch(Exception ex)
+            {
+                //Convert to argument exception so the user knows what's up
+                logger.LogWarning($"Exception during query parse: {ex}");
+                throw new ArgumentException(ex.Message);
+            }
+
             //Add the order and limit and whatever
             BasicFinalLimit(queryStr, request, modifiedValues);
 
@@ -202,7 +235,8 @@ public class GenericSearcher : IGenericSearch
             var dp = new DynamicParameters(modifiedValues);
             var qresult = await dbcon.QueryAsync(sql, dp);
 
-
+            //Add the results to the USER results, AND add it to our list of values so it can
+            //be used in chaining. It's just a reference, don't worry about duplication or whatever.
             result.Add(request.name, qresult);
             modifiedValues.Add(request.name, qresult);
         }

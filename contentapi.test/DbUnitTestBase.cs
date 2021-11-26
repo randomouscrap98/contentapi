@@ -11,7 +11,7 @@ namespace contentapi.test;
 public class DbUnitTestBase : UnitTestBase, IDisposable
 {
     protected IDbConnection masterConnection;
-    public const string MasterConnectionString = "Data Source=master;Mode=Memory;Cache=Shared";
+    public readonly string MasterConnectionString;
     public const string DbMigrationFolder = "dbmigrations";
     public const string DbMigrationBlob = "*.sql";
     public static List<string> allQueries = new List<string>();
@@ -19,6 +19,8 @@ public class DbUnitTestBase : UnitTestBase, IDisposable
 
     public DbUnitTestBase()
     {
+        //Ensure the connection for this particular class is DEFINITELY unique for this class!
+        MasterConnectionString = $"Data Source=master_{Guid.NewGuid().ToString().Replace("-", "")};Mode=Memory;Cache=Shared";
         masterConnection = new SqliteConnection(MasterConnectionString);
         masterConnection.Open();
 
@@ -37,6 +39,13 @@ public class DbUnitTestBase : UnitTestBase, IDisposable
             s.AddTransient<ContentApiDbConnection>(ctx => 
                 new ContentApiDbConnection(new SqliteConnection(MasterConnectionString)));
         });
+    }
+
+    public IDbConnection CreateNewConnection()
+    {
+        var result = GetService<ContentApiDbConnection>().Connection; //new SqliteConnection(MasterConnectionString);
+        result.Open();
+        return result;
     }
 
     public List<string> GetAllQueries()

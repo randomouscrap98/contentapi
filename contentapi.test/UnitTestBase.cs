@@ -18,7 +18,11 @@ public class UnitTestBase
 
         baseCollection.AddLogging(builder => {
             builder.AddDebug();
+            builder.SetMinimumLevel(LogLevel.Debug);
         });
+
+        //Just need ANY type from the assembly... yeah... weird
+        baseCollection.AddAutoMapper(typeof(Db.User));
 
         baseProvider = baseCollection.BuildServiceProvider();
         logger = GetService<ILogger<UnitTestBase>>();
