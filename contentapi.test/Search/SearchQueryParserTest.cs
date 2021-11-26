@@ -5,13 +5,25 @@ using Xunit;
 
 namespace contentapi.test;
 
-public class SearchQueryParserTest : UnitTestBase
+//Use a fixture so the same parser is used for every test, this 
+//makes them run much faster (there's a LOT of parser tests)
+public class SearchQueryParserTestFixture : UnitTestBase
+{
+    public SearchQueryParser Parser;
+
+    public SearchQueryParserTestFixture()
+    {
+        Parser = new SearchQueryParser(GetService<ILogger<SearchQueryParser>>());
+    }
+}
+
+public class SearchQueryParserTest : UnitTestBase, IClassFixture<SearchQueryParserTestFixture>
 {
     protected SearchQueryParser parser;
 
-    public SearchQueryParserTest()
+    public SearchQueryParserTest(SearchQueryParserTestFixture fixture)
     {
-        parser = new SearchQueryParser(GetService<ILogger<SearchQueryParser>>());
+        parser = fixture.Parser;
     }
 
     //This is just a VERY BASIC test to see if the parser was even able to be put
@@ -24,18 +36,51 @@ public class SearchQueryParserTest : UnitTestBase
     }
 
     [Theory]
-    [InlineData("field > @num", true)]
+    [InlineData("field > @num", true)] //Just testing all the operators, had trouble with these 
+    [InlineData("field < @num", true)]
+    [InlineData("field >= @num", true)]
+    [InlineData("field <= @num", true)]
+    [InlineData("field <> @num", true)]
+    [InlineData("field == @num", true)]
+    [InlineData("field IN @num", true)] //If these "keyword" ops fail, the order of lexing could be to blame
+    [InlineData("field NOT IN @num", true)]
+    [InlineData("field LIKE @num", true)]
+    [InlineData("field NOT LIKE @num", true)]
+    [InlineData("THING_THING == @num", true)] //Now test the field regex
+    [InlineData("_field == @num", true)]
+    [InlineData("1field == @num", false)]
+    [InlineData("field.br == @num", false)]
+    [InlineData("124 == @num", false)]
+    [InlineData("field == @a.b.c", true)] //Now to test the value regex
+    [InlineData("field == @_a._b._c", true)]
+    [InlineData("field == @@a", false)]
+    [InlineData("field == 123", false)]  //Don't want to use literals or non-annotated variables
+    [InlineData("field == \"value\"", false)] 
+    [InlineData("field == 'value'", false)]
+    [InlineData("field == value", false)]
+    [InlineData("", true)] //Specifically empty string needs to work
+    [InlineData("  ", true)]
+    [InlineData("field NOT > @num", false)] //Fun combinations
+    [InlineData("field LIKE NOT @num", false)] 
+    [InlineData("field NOT == @num", false)] 
+    [InlineData("field != @num", false)] 
+    [InlineData("field > @num1 and field < @num2", true)] //Getting into the and/or stuff
+    [InlineData("username LIKE @search and id IN @subset", true)]
     public void SearchQueryParser_SyntaxCheck(string query, bool success)
     {
         try
         {
             var result = parser.ParseQuery(query, f => f, v => v);
-            Assert.True(success, $"Query {query} was supposed to fail!");
-            Assert.Equal(query, result);
+            Assert.True(success, $"Query '{query}' was supposed to fail!");
+
+            if(string.IsNullOrWhiteSpace(query))
+                Assert.True(string.IsNullOrWhiteSpace(result));
+            else
+                Assert.Equal(query, result);
         }
         catch(Exception ex)
         {
-            Assert.False(success, $"Query {query} should not have failed: Error: {ex}");
+            Assert.False(success, $"Query '{query}' should not have failed: Error: {ex}");
         }
     }
 }

@@ -5,28 +5,25 @@ namespace contentapi.Search;
 [Lexer(KeyWordIgnoreCase = true)]
 public enum QueryToken 
 {
-    [Lexeme("[a-zA-Z_][a-zA-Z0-9]+")] 
-    FIELD = 1,
-
-    //[Lexeme("\\+")] 
-    [Lexeme("@[a-zA-Z_][a-zA-Z0-9_\\.]*")]
-    VALUE,
-
-    [Lexeme("\\(")] LPAREN,
+    [Lexeme("\\(")] LPAREN = 1,
     [Lexeme("\\)")] RPAREN,
 
+    //Keywords and ops go first? Anyway... these are all "operators" even though they're
+    //also some of them just keywords
+    [Lexeme("=")] EQUALS,
     [Lexeme("<")] LTHAN,
-    [Lexeme("<=")] LTHANEQ,
     [Lexeme(">")] GTHAN,
-    [Lexeme(">=")] GTHANEQ,
-    [Lexeme("==")] EQUALS,
-    [Lexeme("<>")] NOTEQUALS,
     [Lexeme("[iI][nN]")] IN,
     [Lexeme("[nN][oO][tT]")] NOT,
     [Lexeme("[lL][iI][kK][eE]")] LIKE,
 
     [Lexeme("[aA][nN][dD]")] AND,
     [Lexeme("[oO][rR]")] OR,
+
+    //make sure field/etc comes after keywords; keywords should be matched first
+    [Lexeme("[a-zA-Z_][a-zA-Z0-9_]+")] FIELD,
+    [Lexeme("@[a-zA-Z_][a-zA-Z0-9_\\.]*")] VALUE,
+
 
     [Lexeme("[ \\t]+",isSkippable:true)] // the lexeme is marked isSkippable : it will not be sent to the parser and simply discarded.
     WS
