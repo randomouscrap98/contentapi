@@ -13,6 +13,8 @@ public enum QueryToken
     [Lexeme("=")] EQUALS,
     [Lexeme("<")] LTHAN,
     [Lexeme(">")] GTHAN,
+    [Lexeme("!")] MACROSTART,
+    [Lexeme(",")] COMMA,
     [Lexeme("[iI][nN]")] IN,
     [Lexeme("[nN][oO][tT]")] NOT,
     [Lexeme("[lL][iI][kK][eE]")] LIKE,

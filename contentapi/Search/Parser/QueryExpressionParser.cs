@@ -7,6 +7,8 @@ public class QueryExpressionParser
 {
     public Func<string, string> HandleValue {get;set;} = s => s;
     public Func<string, string> HandleField {get;set;} = f => f;
+    public Func<string, string, string> HandleMacro {get;set;} = (m, a) => $"{m}({a})";
+    //public Dictionary<string, Func<string, string>> MacroGenerators {get;set;} = new Dictionary<string, Func<string, string>>();
 
     [Production("expr: filter AND expr")]
     [Production("expr: filter OR expr")]
@@ -27,12 +29,30 @@ public class QueryExpressionParser
         return $"{HandleField(fieldToken.Value)} {op} {HandleValue(val.Value)}";
     }
 
+    [Production("filter: MACROSTART [d] FIELD LPAREN [d] arglist RPAREN [d]")]
+    public string FilterMacro(Token<QueryToken> macroNameToken, string arglist)
+    {
+        return HandleMacro(macroNameToken.Value, arglist);
+    }
+
     //This is that loop-back thing I don't understand. This was ambiguous when this
     //production was derived from "expr" rather than filter, but... ugh I'm not smart
     [Production("filter: LPAREN expr RPAREN")]
-    public string ExpressionGroup(Token<QueryToken> lparen, string expr, Token<QueryToken> rparen)
+    public string FilterGroup(Token<QueryToken> lparen, string expr, Token<QueryToken> rparen)
     {
         return $"{lparen.Value}{expr}{rparen.Value}";
+    }
+
+    [Production("arglist: FIELD COMMA arglist")]
+    public string ArglistList(Token<QueryToken> field, Token<QueryToken> comma, string rest)
+    {
+        return $"{field.Value}{comma.Value}{rest}";
+    }
+
+    [Production("arglist: FIELD")]
+    public string ArglistSingle(Token<QueryToken> field)
+    {
+        return field.Value;
     }
 
     [Production("op: LTHAN")]

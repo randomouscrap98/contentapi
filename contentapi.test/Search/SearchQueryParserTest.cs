@@ -99,19 +99,47 @@ public class SearchQueryParserTest : UnitTestBase, IClassFixture<SearchQueryPars
     [InlineData("(username LIKE @search and (createDate > @longTimeAgo)) (contentId in @pages.cids or action = @MYACT)", false)]
     public void SearchQueryParser_SyntaxCheck(string query, bool success)
     {
+        string result = "";
         try
         {
-            var result = parser.ParseQuery(query, f => f, v => v);
+            result = parser.ParseQuery(query, f => f, v => v);
             Assert.True(success, $"Query '{query}' was supposed to fail!");
-
-            if(string.IsNullOrWhiteSpace(query))
-                Assert.True(string.IsNullOrWhiteSpace(result));
-            else
-                Assert.Equal(query, result);
         }
         catch(Exception ex)
         {
             Assert.False(success, $"Query '{query}' should not have failed: Error: {ex.Message}");
+            return; //Don't bother with the rest of the checks, it failed (and was suppsoed to)
         }
+
+        if(string.IsNullOrWhiteSpace(query))
+            Assert.True(string.IsNullOrWhiteSpace(result));
+        else
+            Assert.Equal(query, result);
+    }
+
+    [Theory]
+    [InlineData("!macro(value)", "macro(value)")]
+    [InlineData("(!macro(value))", "(macro(value))")]
+    [InlineData("!macro(value, value2)", "macro(value,value2)")]
+    [InlineData("!macro(value, value2, _value_3)", "macro(value,value2,_value_3)")]
+    [InlineData("!CRAZY_STUFF(WoWO_, ___, eys)", "CRAZY_STUFF(WoWO_,___,eys)")]
+    public void SearchQueryParser_MacroCheck(string query, string? expected)
+    {
+        string result = "";
+        try
+        {
+            result = parser.ParseQuery(query, f => f, v => v);
+            Assert.True(expected != null, $"Query '{query}' was supposed to fail!");
+        }
+        catch(Exception ex)
+        {
+            Assert.True(expected == null, $"Query '{query}' should not have failed: Error: {ex.Message}");
+            return; //Don't bother with the rest of the checks, it failed (and was suppsoed to)
+        }
+
+        if(string.IsNullOrWhiteSpace(query))
+            Assert.True(string.IsNullOrWhiteSpace(result));
+        else
+            Assert.Equal(expected, result);
     }
 }

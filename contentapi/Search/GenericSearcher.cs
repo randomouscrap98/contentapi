@@ -55,6 +55,7 @@ public class GenericSearcher : IGenericSearch
 
     public const string LastPostDateField = nameof(ContentView.lastPostDate);
     public const string LastPostIdField = nameof(ContentView.lastPostId);
+    //public const string KeywordField = nameof(ContentView.keywords);
     public const string QuantizationField = nameof(FileView.quantization);
     public const string DescriptionField = nameof(ModuleView.description);
     public const string InternalTypeStringField = nameof(ContentView.internalTypeString);
@@ -63,6 +64,7 @@ public class GenericSearcher : IGenericSearch
     protected readonly Dictionary<(RequestType, string),string> StandardModifiedFields = new Dictionary<(RequestType, string), string> {
         { (RequestType.content, LastPostDateField), $"(select createDate from comments where {MainAlias}.id = contentId order by id desc limit 1) as {LastPostDateField}" },
         { (RequestType.content, LastPostIdField), $"(select id from comments where {MainAlias}.id = contentId order by id desc limit 1) as {LastPostIdField}" },
+        //{ (RequestType.content, LastPostIdField), $"(select id from comments where {MainAlias}.id = contentId order by id desc limit 1) as {LastPostIdField}" },
         { (RequestType.file, QuantizationField), $"(select value from content_values where {MainAlias}.id = contentId and key='{QuantizationField}' limit 1) as {QuantizationField}" },
         { (RequestType.module, DescriptionField), $"(select value from content_values where {MainAlias}.id = contentId and key='{DescriptionField}' limit 1) as {DescriptionField}" },
         { (RequestType.user, "registered"), $"(registrationKey IS NULL) as registered" }
@@ -169,32 +171,6 @@ public class GenericSearcher : IGenericSearch
         else
             return fieldName;
     }
-
-    ///// <summary>
-    ///// Returns whether or not the given field is CURRENTLY searchable within the given request context
-    ///// </summary>
-    ///// <param name="field"></param>
-    ///// <param name="request"></param>
-    ///// <returns></returns>
-    //public bool StandardFieldCurrentlySearchable(string field, SearchRequestPlus request)
-    //{
-    //    //Don't even bother with fancy checks if this field isn't even searchable in
-    //    //the first place! Context doesn't matter in that case.
-    //    if(!request.typeInfo.searchableFields.Contains(field))
-    //        return false;
-
-    //    //Always searchable if it's a plain field
-    //    if(!StandardModifiedFields.ContainsKey((request.requestType, field)) &&
-    //        !request.typeInfo.fieldRemap.ContainsKey(field))
-    //    {
-    //        return true;
-    //    }
-    //    else
-    //    {
-    //        //If it's NOT a plain field, it MUST be included in the search results
-    //        return request.requestFields.Contains(field);
-    //    }
-    //}
 
     public List<string> ComputeRealFields(SearchRequestPlus r)
     {
@@ -319,11 +295,17 @@ public class GenericSearcher : IGenericSearch
             return parseResult;
 
         }
+        catch (ArgumentException)
+        {
+            //Skip argument exceptions, we already expect those.
+            throw;
+        }
         catch (Exception ex)
         {
-            //Convert to argument exception so the user knows what's up
+            //Convert to argument exception so the user knows what's up. Nothing that happens here
+            //is due to a database or other "internal" server error (other than stupid messups on my part)
             logger.LogWarning($"Exception during query parse: {ex}");
-            throw new ArgumentException(ex.Message);
+            throw new ArgumentException($"Parse  error: {ex.Message}");
         }
     }
 
