@@ -37,6 +37,7 @@ public class GenericSearcher : IGenericSearch
     protected IDbConnection dbcon;
     protected ITypeInfoService typeService;
     protected GenericSearcherConfig config;
+    protected ISearchQueryParser parser;
     protected IMapper mapper;
 
     public const string MainAlias = "main";
@@ -56,13 +57,15 @@ public class GenericSearcher : IGenericSearch
     };
 
     public GenericSearcher(ILogger<GenericSearcher> logger, ContentApiDbConnection connection,
-        ITypeInfoService typeInfoService, GenericSearcherConfig config, IMapper mapper)
+        ITypeInfoService typeInfoService, GenericSearcherConfig config, IMapper mapper,
+        ISearchQueryParser parser)
     {
         this.logger = logger;
         this.dbcon = connection.Connection;
         this.typeService = typeInfoService;
         this.config = config;
         this.mapper = mapper;
+        this.parser = parser;
     }
 
     public string SystemKey(SearchRequestPlus request, string field)

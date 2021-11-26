@@ -19,7 +19,7 @@ public class SearchQueryParser : ISearchQueryParser
         parserInstance = new QueryExpressionParser(); 
 
         var builder = new ParserBuilder<QueryToken, string>();
-        var buildResult = builder.BuildParser(parserInstance, ParserType.LL_RECURSIVE_DESCENT, "main");
+        var buildResult = builder.BuildParser(parserInstance, ParserType.LL_RECURSIVE_DESCENT, "expr");
         if(buildResult.IsError)
         {
             var errors = buildResult.Errors?.Select(x => x.Message);

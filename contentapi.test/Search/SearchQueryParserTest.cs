@@ -76,6 +76,11 @@ public class SearchQueryParserTest : UnitTestBase, IClassFixture<SearchQueryPars
     [InlineData("()", false)]
     [InlineData("username LIKE @search AND ()", false)]
     [InlineData("username LIKE @search AND (contentId in @pages.cids or action == @MYACT)", true)]
+    [InlineData("(username LIKE @search and (createDate > @longTimeAgo)) AND (contentId in @pages.cids or action == @MYACT)", true)]
+    [InlineData("(username LKE @search and (createDate > @longTimeAgo)) AND (contentId in @pages.cids or action == @MYACT)", false)]
+    [InlineData("(username LIKE @search and createDate > @longTimeAgo)) AND (contentId in @pages.cids or action == @MYACT)", false)]
+    [InlineData("(username LIKE @search and (createDate @longTimeAgo)) AND (contentId in @pages.cids or action == @MYACT)", false)]
+    [InlineData("(username LIKE @search and (createDate > @longTimeAgo)) (contentId in @pages.cids or action == @MYACT)", false)]
     public void SearchQueryParser_SyntaxCheck(string query, bool success)
     {
         try
@@ -90,7 +95,7 @@ public class SearchQueryParserTest : UnitTestBase, IClassFixture<SearchQueryPars
         }
         catch(Exception ex)
         {
-            Assert.False(success, $"Query '{query}' should not have failed: Error: {ex}");
+            Assert.False(success, $"Query '{query}' should not have failed: Error: {ex.Message}");
         }
     }
 }
