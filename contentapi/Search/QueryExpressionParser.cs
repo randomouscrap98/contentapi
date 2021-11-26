@@ -37,6 +37,7 @@ public class QueryExpressionParser
 
     [Production("op: LTHAN")]
     [Production("op: GTHAN")]
+    [Production("op: EQUALS")]
     [Production("op: IN")]
     [Production("op: LIKE")]
     public string Operator(Token<QueryToken> opToken)
@@ -47,7 +48,6 @@ public class QueryExpressionParser
     [Production("op: LTHAN EQUALS")]
     [Production("op: GTHAN EQUALS")]
     [Production("op: LTHAN GTHAN")]
-    [Production("op: EQUALS EQUALS")]
     [Production("op: NOT LIKE")]
     [Production("op: NOT IN")]
     public string Operator2(Token<QueryToken> opToken1, Token<QueryToken> opToken2)

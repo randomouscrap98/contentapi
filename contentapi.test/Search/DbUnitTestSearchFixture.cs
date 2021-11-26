@@ -85,6 +85,13 @@ public class DbUnitTestFixture : DbUnitTestBase, IDisposable
                         internalType = Db.InternalContentType.file,
                         createUserId = carlUser,
                         content = "img/png"
+                    },
+                    new Db.Content() {
+                        name = "pm",
+                        createDate = DateTime.Now.AddDays(-70),
+                        internalType = Db.InternalContentType.module,
+                        createUserId = adminUser,
+                        content = "--some lua code\nyeah"
                     }
                 };
 

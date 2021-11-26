@@ -8,7 +8,6 @@ public class FileView : ContentView
     [FromField("publicType")]
     public string bucket { get; set; } = "";
 
-    [Searchable]
     [FromField("content")]
     public string mimetype { get; set; } = "";
 

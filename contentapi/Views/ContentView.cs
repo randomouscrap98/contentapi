@@ -1,3 +1,4 @@
+using contentapi.Db;
 using contentapi.Search;
 
 namespace contentapi.Views;
@@ -16,6 +17,11 @@ public class ContentView
 
     [Searchable]
     public DateTime createDate { get; set; }
+
+    [Searchable]
+    public int internalType {get;set;}
+
+    public string internalTypeString {get;set;} = "";
 
     [Searchable]
     public string name { get; set; } = "";

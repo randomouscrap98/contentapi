@@ -1,4 +1,5 @@
 using System.Data;
+using System.Runtime.CompilerServices;
 using System.Text;
 using AutoMapper;
 using contentapi.Db;
@@ -54,12 +55,23 @@ public class GenericSearcher : IGenericSearch
     public const string LastPostDateField = nameof(ContentView.lastPostDate);
     public const string QuantizationField = nameof(FileView.quantization);
     public const string DescriptionField = nameof(ModuleView.description);
+    public const string InternalTypeStringField = nameof(ContentView.internalTypeString);
 
+    //These fields are too difficult to modify with the attributes, so we do it in code here
     protected readonly Dictionary<(RequestType, string),string> ModifiedFields = new Dictionary<(RequestType, string), string> {
         { (RequestType.content, LastPostDateField), $"(select createDate from comments where {MainAlias}.id = contentId order by id desc limit 1) as {LastPostDateField}" },
         { (RequestType.file, QuantizationField), $"(select value from content_values where {MainAlias}.id = contentId and key='{QuantizationField}' limit 1) as {QuantizationField}" },
         { (RequestType.module, DescriptionField), $"(select value from content_values where {MainAlias}.id = contentId and key='{DescriptionField}' limit 1) as {DescriptionField}" },
         { (RequestType.user, "registered"), $"(registrationKey IS NULL) as registered" }
+    };
+
+    //Some searches can easily be modified afterwards with constants, put that here.
+    protected readonly Dictionary<RequestType, string> GeneralSearchModifiers = new Dictionary<RequestType, string>()
+    {
+       { RequestType.file, $"internalType = {(int)InternalContentType.file}" } ,
+       { RequestType.module, $"internalType = {(int)InternalContentType.module}" },
+       { RequestType.page, $"internalType = {(int)InternalContentType.page}" } ,
+       { RequestType.comment, $"module IS NULL" } 
     };
 
     public GenericSearcher(ILogger<GenericSearcher> logger, ContentApiDbConnection connection,
@@ -78,6 +90,16 @@ public class GenericSearcher : IGenericSearch
         ModifiedFields.Add((RequestType.file, LastPostDateField), lpdSelect);
         ModifiedFields.Add((RequestType.page, LastPostDateField), lpdSelect);
         ModifiedFields.Add((RequestType.module, LastPostDateField), lpdSelect);
+
+        foreach(var type in new[] { RequestType.content, RequestType.file, RequestType.page, RequestType.module})
+            ModifiedFields.Add((type, InternalTypeStringField), EnumToCase<InternalContentType>(nameof(Db.Content.internalType), InternalTypeStringField));
+    }
+
+    public string EnumToCase<T>(string fieldName, string outputName) where T : struct, System.Enum 
+    {
+        var values = Enum.GetValues<T>();
+        var whens = values.Select(x => $"WHEN {Unsafe.As<T, int>(ref x)} THEN '{x.ToString()}'");
+        return $"CASE {fieldName} {string.Join(" ", whens)} ELSE 'unknown' END as {outputName}";
     }
 
     public string SystemKey(SearchRequest request, string field)
@@ -168,17 +190,17 @@ public class GenericSearcher : IGenericSearch
     /// <param name="queryStr"></param>
     /// <param name="request"></param>
     /// <param name="parameters"></param>
-    public void AddStandardQuery(StringBuilder queryStr, SearchRequestPlus request, Dictionary<string, object> parameters)
+    public string CreateStandardQuery(StringBuilder queryStr, SearchRequestPlus request, Dictionary<string, object> parameters)
     {
         //Not sure if the "query" is generic enough to be placed outside of standard... mmm maybe
         try
         {
             var parseResult = parser.ParseQuery(request.query, f =>
             {
-                if (request.typeInfo.queryableFields.Contains(f))
+                if (request.typeInfo.searchableFields.Contains(f))
                     return f;
                 else
-                    throw new ArgumentException($"No field {f} in type {request.type}({request.name})!");
+                    throw new ArgumentException($"Field {f} not searchable yet in type {request.type}({request.name})!");
             }, v =>
             {
                 var realValName = v.TrimStart('@');
@@ -193,8 +215,8 @@ public class GenericSearcher : IGenericSearch
                 return v;
             });
 
-            if (!string.IsNullOrWhiteSpace(parseResult))
-                queryStr.Append($"WHERE {parseResult} ");
+            return parseResult;
+
         }
         catch (Exception ex)
         {
@@ -202,6 +224,15 @@ public class GenericSearcher : IGenericSearch
             logger.LogWarning($"Exception during query parse: {ex}");
             throw new ArgumentException(ex.Message);
         }
+    }
+
+    public string AddQueryClause(string baseQuery, string clause)
+    {
+        if(string.IsNullOrWhiteSpace(baseQuery))
+            return clause;
+        else if (!string.IsNullOrWhiteSpace(clause))
+            return $"({baseQuery}) AND ({clause})";
+        return baseQuery; 
     }
 
     /// <summary>
@@ -267,9 +298,17 @@ public class GenericSearcher : IGenericSearch
 
             if(StandardSelect.ContainsKey(request.requestType))
             {
-                AddStandardSelect(queryStr, request);                   //Generate "select from"
-                AddStandardQuery(queryStr, request, modifiedValues);    //Generate "where (x)"
-                BasicFinalLimit(queryStr, request, modifiedValues);     //Generate "order by limit offset"
+                //Generate "select from"
+                AddStandardSelect(queryStr, request);                   
+
+                //Generate "where (x)"
+                var query = CreateStandardQuery(queryStr, request, modifiedValues);    
+                query = AddQueryClause(query, GeneralSearchModifiers.GetValueOrDefault(request.requestType, ""));
+                if (!string.IsNullOrWhiteSpace(query))
+                    queryStr.Append($"WHERE {query} ");
+
+                //Generate "order by limit offset"
+                BasicFinalLimit(queryStr, request, modifiedValues);     
             }
             else
             {
