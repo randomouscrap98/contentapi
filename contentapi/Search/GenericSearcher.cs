@@ -1,6 +1,5 @@
 using System.Data;
 using System.Text;
-using System.Text.RegularExpressions;
 using AutoMapper;
 using contentapi.Db;
 using contentapi.Utilities;
@@ -19,8 +18,6 @@ namespace contentapi.Search;
 /// </remarks>
 public class GenericSearcherConfig
 {
-    public string NameRegex {get;set;} = "^[a-zA-Z_][a-zA-Z0-9_]*$";
-    public string ParameterRegex {get;set;} = "^@[a-zA-Z_][a-zA-Z0-9_\\.]*$";
     public int MaxIndividualResultSet {get;set;} = 1000;
 }
 
@@ -68,12 +65,15 @@ public class GenericSearcher : IGenericSearch
         this.parser = parser;
     }
 
-    public string SystemKey(SearchRequestPlus request, string field)
+    public string SystemKey(SearchRequest request, string field)
     {
         return $"{SystemPrepend}_{request.name}_{field}";
     }
 
-    //Throw exceptions on any funky business we can quickly report
+    /// <summary>
+    /// Throw exceptions on any funky business we can quickly report
+    /// </summary>
+    /// <param name="requests"></param>
     public void RequestPrecheck(SearchRequests requests)
     {
         var acceptedTypes = Enum.GetNames<RequestType>();
@@ -84,14 +84,25 @@ public class GenericSearcher : IGenericSearch
             if(!acceptedTypes.Contains(request.type))
                 throw new ArgumentException($"Unknown request type: {request.type} in request {request.name}");
             
-            //Oops, please name your requests appropriately for linking
-            if(!Regex.IsMatch(request.name, config.NameRegex))
-                throw new ArgumentException($"Malformed name {request.name}, must be {config.NameRegex}");
+            //Users HAVE to name their stuff! Otherwise the output of the data
+            //dictionary won't make any sense! Note that the method for this check 
+            //isn't EXACTLY right but... it should be fine, fields are all
+            //just regular identifiers, like in a programming language.
+            if(!parser.IsFieldNameValid(request.name))
+                throw new ArgumentException($"Malformed name '{request.name}'");
         }
     }
 
-    //MOST fields should work with this function, either it's the same name, it's a simple
-    //remap, or the remap is complex and we need a specialized modified field.
+    /// <summary>
+    /// Return the field selector for the given field. For instance, it might be a 
+    /// simple "username", or it might be "(registered IS NULL) AS registered" etc.
+    /// </summary>
+    /// <remarks> MOST fields should work with this function, either it's the same name,
+    /// or it's a simple remap from an attribute, or it's slightly complex but stored
+    /// in our dictionary of remaps </remarks>
+    /// <param name="fieldName"></param>
+    /// <param name="r"></param>
+    /// <returns></returns>
     public string StandardFieldRemap(string fieldName, SearchRequestPlus r)
     {
         //var modifiedTuple = Tuple.Create(r.requestType, fieldName);
@@ -107,6 +118,12 @@ public class GenericSearcher : IGenericSearch
             return fieldName;
     }
 
+    /// <summary>
+    /// This method adds a 'standard' select for regular searches against simple
+    /// single table queries. For instance, it might be "SELECT id,username FROM users "
+    /// </summary>
+    /// <param name="queryStr"></param>
+    /// <param name="r"></param>
     public void AddStandardSelect(StringBuilder queryStr, SearchRequestPlus r)
     {
         var fields = r.fields.Split(",".ToCharArray(), StringSplitOptions.RemoveEmptyEntries).Select(x => x.Trim()).ToList(); 
@@ -129,6 +146,56 @@ public class GenericSearcher : IGenericSearch
         queryStr.Append($" AS {MainAlias} ");
     }
 
+    /// <summary>
+    /// This method performs a "standard" user-query parse and adds the generated sql to the 
+    /// given queryStr, along with any missing parameters that were able to be computed.
+    /// </summary>
+    /// <param name="queryStr"></param>
+    /// <param name="request"></param>
+    /// <param name="parameters"></param>
+    public void AddStandardQuery(StringBuilder queryStr, SearchRequestPlus request, Dictionary<string, object> parameters)
+    {
+        //Not sure if the "query" is generic enough to be placed outside of standard... mmm maybe
+        try
+        {
+            var parseResult = parser.ParseQuery(request.query, f =>
+            {
+                if (request.typeInfo.queryableFields.Contains(f))
+                    return f;
+                else
+                    throw new ArgumentException($"No field {f} in type {request.type}({request.name})!");
+            }, v =>
+            {
+                var realValName = v.TrimStart('@');
+                if (!parameters.ContainsKey(realValName))
+                {
+                        //There are two options: one is that it's just deeper in, the other
+                        //is that it just doesn't exist. Keep going down and down through dot
+                        //operators until we reach the actual value, and if it exists, add
+                        //it with the full path (dots converted to underscores) to the values list
+                        throw new ArgumentException($"Unknown value {v} in {request.name}");
+                }
+                return v;
+            });
+
+            if (!string.IsNullOrWhiteSpace(parseResult))
+                queryStr.Append($"WHERE {parseResult} ");
+        }
+        catch (Exception ex)
+        {
+            //Convert to argument exception so the user knows what's up
+            logger.LogWarning($"Exception during query parse: {ex}");
+            throw new ArgumentException(ex.Message);
+        }
+    }
+
+    /// <summary>
+    /// Assuming a query that can be limited simply, this adds the necessary LIMIT, OFFSET,
+    /// and ORDER BY clauses. Most queries can use this function.
+    /// </summary>
+    /// <param name="queryStr"></param>
+    /// <param name="r"></param>
+    /// <param name="parameters"></param>
     public void BasicFinalLimit(StringBuilder queryStr, SearchRequestPlus r, Dictionary<string, object> parameters)
     {
         if(!string.IsNullOrEmpty(r.order))
@@ -167,9 +234,9 @@ public class GenericSearcher : IGenericSearch
     }
 
     //All searches are reads, don't need to open the connection OR set up transactions, wow.
-    public async Task<Dictionary<string, object>> Search(SearchRequests requests)
+    public async Task<Dictionary<string, IEnumerable<IDictionary<string, object>>>> Search(SearchRequests requests)
     {
-        var result = new Dictionary<string, object>();
+        var result = new Dictionary<string, IEnumerable<IDictionary<string, object>>>();
         var modifiedValues = new Dictionary<string, object>(requests.values);
         var queryStr = new StringBuilder();
 
@@ -185,55 +252,20 @@ public class GenericSearcher : IGenericSearch
 
             if(StandardSelect.ContainsKey(request.requestType))
             {
-                //Generates the "select from"
-                AddStandardSelect(queryStr, request);
+                AddStandardSelect(queryStr, request);                   //Generate "select from"
+                AddStandardQuery(queryStr, request, modifiedValues);    //Generate "where (x)"
+                BasicFinalLimit(queryStr, request, modifiedValues);     //Generate "order by limit offset"
             }
             else
             {
                 throw new NotImplementedException($"Sorry, {request.type} isn't ready yet!");
             }
 
-            //Not sure if the "query" is generic but... mmm maybe
-            try
-            {
-                var parseResult = parser.ParseQuery(request.query, f =>
-                {
-                    if(request.typeInfo.queryableFields.Contains(f))
-                        return f;
-                    else
-                        throw new ArgumentException($"No field {f} in type {request.type}({request.name})!");
-                }, v =>
-                {
-                    var realValName = v.TrimStart('@');
-                    if(!modifiedValues.ContainsKey(realValName))
-                    {
-                        //There are two options: one is that it's just deeper in, the other
-                        //is that it just doesn't exist. Keep going down and down through dot
-                        //operators until we reach the actual value, and if it exists, add
-                        //it with the full path (dots converted to underscores) to the values list
-                        throw new ArgumentException($"Unknown value {v} in {request.name}");
-                    }
-                    return v;
-                });
-
-                if(!string.IsNullOrWhiteSpace(parseResult))
-                    queryStr.Append($"WHERE {parseResult} ");
-            }
-            catch(Exception ex)
-            {
-                //Convert to argument exception so the user knows what's up
-                logger.LogWarning($"Exception during query parse: {ex}");
-                throw new ArgumentException(ex.Message);
-            }
-
-            //Add the order and limit and whatever
-            BasicFinalLimit(queryStr, request, modifiedValues);
-
             var sql = queryStr.ToString();
             logger.LogDebug($"Running SQL for {request.type}({request.name}): {sql}");
 
             var dp = new DynamicParameters(modifiedValues);
-            var qresult = await dbcon.QueryAsync(sql, dp);
+            var qresult = (await dbcon.QueryAsync(sql, dp)).Cast<IDictionary<string, object>>();
 
             //Add the results to the USER results, AND add it to our list of values so it can
             //be used in chaining. It's just a reference, don't worry about duplication or whatever.

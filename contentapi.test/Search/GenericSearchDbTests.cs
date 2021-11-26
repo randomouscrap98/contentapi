@@ -51,13 +51,13 @@ public class GenericSearchDbTests : UnitTestBase, IClassFixture<DbUnitTestFixtur
             });
 
             var result = service.Search(search).Result["testStar"];
+            Assert.NotEmpty(result);
 
             //Here, we're just making sure that "*" didn't break anything. We assume
             //that "*" is implemented generically, and thus we can do some other test
             //some other time for whether all fields are returned, but that is not 
             //necessary for this broad test
-            if(result is IEnumerable)
-                Assert.NotEmpty((IEnumerable<object>)result);
+            //if(result is IEnumerable)
         }
     }
 
@@ -71,12 +71,15 @@ public class GenericSearchDbTests : UnitTestBase, IClassFixture<DbUnitTestFixtur
             name = "testValue",
             type = "user",
             fields = "id, username, special, avatar",
-            query = "username like @userlike"
+            query = "username like @userlike" //Don't need to test syntax btw! Already done!
         });
 
-        var result = (IEnumerable<object>)service.Search(search).Result["testValue"];
+        //var result = (IEnumerable<object>)service.Search(search).Result["testValue"];
+        //Assert.Single(result);
+        //var user = (IDictionary<string, object>)result.First();
+        var result = service.Search(search).Result["testValue"];
         Assert.Single(result);
-        var user = (IDictionary<string, object>)result.First();
+        var user = result.First();
         Assert.Equal("admin", user["username"]);
         Assert.Equal(1L, user["avatar"]);
         Assert.Equal("cutenickname", user["special"]);

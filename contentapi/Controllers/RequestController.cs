@@ -7,7 +7,8 @@ namespace contentapi.Controllers;
 public class RequestResponse
 {
     public SearchRequests search {get;set;} = new SearchRequests();
-    public Dictionary<string, object> data {get;set;} = new Dictionary<string, object>();
+    public Dictionary<string, IEnumerable<IDictionary<string, object>>> data {get;set;} = 
+        new Dictionary<string, IEnumerable<IDictionary<string, object>>>();
     public double time {get;set;}
     public bool loggedIn {get;set;}
 }

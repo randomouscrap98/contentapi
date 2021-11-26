@@ -30,6 +30,13 @@ public class SearchQueryParser : ISearchQueryParser
         parser = buildResult.Result;
     }
 
+    public bool IsFieldNameValid(string field)
+    {
+        var tokens = parser.Lexer.Tokenize(field);
+        //It's 2 tokens because the last one is "end"
+        return tokens != null && tokens.IsOk && tokens.Tokens.Count == 2 && tokens.Tokens.First().TokenID == QueryToken.FIELD;
+    }
+
     public string ParseQuery(string query, Func<string, string> fieldConverter, Func<string, string> valueConverter)
     {
         //I don't know how to handle blank stuff; it's allowed, but... egh can't get the

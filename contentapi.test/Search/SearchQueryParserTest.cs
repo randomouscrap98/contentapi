@@ -36,6 +36,22 @@ public class SearchQueryParserTest : UnitTestBase, IClassFixture<SearchQueryPars
     }
 
     [Theory]
+    [InlineData("someTest", true)]
+    [InlineData("some_Test", true)]
+    [InlineData("_some_Test", true)]
+    [InlineData("some.Test", false)]
+    [InlineData(";thing", false)]
+    [InlineData("thing;", false)]
+    [InlineData("1wo", false)]
+    public void SearchQueryParser_IsFieldNameValid(string field, bool valid)
+    {
+        if(valid)
+            Assert.True(parser.IsFieldNameValid(field), $"{field} was supposed to be valid!");
+        else
+            Assert.False(parser.IsFieldNameValid(field), $"{field} was supposed to be invalid!");
+    }
+
+    [Theory]
     [InlineData("field > @num", true)] //Just testing all the operators, had trouble with these 
     [InlineData("field < @num", true)]
     [InlineData("field >= @num", true)]
