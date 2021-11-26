@@ -43,7 +43,7 @@ public class GenericSearcher : IGenericSearch
     public const string SystemPrepend = "_sys";
     
     //Should this be configurable? I don't care for now
-    protected readonly Dictionary<RequestType, Type> StandardSelect = new Dictionary<RequestType, Type> {
+    protected readonly Dictionary<RequestType, Type> StandardViewRequests = new Dictionary<RequestType, Type> {
         { RequestType.user, typeof(UserView) },
         { RequestType.comment, typeof(CommentView) },
         { RequestType.content, typeof(ContentView) },
@@ -52,7 +52,7 @@ public class GenericSearcher : IGenericSearch
         { RequestType.file, typeof(FileView) }
     };
 
-    protected readonly List<RequestType> ContentTypes = new List<RequestType>()
+    protected readonly List<RequestType> ContentRequestTypes = new List<RequestType>()
     {
         RequestType.content, RequestType.file, RequestType.page, RequestType.module
     };
@@ -63,7 +63,7 @@ public class GenericSearcher : IGenericSearch
     public const string InternalTypeStringField = nameof(ContentView.internalTypeString);
 
     //These fields are too difficult to modify with the attributes, so we do it in code here
-    protected readonly Dictionary<(RequestType, string),string> ModifiedFields = new Dictionary<(RequestType, string), string> {
+    protected readonly Dictionary<(RequestType, string),string> StandardModifiedFields = new Dictionary<(RequestType, string), string> {
         { (RequestType.content, LastPostDateField), $"(select createDate from comments where {MainAlias}.id = contentId order by id desc limit 1) as {LastPostDateField}" },
         { (RequestType.file, QuantizationField), $"(select value from content_values where {MainAlias}.id = contentId and key='{QuantizationField}' limit 1) as {QuantizationField}" },
         { (RequestType.module, DescriptionField), $"(select value from content_values where {MainAlias}.id = contentId and key='{DescriptionField}' limit 1) as {DescriptionField}" },
@@ -71,7 +71,7 @@ public class GenericSearcher : IGenericSearch
     };
 
     //Some searches can easily be modified afterwards with constants, put that here.
-    protected readonly Dictionary<RequestType, string> GeneralSearchModifiers = new Dictionary<RequestType, string>()
+    protected readonly Dictionary<RequestType, string> StandardSearchModifiers = new Dictionary<RequestType, string>()
     {
        { RequestType.file, $"internalType = {(int)InternalContentType.file}" } ,
        { RequestType.module, $"internalType = {(int)InternalContentType.module}" },
@@ -91,14 +91,14 @@ public class GenericSearcher : IGenericSearch
         this.parser = parser;
 
         //Duplicate some fields
-        var lpdSelect = ModifiedFields[(RequestType.content, LastPostDateField)];
-        ModifiedFields.Add((RequestType.file, LastPostDateField), lpdSelect);
-        ModifiedFields.Add((RequestType.page, LastPostDateField), lpdSelect);
-        ModifiedFields.Add((RequestType.module, LastPostDateField), lpdSelect);
+        var lpdSelect = StandardModifiedFields[(RequestType.content, LastPostDateField)];
+        StandardModifiedFields.Add((RequestType.file, LastPostDateField), lpdSelect);
+        StandardModifiedFields.Add((RequestType.page, LastPostDateField), lpdSelect);
+        StandardModifiedFields.Add((RequestType.module, LastPostDateField), lpdSelect);
 
-        foreach(var type in ContentTypes)
+        foreach(var type in ContentRequestTypes)
         {
-            ModifiedFields.Add((type, InternalTypeStringField), EnumToCase<InternalContentType>(nameof(Db.Content.internalType), InternalTypeStringField));
+            StandardModifiedFields.Add((type, InternalTypeStringField), EnumToCase<InternalContentType>(nameof(Db.Content.internalType), InternalTypeStringField));
         }
     }
 
@@ -150,8 +150,8 @@ public class GenericSearcher : IGenericSearch
     public string StandardFieldRemap(string fieldName, SearchRequestPlus r)
     {
         //Our personal field modifiers always override all
-        if (ModifiedFields.ContainsKey((r.requestType, fieldName)))
-            return ModifiedFields[(r.requestType, fieldName)];
+        if (StandardModifiedFields.ContainsKey((r.requestType, fieldName)))
+            return StandardModifiedFields[(r.requestType, fieldName)];
         //Return whatever's in the fieldmap, EVEN if it's empty (if it's empty, we remove it from the selector)
         else if (r.typeInfo.fieldRemap.ContainsKey(fieldName))
             return r.typeInfo.fieldRemap[fieldName];
@@ -211,11 +211,55 @@ public class GenericSearcher : IGenericSearch
                 var realValName = v.TrimStart('@');
                 if (!parameters.ContainsKey(realValName))
                 {
-                        //There are two options: one is that it's just deeper in, the other
-                        //is that it just doesn't exist. Keep going down and down through dot
-                        //operators until we reach the actual value, and if it exists, add
-                        //it with the full path (dots converted to underscores) to the values list
-                        throw new ArgumentException($"Unknown value {v} in {request.name}");
+                    var dotParts = realValName.Split(".".ToCharArray(), StringSplitOptions.RemoveEmptyEntries);
+                    var newName = realValName.Replace(".", "_");
+
+                    //For now, let's just assume when linking, they're going one deep
+                    if(dotParts.Length != 2)
+                        throw new ArgumentException($"For now, can only access 1 layer deep in results, fix {v} in {request.name}");
+
+                    var resultName = dotParts[0];
+                    var resultField = dotParts[1];
+
+                    if(!parameters.ContainsKey(resultName))
+                        throw new ArgumentException($"No base link {resultName} for {v} in {request.name}");
+                    
+                    var testList = parameters[resultName];
+
+                    if(!(testList is IEnumerable<IDictionary<string, object>>))
+                        throw new ArgumentException($"Base link {resultName} improper type for {v} in {request.name}");
+                    
+                    var valList = (IEnumerable<IDictionary<string, object>>)testList;
+
+                    if(valList.Count() == 0)
+                    {
+                        //There's no results, so most things will fail, but whatever. In this case,
+                        //we don't care about the field
+                        parameters.Add(newName, new List<object>());
+                        return $"@{newName}";
+                    }
+
+                    if(!valList.First().ContainsKey(resultField))
+                        throw new ArgumentException($"Link result {resultName} has no field {resultField} for {v} in {request.name}");
+                    
+                    //OK we finally have it, let's go
+                    parameters.Add(newName, valList.Select(x => x[resultField]));
+                    return $"@{newName}";
+
+                    //var dotParts = realValName.Split(".".ToCharArray());
+                    //Type lastType = typeof(object);
+                    //object lastContainer = parameters;
+
+                    //for(var i = 0; i < dotParts.Length; i++)
+                    //{
+                    //    Type thisType = lastContainer.GetType();
+                    //}
+
+                    //There are two options: one is that it's just deeper in, the other
+                    //is that it just doesn't exist. Keep going down and down through dot
+                    //operators until we reach the actual value, and if it exists, add
+                    //it with the full path (dots converted to underscores) to the values list
+                    //throw new ArgumentException($"Unknown value {v} in {request.name}");
                 }
                 return v;
             });
@@ -247,7 +291,7 @@ public class GenericSearcher : IGenericSearch
     /// <param name="queryStr"></param>
     /// <param name="r"></param>
     /// <param name="parameters"></param>
-    public void BasicFinalLimit(StringBuilder queryStr, SearchRequestPlus r, Dictionary<string, object> parameters)
+    public void AddStandardFinalLimit(StringBuilder queryStr, SearchRequestPlus r, Dictionary<string, object> parameters)
     {
         if(!string.IsNullOrEmpty(r.order))
         {
@@ -298,22 +342,22 @@ public class GenericSearcher : IGenericSearch
         foreach(var request in requests.requests.Select(x => mapper.Map<SearchRequestPlus>(x)))
         {
             request.requestType = Enum.Parse<RequestType>(request.type); //I know this will succeed
-            request.typeInfo = typeService.GetTypeInfo(StandardSelect[request.requestType]);
+            request.typeInfo = typeService.GetTypeInfo(StandardViewRequests[request.requestType]);
             queryStr.Clear();
 
-            if(StandardSelect.ContainsKey(request.requestType))
+            if(StandardViewRequests.ContainsKey(request.requestType))
             {
                 //Generate "select from"
                 AddStandardSelect(queryStr, request);                   
 
                 //Generate "where (x)"
                 var query = CreateStandardQuery(queryStr, request, modifiedValues);    
-                query = AddQueryClause(query, GeneralSearchModifiers.GetValueOrDefault(request.requestType, ""));
+                query = AddQueryClause(query, StandardSearchModifiers.GetValueOrDefault(request.requestType, ""));
                 if (!string.IsNullOrWhiteSpace(query))
                     queryStr.Append($"WHERE {query} ");
 
                 //Generate "order by limit offset"
-                BasicFinalLimit(queryStr, request, modifiedValues);     
+                AddStandardFinalLimit(queryStr, request, modifiedValues);     
             }
             else
             {

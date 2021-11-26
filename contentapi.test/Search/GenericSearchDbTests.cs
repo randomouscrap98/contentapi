@@ -82,4 +82,39 @@ public class GenericSearchDbTests : UnitTestBase, IClassFixture<DbUnitTestFixtur
         Assert.Equal(1L, user["avatar"]);
         Assert.Equal("cutenickname", user["special"]);
     }
+
+
+    [Fact]
+    public void GenericSearch_Search_SimpleLink()
+    {
+        var search = new SearchRequests();
+        search.values.Add("pagedate", DateTime.Now.AddDays(-20).ToString());
+        search.requests.Add(new SearchRequest()
+        {
+            name = "recentpages",
+            type = "page",
+            fields = "id, name, createUserId, createDate",
+            query = "createDate > @pagedate"
+        });
+        search.requests.Add(new SearchRequest()
+        {
+            name = "createusers",
+            type = "user",
+            fields = "id, username, special, avatar",
+            query = "id in @recentpages.createUserId"
+        });
+
+        var result = service.Search(search).Result;
+        Assert.Contains("recentpages", result.Keys);
+        Assert.Contains("createusers", result.Keys);
+        Assert.Equal(2, result["recentpages"].Count());
+        Assert.Equal(2, result["createusers"].Count());
+        Assert.Single(result["createusers"].Where(x => 
+            x["id"].Equals(1L) && x["username"].Equals("firstUser")));
+        Assert.Single(result["createusers"].Where(x => 
+            x["id"].Equals(2L) && x["username"].Equals("admin")));
+        //Assert.Equal("admin", user["username"]);
+        //Assert.Equal(1L, user["avatar"]);
+        //Assert.Equal("cutenickname", user["special"]);
+    }
 }
