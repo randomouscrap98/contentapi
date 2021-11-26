@@ -45,11 +45,20 @@ public class GenericSearcher : IGenericSearch
     protected readonly Dictionary<RequestType, Type> StandardSelect = new Dictionary<RequestType, Type> {
         { RequestType.user, typeof(UserView) },
         { RequestType.comment, typeof(CommentView) },
-        { RequestType.content, typeof(ContentView) }
+        { RequestType.content, typeof(ContentView) },
+        { RequestType.page, typeof(PageView) },
+        { RequestType.module, typeof(ModuleView) },
+        { RequestType.file, typeof(FileView) }
     };
 
+    public const string LastPostDateField = nameof(ContentView.lastPostDate);
+    public const string QuantizationField = nameof(FileView.quantization);
+    public const string DescriptionField = nameof(ModuleView.description);
+
     protected readonly Dictionary<(RequestType, string),string> ModifiedFields = new Dictionary<(RequestType, string), string> {
-        { (RequestType.content, "lastPostDate"), $"(select createDate from comments where {MainAlias}.id = contentId order by id desc limit 1) as lastPostDate" },
+        { (RequestType.content, LastPostDateField), $"(select createDate from comments where {MainAlias}.id = contentId order by id desc limit 1) as {LastPostDateField}" },
+        { (RequestType.file, QuantizationField), $"(select value from content_values where {MainAlias}.id = contentId and key='{QuantizationField}' limit 1) as {QuantizationField}" },
+        { (RequestType.module, DescriptionField), $"(select value from content_values where {MainAlias}.id = contentId and key='{DescriptionField}' limit 1) as {DescriptionField}" },
         { (RequestType.user, "registered"), $"(registrationKey IS NULL) as registered" }
     };
 
@@ -63,6 +72,12 @@ public class GenericSearcher : IGenericSearch
         this.config = config;
         this.mapper = mapper;
         this.parser = parser;
+
+        //Duplicate some fields
+        var lpdSelect = ModifiedFields[(RequestType.content, LastPostDateField)];
+        ModifiedFields.Add((RequestType.file, LastPostDateField), lpdSelect);
+        ModifiedFields.Add((RequestType.page, LastPostDateField), lpdSelect);
+        ModifiedFields.Add((RequestType.module, LastPostDateField), lpdSelect);
     }
 
     public string SystemKey(SearchRequest request, string field)

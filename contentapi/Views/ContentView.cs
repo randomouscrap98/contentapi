@@ -17,28 +17,20 @@ public class ContentView
     [Searchable]
     public DateTime createDate { get; set; }
 
-    //public InternalContentType internalType { get; set; }
-
-    [Searchable]
-    [FromField("publicType")]
-    public string type { get; set; } = "";
-
     [Searchable]
     public string name { get; set; } = "";
-
-    public string content { get; set; } = "";
 
     [Searchable]
     public long parentId { get; set; }
 
-    [Searchable]
-    [FromField("")]
-    public DateTime lastPostDate {get;set;}
-
-    //These are all fields you can request, but they are special additions.
+    //NOTE: values will have some content-specific things!
     [FromField("")] //Empty field means something special, these are removed from standard searches
     public Dictionary<string, string> values {get;set;} = new Dictionary<string, string>();
 
     [FromField("")]
     public List<string> keywords {get;set;} = new List<string>();
+
+    [Searchable]
+    [FromField("")]
+    public DateTime lastPostDate {get;set;}
 }
