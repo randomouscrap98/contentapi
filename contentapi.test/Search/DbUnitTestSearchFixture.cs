@@ -30,6 +30,7 @@ public class DbUnitTestFixture : DbUnitTestBase, IDisposable
                         username = "firstUser",
                         password = "shouldNotBeSearchable",
                         salt = "alsoShouldNotBeSearchable",
+                        special = "",
                         createDate = DateTime.Now.AddDays(-10),
                         avatar = 99,
                         email = "secrets@email.com"
@@ -38,6 +39,7 @@ public class DbUnitTestFixture : DbUnitTestBase, IDisposable
                         username = "admin",
                         password = "shouldNotBeSearchable",
                         salt = "alsoShouldNotBeSearchable",
+                        special = "cutenickname",
                         createDate = DateTime.Now.AddDays(-15),
                         avatar = 1,
                         super = true,

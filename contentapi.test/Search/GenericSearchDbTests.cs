@@ -2,6 +2,7 @@ using System;
 using System.Collections;
 using System.Collections.Generic;
 using System.Data;
+using System.Linq;
 using AutoMapper;
 using contentapi.Db;
 using contentapi.Search;
@@ -51,8 +52,33 @@ public class GenericSearchDbTests : UnitTestBase, IClassFixture<DbUnitTestFixtur
 
             var result = service.Search(search).Result["testStar"];
 
+            //Here, we're just making sure that "*" didn't break anything. We assume
+            //that "*" is implemented generically, and thus we can do some other test
+            //some other time for whether all fields are returned, but that is not 
+            //necessary for this broad test
             if(result is IEnumerable)
                 Assert.NotEmpty((IEnumerable<object>)result);
         }
+    }
+
+    [Fact]
+    public void GenericSearch_Search_SimpleValue()
+    {
+        var search = new SearchRequests();
+        search.values.Add("userlike", "admin%");
+        search.requests.Add(new SearchRequest()
+        {
+            name = "testValue",
+            type = "user",
+            fields = "id, username, special, avatar",
+            query = "username like @userlike"
+        });
+
+        var result = (IEnumerable<object>)service.Search(search).Result["testValue"];
+        Assert.Single(result);
+        var user = (IDictionary<string, object>)result.First();
+        Assert.Equal("admin", user["username"]);
+        Assert.Equal(1L, user["avatar"]);
+        Assert.Equal("cutenickname", user["special"]);
     }
 }
