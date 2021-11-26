@@ -214,6 +214,9 @@ public class GenericSearcher : IGenericSearch
                     var dotParts = realValName.Split(".".ToCharArray(), StringSplitOptions.RemoveEmptyEntries);
                     var newName = realValName.Replace(".", "_");
 
+                    if(dotParts.Length == 1)
+                        throw new ArgumentException($"Value {v} not found for request {request.name}");
+
                     //For now, let's just assume when linking, they're going one deep
                     if(dotParts.Length != 2)
                         throw new ArgumentException($"For now, can only access 1 layer deep in results, fix {v} in {request.name}");
