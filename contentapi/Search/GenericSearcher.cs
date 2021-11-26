@@ -12,11 +12,6 @@ namespace contentapi.Search;
 /// <summary>
 /// Configuration for the generic searcher
 /// </summary>
-/// <remarks>
-/// Note to self: start making this stupid config classes have reasonable defaults,
-/// I don't feel like always configuring everything in configs, and I set up a system
-/// to easily load from config if I need it.
-/// </remarks>
 public class GenericSearcherConfig
 {
     public int MaxIndividualResultSet {get;set;} = 1000;
@@ -27,6 +22,7 @@ public class SearchRequestPlus : SearchRequest
 {
     public RequestType requestType {get;set;}
     public TypeInfo typeInfo {get;set;} = new TypeInfo();
+    public List<string> requestFields {get;set;} = new List<string>();
 }
 
 public class GenericSearcher : IGenericSearch
@@ -58,6 +54,7 @@ public class GenericSearcher : IGenericSearch
     };
 
     public const string LastPostDateField = nameof(ContentView.lastPostDate);
+    public const string LastPostIdField = nameof(ContentView.lastPostId);
     public const string QuantizationField = nameof(FileView.quantization);
     public const string DescriptionField = nameof(ModuleView.description);
     public const string InternalTypeStringField = nameof(ContentView.internalTypeString);
@@ -65,6 +62,7 @@ public class GenericSearcher : IGenericSearch
     //These fields are too difficult to modify with the attributes, so we do it in code here
     protected readonly Dictionary<(RequestType, string),string> StandardModifiedFields = new Dictionary<(RequestType, string), string> {
         { (RequestType.content, LastPostDateField), $"(select createDate from comments where {MainAlias}.id = contentId order by id desc limit 1) as {LastPostDateField}" },
+        { (RequestType.content, LastPostIdField), $"(select id from comments where {MainAlias}.id = contentId order by id desc limit 1) as {LastPostIdField}" },
         { (RequestType.file, QuantizationField), $"(select value from content_values where {MainAlias}.id = contentId and key='{QuantizationField}' limit 1) as {QuantizationField}" },
         { (RequestType.module, DescriptionField), $"(select value from content_values where {MainAlias}.id = contentId and key='{DescriptionField}' limit 1) as {DescriptionField}" },
         { (RequestType.user, "registered"), $"(registrationKey IS NULL) as registered" }
@@ -73,9 +71,9 @@ public class GenericSearcher : IGenericSearch
     //Some searches can easily be modified afterwards with constants, put that here.
     protected readonly Dictionary<RequestType, string> StandardSearchModifiers = new Dictionary<RequestType, string>()
     {
-       { RequestType.file, $"internalType = {(int)InternalContentType.file}" } ,
+       { RequestType.file, $"internalType = {(int)InternalContentType.file}" },
        { RequestType.module, $"internalType = {(int)InternalContentType.module}" },
-       { RequestType.page, $"internalType = {(int)InternalContentType.page}" } ,
+       { RequestType.page, $"internalType = {(int)InternalContentType.page}" },
        { RequestType.comment, $"module IS NULL" } 
     };
 
@@ -118,9 +116,10 @@ public class GenericSearcher : IGenericSearch
     /// Throw exceptions on any funky business we can quickly report
     /// </summary>
     /// <param name="requests"></param>
-    public void RequestPrecheck(SearchRequests requests)
+    public List<SearchRequestPlus> RequestPreparse(SearchRequests requests)
     {
         var acceptedTypes = Enum.GetNames<RequestType>();
+        var result = new List<SearchRequestPlus>();
 
         foreach(var request in requests.requests)
         {
@@ -134,7 +133,18 @@ public class GenericSearcher : IGenericSearch
             //just regular identifiers, like in a programming language.
             if(!parser.IsFieldNameValid(request.name))
                 throw new ArgumentException($"Malformed name '{request.name}'");
+            
+            //Now do some pre-parsing and data retrieval. If one of these fail, it's good that it
+            //fails early (although it will only fail if me, the programmer, did something wrong,
+            //not if the user supplies a weird request)
+            var reqplus = mapper.Map<SearchRequestPlus>(request);
+            reqplus.requestType = Enum.Parse<RequestType>(reqplus.type); //I know this will succeed
+            reqplus.typeInfo = typeService.GetTypeInfo(StandardViewRequests[reqplus.requestType]);
+            reqplus.requestFields = ComputeRealFields(reqplus);
+            result.Add(reqplus);
         }
+
+        return result;
     }
 
     /// <summary>
@@ -160,13 +170,33 @@ public class GenericSearcher : IGenericSearch
             return fieldName;
     }
 
-    /// <summary>
-    /// This method adds a 'standard' select for regular searches against simple
-    /// single table queries. For instance, it might be "SELECT id,username FROM users "
-    /// </summary>
-    /// <param name="queryStr"></param>
-    /// <param name="r"></param>
-    public void AddStandardSelect(StringBuilder queryStr, SearchRequestPlus r)
+    ///// <summary>
+    ///// Returns whether or not the given field is CURRENTLY searchable within the given request context
+    ///// </summary>
+    ///// <param name="field"></param>
+    ///// <param name="request"></param>
+    ///// <returns></returns>
+    //public bool StandardFieldCurrentlySearchable(string field, SearchRequestPlus request)
+    //{
+    //    //Don't even bother with fancy checks if this field isn't even searchable in
+    //    //the first place! Context doesn't matter in that case.
+    //    if(!request.typeInfo.searchableFields.Contains(field))
+    //        return false;
+
+    //    //Always searchable if it's a plain field
+    //    if(!StandardModifiedFields.ContainsKey((request.requestType, field)) &&
+    //        !request.typeInfo.fieldRemap.ContainsKey(field))
+    //    {
+    //        return true;
+    //    }
+    //    else
+    //    {
+    //        //If it's NOT a plain field, it MUST be included in the search results
+    //        return request.requestFields.Contains(field);
+    //    }
+    //}
+
+    public List<string> ComputeRealFields(SearchRequestPlus r)
     {
         var fields = r.fields.Split(",".ToCharArray(), StringSplitOptions.RemoveEmptyEntries).Select(x => x.Trim()).ToList(); 
 
@@ -178,8 +208,44 @@ public class GenericSearcher : IGenericSearch
         foreach (var field in fields)
             if (!r.typeInfo.queryableFields.Contains(field))
                 throw new ArgumentException($"Unknown field {field} in request {r.name}");
+        
+        return fields;
+    }
 
-        var fieldSelect = fields.Select(x => StandardFieldRemap(x, r)).Where(x => !string.IsNullOrEmpty(x)).ToList();
+    public string CombineQueryClause(string baseQuery, string clause)
+    {
+        if(string.IsNullOrWhiteSpace(baseQuery))
+            return clause;
+        else if (!string.IsNullOrWhiteSpace(clause))
+            return $"({baseQuery}) AND ({clause})";
+        return baseQuery; 
+    }
+
+    public void ThrowOnStandardFieldSearchableError(string field, SearchRequestPlus request)
+    {
+        if(!request.typeInfo.searchableFields.Contains(field))
+            throw new ArgumentException($"Field '{field}' not searchable yet in type '{request.type}'({request.name})!");
+
+        //Oops, this is a dangerous field, we can't just use it without requesting it because
+        //it's COMPUTED
+        if(StandardModifiedFields.ContainsKey((request.requestType, field)) || 
+            request.typeInfo.fieldRemap.ContainsKey(field))
+        {
+            if(!request.requestFields.Contains(field))
+                throw new ArgumentException($"Field '{field}' is a computed field for type '{request.type}' and must be included in the retrieved fieldlist ({request.name})");
+        }
+    }
+
+
+    /// <summary>
+    /// This method adds a 'standard' select for regular searches against simple
+    /// single table queries. For instance, it might be "SELECT id,username FROM users "
+    /// </summary>
+    /// <param name="queryStr"></param>
+    /// <param name="r"></param>
+    public void AddStandardSelect(StringBuilder queryStr, SearchRequestPlus r)
+    {
+        var fieldSelect = r.requestFields.Select(x => StandardFieldRemap(x, r)).Where(x => !string.IsNullOrEmpty(x)).ToList();
 
         queryStr.Append("SELECT ");
         queryStr.Append(string.Join(",", fieldSelect));
@@ -202,10 +268,8 @@ public class GenericSearcher : IGenericSearch
         {
             var parseResult = parser.ParseQuery(request.query, f =>
             {
-                if (request.typeInfo.searchableFields.Contains(f))
-                    return f;
-                else
-                    throw new ArgumentException($"Field {f} not searchable yet in type {request.type}({request.name})!");
+                ThrowOnStandardFieldSearchableError(f, request);
+                return f;
             }, v =>
             {
                 var realValName = v.TrimStart('@');
@@ -248,21 +312,6 @@ public class GenericSearcher : IGenericSearch
                     //OK we finally have it, let's go
                     parameters.Add(newName, valList.Select(x => x[resultField]));
                     return $"@{newName}";
-
-                    //var dotParts = realValName.Split(".".ToCharArray());
-                    //Type lastType = typeof(object);
-                    //object lastContainer = parameters;
-
-                    //for(var i = 0; i < dotParts.Length; i++)
-                    //{
-                    //    Type thisType = lastContainer.GetType();
-                    //}
-
-                    //There are two options: one is that it's just deeper in, the other
-                    //is that it just doesn't exist. Keep going down and down through dot
-                    //operators until we reach the actual value, and if it exists, add
-                    //it with the full path (dots converted to underscores) to the values list
-                    //throw new ArgumentException($"Unknown value {v} in {request.name}");
                 }
                 return v;
             });
@@ -276,15 +325,6 @@ public class GenericSearcher : IGenericSearch
             logger.LogWarning($"Exception during query parse: {ex}");
             throw new ArgumentException(ex.Message);
         }
-    }
-
-    public string AddQueryClause(string baseQuery, string clause)
-    {
-        if(string.IsNullOrWhiteSpace(baseQuery))
-            return clause;
-        else if (!string.IsNullOrWhiteSpace(clause))
-            return $"({baseQuery}) AND ({clause})";
-        return baseQuery; 
     }
 
     /// <summary>
@@ -340,12 +380,10 @@ public class GenericSearcher : IGenericSearch
 
         //Before wasting the user's time on useless junk, check some simple stuff
         //Might look silly to do this loop twice but whatever, be nice to the users
-        RequestPrecheck(requests);
+        var requestsPlus = RequestPreparse(requests);
 
-        foreach(var request in requests.requests.Select(x => mapper.Map<SearchRequestPlus>(x)))
+        foreach(var request in requestsPlus)
         {
-            request.requestType = Enum.Parse<RequestType>(request.type); //I know this will succeed
-            request.typeInfo = typeService.GetTypeInfo(StandardViewRequests[request.requestType]);
             queryStr.Clear();
 
             if(StandardViewRequests.ContainsKey(request.requestType))
@@ -355,7 +393,7 @@ public class GenericSearcher : IGenericSearch
 
                 //Generate "where (x)"
                 var query = CreateStandardQuery(queryStr, request, modifiedValues);    
-                query = AddQueryClause(query, StandardSearchModifiers.GetValueOrDefault(request.requestType, ""));
+                query = CombineQueryClause(query, StandardSearchModifiers.GetValueOrDefault(request.requestType, ""));
                 if (!string.IsNullOrWhiteSpace(query))
                     queryStr.Append($"WHERE {query} ");
 

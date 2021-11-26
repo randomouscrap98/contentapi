@@ -33,10 +33,15 @@ public class ContentView
     [FromField("")] //Empty field means something special, these are removed from standard searches
     public Dictionary<string, string> values {get;set;} = new Dictionary<string, string>();
 
+    [Searchable]
     [FromField("")]
     public List<string> keywords {get;set;} = new List<string>();
 
     [Searchable]
     [FromField("")]
     public DateTime lastPostDate {get;set;}
+
+    [Searchable]
+    [FromField("")]
+    public long lastPostId {get;set;}
 }
