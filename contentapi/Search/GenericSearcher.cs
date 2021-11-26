@@ -42,15 +42,22 @@ public class GenericSearcher : IGenericSearch
     public const string DescendingAppend = "_desc";
     public const string SystemPrepend = "_sys";
     
+    protected readonly Dictionary<RequestType, Type> basicTypes;
+    // = new Dictionary<RequestType, Type>();
     //Should this be configurable? I don't care for now
-    protected readonly Dictionary<RequestType, Type> StandardSelect = new Dictionary<RequestType, Type> {
-        { RequestType.user, typeof(UserView) },
-        { RequestType.comment, typeof(CommentView) },
-        { RequestType.content, typeof(ContentView) },
-        { RequestType.page, typeof(PageView) },
-        { RequestType.module, typeof(ModuleView) },
-        { RequestType.file, typeof(FileView) }
-    };
+    //protected readonly Dictionary<RequestType, Type> StandardSelect = new Dictionary<RequestType, Type> {
+    //    { RequestType.user, typeof(UserView) },
+    //    { RequestType.comment, typeof(CommentView) },
+    //    { RequestType.content, typeof(ContentView) },
+    //    { RequestType.page, typeof(PageView) },
+    //    { RequestType.module, typeof(ModuleView) },
+    //    { RequestType.file, typeof(FileView) }
+    //};
+
+    //protected readonly List<RequestType> ContentTypes = new List<RequestType>()
+    //{
+    //    RequestType.content, RequestType.file, RequestType.page, RequestType.module
+    //};
 
     public const string LastPostDateField = nameof(ContentView.lastPostDate);
     public const string QuantizationField = nameof(FileView.quantization);
@@ -91,8 +98,15 @@ public class GenericSearcher : IGenericSearch
         ModifiedFields.Add((RequestType.page, LastPostDateField), lpdSelect);
         ModifiedFields.Add((RequestType.module, LastPostDateField), lpdSelect);
 
-        foreach(var type in new[] { RequestType.content, RequestType.file, RequestType.page, RequestType.module})
+        foreach(var reqType in Enum.GetValues<RequestType>())
+        {
+
+        }
+
+        foreach(var type in ContentTypes)
+        {
             ModifiedFields.Add((type, InternalTypeStringField), EnumToCase<InternalContentType>(nameof(Db.Content.internalType), InternalTypeStringField));
+        }
     }
 
     public string EnumToCase<T>(string fieldName, string outputName) where T : struct, System.Enum 
@@ -142,8 +156,6 @@ public class GenericSearcher : IGenericSearch
     /// <returns></returns>
     public string StandardFieldRemap(string fieldName, SearchRequestPlus r)
     {
-        //var modifiedTuple = Tuple.Create(r.requestType, fieldName);
-
         //Our personal field modifiers always override all
         if (ModifiedFields.ContainsKey((r.requestType, fieldName)))
             return ModifiedFields[(r.requestType, fieldName)];
@@ -268,7 +280,7 @@ public class GenericSearcher : IGenericSearch
         //ALWAYS need limit if you're doing offset, just easier to include it. -1 is magic
         var limit = Math.Min(r.limit > 0 ? r.limit : int.MaxValue, config.MaxIndividualResultSet);
         var limitKey = SystemKey(r, "limit");
-        queryStr.Append($"LIMIT @{limitKey} ");//{limit} ");
+        queryStr.Append($"LIMIT @{limitKey} ");
         parameters.Add(limitKey, limit);
 
         if (r.skip > 0)
