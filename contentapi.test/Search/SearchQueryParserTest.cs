@@ -64,8 +64,18 @@ public class SearchQueryParserTest : UnitTestBase, IClassFixture<SearchQueryPars
     [InlineData("field LIKE NOT @num", false)] 
     [InlineData("field NOT == @num", false)] 
     [InlineData("field != @num", false)] 
+    [InlineData("field field", false)] 
+    [InlineData("field > @num;", false)] //AN IMPORTANT ONE!
+    [InlineData(";DROP TABLE users", false)] //AN IMPORTANT ONE!
+    [InlineData("\";drop table users", false)] //AN IMPORTANT ONE!
     [InlineData("field > @num1 and field < @num2", true)] //Getting into the and/or stuff
     [InlineData("username LIKE @search and id IN @subset", true)]
+    [InlineData("(username LIKE @search)", true)]
+    [InlineData("(username LIKE @search", false)]
+    [InlineData("username LIKE @search)", false)]
+    [InlineData("()", false)]
+    [InlineData("username LIKE @search AND ()", false)]
+    [InlineData("username LIKE @search AND (contentId in @pages.cids or action == @MYACT)", true)]
     public void SearchQueryParser_SyntaxCheck(string query, bool success)
     {
         try

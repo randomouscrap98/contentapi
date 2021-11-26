@@ -8,6 +8,7 @@ public class SearchQueryParser : ISearchQueryParser
     protected ILogger logger;
     protected QueryExpressionParser parserInstance;
     protected Parser<QueryToken, string> parser;
+    protected readonly object parserLock = new Object();
 
     public SearchQueryParser(ILogger<SearchQueryParser> logger)
     {
@@ -37,32 +38,40 @@ public class SearchQueryParser : ISearchQueryParser
         if(string.IsNullOrWhiteSpace(query))
             return "";
 
-        var oldFieldConv = parserInstance.HandleField;
-        var oldValueConv = parserInstance.HandleValue;
-
-        try
+        //We lock to make this threadsafe: the parser doesn't allow us to pass in configuration
+        //per-call and have it trickle down into the production grammar handlers, so we have
+        //to instead pass the config as properties. Because it's a property, we don't want 
+        //someone ELSE to come in and change those handlers out from underneath us. If this
+        //becomes a performance issue, idk
+        lock(parserLock)
         {
-            parserInstance.HandleField = fieldConverter;
-            parserInstance.HandleValue = valueConverter;
+            var oldFieldConv = parserInstance.HandleField;
+            var oldValueConv = parserInstance.HandleValue;
 
-            var result = parser.Parse(query);
-
-            if(result.IsError)
+            try
             {
-                if (result.Errors != null && result.Errors.Any())
-                    throw new ArgumentException("ERROR DURING QUERY PARSE: " + string.Join("\n", result.Errors.Select(x => x.ErrorMessage)));
+                parserInstance.HandleField = fieldConverter;
+                parserInstance.HandleValue = valueConverter;
+
+                var result = parser.Parse(query);
+
+                if (result.IsError)
+                {
+                    if (result.Errors != null && result.Errors.Any())
+                        throw new ArgumentException("ERROR DURING QUERY PARSE: " + string.Join("\n", result.Errors.Select(x => x.ErrorMessage)));
+                    else
+                        throw new ArgumentException("Unknown error during query parse");
+                }
                 else
-                    throw new ArgumentException("Unknown error during query parse");
+                {
+                    return result.Result;
+                }
             }
-            else
+            finally
             {
-                return result.Result;
+                parserInstance.HandleField = oldFieldConv;
+                parserInstance.HandleValue = oldValueConv;
             }
-        }
-        finally
-        {
-            parserInstance.HandleField = oldFieldConv;
-            parserInstance.HandleValue = oldValueConv;
         }
     }
 }

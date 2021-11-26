@@ -20,6 +20,7 @@ public static class DefaultSetup
         services.AddSingleton<ITypeInfoService, CachedTypeInfoService>();
         services.AddTransient<IGenericSearch, GenericSearcher>();
         services.AddSingleton<IAuthTokenService<long>, JwtAuthTokenService<long>>();
+        services.AddSingleton<ISearchQueryParser, SearchQueryParser>();
 
         //Configs
         services.AddSingleton<GenericSearcherConfig>();
