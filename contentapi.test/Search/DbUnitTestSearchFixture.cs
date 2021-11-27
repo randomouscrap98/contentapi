@@ -43,6 +43,9 @@ public class DbUnitTestSearchFixture : DbUnitTestBase, IDisposable
         "eight"
     };
 
+    public readonly int UserCount;
+    public readonly int ContentCount;
+
     public DbUnitTestSearchFixture()
     {
         logger.LogDebug($"Adding users to database {MasterConnectionString}");
@@ -56,14 +59,14 @@ public class DbUnitTestSearchFixture : DbUnitTestBase, IDisposable
             {
                 var users = new List<Db.User>();
                 var userVariables = new List<Db.UserVariable>();
-                var userCount = (int)Math.Pow(2, Enum.GetValues<UserVariations>().Count());
+                UserCount = (int)Math.Pow(2, Enum.GetValues<UserVariations>().Count());
 
-                for(var i = 0; i < userCount; i++)
+                for(var i = 0; i < UserCount; i++)
                 {
                     var user = new Db.User() {
                         username = $"user_{i}",
                         password = $"SECRETS_{i}",
-                        createDate = DateTime.Now.AddDays(i - userCount),
+                        createDate = DateTime.Now.AddDays(i - UserCount),
                         salt = $"SALTYSECRETS_{i}"
                     };
 
@@ -96,16 +99,16 @@ public class DbUnitTestSearchFixture : DbUnitTestBase, IDisposable
                 var values = new List<Db.ContentValue>();
                 var keywords = new List<Db.ContentKeyword>();
                 var permissions = new List<Db.ContentPermission>();
-                var contentCount = (int)Math.Pow(2, Enum.GetValues<ContentVariations>().Count());
+                ContentCount = (int)Math.Pow(2, Enum.GetValues<ContentVariations>().Count());
 
-                for(var i = 0; i < contentCount; i++)
+                for(var i = 0; i < ContentCount; i++)
                 {
                     var c = new Db.Content() {
                         name = $"content_{i}",
                         parentId = i / 4,
                         content = $"text_{i}",
-                        createUserId = 1 + (i % userCount),
-                        createDate = DateTime.Now.AddDays(i - contentCount)
+                        createUserId = 1 + (i % UserCount),
+                        createDate = DateTime.Now.AddDays(i - ContentCount)
                     };
 
                     c.deleted = (i & (int)ContentVariations.Deleted) > 0;
@@ -116,7 +119,7 @@ public class DbUnitTestSearchFixture : DbUnitTestBase, IDisposable
                         permissions.Add(new Db.ContentPermission()
                         {
                             contentId = i + 1,
-                            userId = 1 + ((i | (int)UserVariations.Super) % userCount), //User is contentid with super bit flip
+                            userId = 1 + ((i | (int)UserVariations.Super) % UserCount), //User is contentid with super bit flip
                             create = true,
                             read = true,
                             update = true,
@@ -173,7 +176,7 @@ public class DbUnitTestSearchFixture : DbUnitTestBase, IDisposable
                             {
                                 contentId = i + 1,
                                 createDate = DateTime.Now.AddDays(j - i),
-                                createUserId = 1 + (j % userCount),
+                                createUserId = 1 + (j % UserCount),
                                 text = $"comment_{i}",
                             });
                         }

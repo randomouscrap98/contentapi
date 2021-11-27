@@ -55,8 +55,143 @@ public class GenericSearchDbTests : UnitTestBase, IClassFixture<DbUnitTestSearch
             //that "*" is implemented generically, and thus we can do some other test
             //some other time for whether all fields are returned, but that is not 
             //necessary for this broad test
-            //if(result is IEnumerable)
         }
+    }
+
+    [Fact]
+    public void GenericSearch_Search_FieldLimiting()
+    {
+        var search = new SearchRequests();
+        //search.values.Add("userlike", "admin%");
+        search.requests.Add(new SearchRequest()
+        {
+            name = "fieldLimit",
+            type = "user",
+            fields = "id, username",
+            //query = "username like @userlike" //Don't need to test syntax btw! Already done!
+        });
+
+        var result = service.Search(search).Result;
+
+        Assert.All(result["fieldLimit"], x => {
+            Assert.Equal(2, x.Keys.Count);
+            Assert.Contains("id", x.Keys);
+            Assert.Contains("username", x.Keys);
+        });
+    }
+
+    [Fact]
+    public void GenericSearch_Search_LessThan()
+    {
+        var search = new SearchRequests();
+        search.values.Add("maxid", 10);
+        search.requests.Add(new SearchRequest()
+        {
+            name = "lessthan",
+            type = "user",
+            fields = "id",
+            query = "id < @maxid" //Don't need to test syntax btw! Already done!
+        });
+
+        var result = service.Search(search).Result;
+
+        Assert.Equal(9, result["lessthan"].Count());
+    }
+
+    [Fact]
+    public void GenericSearch_Search_LessThanEqual()
+    {
+        var search = new SearchRequests();
+        search.values.Add("maxid", 10);
+        search.requests.Add(new SearchRequest()
+        {
+            name = "lessthanequal",
+            type = "user",
+            fields = "id",
+            query = "id <= @maxid"
+        });
+
+        var result = service.Search(search).Result;
+
+        Assert.Equal(10, result["lessthanequal"].Count());
+    }
+
+    [Fact]
+    public void GenericSearch_Search_GreaterThan()
+    {
+        var search = new SearchRequests();
+        search.values.Add("minid", 10);
+        search.requests.Add(new SearchRequest()
+        {
+            name = "greaterthan",
+            type = "user",
+            fields = "id",
+            query = "id > @minid" //Don't need to test syntax btw! Already done!
+        });
+
+        var result = service.Search(search).Result;
+
+        Assert.Equal(fixture.UserCount - 10, result["greaterthan"].Count());
+    }
+
+    [Fact]
+    public void GenericSearch_Search_GreaterThanEqual()
+    {
+        var search = new SearchRequests();
+        search.values.Add("minid", 10);
+        search.requests.Add(new SearchRequest()
+        {
+            name = "greaterthanequal",
+            type = "user",
+            fields = "id",
+            query = "id >= @minid" //Don't need to test syntax btw! Already done!
+        });
+
+        var result = service.Search(search).Result;
+
+        Assert.Equal(fixture.UserCount - 9, result["greaterthanequal"].Count());
+    }
+
+    [Fact]
+    public void GenericSearch_Search_Equal()
+    {
+        var search = new SearchRequests();
+        search.values.Add("id", 10);
+        search.requests.Add(new SearchRequest()
+        {
+            name = "equal",
+            type = "user",
+            fields = "id",
+            query = "id = @id"
+        });
+
+        var result = service.Search(search).Result;
+
+        Assert.Single(result["equal"]);
+        Assert.Equal(10L, result["equal"].First()["id"]);
+    }
+
+    [Fact]
+    public void GenericSearch_Search_NotEqual()
+    {
+        var search = new SearchRequests();
+        search.values.Add("id", 10);
+        search.requests.Add(new SearchRequest()
+        {
+            name = "notequal",
+            type = "user",
+            fields = "id",
+            query = "id <> @id"
+        });
+
+        var result = service.Search(search).Result;
+
+        Assert.Equal(fixture.UserCount - 1, result["notequal"].Count());
+        Assert.All(result["notequal"], x =>
+        {
+            //Make sure that one we didn't want wasn't included
+            Assert.NotEqual(10L, x["id"]);
+        });
     }
 
     //[Fact]
