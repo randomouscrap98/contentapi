@@ -274,13 +274,24 @@ public class GenericSearcher : IGenericSearch
     {
         //Our personal field modifiers always override all
         if (StandardModifiedFields.ContainsKey((r.requestType, fieldName)))
+        {
             return StandardModifiedFields[(r.requestType, fieldName)];
-        //Return whatever's in the fieldmap, EVEN if it's empty (if it's empty, we remove it from the selector)
+        }
         else if (r.typeInfo.fieldRemap.ContainsKey(fieldName))
-            return r.typeInfo.fieldRemap[fieldName];
+        {
+            //Can't return a blank "as" for a null field remap. Null/empty remaps are
+            //fields which you're allowed to query for, but which should not be output in
+            //the selector (hence the field mapped to "nothing")
+            if(string.IsNullOrWhiteSpace(r.typeInfo.fieldRemap[fieldName]))
+                return "";
+            else
+                return $"{r.typeInfo.fieldRemap[fieldName]} as {fieldName}";
+        }
         //Just a basic fieldname replacement
         else
+        {
             return fieldName;
+        }
     }
 
     public List<string> ComputeRealFields(SearchRequestPlus r)

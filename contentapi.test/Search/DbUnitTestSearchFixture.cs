@@ -43,6 +43,17 @@ public class DbUnitTestSearchFixture : DbUnitTestBase, IDisposable
         "eight"
     };
 
+    public readonly List<string> StandardPublicTypes = new List<string> {
+        "one",
+        "two",
+        "three",
+        "four",
+        "five",
+        "six",
+        "seven",
+        "eight"
+    };
+
     public readonly int UserCount;
     public readonly int ContentCount;
 
@@ -108,6 +119,7 @@ public class DbUnitTestSearchFixture : DbUnitTestBase, IDisposable
                         parentId = i / 4,
                         content = $"text_{i}",
                         createUserId = 1 + (i % UserCount),
+                        publicType = StandardPublicTypes[i % StandardPublicTypes.Count],
                         createDate = DateTime.Now.AddDays(i - ContentCount)
                     };
 

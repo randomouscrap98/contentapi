@@ -204,11 +204,12 @@ public class GenericSearchDbTests : UnitTestBase, IClassFixture<DbUnitTestSearch
         {
             name = "testlike",
             type = "user",
-            fields = "id",
+            fields = "id, username",
             query = "username like @userlike"
         });
 
         var result = service.Search(search).Result["testlike"];
+        Assert.Equal(16, fixture.UserCount); //This test only works while this is 16
         Assert.Equal(7, result.Count()); //There are 16 users, so 6 from 10s and 1 from the 1
         //Assert.Single(result);
         //var user = result.First();
@@ -231,6 +232,7 @@ public class GenericSearchDbTests : UnitTestBase, IClassFixture<DbUnitTestSearch
         });
 
         var result = service.Search(search).Result["testnotlike"];
+        Assert.Equal(16, fixture.UserCount); //This test only works while this is 16
         Assert.Equal(fixture.UserCount - 7, result.Count()); //There are 16 users, so 6 from 10s and 1 from the 1
     }
 
@@ -314,6 +316,95 @@ public class GenericSearchDbTests : UnitTestBase, IClassFixture<DbUnitTestSearch
         await Assert.ThrowsAnyAsync<ArgumentException>(async () => {
             var result = await service.Search(search);
         });
+    }
+
+    [Fact]
+    public async Task GenericSearch_Search_SimpleLink()
+    {
+        var search = new SearchRequests();
+        search.requests.Add(new SearchRequest()
+        {
+            name = "allpages",
+            type = "content",
+            fields = "id, name, createUserId, createDate",
+        });
+        search.requests.Add(new SearchRequest()
+        {
+            name = "createusers",
+            type = "user",
+            fields = "id, username, special, avatar",
+            query = "id in @allpages.createUserId"
+        });
+
+        var result = await service.Search(search);
+        Assert.Contains("allpages", result.Keys);
+        Assert.Contains("createusers", result.Keys);
+        Assert.Equal(fixture.ContentCount, result["allpages"].Count());
+
+        Assert.All(result["allpages"], x =>
+        {
+            Assert.Contains(x["createUserId"], result["createusers"].Select(x => x["id"]));
+        });
+
+        Assert.All(result["createusers"], x =>
+        {
+            Assert.Contains(x["id"], result["allpages"].Select(x => x["createUserId"]));
+        });
+    }
+
+    [Fact]
+    public async Task GenericSearch_Search_BasicFieldNotRequired()
+    {
+        var search = new SearchRequests();
+        search.values.Add("userlike", "user_%");
+        search.requests.Add(new SearchRequest()
+        {
+            name = "basicfield",
+            type = "user",
+            fields = "id", //Even though username is not there, we should be able to query for it
+            query = "username like @userlike"
+        });
+
+        var result = (await service.Search(search))["basicfield"];
+        Assert.Equal(fixture.UserCount, result.Count());
+    }
+
+    [Fact]
+    public async Task GenericSearch_Search_ComplexFieldRequired_FailGracefully()
+    {
+        var search = new SearchRequests();
+        search.values.Add("bucket", "one");
+        search.requests.Add(new SearchRequest()
+        {
+            name = "nocomplex",
+            type = "file",
+            fields = "id", //Only querying id, but asking for bucket, which we know is searchable
+            query = "bucket = @bucket"
+        });
+
+        await Assert.ThrowsAnyAsync<ArgumentException>(async () => {
+            var result = await service.Search(search);
+        });
+    }
+
+    [Fact]
+    public async Task GenericSearch_Search_RemappedField_Searchable()
+    {
+        //This test relies on the amount of content types. If it changes, just fix it, it's easy
+        Assert.Equal(4, Enum.GetValues<InternalContentType>().Count());
+
+        var search = new SearchRequests();
+        search.values.Add("bucket", fixture.StandardPublicTypes[(int)InternalContentType.file]);
+        search.requests.Add(new SearchRequest()
+        {
+            name = "complex",
+            type = "file",
+            fields = "id, bucket", //Only querying id, but asking for bucket, which we know is searchable but remapped from publicType
+            query = "bucket = @bucket"
+        });
+
+        var result = (await service.Search(search))["complex"];
+        Assert.Equal(fixture.ContentCount / 4 / 2, result.Count());
     }
 
     //[Fact]
