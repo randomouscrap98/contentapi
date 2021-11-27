@@ -544,7 +544,7 @@ public class GenericSearcher : IGenericSearch
                     new { ids = ids });
 
                 foreach(var c in result)
-                    c[keykey] = keywords.Where(x => x[cidkey] == c["id"]).Select(x => x["value"]).ToList();
+                    c[keykey] = keywords.Where(x => x[cidkey].Equals(c["id"])).Select(x => x["value"]).ToList();
             }
             if(r.requestFields.Contains(valkey))
             {
@@ -553,7 +553,7 @@ public class GenericSearcher : IGenericSearch
                     new { ids = ids });
 
                 foreach(var c in result)
-                    c[valkey] = values.Where(x => x[cidkey] == c["id"]).ToDictionary(x => x["key"], y => y["value"]);
+                    c[valkey] = values.Where(x => x[cidkey].Equals(c["id"])).ToDictionary(x => x["key"], y => y["value"]);
             }
             if(r.requestFields.Contains(permkey))
             {
@@ -564,7 +564,7 @@ public class GenericSearcher : IGenericSearch
                 foreach(var c in result)
                 {
                     //TODO: May need to move this conversion somewhere else... not sure
-                    c[permkey] = permissions.Where(x => x[cidkey] == c["id"]).ToDictionary(
+                    c[permkey] = permissions.Where(x => x[cidkey].Equals(c["id"])).ToDictionary(
                         x => x["userId"], y => $"{(y["create"].Equals(1)?"C":"")}{(y["read"].Equals(1)?"R":"")}{(y["update"].Equals(1)?"U":"")}{(y["delete"].Equals(1)?"D":"")}");
                 }
             }
@@ -612,6 +612,8 @@ public class GenericSearcher : IGenericSearch
             var dp = new DynamicParameters(parameterValues);
             var qresult = await QueryAsyncCast(sql, dp);
 
+            //mapper.Map()
+
             //Just because we got the qresult doesn't mean we can stop! if it's content, we need
             //to fill in the values, keywords, and permissions!
             await AddExtraFields(request, qresult);
@@ -656,5 +658,10 @@ public class GenericSearcher : IGenericSearch
         var requestsPlus = await RequestPreparseAsync(requests, -1);
 
         return await SearchBase(requestsPlus, new Dictionary<string, object>(requests.values));
+    }
+
+    public List<T> ToStronglyTyped<T>(IEnumerable<IDictionary<string, object>> singleResults)
+    {
+        return singleResults.Select(x => mapper.Map<T>(x)).ToList();
     }
 }

@@ -77,6 +77,7 @@ public class DbUnitTestSearchFixture : DbUnitTestBase, IDisposable
                     var user = new Db.User() {
                         username = $"user_{i}",
                         password = $"SECRETS_{i}",
+                        avatar = UserCount - i,
                         createDate = DateTime.Now.AddDays(i - UserCount),
                         salt = $"SALTYSECRETS_{i}"
                     };

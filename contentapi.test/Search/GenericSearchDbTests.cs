@@ -6,11 +6,15 @@ using AutoMapper;
 using contentapi.Db;
 using contentapi.Search;
 using contentapi.Utilities;
+using contentapi.Views;
 using Microsoft.Extensions.Logging;
 using Xunit;
 
 namespace contentapi.test;
 
+//WARN: ALL TESTS THAT ACCESS THE SEARCHFIXTURE SHOULD GO IN HERE! Otherwise the database
+//will be created for EVERY class that uses the fixture, increasing the test time! Just
+//keep it together, even if the class gets large!
 public class GenericSearchDbTests : UnitTestBase, IClassFixture<DbUnitTestSearchFixture>
 {
     protected IDbConnection dbcon;
@@ -57,6 +61,69 @@ public class GenericSearchDbTests : UnitTestBase, IClassFixture<DbUnitTestSearch
             //some other time for whether all fields are returned, but that is not 
             //necessary for this broad test
         }
+    }
+
+    [Fact]
+    public async Task GenericSearch_ToStronglyTyped_User()
+    {
+        var search = new SearchRequests();
+        search.requests.Add(new SearchRequest()
+        {
+            name = "test",
+            type = "user",
+            fields = "*", //THIS is what we're testing
+        });
+
+        var result = (await service.Search(search))["test"];
+        var castResult = service.ToStronglyTyped<UserView>(result);
+        Assert.NotEmpty(castResult);
+        Assert.All(castResult, x =>
+        {
+            Assert.False(string.IsNullOrWhiteSpace(x.username), "Username wasn't cast properly!");
+            Assert.True(x.id > 0, "UserID not cast properly!");
+            Assert.True(x.avatar > 0, "UserAvatar not cast properly!");
+            Assert.True(x.createDate.Ticks > 0, "User createdate not cast properly!");
+        });
+
+        Assert.Equal(fixture.UserCount / 2, castResult.Where(x => x.registered).Count());
+        Assert.Equal(fixture.UserCount / 2, castResult.Where(x => x.super).Count());
+        Assert.Equal(fixture.UserCount / 2, castResult.Where(x => x.special != null).Count());
+    }
+
+    [Fact]
+    public async Task GenericSearch_ToStronglyTyped_Content_ExtraFields()
+    {
+        var search = new SearchRequests();
+        search.requests.Add(new SearchRequest()
+        {
+            name = "test",
+            type = "content",
+            fields = "*", //THIS is what we're testing
+        });
+
+        var result = (await service.Search(search))["test"];
+        var castResult = service.ToStronglyTyped<ContentView>(result);
+        Assert.NotEmpty(castResult);
+        Assert.All(castResult, x =>
+        {
+            Assert.False(string.IsNullOrWhiteSpace(x.name), "Content name wasn't cast properly!");
+            Assert.False(string.IsNullOrWhiteSpace(x.internalTypeString), "Content internalTypeString wasn't cast properly!");
+            Assert.True(x.id > 0, "ContentId not cast properly!");
+            Assert.True(x.createUserId > 0, "Content createuserid not cast properly!");
+            Assert.True(x.createDate.Ticks > 0, "Content createdate not cast properly!");
+        });
+
+        Assert.Equal(4, Enum.GetValues<InternalContentType>().Count());
+        foreach(var type in Enum.GetValues<InternalContentType>())
+            Assert.Equal(fixture.ContentCount / 4, castResult.Where(x => x.internalType == (int)type).Count());
+        Assert.Equal(fixture.ContentCount / 2, castResult.Where(x => x.deleted).Count());
+        Assert.Equal(fixture.ContentCount - 4, castResult.Where(x => x.parentId > 0).Count());
+        //It's minus four because the parent id is actually divided by 4, so only the first 4 values will be 0
+        //(the parentID is based on the iterator, which starts at 0)
+
+        //These two test whether or not the system pulls in the extra values!!
+        Assert.Equal(fixture.ContentCount / 2, castResult.Where(x => x.keywords.Count > 0).Count());
+        Assert.Equal(fixture.ContentCount / 2, castResult.Where(x => x.values.Count > 0).Count());
     }
 
     [Fact]

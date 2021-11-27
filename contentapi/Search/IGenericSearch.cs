@@ -11,4 +11,6 @@ public interface IGenericSearch
     Task<Dictionary<string, IEnumerable<IDictionary<string, object>>>> Search(SearchRequests requests);
     Task<Dictionary<string, IEnumerable<IDictionary<string, object>>>> SearchRestricted(SearchRequests requests,
         long requestUserId = 0);
+
+    List<T> ToStronglyTyped<T>(IEnumerable<IDictionary<string, object>> singleResults);
 }
