@@ -29,11 +29,16 @@ public class ContentView
     [Searchable]
     public long parentId { get; set; }
 
+    [FromField("")]
+    public Dictionary<long, string> permissions {get;set;} = new Dictionary<long, string>();
+
     //NOTE: values will have some content-specific things!
-    [FromField("")] //Empty field means something special, these are removed from standard searches
+    [FromField("")] //Empty field means something special, their field can be included but is not mapped to any particular field in the database
     public Dictionary<string, string> values {get;set;} = new Dictionary<string, string>();
 
-    [Searchable]
+    //Although these are NOT searchable with a standard search system, they do at least have 
+    //macros to let you search. Essentially, any field that is a "list" or something else
+    //will not be searchable.
     [FromField("")]
     public List<string> keywords {get;set;} = new List<string>();
 

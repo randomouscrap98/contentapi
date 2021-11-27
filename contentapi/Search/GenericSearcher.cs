@@ -95,12 +95,14 @@ public class GenericSearcher : IGenericSearch
 
     protected class MacroDescription
     {
+        //public bool publicMacro = false;
         public List<MacroArgumentType> argumentTypes = new List<MacroArgumentType>();
         public System.Reflection.MethodInfo macroMethod;
         public List<RequestType> allowedTypes;
 
-        public MacroDescription(string argTypes, string methodName, List<RequestType> allowedTypes)
+        public MacroDescription(/*bool publicMacro,*/ string argTypes, string methodName, List<RequestType> allowedTypes)
         {
+            //this.publicMacro = publicMacro;
             this.allowedTypes = allowedTypes;
             foreach(var c in argTypes)
             {
@@ -120,7 +122,16 @@ public class GenericSearcher : IGenericSearch
     protected readonly Dictionary<string, MacroDescription> StandardMacros = new Dictionary<string, MacroDescription>()
     {
         { "keywordlike", new MacroDescription("v", "KeywordLike", ContentRequestTypes) },
-        { "valuelike", new MacroDescription("vv", "ValueLike", ContentRequestTypes) }
+        { "valuelike", new MacroDescription("vv", "ValueLike", ContentRequestTypes) },
+        //WARN: permission limiting could be very dangerous! Make sure that no matter how the user uses
+        //this, they still ONLY get the stuff they're allowed to read!
+        { "permissionlimit", new MacroDescription("vf", "PermissionLimit", new List<RequestType> {
+            RequestType.content,
+            RequestType.page,
+            RequestType.file,
+            RequestType.module,
+            RequestType.comment
+        }) }
     };
 
     public GenericSearcher(ILogger<GenericSearcher> logger, ContentApiDbConnection connection,
@@ -153,6 +164,39 @@ public class GenericSearcher : IGenericSearch
         return $"CASE {fieldName} {string.Join(" ", whens)} ELSE 'unknown' END as {outputName}";
     }
 
+    public string KeywordLike(SearchRequestPlus request, string value)
+    {
+        var typeInfo = typeService.GetTypeInfo<ContentKeyword>();
+        return $@"{MainAlias}.id in 
+            (select {nameof(ContentKeyword.contentId)} 
+             from {typeInfo.database} 
+             where {nameof(ContentKeyword.value)} like {value}
+            )";
+    }
+
+    public string ValueLike(SearchRequestPlus request, string key, string value)
+    {
+        var typeInfo = typeService.GetTypeInfo<ContentValue>();
+        return $@"{MainAlias}.id in 
+            (select {nameof(ContentValue.contentId)} 
+             from {typeInfo.database} 
+             where {nameof(ContentValue.key)} like {key} 
+               and {nameof(ContentValue.value)} like {value}
+            )";
+    }
+
+    //For now, this is JUST read limit!!
+    public string PermissionLimit(SearchRequestPlus request, string requester, string idField)
+    {
+        var typeInfo = typeService.GetTypeInfo<ContentPermission>();
+        return $@"{MainAlias}.{idField} in 
+            (select {nameof(ContentPermission.contentId)} 
+             from {typeInfo.database} 
+             where {nameof(ContentPermission.userId)} in (0,{requester})
+               and {nameof(ContentPermission.read)} = 1
+            )";
+    }
+
     /// <summary>
     /// Throw exceptions on any funky business we can quickly report
     /// </summary>
@@ -169,7 +213,7 @@ public class GenericSearcher : IGenericSearch
         };
 
         //Do a (hopefully) quick lookup for the request user!
-        if(requestUserId != 0)
+        if(requestUserId > 0)
         {
             try
             {
@@ -351,7 +395,10 @@ public class GenericSearcher : IGenericSearch
         if(args.Count != macDef.argumentTypes.Count)
             throw new ArgumentException($"Expected {macDef.argumentTypes.Count} arguments for macro {m} in '{request.name}', found {args.Count}");
         
-        var argVals = new List<string>();
+        //Parameters start with the request, always
+        var argVals = new List<object?>() {
+            request
+        };
 
         for(var i = 0; i < args.Count; i++)
         {
@@ -376,7 +423,7 @@ public class GenericSearcher : IGenericSearch
         }
 
         //At this point, we have the macro function info, so we can just call it
-        return (string)(macDef.macroMethod.Invoke(this, args.Cast<object?>().ToArray()) ?? 
+        return (string)(macDef.macroMethod.Invoke(this, args.ToArray()) ?? 
             throw new InvalidOperationException($""));
     }
 
@@ -459,29 +506,20 @@ public class GenericSearcher : IGenericSearch
         }
     }
 
-    //All searches are reads, don't need to open the connection OR set up transactions, wow.
-    public async Task<Dictionary<string, IEnumerable<IDictionary<string, object>>>> Search(SearchRequests requests, long 
-        requestUserId = 0)
+    protected async Task<Dictionary<string, IEnumerable<IDictionary<string, object>>>> SearchBase(
+        List<SearchRequestPlus> requests, long requestUserId, Dictionary<string, object> parameterValues)
     {
         var result = new Dictionary<string, IEnumerable<IDictionary<string, object>>>();
-        var parameterValues = new Dictionary<string, object>(requests.values);
         var queryStr = new StringBuilder();
 
-        //Before wasting the user's time on useless junk, check some simple stuff
-        //Might look silly to do this loop twice but whatever, be nice to the users
-        var requestsPlus = await RequestPreparseAsync(requests, requestUserId);
-
         //Nothing to do!
-        if(requestsPlus.Count == 0)
+        if(requests.Count == 0)
         {
             logger.LogWarning($"User {requestUserId} sent empty search request!");
             return result;
         }
 
-        //Now add the requester to the parameter values!
-        parameterValues.Add(requestsPlus.First().RequesterKey(), requestUserId);
-
-        foreach(var request in requestsPlus)
+        foreach(var request in requests)
         {
             queryStr.Clear();
 
@@ -510,6 +548,9 @@ public class GenericSearcher : IGenericSearch
             var dp = new DynamicParameters(parameterValues);
             var qresult = (await dbcon.QueryAsync(sql, dp)).Cast<IDictionary<string, object>>();
 
+            //Just because we got the qresult doesn't mean we can stop! if it's content, we need
+            //to fill in the values, keywords, and permissions!
+
             //Add the results to the USER results, AND add it to our list of values so it can
             //be used in chaining. It's just a reference, don't worry about duplication or whatever.
             result.Add(request.name, qresult);
@@ -517,5 +558,38 @@ public class GenericSearcher : IGenericSearch
         }
 
         return result;
+    }
+
+    //A restricted search doesn't allow you to retrieve results that the given request user can't read
+    public async Task<Dictionary<string, IEnumerable<IDictionary<string, object>>>> SearchRestricted(SearchRequests requests, 
+        long requestUserId = 0)
+    {
+        var requestsPlus = await RequestPreparseAsync(requests, requestUserId);
+
+        foreach(var reqplus in requestsPlus)
+        {
+            //This is VERY important: limit content searches based on permissions!
+            if(ContentRequestTypes.Contains(reqplus.requestType))
+                reqplus.query = CombineQueryClause(reqplus.query, $"!permissionlimit(@{reqplus.RequesterKey()}, id)");
+            else if(reqplus.requestType == RequestType.comment) //ALSO MODULEMESSAGE!@!
+                reqplus.query = CombineQueryClause(reqplus.query, $"!permissionlimit(@{reqplus.RequesterKey()}, contentId)");
+        }
+
+        var parameterValues = new Dictionary<string, object>(requests.values);
+
+        //Now add the requester to the parameter values!
+        parameterValues.Add(requestsPlus.First().RequesterKey(), requestUserId);
+
+        return await SearchBase(requestsPlus, requestUserId, parameterValues);
+    }
+
+    //All searches are reads, don't need to open the connection OR set up transactions, wow.
+    public async Task<Dictionary<string, IEnumerable<IDictionary<string, object>>>> Search(SearchRequests requests)
+    {
+        //Before wasting the user's time on useless junk, check some simple stuff
+        //Might look silly to do this loop twice but whatever, be nice to the users
+        var requestsPlus = await RequestPreparseAsync(requests, -1);
+
+        return await SearchBase(requestsPlus, -1, new Dictionary<string, object>(requests.values));
     }
 }

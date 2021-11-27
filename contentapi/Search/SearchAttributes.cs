@@ -6,6 +6,8 @@ public class SearchableAttribute : System.Attribute
     public SearchableAttribute() {  }  
 }  
 
+//This is used for properties that you do NOT ever select from the database, they're just 
+//'always' available. Not sure if this will work with the new system...
 [System.AttributeUsage(System.AttributeTargets.Property)]
 public class ComputedAttribute : System.Attribute  
 {  

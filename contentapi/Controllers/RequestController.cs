@@ -32,7 +32,7 @@ public class RequestController : BaseController
             var sw = new Stopwatch();
 
             sw.Start();
-            var data = await searcher.Search(search);
+            var data = await searcher.SearchRestricted(search);
             sw.Stop();
 
             return new RequestResponse()

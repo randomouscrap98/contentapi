@@ -102,7 +102,7 @@ public class SearchQueryParserTest : UnitTestBase, IClassFixture<SearchQueryPars
         string result = "";
         try
         {
-            result = parser.ParseQuery(query, f => f, v => v);
+            result = parser.ParseQuery(query, f => f, v => v, (m,a) => "");
             Assert.True(success, $"Query '{query}' was supposed to fail!");
         }
         catch(Exception ex)
@@ -140,7 +140,7 @@ public class SearchQueryParserTest : UnitTestBase, IClassFixture<SearchQueryPars
         string result = "";
         try
         {
-            result = parser.ParseQuery(query, f => f, v => v);
+            result = parser.ParseQuery(query, f => f, v => v, (m,a) => $"{m}({a})");
             Assert.True(expected != null, $"Query '{query}' was supposed to fail!");
         }
         catch(Exception ex)
