@@ -285,7 +285,7 @@ public class GenericSearcher : IGenericSearch
             if(string.IsNullOrWhiteSpace(r.typeInfo.fieldRemap[fieldName]))
                 return "";
             else
-                return $"{r.typeInfo.fieldRemap[fieldName]} as {fieldName}";
+                return $"{r.typeInfo.fieldRemap[fieldName]} AS {fieldName}";
         }
         //Just a basic fieldname replacement
         else
@@ -317,23 +317,6 @@ public class GenericSearcher : IGenericSearch
         else if (!string.IsNullOrWhiteSpace(clause))
             return $"({baseQuery}) AND ({clause})";
         return baseQuery; 
-    }
-
-    /// <summary>
-    /// This method adds a 'standard' select for regular searches against simple
-    /// single table queries. For instance, it might be "SELECT id,username FROM users "
-    /// </summary>
-    /// <param name="queryStr"></param>
-    /// <param name="r"></param>
-    public void AddStandardSelect(StringBuilder queryStr, SearchRequestPlus r)
-    {
-        var fieldSelect = r.requestFields.Select(x => StandardFieldRemap(x, r)).Where(x => !string.IsNullOrEmpty(x)).ToList();
-
-        queryStr.Append("SELECT ");
-        queryStr.Append(string.Join(",", fieldSelect));
-        queryStr.Append(" FROM ");
-        queryStr.Append(r.typeInfo.database ?? throw new InvalidOperationException($"Standard select {r.type} doesn't map to database table in request {r.name}!"));
-        queryStr.Append($" AS {MainAlias} ");
     }
 
     public string ParseField(string field, SearchRequestPlus request)
@@ -442,6 +425,11 @@ public class GenericSearcher : IGenericSearch
             throw new InvalidOperationException($""));
     }
 
+    public async Task<IEnumerable<IDictionary<string, object>>> QueryAsyncCast(string query, object parameters)
+    {
+        return (await dbcon.QueryAsync(query, parameters)).Cast<IDictionary<string, object>>();
+    }
+
     /// <summary>
     /// This method performs a "standard" user-query parse and adds the generated sql to the 
     /// given queryStr, along with any missing parameters that were able to be computed.
@@ -476,6 +464,24 @@ public class GenericSearcher : IGenericSearch
             throw new ArgumentException($"Parse  error: {ex.Message}");
         }
     }
+
+    /// <summary>
+    /// This method adds a 'standard' select for regular searches against simple
+    /// single table queries. For instance, it might be "SELECT id,username FROM users "
+    /// </summary>
+    /// <param name="queryStr"></param>
+    /// <param name="r"></param>
+    public void AddStandardSelect(StringBuilder queryStr, SearchRequestPlus r)
+    {
+        var fieldSelect = r.requestFields.Select(x => StandardFieldRemap(x, r)).Where(x => !string.IsNullOrEmpty(x)).ToList();
+
+        queryStr.Append("SELECT ");
+        queryStr.Append(string.Join(",", fieldSelect));
+        queryStr.Append(" FROM ");
+        queryStr.Append(r.typeInfo.database ?? throw new InvalidOperationException($"Standard select {r.type} doesn't map to database table in request {r.name}!"));
+        queryStr.Append($" AS {MainAlias} ");
+    }
+
 
     /// <summary>
     /// Assuming a query that can be limited simply, this adds the necessary LIMIT, OFFSET,
@@ -521,6 +527,50 @@ public class GenericSearcher : IGenericSearch
         }
     }
 
+    public async Task AddExtraFields(SearchRequestPlus r, IEnumerable<IDictionary<string, object>> result)
+    {
+        if(ContentRequestTypes.Contains(r.requestType))
+        {
+            const string keykey = nameof(ContentView.keywords);
+            const string valkey = nameof(ContentView.values);
+            const string permkey = nameof(ContentView.permissions);
+            const string cidkey = nameof(Db.ContentKeyword.contentId); //WARN: assuming it's the same for all!
+            var ids = result.Select(x => x["id"]);
+
+            if(r.requestFields.Contains(keykey))
+            {
+                var keyinfo = typeService.GetTypeInfo<Db.ContentKeyword>();
+                var keywords = await QueryAsyncCast($"select {cidkey},value from {keyinfo.database} where {cidkey} in @ids",
+                    new { ids = ids });
+
+                foreach(var c in result)
+                    c[keykey] = keywords.Where(x => x[cidkey] == c["id"]).Select(x => x["value"]).ToList();
+            }
+            if(r.requestFields.Contains(valkey))
+            {
+                var valinfo = typeService.GetTypeInfo<Db.ContentValue>();
+                var values = await QueryAsyncCast($"select {cidkey},key,value from {valinfo.database} where {cidkey} in @ids",
+                    new { ids = ids });
+
+                foreach(var c in result)
+                    c[valkey] = values.Where(x => x[cidkey] == c["id"]).ToDictionary(x => x["key"], y => y["value"]);
+            }
+            if(r.requestFields.Contains(permkey))
+            {
+                var perminfo = typeService.GetTypeInfo<Db.ContentPermission>();
+                var permissions = await QueryAsyncCast($"select * from {perminfo.database} where {cidkey} in @ids",
+                    new { ids = ids });
+
+                foreach(var c in result)
+                {
+                    //TODO: May need to move this conversion somewhere else... not sure
+                    c[permkey] = permissions.Where(x => x[cidkey] == c["id"]).ToDictionary(
+                        x => x["userId"], y => $"{(y["create"].Equals(1)?"C":"")}{(y["read"].Equals(1)?"R":"")}{(y["update"].Equals(1)?"U":"")}{(y["delete"].Equals(1)?"D":"")}");
+                }
+            }
+        }
+    }
+
     //A basic search doesn't have a concept of a "request user" or permissions, those are set up
     //prior to this. This function just wants to build a query based on what you give it
     protected async Task<Dictionary<string, IEnumerable<IDictionary<string, object>>>> SearchBase(
@@ -560,10 +610,11 @@ public class GenericSearcher : IGenericSearch
             logger.LogDebug($"Running SQL for {request.type}({request.name}): {sql}");
 
             var dp = new DynamicParameters(parameterValues);
-            var qresult = (await dbcon.QueryAsync(sql, dp)).Cast<IDictionary<string, object>>();
+            var qresult = await QueryAsyncCast(sql, dp);
 
             //Just because we got the qresult doesn't mean we can stop! if it's content, we need
             //to fill in the values, keywords, and permissions!
+            await AddExtraFields(request, qresult);
 
             //Add the results to the USER results, AND add it to our list of values so it can
             //be used in chaining. It's just a reference, don't worry about duplication or whatever.

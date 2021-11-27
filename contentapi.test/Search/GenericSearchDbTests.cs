@@ -407,39 +407,63 @@ public class GenericSearchDbTests : UnitTestBase, IClassFixture<DbUnitTestSearch
         Assert.Equal(fixture.ContentCount / 4 / 2, result.Count());
     }
 
-    //[Fact]
-    //public void GenericSearch_Search_SimpleLink()
-    //{
-    //    var search = new SearchRequests();
-    //    search.values.Add("pagedate", DateTime.Now.AddDays(-20).ToString());
-    //    search.requests.Add(new SearchRequest()
-    //    {
-    //        name = "recentpages",
-    //        type = "page",
-    //        fields = "id, name, createUserId, createDate",
-    //        query = "createDate > @pagedate"
-    //    });
-    //    search.requests.Add(new SearchRequest()
-    //    {
-    //        name = "createusers",
-    //        type = "user",
-    //        fields = "id, username, special, avatar",
-    //        query = "id in @recentpages.createUserId"
-    //    });
+    [Fact]
+    public async Task GenericSearch_Search_LexerKeywordPrefix()
+    {
+        var search = new SearchRequests();
 
-    //    var result = service.Search(search).Result;
-    //    Assert.Contains("recentpages", result.Keys);
-    //    Assert.Contains("createusers", result.Keys);
-    //    Assert.Equal(2, result["recentpages"].Count());
-    //    Assert.Equal(2, result["createusers"].Count());
-    //    Assert.Single(result["createusers"].Where(x => 
-    //        x["id"].Equals(1L) && x["username"].Equals("firstUser")));
-    //    Assert.Single(result["createusers"].Where(x => 
-    //        x["id"].Equals(2L) && x["username"].Equals("admin")));
-    //    //Assert.Equal("admin", user["username"]);
-    //    //Assert.Equal(1L, user["avatar"]);
-    //    //Assert.Equal("cutenickname", user["special"]);
-    //}
+        var keywords = new[] { "and", "or", "not", "in", "like" };
+
+        foreach(var k in keywords)
+        {
+            search.values.Add($"{k}ids", new int[] { 1, 10, 15 });
+            search.requests.Add(new SearchRequest()
+            {
+                name = $"{k}test",
+                type = "user",
+                fields = "id",
+                query = $"id not in @{k}ids"
+            });
+        }
+        //Here, I'm using a keyword as the start of different names. This would normally fail
+        //in the regular lexer, but with the additions, it will allow this to work(?)
+
+        var result = await service.Search(search);
+        foreach(var k in keywords)
+        {
+            var r = result[$"{k}test"];
+            Assert.Equal(fixture.UserCount - 3, r.Count());
+            Assert.DoesNotContain(1L, r.Select(x => x["id"]));
+            Assert.DoesNotContain(10L, r.Select(x => x["id"]));
+            Assert.DoesNotContain(15L, r.Select(x => x["id"]));
+        }
+    }
+
+    [Fact]
+    public async Task GenericSearch_Search_PermissionDefault()
+    {
+        var search = new SearchRequests();
+        search.requests.Add(new SearchRequest()
+        {
+            name = "permissiondefault",
+            type = "content",
+            fields = "*"
+        });
+
+        var result = (await service.SearchRestricted(search))["permissiondefault"];
+        //var castedResult = ;
+
+        //Because the permission thing "all or none" is just based on a bit, it will
+        //always be HALF of the content that we're allowed to get. The ID should also
+        //be related to the ones that have it.
+        Assert.Equal(fixture.ContentCount / 2, result.Count());
+        Assert.All(result, x =>
+        {
+            //Minus 1 because the database ids start at 1
+            Assert.True(((((long)x["id"]) - 1) & (int)ContentVariations.AccessByAll) > 0);
+            //Assert.Contains(x["permissions"].Keys)
+        });
+    }
 
     ////This test tests a LOT of systems all at once! Does the macro system work?
     ////Does the search system automatically limit, and does it do it correctly?
