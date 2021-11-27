@@ -75,8 +75,6 @@ public class GenericSearcher : IGenericSearch
 
     //These fields are too difficult to modify with the attributes, so we do it in code here
     protected readonly Dictionary<(RequestType, string),string> StandardModifiedFields = new Dictionary<(RequestType, string), string> {
-        { (RequestType.content, LastPostDateField), $"(select createDate from comments where {MainAlias}.id = contentId order by id desc limit 1) as {LastPostDateField}" },
-        { (RequestType.content, LastPostIdField), $"(select id from comments where {MainAlias}.id = contentId order by id desc limit 1) as {LastPostIdField}" },
         { (RequestType.file, QuantizationField), $"(select value from content_values where {MainAlias}.id = contentId and key='{QuantizationField}' limit 1) as {QuantizationField}" },
         { (RequestType.module, DescriptionField), $"(select value from content_values where {MainAlias}.id = contentId and key='{DescriptionField}' limit 1) as {DescriptionField}" },
         { (RequestType.user, "registered"), $"(registrationKey IS NULL) as registered" }
@@ -145,15 +143,15 @@ public class GenericSearcher : IGenericSearch
         this.mapper = mapper;
         this.parser = parser;
 
-        //Duplicate some fields
-        var lpdSelect = StandardModifiedFields[(RequestType.content, LastPostDateField)];
-        StandardModifiedFields.Add((RequestType.file, LastPostDateField), lpdSelect);
-        StandardModifiedFields.Add((RequestType.page, LastPostDateField), lpdSelect);
-        StandardModifiedFields.Add((RequestType.module, LastPostDateField), lpdSelect);
-
+        //Because of how content is, we need to add these content fields to all things
         foreach(var type in ContentRequestTypes)
         {
-            StandardModifiedFields.Add((type, InternalTypeStringField), EnumToCase<InternalContentType>(nameof(Db.Content.internalType), InternalTypeStringField));
+            StandardModifiedFields.Add((type, InternalTypeStringField), 
+                EnumToCase<InternalContentType>(nameof(Db.Content.internalType), InternalTypeStringField));
+            StandardModifiedFields.Add((type, LastPostDateField), 
+                $"(select createDate from comments where {MainAlias}.id = contentId order by id desc limit 1) as {LastPostDateField}");
+            StandardModifiedFields.Add((type, LastPostIdField), 
+                $"(select id from comments where {MainAlias}.id = contentId order by id desc limit 1) as {LastPostIdField}");
         }
     }
 
@@ -506,18 +504,17 @@ public class GenericSearcher : IGenericSearch
         }
     }
 
+    //A basic search doesn't have a concept of a "request user" or permissions, those are set up
+    //prior to this. This function just wants to build a query based on what you give it
     protected async Task<Dictionary<string, IEnumerable<IDictionary<string, object>>>> SearchBase(
-        List<SearchRequestPlus> requests, long requestUserId, Dictionary<string, object> parameterValues)
+        List<SearchRequestPlus> requests, Dictionary<string, object> parameterValues)
     {
         var result = new Dictionary<string, IEnumerable<IDictionary<string, object>>>();
         var queryStr = new StringBuilder();
 
         //Nothing to do!
         if(requests.Count == 0)
-        {
-            logger.LogWarning($"User {requestUserId} sent empty search request!");
             return result;
-        }
 
         foreach(var request in requests)
         {
@@ -580,7 +577,7 @@ public class GenericSearcher : IGenericSearch
         //Now add the requester to the parameter values!
         parameterValues.Add(requestsPlus.First().RequesterKey(), requestUserId);
 
-        return await SearchBase(requestsPlus, requestUserId, parameterValues);
+        return await SearchBase(requestsPlus, parameterValues);
     }
 
     //All searches are reads, don't need to open the connection OR set up transactions, wow.
@@ -590,6 +587,6 @@ public class GenericSearcher : IGenericSearch
         //Might look silly to do this loop twice but whatever, be nice to the users
         var requestsPlus = await RequestPreparseAsync(requests, -1);
 
-        return await SearchBase(requestsPlus, -1, new Dictionary<string, object>(requests.values));
+        return await SearchBase(requestsPlus, new Dictionary<string, object>(requests.values));
     }
 }
