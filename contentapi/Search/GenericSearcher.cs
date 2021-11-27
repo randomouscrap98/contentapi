@@ -423,7 +423,7 @@ public class GenericSearcher : IGenericSearch
         }
 
         //At this point, we have the macro function info, so we can just call it
-        return (string)(macDef.macroMethod.Invoke(this, args.ToArray()) ?? 
+        return (string)(macDef.macroMethod.Invoke(this, argVals.ToArray()) ?? 
             throw new InvalidOperationException($""));
     }
 

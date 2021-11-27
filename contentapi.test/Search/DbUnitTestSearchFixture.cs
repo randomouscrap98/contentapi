@@ -6,9 +6,15 @@ using Microsoft.Extensions.Logging;
 
 namespace contentapi.test;
 
-public class DbUnitTestFixture : DbUnitTestBase, IDisposable
+public class DbUnitTestSearchFixture : DbUnitTestBase, IDisposable
 {
-    public DbUnitTestFixture()
+    public const int basicUser = 1;
+    public const int adminUser = 2;
+    public const int carlUser = 3;
+    public const int basicPage = 1;
+    public const int adminPage = 2;
+
+    public DbUnitTestSearchFixture()
     {
         logger.LogDebug($"Adding users to database {MasterConnectionString}");
 
@@ -19,12 +25,6 @@ public class DbUnitTestFixture : DbUnitTestBase, IDisposable
         {
             using(var tsx = conn.BeginTransaction())
             {
-                const int basicUser = 1;
-                const int adminUser = 2;
-                const int carlUser = 3;
-                const int basicPage = 1;
-                const int adminPage = 2;
-
                 var users = new List<Db.User> {
                     new Db.User() {
                         username = "firstUser",
@@ -96,6 +96,12 @@ public class DbUnitTestFixture : DbUnitTestBase, IDisposable
                 };
 
                 var permissions = new List<Db.ContentPermission> {
+                    new Db.ContentPermission()
+                    {
+                        contentId = basicPage,
+                        userId = 0,
+                        create = true, read = true
+                    },
                     new Db.ContentPermission()
                     {
                         contentId = adminPage,
