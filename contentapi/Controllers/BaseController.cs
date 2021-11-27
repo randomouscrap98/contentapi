@@ -34,9 +34,16 @@ public class BaseController : Controller
         {
             return await perform();
         }
-        catch(ArgumentException ex)
+        catch(Exception ex)
         {
-            return BadRequest($"Argument error: {ex.Message}");
+            if(ex is AggregateException)
+                ex = ex.InnerException ?? throw new InvalidOperationException("Aggregate exception did not have inner exception!", ex); //Grab the first inner exception
+
+            if(ex is ArgumentException)
+                return BadRequest($"Argument error: {ex.Message}");
+            
+            //Just rethrow if we couldn't figure out what it was.
+            throw;
         }
     }
 }

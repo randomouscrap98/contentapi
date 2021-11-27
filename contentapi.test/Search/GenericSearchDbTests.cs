@@ -1,6 +1,7 @@
 using System;
 using System.Data;
 using System.Linq;
+using System.Threading.Tasks;
 using AutoMapper;
 using contentapi.Db;
 using contentapi.Search;
@@ -178,7 +179,7 @@ public class GenericSearchDbTests : UnitTestBase, IClassFixture<DbUnitTestSearch
         search.values.Add("id", 10);
         search.requests.Add(new SearchRequest()
         {
-            name = "notequal",
+            name = "noequal", //can't have keywords in names for now, oops
             type = "user",
             fields = "id",
             query = "id <> @id"
@@ -186,38 +187,134 @@ public class GenericSearchDbTests : UnitTestBase, IClassFixture<DbUnitTestSearch
 
         var result = service.Search(search).Result;
 
-        Assert.Equal(fixture.UserCount - 1, result["notequal"].Count());
-        Assert.All(result["notequal"], x =>
+        Assert.Equal(fixture.UserCount - 1, result["noequal"].Count());
+        Assert.All(result["noequal"], x =>
         {
             //Make sure that one we didn't want wasn't included
             Assert.NotEqual(10L, x["id"]);
         });
     }
 
-    //[Fact]
-    //public void GenericSearch_Search_SimpleValue()
-    //{
-    //    var search = new SearchRequests();
-    //    search.values.Add("userlike", "admin%");
-    //    search.requests.Add(new SearchRequest()
-    //    {
-    //        name = "testValue",
-    //        type = "user",
-    //        fields = "id, username, special, avatar",
-    //        query = "username like @userlike" //Don't need to test syntax btw! Already done!
-    //    });
+    [Fact]
+    public void GenericSearch_Search_Like()
+    {
+        var search = new SearchRequests();
+        search.values.Add("userlike", "user_1%");
+        search.requests.Add(new SearchRequest()
+        {
+            name = "testlike",
+            type = "user",
+            fields = "id",
+            query = "username like @userlike"
+        });
 
-    //    //var result = (IEnumerable<object>)service.Search(search).Result["testValue"];
-    //    //Assert.Single(result);
-    //    //var user = (IDictionary<string, object>)result.First();
-    //    var result = service.Search(search).Result["testValue"];
-    //    Assert.Single(result);
-    //    var user = result.First();
-    //    Assert.Equal("admin", user["username"]);
-    //    Assert.Equal(1L, user["avatar"]);
-    //    Assert.Equal("cutenickname", user["special"]);
-    //}
+        var result = service.Search(search).Result["testlike"];
+        Assert.Equal(7, result.Count()); //There are 16 users, so 6 from 10s and 1 from the 1
+        //Assert.Single(result);
+        //var user = result.First();
+        //Assert.Equal("admin", user["username"]);
+        //Assert.Equal(1L, user["avatar"]);
+        //Assert.Equal("cutenickname", user["special"]);
+    }
 
+    [Fact]
+    public void GenericSearch_Search_NotLike()
+    {
+        var search = new SearchRequests();
+        search.values.Add("usernotlike", "user_1%");
+        search.requests.Add(new SearchRequest()
+        {
+            name = "testnotlike",
+            type = "user",
+            fields = "id",
+            query = "username not like @usernotlike"
+        });
+
+        var result = service.Search(search).Result["testnotlike"];
+        Assert.Equal(fixture.UserCount - 7, result.Count()); //There are 16 users, so 6 from 10s and 1 from the 1
+    }
+
+    [Fact]
+    public void GenericSearch_Search_In()
+    {
+        var search = new SearchRequests();
+        search.values.Add("ids", new int[] { 1, 10, 15 });
+        search.requests.Add(new SearchRequest()
+        {
+            name = "idin",
+            type = "user",
+            fields = "id",
+            query = "id in @ids"
+        });
+
+        var result = service.Search(search).Result["idin"];
+        Assert.Equal(3, result.Count()); //There are 16 users, so 6 from 10s and 1 from the 1
+        Assert.Contains(1L, result.Select(x => x["id"]));
+        Assert.Contains(10L, result.Select(x => x["id"]));
+        Assert.Contains(15L, result.Select(x => x["id"]));
+    }
+
+    [Fact]
+    public void GenericSearch_Search_NotIn()
+    {
+        var search = new SearchRequests();
+        search.values.Add("ids", new int[] { 1, 10, 15 });
+        search.requests.Add(new SearchRequest()
+        {
+            name = "idnotin",
+            type = "user",
+            fields = "id",
+            query = "id not in @ids"
+        });
+
+        var result = service.Search(search).Result["idnotin"];
+        Assert.Equal(fixture.UserCount - 3, result.Count()); //There are 16 users, so 6 from 10s and 1 from the 1
+        Assert.DoesNotContain(1L, result.Select(x => x["id"]));
+        Assert.DoesNotContain(10L, result.Select(x => x["id"]));
+        Assert.DoesNotContain(15L, result.Select(x => x["id"]));
+    }
+
+    [Fact]
+    public async Task GenericSearch_Search_FailGracefully_NameValueCollision()
+    {
+        //The exact setup that produced the failure, oops
+        var search = new SearchRequests();
+        search.values.Add("idin", new int[] { 1, 10, 15 });
+        search.requests.Add(new SearchRequest()
+        {
+            name = "idin",
+            type = "user",
+            fields = "id",
+            query = "id in @idin"
+        });
+
+        await Assert.ThrowsAnyAsync<ArgumentException>(async () => {
+            var result = await service.Search(search);
+        });
+    }
+
+    [Fact]
+    public async Task GenericSearch_Search_FailGracefully_DuplicateNames()
+    {
+        //The exact setup that produced the failure, oops
+        var search = new SearchRequests();
+        search.requests.Add(new SearchRequest()
+        {
+            name = "idin",
+            type = "user",
+            fields = "id"
+        });
+        search.requests.Add(new SearchRequest()
+        {
+            name = "idin",
+            type = "content",
+            fields = "id"
+        });
+
+        await Assert.ThrowsAnyAsync<ArgumentException>(async () => {
+            var result = await service.Search(search);
+        });
+    }
 
     //[Fact]
     //public void GenericSearch_Search_SimpleLink()

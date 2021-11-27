@@ -238,6 +238,12 @@ public class GenericSearcher : IGenericSearch
             //just regular identifiers, like in a programming language.
             if(!parser.IsFieldNameValid(request.name))
                 throw new ArgumentException($"Malformed name '{request.name}'");
+
+            if(requests.values.ContainsKey(request.name))
+                throw new ArgumentException($"Key/name collision: request named {request.name}, which is also provided value");
+
+            if(requests.requests.Count(x => x.name == request.name) > 1)
+                throw new ArgumentException($"Name collision: request named {request.name} shows up twice!");
             
             //Now do some pre-parsing and data retrieval. If one of these fail, it's good that it
             //fails early (although it will only fail if me, the programmer, did something wrong,
