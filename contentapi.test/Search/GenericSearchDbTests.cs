@@ -90,6 +90,7 @@ public class GenericSearchDbTests : UnitTestBase, IClassFixture<DbUnitTestSearch
         Assert.Equal(fixture.UserCount / 2, castResult.Where(x => x.special != null).Count());
     }
 
+    //This tests both content automapping AND whether or not the content fields are actually pulled...
     [Fact]
     public async Task GenericSearch_ToStronglyTyped_Content_ExtraFields()
     {
@@ -124,6 +125,11 @@ public class GenericSearchDbTests : UnitTestBase, IClassFixture<DbUnitTestSearch
         //These two test whether or not the system pulls in the extra values!!
         Assert.Equal(fixture.ContentCount / 2, castResult.Where(x => x.keywords.Count > 0).Count());
         Assert.Equal(fixture.ContentCount / 2, castResult.Where(x => x.values.Count > 0).Count());
+        Assert.Equal(fixture.ContentCount / 2, castResult.Where(x => x.permissions.Where(x => x.Key == 0).Count() > 0).Count());
+        Assert.Equal(fixture.ContentCount / 2, castResult.Where(x => x.permissions.Where(x => x.Key != 0 && ((x.Key - 1) & (int)UserVariations.Super) > 0).Count() > 0).Count());
+        //Note for supers: the super permission given to each content is the content id with the user super bit
+        //set modulo the user count. Thus, basically, the keys should all have the super bit set. But, subtract one
+        //because database IDs are plus one.
     }
 
     [Fact]
@@ -518,17 +524,18 @@ public class GenericSearchDbTests : UnitTestBase, IClassFixture<DbUnitTestSearch
         });
 
         var result = (await service.SearchRestricted(search))["permissiondefault"];
-        //var castedResult = ;
+        var castResult = service.ToStronglyTyped<ContentView>(result);
 
         //Because the permission thing "all or none" is just based on a bit, it will
         //always be HALF of the content that we're allowed to get. The ID should also
         //be related to the ones that have it.
         Assert.Equal(fixture.ContentCount / 2, result.Count());
-        Assert.All(result, x =>
+        Assert.All(castResult, x =>
         {
             //Minus 1 because the database ids start at 1
-            Assert.True(((((long)x["id"]) - 1) & (int)ContentVariations.AccessByAll) > 0);
-            //Assert.Contains(x["permissions"].Keys)
+            Assert.True(((x.id - 1) & (int)ContentVariations.AccessByAll) > 0);
+            Assert.Contains(0, x.permissions.Keys);
+            Assert.Contains("R", x.permissions[0]);
         });
     }
 

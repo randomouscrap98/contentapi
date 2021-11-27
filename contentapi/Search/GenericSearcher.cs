@@ -558,14 +558,14 @@ public class GenericSearcher : IGenericSearch
             if(r.requestFields.Contains(permkey))
             {
                 var perminfo = typeService.GetTypeInfo<Db.ContentPermission>();
-                var permissions = await QueryAsyncCast($"select * from {perminfo.database} where {cidkey} in @ids",
+                var permissions = await dbcon.QueryAsync($"select * from {perminfo.database} where {cidkey} in @ids",
                     new { ids = ids });
 
                 foreach(var c in result)
                 {
                     //TODO: May need to move this conversion somewhere else... not sure
-                    c[permkey] = permissions.Where(x => x[cidkey].Equals(c["id"])).ToDictionary(
-                        x => x["userId"], y => $"{(y["create"].Equals(1)?"C":"")}{(y["read"].Equals(1)?"R":"")}{(y["update"].Equals(1)?"U":"")}{(y["delete"].Equals(1)?"D":"")}");
+                    c[permkey] = permissions.Where(x => x.contentId.Equals(c["id"])).ToDictionary(
+                        x => x.userId, y => $"{(y.create==1?"C":"")}{(y.read==1?"R":"")}{(y.update==1?"U":"")}{(y.delete==1?"D":"")}");
                 }
             }
         }
