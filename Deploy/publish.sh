@@ -16,8 +16,8 @@ fi
 
 # space separated
 deploy="Deploy"
-copyfolders="$deploy/dbmigrate.sh $deploy/dbMigrations"
-removefiles="ignore uploads content.db dbMigrations/*.done"
+copyfolders="$deploy/dbmigrate.sh $deploy/dbmigrations"
+removefiles="ignore uploads content.db dbmigrations/*.done"
 
 # Eventually, may include some kind of language system
 # copyfolders="$deploy/LanguageFiles $deploy/dbmigrate.sh $projectdata/dbMigrations"

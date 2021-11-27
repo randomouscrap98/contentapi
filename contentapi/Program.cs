@@ -98,6 +98,11 @@ var app = builder.Build();
 // I ALWAYS want swagger, no matter what environment it is
 app.UseSwagger();
 app.UseSwaggerUI();
+//c =>
+//{
+//    c.SwaggerEndpoint("/swagger/v1/swagger.json", "My API V1");
+//    c.RoutePrefix = "api";
+//});
 
 app.UseCors(builder =>
 {

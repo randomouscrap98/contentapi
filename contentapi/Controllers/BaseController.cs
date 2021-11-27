@@ -15,7 +15,7 @@ public class BaseControllerServices
 }
 
 [ApiController]
-[Route("[controller]")]
+[Route("api/[controller]")]
 public class BaseController : Controller
 {
     protected BaseControllerServices services;

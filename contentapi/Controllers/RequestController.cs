@@ -14,7 +14,7 @@ public class RequestResponse
 }
 
 [ApiController]
-[Route("[controller]")]
+//[Route("[controller]")]
 public class RequestController : BaseController
 {
     protected IGenericSearch searcher;
