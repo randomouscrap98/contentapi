@@ -59,107 +59,107 @@ public class GenericSearchDbTests : UnitTestBase, IClassFixture<DbUnitTestSearch
         }
     }
 
-    [Fact]
-    public void GenericSearch_Search_SimpleValue()
-    {
-        var search = new SearchRequests();
-        search.values.Add("userlike", "admin%");
-        search.requests.Add(new SearchRequest()
-        {
-            name = "testValue",
-            type = "user",
-            fields = "id, username, special, avatar",
-            query = "username like @userlike" //Don't need to test syntax btw! Already done!
-        });
+    //[Fact]
+    //public void GenericSearch_Search_SimpleValue()
+    //{
+    //    var search = new SearchRequests();
+    //    search.values.Add("userlike", "admin%");
+    //    search.requests.Add(new SearchRequest()
+    //    {
+    //        name = "testValue",
+    //        type = "user",
+    //        fields = "id, username, special, avatar",
+    //        query = "username like @userlike" //Don't need to test syntax btw! Already done!
+    //    });
 
-        //var result = (IEnumerable<object>)service.Search(search).Result["testValue"];
-        //Assert.Single(result);
-        //var user = (IDictionary<string, object>)result.First();
-        var result = service.Search(search).Result["testValue"];
-        Assert.Single(result);
-        var user = result.First();
-        Assert.Equal("admin", user["username"]);
-        Assert.Equal(1L, user["avatar"]);
-        Assert.Equal("cutenickname", user["special"]);
-    }
+    //    //var result = (IEnumerable<object>)service.Search(search).Result["testValue"];
+    //    //Assert.Single(result);
+    //    //var user = (IDictionary<string, object>)result.First();
+    //    var result = service.Search(search).Result["testValue"];
+    //    Assert.Single(result);
+    //    var user = result.First();
+    //    Assert.Equal("admin", user["username"]);
+    //    Assert.Equal(1L, user["avatar"]);
+    //    Assert.Equal("cutenickname", user["special"]);
+    //}
 
 
-    [Fact]
-    public void GenericSearch_Search_SimpleLink()
-    {
-        var search = new SearchRequests();
-        search.values.Add("pagedate", DateTime.Now.AddDays(-20).ToString());
-        search.requests.Add(new SearchRequest()
-        {
-            name = "recentpages",
-            type = "page",
-            fields = "id, name, createUserId, createDate",
-            query = "createDate > @pagedate"
-        });
-        search.requests.Add(new SearchRequest()
-        {
-            name = "createusers",
-            type = "user",
-            fields = "id, username, special, avatar",
-            query = "id in @recentpages.createUserId"
-        });
+    //[Fact]
+    //public void GenericSearch_Search_SimpleLink()
+    //{
+    //    var search = new SearchRequests();
+    //    search.values.Add("pagedate", DateTime.Now.AddDays(-20).ToString());
+    //    search.requests.Add(new SearchRequest()
+    //    {
+    //        name = "recentpages",
+    //        type = "page",
+    //        fields = "id, name, createUserId, createDate",
+    //        query = "createDate > @pagedate"
+    //    });
+    //    search.requests.Add(new SearchRequest()
+    //    {
+    //        name = "createusers",
+    //        type = "user",
+    //        fields = "id, username, special, avatar",
+    //        query = "id in @recentpages.createUserId"
+    //    });
 
-        var result = service.Search(search).Result;
-        Assert.Contains("recentpages", result.Keys);
-        Assert.Contains("createusers", result.Keys);
-        Assert.Equal(2, result["recentpages"].Count());
-        Assert.Equal(2, result["createusers"].Count());
-        Assert.Single(result["createusers"].Where(x => 
-            x["id"].Equals(1L) && x["username"].Equals("firstUser")));
-        Assert.Single(result["createusers"].Where(x => 
-            x["id"].Equals(2L) && x["username"].Equals("admin")));
-        //Assert.Equal("admin", user["username"]);
-        //Assert.Equal(1L, user["avatar"]);
-        //Assert.Equal("cutenickname", user["special"]);
-    }
+    //    var result = service.Search(search).Result;
+    //    Assert.Contains("recentpages", result.Keys);
+    //    Assert.Contains("createusers", result.Keys);
+    //    Assert.Equal(2, result["recentpages"].Count());
+    //    Assert.Equal(2, result["createusers"].Count());
+    //    Assert.Single(result["createusers"].Where(x => 
+    //        x["id"].Equals(1L) && x["username"].Equals("firstUser")));
+    //    Assert.Single(result["createusers"].Where(x => 
+    //        x["id"].Equals(2L) && x["username"].Equals("admin")));
+    //    //Assert.Equal("admin", user["username"]);
+    //    //Assert.Equal(1L, user["avatar"]);
+    //    //Assert.Equal("cutenickname", user["special"]);
+    //}
 
-    //This test tests a LOT of systems all at once! Does the macro system work?
-    //Does the search system automatically limit, and does it do it correctly?
-    //Can we actually retrieve the last post ID for all content while doing
-    //all this other stuff?? This is the MOST like a regular user search! If this
-    //is working correctly, chances are the whole system is at least MOSTLY working
-    [Fact]
-    public void GenericSearch_SearchRestricted()
-    {
-        var search = new SearchRequests();
-        search.requests.Add(new SearchRequest()
-        {
-            name = "allreadable",
-            type = "page",
-            fields = "id, name, createUserId, createDate, lastPostId"
-        });
-        search.requests.Add(new SearchRequest()
-        {
-            name = "createusers",
-            type = "user",
-            fields = "id, username, special, avatar",
-            query = "id in @allreadable.createUserId"
-        });
-        search.requests.Add(new SearchRequest()
-        {
-            name = "allcomments",
-            type = "comment",
-            fields = "id, text, contentId",
-            query = "contentId in @allreadable.id"
-        });
+    ////This test tests a LOT of systems all at once! Does the macro system work?
+    ////Does the search system automatically limit, and does it do it correctly?
+    ////Can we actually retrieve the last post ID for all content while doing
+    ////all this other stuff?? This is the MOST like a regular user search! If this
+    ////is working correctly, chances are the whole system is at least MOSTLY working
+    //[Fact]
+    //public void GenericSearch_SearchRestricted()
+    //{
+    //    var search = new SearchRequests();
+    //    search.requests.Add(new SearchRequest()
+    //    {
+    //        name = "allreadable",
+    //        type = "page",
+    //        fields = "id, name, createUserId, createDate, lastPostId"
+    //    });
+    //    search.requests.Add(new SearchRequest()
+    //    {
+    //        name = "createusers",
+    //        type = "user",
+    //        fields = "id, username, special, avatar",
+    //        query = "id in @allreadable.createUserId"
+    //    });
+    //    search.requests.Add(new SearchRequest()
+    //    {
+    //        name = "allcomments",
+    //        type = "comment",
+    //        fields = "id, text, contentId",
+    //        query = "contentId in @allreadable.id"
+    //    });
 
-        //Get results as the admin user! They don't have special read permissions for everything (that's
-        //not how supers work), but they have some private pages others can't read!
-        var result = service.SearchRestricted(search, DbUnitTestSearchFixture.adminUser).Result;
+    //    //Get results as the admin user! They don't have special read permissions for everything (that's
+    //    //not how supers work), but they have some private pages others can't read!
+    //    var result = service.SearchRestricted(search, DbUnitTestSearchFixture.adminUser).Result;
 
-        Assert.Contains("allreadable", result.Keys);
-        Assert.Contains("createusers", result.Keys);
-        Assert.Contains("allcomments", result.Keys);
-        //Assert.Equal(2, result["recentpages"].Count());
-        //Assert.Equal(2, result["createusers"].Count());
-        //Assert.Single(result["createusers"].Where(x => 
-        //    x["id"].Equals(1L) && x["username"].Equals("firstUser")));
-        //Assert.Single(result["createusers"].Where(x => 
-        //    x["id"].Equals(2L) && x["username"].Equals("admin")));
-    }
+    //    Assert.Contains("allreadable", result.Keys);
+    //    Assert.Contains("createusers", result.Keys);
+    //    Assert.Contains("allcomments", result.Keys);
+    //    //Assert.Equal(2, result["recentpages"].Count());
+    //    //Assert.Equal(2, result["createusers"].Count());
+    //    //Assert.Single(result["createusers"].Where(x => 
+    //    //    x["id"].Equals(1L) && x["username"].Equals("firstUser")));
+    //    //Assert.Single(result["createusers"].Where(x => 
+    //    //    x["id"].Equals(2L) && x["username"].Equals("admin")));
+    //}
 }
