@@ -42,4 +42,18 @@ public class RequestController : BaseController
             };
         });
     }
+
+    [HttpGet("about")]
+    public ActionResult<object> About()
+    {
+        return new {
+            about = "The 'request' endpoint replaces the chainer and longpoller endpoints from the previous api. " +
+                    "Because of the complexity of the request format, you now must POST to get results. " +
+                    "You can request data from any 'table', and the query is in a kind of SQL format rather than " +
+                    "search objects. You must name each request, because you can reference requests in later " +
+                    "requests to perform 'chaining'. You can use values in your query, but they must be parameters " +
+                    "in the form of @value. For examples, please see the unit tests in github: https://github.com/randomouscrap98/contentapi/blob/master/contentapi.test/Search/GenericSearchDbTests.cs",
+            details = searcher.GetAboutSearch()
+        };
+    }
 }

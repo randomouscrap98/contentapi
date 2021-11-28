@@ -13,4 +13,6 @@ public interface IGenericSearch
         long requestUserId = 0);
 
     List<T> ToStronglyTyped<T>(IEnumerable<IDictionary<string, object>> singleResults);
+
+    AboutSearch GetAboutSearch();
 }

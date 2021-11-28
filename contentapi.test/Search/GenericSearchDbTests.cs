@@ -539,48 +539,68 @@ public class GenericSearchDbTests : UnitTestBase, IClassFixture<DbUnitTestSearch
         });
     }
 
-    ////This test tests a LOT of systems all at once! Does the macro system work?
-    ////Does the search system automatically limit, and does it do it correctly?
-    ////Can we actually retrieve the last post ID for all content while doing
-    ////all this other stuff?? This is the MOST like a regular user search! If this
-    ////is working correctly, chances are the whole system is at least MOSTLY working
-    //[Fact]
-    //public void GenericSearch_SearchRestricted()
-    //{
-    //    var search = new SearchRequests();
-    //    search.requests.Add(new SearchRequest()
-    //    {
-    //        name = "allreadable",
-    //        type = "page",
-    //        fields = "id, name, createUserId, createDate, lastPostId"
-    //    });
-    //    search.requests.Add(new SearchRequest()
-    //    {
-    //        name = "createusers",
-    //        type = "user",
-    //        fields = "id, username, special, avatar",
-    //        query = "id in @allreadable.createUserId"
-    //    });
-    //    search.requests.Add(new SearchRequest()
-    //    {
-    //        name = "allcomments",
-    //        type = "comment",
-    //        fields = "id, text, contentId",
-    //        query = "contentId in @allreadable.id"
-    //    });
+    //This test tests a LOT of systems all at once! Does the macro system work?
+    //Does the search system automatically limit, and does it do it correctly?
+    //Can we actually retrieve the last post ID for all content while doing
+    //all this other stuff?? This is the MOST like a regular user search! If this
+    //is working correctly, chances are the whole system is at least MOSTLY working
+    [Fact]
+    public async Task GenericSearch_StandardUseCase1()
+    {
+        var search = new SearchRequests();
+        search.requests.Add(new SearchRequest()
+        {
+            name = "allreadable",
+            type = "page",
+            //fields = "id, name, createUserId, createDate, lastPostId"
+            fields = "*"
+        });
+        search.requests.Add(new SearchRequest()
+        {
+            name = "createusers",
+            type = "user",
+            fields = "id, username, special, avatar",
+            query = "id in @allreadable.createUserId"
+        });
+        search.requests.Add(new SearchRequest()
+        {
+            name = "allcomments",
+            type = "comment",
+            fields = "id, text, contentId",
+            query = "contentId in @allreadable.id"
+        });
 
-    //    //Get results as the admin user! They don't have special read permissions for everything (that's
-    //    //not how supers work), but they have some private pages others can't read!
-    //    var result = service.SearchRestricted(search, DbUnitTestSearchFixture.adminUser).Result;
+        //Get results as "default" user (meaning not logged in)
+        var result = await service.SearchRestricted(search);
 
-    //    Assert.Contains("allreadable", result.Keys);
-    //    Assert.Contains("createusers", result.Keys);
-    //    Assert.Contains("allcomments", result.Keys);
-    //    //Assert.Equal(2, result["recentpages"].Count());
-    //    //Assert.Equal(2, result["createusers"].Count());
-    //    //Assert.Single(result["createusers"].Where(x => 
-    //    //    x["id"].Equals(1L) && x["username"].Equals("firstUser")));
-    //    //Assert.Single(result["createusers"].Where(x => 
-    //    //    x["id"].Equals(2L) && x["username"].Equals("admin")));
-    //}
+        Assert.Contains("allreadable", result.Keys);
+        Assert.Contains("createusers", result.Keys);
+        Assert.Contains("allcomments", result.Keys);
+
+        var content = service.ToStronglyTyped<PageView>(result["allreadable"]);
+        var users = service.ToStronglyTyped<UserView>(result["createusers"]);
+        var comments = service.ToStronglyTyped<CommentView>(result["allcomments"]);
+
+        Assert.All(content, x => 
+        {
+            Assert.Equal((int)InternalContentType.page, x.internalType);
+            Assert.Equal("page", x.internalTypeString);
+            Assert.Contains(0, x.permissions.Keys);
+            Assert.Contains("R", x.permissions[0]);
+            Assert.True(users.Any(y => y.id == x.createUserId), "Didn't return matched content user!");
+        });
+
+        Assert.All(comments, x =>
+        {
+            Assert.True(content.Any(y => y.id == x.contentId), "returned comment not in content list!");
+            Assert.True(users.Any(y => y.id == x.createUserId), "Didn't return matched comment user!");
+        });
+
+        //Assert.Equal(2, result["recentpages"].Count());
+        //Assert.Equal(2, result["createusers"].Count());
+        //Assert.Single(result["createusers"].Where(x => 
+        //    x["id"].Equals(1L) && x["username"].Equals("firstUser")));
+        //Assert.Single(result["createusers"].Where(x => 
+        //    x["id"].Equals(2L) && x["username"].Equals("admin")));
+    }
 }

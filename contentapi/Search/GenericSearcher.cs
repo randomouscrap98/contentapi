@@ -664,4 +664,36 @@ public class GenericSearcher : IGenericSearch
     {
         return singleResults.Select(x => mapper.Map<T>(x)).ToList();
     }
+
+    public AboutSearch GetAboutSearch()
+    {
+        var result = new AboutSearch();
+
+        //The types are from our enum are the types that can be searched
+        foreach(var type in Enum.GetValues<RequestType>())
+        {
+            if(StandardViewRequests.ContainsKey(type))
+            {
+                var typeInfo = typeService.GetTypeInfo(StandardViewRequests[type]);
+                result.types.Add(type.ToString(), new {
+                    getfields = typeInfo.queryableFields,
+                    searchfields = typeInfo.searchableFields
+                });
+
+                result.objects.Add(type.ToString(), Activator.CreateInstance(StandardViewRequests[type]) ??
+                    throw new InvalidOperationException($"Couldn't create type {type} for display!"));
+            }
+        }
+
+        foreach(var macro in StandardMacros.Keys)
+        {
+            var macdef = StandardMacros[macro];
+            result.macros.Add(macro, new {
+                format = $"!{macro}({string.Join(",", macdef.argumentTypes.Select(x => x.ToString()))})",
+                allowedtypes = macdef.allowedTypes.Select(x => x.ToString())
+            });
+        }
+
+        return result;
+    }
 }
