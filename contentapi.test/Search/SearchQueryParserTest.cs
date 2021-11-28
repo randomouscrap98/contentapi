@@ -135,6 +135,9 @@ public class SearchQueryParserTest : UnitTestBase, IClassFixture<SearchQueryPars
     [InlineData("(field = @value) and !macro(@value)", "(field = @value) and macro(@value)")]
     [InlineData("field = @value and (!macro(@value))", "field = @value and (macro(@value))")]
     [InlineData("((field = @value) and (!macro(@value)))", "((field = @value) and (macro(@value)))")]
+    [InlineData("!macro()", "macro()")] //We finally allow empty macros! I hope!
+    [InlineData("!macro(  )", "macro()")]
+    [InlineData("!macro(_)", "macro(_)")]  //This is the OLD way of doing it
     public void SearchQueryParser_MacroCheck(string query, string? expected)
     {
         string result = "";

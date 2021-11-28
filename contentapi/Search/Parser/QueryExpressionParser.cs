@@ -29,11 +29,19 @@ public class QueryExpressionParser
         return $"{HandleField(fieldToken.Value)} {op} {HandleValue(val.Value)}";
     }
 
-    [Production("filter: MACROSTART [d] FIELD LPAREN [d] arglist RPAREN [d]")]
-    public string FilterMacro(Token<QueryToken> macroNameToken, string arglist)
+    [Production("filter: MACROSTART [d] FIELD LPAREN [d] macroend")]
+    public string FilterMacro(Token<QueryToken> macroNameToken, string macroend)
     {
-        return HandleMacro(macroNameToken.Value, arglist);
+        return HandleMacro(macroNameToken.Value, macroend);
     }
+
+    //These two productions are simple "pass it along" things to allow an empty 
+    //argument list without ambiguity (LL(K))
+    [Production("macroend: arglist RPAREN [d]")]
+    public string MacroEnd(string arglist) { return arglist; }
+
+    [Production("macroend: RPAREN [d]")]
+    public string MacroEndEmpty() { return ""; }
 
     //This is that loop-back thing I don't understand. This was ambiguous when this
     //production was derived from "expr" rather than filter, but... ugh I'm not smart

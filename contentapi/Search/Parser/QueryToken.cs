@@ -23,7 +23,7 @@ public enum QueryToken
     [Lexeme(@"[oO][rR]\b")] OR,
 
     //make sure field/etc comes after keywords; keywords should be matched first
-    [Lexeme(@"[a-zA-Z_][a-zA-Z0-9_]+")] FIELD,
+    [Lexeme(@"[a-zA-Z_][a-zA-Z0-9_]*")] FIELD,
     [Lexeme(@"@[a-zA-Z_][a-zA-Z0-9_\.]*")] VALUE,
 
     // the lexeme is marked isSkippable : it will not be sent to the parser and simply discarded.
