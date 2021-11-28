@@ -109,6 +109,12 @@ public class GenericSearchDbTests : UnitTestBase, IClassFixture<DbUnitTestSearch
         {
             Assert.False(string.IsNullOrWhiteSpace(x.name), "Content name wasn't cast properly!");
             Assert.False(string.IsNullOrWhiteSpace(x.internalTypeString), "Content internalTypeString wasn't cast properly!");
+            if(((x.id - 1) & (int)ContentVariations.Comments) > 0)
+                Assert.Equal(x.id - 1, x.commentCount);
+            else
+                Assert.Equal(0, x.commentCount);
+            Assert.Equal((x.id - 1) / fixture.ContentCount * fixture.UserCount, x.watchCount);
+            Assert.Equal((x.id - 1) / fixture.ContentCount * fixture.UserCount, x.votes.Sum(x => x.Value));
             Assert.True(x.id > 0, "ContentId not cast properly!");
             Assert.True(x.createUserId > 0, "Content createuserid not cast properly!");
             Assert.True(x.createDate.Ticks > 0, "Content createdate not cast properly!");

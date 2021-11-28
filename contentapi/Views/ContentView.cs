@@ -42,11 +42,22 @@ public class ContentView
     [FromField("")]
     public List<string> keywords {get;set;} = new List<string>();
 
-    [Searchable]
     [FromField("")]
-    public DateTime lastPostDate {get;set;}
+    public Dictionary<string, int> votes {get;set;} = new Dictionary<string, int>();
 
     [Searchable]
     [FromField("")]
-    public long lastPostId {get;set;}
+    public DateTime lastCommentDate {get;set;}
+
+    [Searchable]
+    [FromField("")]
+    public long lastCommentId {get;set;}
+
+    [Searchable]
+    [FromField("")]
+    public int commentCount {get;set;}
+
+    [Searchable]
+    [FromField("")]
+    public int watchCount {get;set;}
 }

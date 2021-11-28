@@ -67,11 +67,13 @@ public class GenericSearcher : IGenericSearch
         RequestType.content, RequestType.file, RequestType.page, RequestType.module
     };
 
-    public const string LastPostDateField = nameof(ContentView.lastPostDate);
-    public const string LastPostIdField = nameof(ContentView.lastPostId);
+    public const string LastPostDateField = nameof(ContentView.lastCommentDate);
+    public const string LastPostIdField = nameof(ContentView.lastCommentId);
     public const string QuantizationField = nameof(FileView.quantization);
     public const string DescriptionField = nameof(ModuleView.description);
     public const string InternalTypeStringField = nameof(ContentView.internalTypeString);
+    public const string PostCountField = nameof(ContentView.commentCount);
+    public const string WatchCountField = nameof(ContentView.watchCount);
 
     //These fields are too difficult to modify with the attributes, so we do it in code here
     protected readonly Dictionary<(RequestType, string),string> StandardModifiedFields = new Dictionary<(RequestType, string), string> {
@@ -152,6 +154,10 @@ public class GenericSearcher : IGenericSearch
                 $"(select createDate from comments where {MainAlias}.id = contentId order by id desc limit 1) as {LastPostDateField}");
             StandardModifiedFields.Add((type, LastPostIdField), 
                 $"(select id from comments where {MainAlias}.id = contentId order by id desc limit 1) as {LastPostIdField}");
+            StandardModifiedFields.Add((type, PostCountField), 
+                $"(select count(*) from comments where {MainAlias}.id = contentId) as {PostCountField}");
+            StandardModifiedFields.Add((type, WatchCountField), 
+                $"(select count(*) from content_watches where {MainAlias}.id = contentId) as {WatchCountField}");
         }
     }
 
@@ -534,6 +540,7 @@ public class GenericSearcher : IGenericSearch
             const string keykey = nameof(ContentView.keywords);
             const string valkey = nameof(ContentView.values);
             const string permkey = nameof(ContentView.permissions);
+            const string votekey = nameof(ContentView.votes);
             const string cidkey = nameof(Db.ContentKeyword.contentId); //WARN: assuming it's the same for all!
             var ids = result.Select(x => x["id"]);
 
@@ -566,6 +573,24 @@ public class GenericSearcher : IGenericSearch
                     //TODO: May need to move this conversion somewhere else... not sure
                     c[permkey] = permissions.Where(x => x.contentId.Equals(c["id"])).ToDictionary(
                         x => x.userId, y => $"{(y.create==1?"C":"")}{(y.read==1?"R":"")}{(y.update==1?"U":"")}{(y.delete==1?"D":"")}");
+                }
+            }
+            if(r.requestFields.Contains(votekey))
+            {
+                var voteinfo = typeService.GetTypeInfo<Db.ContentVote>();
+                var votes = await dbcon.QueryAsync($"select {cidkey}, vote, count(*) as count from {voteinfo.database} where {cidkey} in @ids group by {cidkey}, vote",
+                    new { ids = ids });
+                var displayVotes = Enum.GetValues<VoteType>().Where(x => x != VoteType.none).Select(x => x.ToString());
+
+                foreach(var c in result)
+                {
+                    var cvotes = votes.Where(x => x.contentId.Equals(c["id"])).ToDictionary(x => ((VoteType)x.vote).ToString(), y => y.count);
+                    foreach(var v in displayVotes)
+                    {
+                        if(!cvotes.ContainsKey(v))
+                            cvotes.Add(v, 0);
+                    }
+                    c[votekey] = cvotes;
                 }
             }
         }

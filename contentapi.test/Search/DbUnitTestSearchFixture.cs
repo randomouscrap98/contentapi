@@ -105,6 +105,8 @@ public class DbUnitTestSearchFixture : DbUnitTestBase, IDisposable
                 var values = new List<Db.ContentValue>();
                 var keywords = new List<Db.ContentKeyword>();
                 var permissions = new List<Db.ContentPermission>();
+                var watchers = new List<Db.ContentWatch>();
+                var votes = new List<Db.ContentVote>();
                 ContentCount = (int)Math.Pow(2, Enum.GetValues<ContentVariations>().Count());
 
                 for(var i = 0; i < ContentCount; i++)
@@ -120,6 +122,31 @@ public class DbUnitTestSearchFixture : DbUnitTestBase, IDisposable
 
                     c.deleted = (i & (int)ContentVariations.Deleted) > 0;
                     c.internalType = (Db.InternalContentType)(i % 4);//(i & (int)ContentVariations.PageOrFile) > 0 ? Db.InternalContentType.page : Db.InternalContentType.file;
+
+                    //Always insert watches, the amount of people watching is 1/usercount of the id.
+                    //Thus the last one might have all users watching it... maybe?? mm idk. 
+                    //Anyway, first few usercount content have no watches
+                    for(var j = 0; j < i / ContentCount * UserCount; j++)
+                    {
+                        watchers.Add(new Db.ContentWatch()
+                        {
+                            contentId = i + 1,
+                            userId = j % UserCount,
+                            createDate = DateTime.Now
+                        });
+                    }
+
+                    var random = new Random(i);
+                    for(var j = 0; j < i / ContentCount * UserCount; j++)
+                    {
+                        votes.Add(new Db.ContentVote()
+                        {
+                            contentId = i + 1,
+                            userId = j % UserCount,
+                            createDate = DateTime.Now,
+                            vote = (Db.VoteType)(1 + random.Next() % 3)
+                        });
+                    }
 
                     if((i & (int)ContentVariations.AccessBySupers) > 0)
                     {
@@ -176,8 +203,8 @@ public class DbUnitTestSearchFixture : DbUnitTestBase, IDisposable
 
                     if((i & (int)ContentVariations.Comments) > 0)
                     {
-                        //comment count should equal contentId, yes even if it's a crapload
-                        for(var j = 0; j <= i; j++)
+                        //comment count should equal (indexed) contentId, yes even if it's a crapload
+                        for(var j = 0; j < i; j++)
                         {
                             comments.Add(new Db.Comment()
                             {
@@ -197,120 +224,8 @@ public class DbUnitTestSearchFixture : DbUnitTestBase, IDisposable
                 conn.Insert(values, tsx);
                 conn.Insert(keywords, tsx);
                 conn.Insert(permissions, tsx);
-
-                //var users = new List<Db.User> {
-                //    new Db.User() {
-                //        username = "firstUser",
-                //        password = "shouldNotBeSearchable",
-                //        salt = "alsoShouldNotBeSearchable",
-                //        special = "",
-                //        createDate = DateTime.Now.AddDays(-10),
-                //        avatar = 99,
-                //        email = "secrets@email.com"
-                //    },
-                //    new Db.User() {
-                //        username = "admin",
-                //        password = "shouldNotBeSearchable",
-                //        salt = "alsoShouldNotBeSearchable",
-                //        special = "cutenickname",
-                //        createDate = DateTime.Now.AddDays(-15),
-                //        avatar = 1,
-                //        super = true,
-                //        email = "admin@email.com"
-                //    },
-                //    new Db.User() {
-                //        username = "carl",
-                //        password = "differentpassword",
-                //        salt = "verysalty",
-                //        createDate = DateTime.Now,
-                //        avatar = 0,
-                //        email = "carl@karl.com"
-                //    },
-                //};
-
-                //var content = new List<Db.Content> {
-                //    new Db.Content() {
-                //        name = "A test page",
-                //        createDate = DateTime.Now.AddDays(-9),
-                //        publicType = "test",
-                //        internalType = Db.InternalContentType.page,
-                //        createUserId = basicUser,
-                //        content = "A long time ago, someone tried to test"
-                //    },
-                //    new Db.Content() {
-                //        name = "Private room",
-                //        createDate = DateTime.Now.AddDays(-19),
-                //        publicType = "secrets",
-                //        internalType = Db.InternalContentType.page,
-                //        createUserId = adminUser,
-                //        content = "The whole operation is run by Tony Lazuto"
-                //    },
-                //    new Db.Content() {
-                //        createDate = DateTime.Now.AddDays(-5),
-                //        internalType = Db.InternalContentType.file,
-                //        createUserId = basicUser,
-                //        publicType = "mybucket",
-                //        content = "img/jpeg"
-                //    },
-                //    new Db.Content() {
-                //        name = "carl's special pic",
-                //        createDate = DateTime.Now.AddDays(-7),
-                //        internalType = Db.InternalContentType.file,
-                //        createUserId = carlUser,
-                //        content = "img/png"
-                //    },
-                //    new Db.Content() {
-                //        name = "pm",
-                //        createDate = DateTime.Now.AddDays(-70),
-                //        internalType = Db.InternalContentType.module,
-                //        createUserId = adminUser,
-                //        content = "--some lua code\nyeah"
-                //    }
-                //};
-
-                //var permissions = new List<Db.ContentPermission> {
-                //    new Db.ContentPermission()
-                //    {
-                //        contentId = basicPage,
-                //        userId = 0,
-                //        create = true, read = true
-                //    },
-                //    new Db.ContentPermission()
-                //    {
-                //        contentId = adminPage,
-                //        userId = adminUser,
-                //        create = true, update = true, read = true, delete = true
-                //    },
-                //    new Db.ContentPermission()
-                //    {
-                //        contentId = adminPage,
-                //        userId = carlUser,
-                //        create = true, read = true
-                //    }
-                //};
-
-                //var comments = new List<Db.Comment> {
-                //    new Db.Comment() {
-                //        createUserId = carlUser,
-                //        contentId = adminPage,
-                //        createDate = DateTime.Now.AddDays(-1),
-                //        text = "hi i'm paul"
-                //    },
-                //    new Db.Comment() {
-                //        createUserId = adminUser,
-                //        contentId = basicPage,
-                //        createDate = DateTime.Now,
-                //        text = "yes I agree"
-                //    }
-                //};
-
-                ////We're making ASSUMPTIONS about the ids here, probably bad but whatever
-
-                ////Don't want to wait forever for inserts, please use a transaction
-                //conn.Insert(users, tsx);
-                //conn.Insert(content, tsx);
-                //conn.Insert(permissions, tsx);
-                //conn.Insert(comments, tsx);
+                conn.Insert(watchers, tsx);
+                conn.Insert(votes, tsx);
 
                 tsx.Commit();
             }
