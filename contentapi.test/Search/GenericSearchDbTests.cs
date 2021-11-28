@@ -633,6 +633,46 @@ public class GenericSearchDbTests : UnitTestBase, IClassFixture<DbUnitTestSearch
         Assert.Empty(result);
     }
 
+    [Fact]
+    public async Task GenericSearch_Search_OnlyParentsMacro()
+    {
+        var search = new SearchRequests();
+        search.requests.Add(new SearchRequest()
+        {
+            name = "parentmacro",
+            type = "content",
+            fields = "*",
+            query = "!onlyparents()"
+        });
+
+        var result = (await service.Search(search))["parentmacro"];
+        var castResult = service.ToStronglyTyped<ContentView>(result);
+
+        //Parents are assigned / 4, so there should be that many (minus 0 parents)
+        Assert.Equal(fixture.ContentCount / 4 - 1, result.Count());
+        Assert.All(castResult, x =>
+        {
+            Assert.True((x.id - 1) < fixture.ContentCount / 4);
+        });
+    }
+
+    [Fact]
+    public async Task GenericSearch_Search_OnlyParentsMacro_Empty()
+    {
+        var search = new SearchRequests();
+        search.values.Add("minId", fixture.ContentCount / 4 + 1);
+        search.requests.Add(new SearchRequest()
+        {
+            name = "parentmacro",
+            type = "content",
+            fields = "*",
+            query = "id > @minId and !onlyparents()"
+        });
+
+        var result = (await service.Search(search))["parentmacro"];
+        Assert.Empty(result);
+    }
+
     //This test tests a LOT of systems all at once! Does the macro system work?
     //Does the search system automatically limit, and does it do it correctly?
     //Can we actually retrieve the last post ID for all content while doing

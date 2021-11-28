@@ -123,6 +123,7 @@ public class GenericSearcher : IGenericSearch
     {
         { "keywordlike", new MacroDescription("v", "KeywordLike", ContentRequestTypes) },
         { "valuelike", new MacroDescription("vv", "ValueLike", ContentRequestTypes) },
+        { "onlyparents", new MacroDescription("", "OnlyParents", ContentRequestTypes) },
         //WARN: permission limiting could be very dangerous! Make sure that no matter how the user uses
         //this, they still ONLY get the stuff they're allowed to read!
         { "permissionlimit", new MacroDescription("vf", "PermissionLimit", new List<RequestType> {
@@ -186,6 +187,16 @@ public class GenericSearcher : IGenericSearch
              from {typeInfo.database} 
              where {nameof(ContentValue.key)} like {key} 
                and {nameof(ContentValue.value)} like {value}
+            )";
+    }
+
+    public string OnlyParents(SearchRequestPlus request)
+    {
+        var typeInfo = typeService.GetTypeInfo<Content>();
+        return $@"{MainAlias}.id in 
+            (select {nameof(Content.parentId)} 
+             from {typeInfo.database} 
+             group by {nameof(Content.parentId)}
             )";
     }
 
