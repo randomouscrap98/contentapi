@@ -139,6 +139,35 @@ public class GenericSearchDbTests : UnitTestBase, IClassFixture<DbUnitTestSearch
     }
 
     [Fact]
+    public async Task GenericSearch_ToStronglyTyped_Activity()
+    {
+        var search = new SearchRequests();
+        search.requests.Add(new SearchRequest()
+        {
+            name = "test",
+            type = "activity",
+            fields = "*"
+        });
+
+        var result = (await service.Search(search))["test"];
+        var castResult = service.ToStronglyTyped<ActivityView>(result);
+        Assert.NotEmpty(castResult);
+        Assert.All(castResult, x =>
+        {
+            Assert.False(string.IsNullOrWhiteSpace(x.action), "Action wasn't cast properly!");
+            Assert.True(x.action == "update" || x.action == "delete", "Action wasn't an expected value!");
+            Assert.True(x.id > 0, "ActivityID not cast properly!");
+            Assert.True(x.userId > 0, "UserId not cast properly!");
+            Assert.True(x.contentId > 0, "ContentID not cast properly!");
+            Assert.True(x.date.Ticks > 0, "Activity date not cast properly!");
+        });
+
+        //Assert.Equal(fixture.UserCount / 2, castResult.Where(x => x.registered).Count());
+        //Assert.Equal(fixture.UserCount / 2, castResult.Where(x => x.super).Count());
+        //Assert.Equal(fixture.UserCount / 2, castResult.Where(x => x.special != null).Count());
+    }
+
+    [Fact]
     public void GenericSearch_Search_FieldLimiting()
     {
         var search = new SearchRequests();

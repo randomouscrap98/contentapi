@@ -8,6 +8,7 @@ using Microsoft.AspNetCore.Authentication.JwtBearer;
 using Microsoft.Data.Sqlite;
 using Microsoft.IdentityModel.Tokens;
 using Microsoft.OpenApi.Models;
+using Newtonsoft.Json.Converters;
 
 var builder = WebApplication.CreateBuilder(args);
 
@@ -58,7 +59,9 @@ builder.Services.AddAuthentication(x =>
 });
 
 // System.Text STILL does not do what I want it to do
-builder.Services.AddControllers().AddNewtonsoftJson();
+builder.Services.AddControllers().AddNewtonsoftJson(opts => {
+    opts.SerializerSettings.Converters.Add(new StringEnumConverter());
+});
 builder.Services.AddEndpointsApiExplorer();
 
 //This section sets up JWT to be used in swagger

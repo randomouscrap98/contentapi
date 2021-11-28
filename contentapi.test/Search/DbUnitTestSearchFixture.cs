@@ -133,7 +133,7 @@ public class DbUnitTestSearchFixture : DbUnitTestBase, IDisposable
                         {
                             contentId = i + 1,
                             createDate = DateTime.Now.AddDays(j - i),
-                            createUserId = i % UserCount, //All same user. Hm
+                            createUserId = 1 + (i % UserCount), //All same user. Hm
                             action = (j == historyCount - 1 && c.deleted) ? Db.UserAction.delete : Db.UserAction.update
                         });
                     }
