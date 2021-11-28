@@ -6,7 +6,7 @@ public class FileView : ContentView
 {
     [Searchable]
     [FromField("publicType")]
-    public string bucket { get; set; } = "";
+    public string hash { get; set; } = "";
 
     [FromField("content")]
     public string mimetype { get; set; } = "";

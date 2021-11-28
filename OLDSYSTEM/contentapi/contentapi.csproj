@@ -1,7 +1,7 @@
 <Project Sdk="Microsoft.NET.Sdk.Web">
 
   <PropertyGroup>
-    <Version>2.4.1.233</Version>
+    <Version>2.4.1.237</Version>
     <TargetFramework>netcoreapp3.1</TargetFramework>
   </PropertyGroup>
 

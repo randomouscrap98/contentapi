@@ -202,7 +202,7 @@ namespace contentapi.Controllers
                 Log($"Inserted {tn.Name} '{nc.name}'({id})");
 
                 //Now grab the keywords and permissions and values
-                var kws = ct.keywords.Select(x => new ContentKeyword()
+                var kws = ct.keywords.Where(x => !string.IsNullOrWhiteSpace(x)).Select(x => new ContentKeyword()
                 {
                     contentId = id,
                     value = x
@@ -335,6 +335,12 @@ namespace contentapi.Controllers
                         (id) => fileSource.GetRevisions(id) ,
                         (n, o) =>
                         {
+                            if(!string.IsNullOrEmpty(o.bucket))
+                            {
+                                //Remove ALL public permissions for files with a bucket set
+                                o.permissions.Remove(0);
+                                o.values.Add("bucket", o.bucket);
+                            }
                             o.values.Add("quantization", o.quantization.ToString());
                             return n;
                         });

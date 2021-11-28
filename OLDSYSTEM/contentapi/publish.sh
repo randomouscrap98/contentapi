@@ -25,7 +25,7 @@ then
    rdf="rl"
 else
    phost=publisher@oboy.smilebasicsource.com # The production server (and user to connect)
-   pfolder="/storage/random/contentapi"                        # The REMOTE location to PLACE all files
+   pfolder="/storage/random/contentapi_old"                        # The REMOTE location to PLACE all files
    rdf="a"
 fi
 

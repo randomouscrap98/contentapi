@@ -11,8 +11,8 @@ namespace contentapi
             CreateMap<FileView, Db.Content>()
             .ForMember(x => x.name, 
                  opt => opt.MapFrom(src => src.name ?? "")) //Basically, a description of the file
-            .ForMember(x => x.publicType, //For optimization, public type HAS TO be the bucket. There's an index!
-                 opt => opt.MapFrom(src => src.bucket ?? ""))
+            .ForMember(x => x.publicType, //The public type is the lookup hash, which has to be our id since there's no hash from before and we don't want to break our links
+                 opt => opt.MapFrom(src => src.id.ToString()))
             .ForMember(x => x.content, 
                  opt => opt.MapFrom(src => src.fileType)) //Basically, a description of the file
             .ForMember(x => x.internalType, 

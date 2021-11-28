@@ -449,16 +449,36 @@ public class GenericSearchDbTests : UnitTestBase, IClassFixture<DbUnitTestSearch
     }
 
     [Fact]
-    public async Task GenericSearch_Search_ComplexFieldRequired_FailGracefully()
+    public async Task GenericSearch_Search_RemappedField_Searchable()
+    {
+        //This test relies on the amount of content types. If it changes, just fix it, it's easy
+        Assert.Equal(4, Enum.GetValues<InternalContentType>().Count());
+
+        var search = new SearchRequests();
+        search.values.Add("hash", fixture.StandardPublicTypes[(int)InternalContentType.file]);
+        search.requests.Add(new SearchRequest()
+        {
+            name = "complex",
+            type = "file",
+            fields = "id, hash", 
+            query = "hash = @hash"
+        });
+
+        var result = (await service.Search(search))["complex"];
+        Assert.Equal(fixture.ContentCount / 4 / 2, result.Count());
+    }
+
+    [Fact]
+    public async Task GenericSearch_Search_RemappedField_FailGracefully()
     {
         var search = new SearchRequests();
-        search.values.Add("bucket", "one");
+        search.values.Add("hash", "one");
         search.requests.Add(new SearchRequest()
         {
             name = "nocomplex",
             type = "file",
-            fields = "id", //Only querying id, but asking for bucket, which we know is searchable
-            query = "bucket = @bucket"
+            fields = "id", //Only querying id, but asking for hash, which needs to be included
+            query = "hash = @hash"
         });
 
         await Assert.ThrowsAnyAsync<ArgumentException>(async () => {
@@ -466,25 +486,6 @@ public class GenericSearchDbTests : UnitTestBase, IClassFixture<DbUnitTestSearch
         });
     }
 
-    [Fact]
-    public async Task GenericSearch_Search_RemappedField_Searchable()
-    {
-        //This test relies on the amount of content types. If it changes, just fix it, it's easy
-        Assert.Equal(4, Enum.GetValues<InternalContentType>().Count());
-
-        var search = new SearchRequests();
-        search.values.Add("bucket", fixture.StandardPublicTypes[(int)InternalContentType.file]);
-        search.requests.Add(new SearchRequest()
-        {
-            name = "complex",
-            type = "file",
-            fields = "id, bucket", //Only querying id, but asking for bucket, which we know is searchable but remapped from publicType
-            query = "bucket = @bucket"
-        });
-
-        var result = (await service.Search(search))["complex"];
-        Assert.Equal(fixture.ContentCount / 4 / 2, result.Count());
-    }
 
     [Fact]
     public async Task GenericSearch_Search_LexerKeywordPrefix()
