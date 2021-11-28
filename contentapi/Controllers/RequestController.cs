@@ -13,8 +13,6 @@ public class RequestResponse
     public bool loggedIn {get;set;}
 }
 
-[ApiController]
-//[Route("[controller]")]
 public class RequestController : BaseController
 {
     protected IGenericSearch searcher;

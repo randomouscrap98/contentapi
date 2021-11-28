@@ -1,6 +1,6 @@
 using System.Security.Claims;
 
-namespace contentapi;
+namespace contentapi.Security;
 
 public interface IAuthTokenService<T> where T : struct
 {

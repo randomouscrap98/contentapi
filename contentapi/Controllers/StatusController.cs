@@ -3,8 +3,6 @@ using Microsoft.AspNetCore.Mvc;
 
 namespace contentapi.Controllers;
 
-[ApiController]
-//[Route("[controller]")]
 public class StatusController : BaseController
 {
     protected IWebHostEnvironment environment;

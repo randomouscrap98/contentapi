@@ -1,3 +1,4 @@
+using contentapi.Security;
 using Microsoft.AspNetCore.Mvc;
 
 namespace contentapi.Controllers;

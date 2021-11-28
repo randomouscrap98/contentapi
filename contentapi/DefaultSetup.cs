@@ -1,4 +1,5 @@
 using contentapi.Search;
+using contentapi.Security;
 using contentapi.Utilities;
 using Microsoft.Extensions.DependencyInjection.Extensions;
 using Microsoft.Extensions.Options;
@@ -21,10 +22,12 @@ public static class DefaultSetup
         services.AddTransient<IGenericSearch, GenericSearcher>();
         services.AddSingleton<IAuthTokenService<long>, JwtAuthTokenService<long>>();
         services.AddSingleton<ISearchQueryParser, SearchQueryParser>();
+        services.AddSingleton<IHashService, HashService>();
 
-        //Configs
+        //Configs (these have default values given in configs)
         services.AddSingleton<GenericSearcherConfig>();
         services.AddSingleton<JwtAuthTokenServiceConfig>();
+        services.AddSingleton<HashServiceConfig>();
     }
 
     /// <summary>
