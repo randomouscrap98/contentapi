@@ -20,7 +20,7 @@ DefaultSetup.AddDefaultServices(builder.Services);
 DefaultSetup.AddConfigBinding<GenericSearcherConfig>(builder.Services, builder.Configuration);
 builder.Services.AddTransient<BaseControllerServices>();
 
-const string secretKey = "pleasechangethis";
+string secretKey = builder.Configuration.GetValue<string>("SecretKey"); //"pleasechangethis";
 
 //The default setup doesn't set up our database provider though
 builder.Services.AddTransient<ContentApiDbConnection>(ctx => 
