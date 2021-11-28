@@ -26,12 +26,6 @@ public enum ContentVariations
 
 public class DbUnitTestSearchFixture : DbUnitTestBase, IDisposable
 {
-    //public const int basicUser = 1;
-    //public const int adminUser = 2;
-    //public const int carlUser = 3;
-    //public const int basicPage = 1;
-    //public const int adminPage = 2;
-
     public readonly List<string> StandardKeywords = new List<string> {
         "one",
         "two",

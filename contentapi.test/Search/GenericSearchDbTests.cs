@@ -539,6 +539,94 @@ public class GenericSearchDbTests : UnitTestBase, IClassFixture<DbUnitTestSearch
         });
     }
 
+    [Fact]
+    public async Task GenericSearch_Search_KeywordMacro()
+    {
+        var search = new SearchRequests();
+        search.values.Add("search", "one");
+        search.requests.Add(new SearchRequest()
+        {
+            name = "keywordmacro",
+            type = "content",
+            fields = "id",
+            query = "!keywordlike(@search)"
+        });
+
+        var result = (await service.Search(search))["keywordmacro"];
+        var castResult = service.ToStronglyTyped<ContentView>(result);
+
+        //At least half the content should have the "one" keyword, and they should all have
+        //an id with the keyword flag set
+        Assert.Equal(fixture.ContentCount / 2, result.Count());
+        Assert.All(castResult, x =>
+        {
+            Assert.True(((x.id - 1) & (int)ContentVariations.Keywords) > 0);
+        });
+    }
+
+    [Fact]
+    public async Task GenericSearch_Search_KeywordMacro_None()
+    {
+        var search = new SearchRequests();
+        search.values.Add("search", "%NOBODY%");
+        search.requests.Add(new SearchRequest()
+        {
+            name = "keywordmacro",
+            type = "content",
+            fields = "id",
+            query = "!keywordlike(@search)"
+        });
+
+        var result = (await service.Search(search))["keywordmacro"];
+        var castResult = service.ToStronglyTyped<ContentView>(result);
+        //This also secretly tests if ToStronglyTyped accepts blanks
+        Assert.Empty(result);
+    }
+
+    [Fact]
+    public async Task GenericSearch_Search_ValueMacro()
+    {
+        var search = new SearchRequests();
+        search.values.Add("key", "contentval_%");
+        search.values.Add("search", "value_%");
+        search.requests.Add(new SearchRequest()
+        {
+            name = "valuemacro",
+            type = "content",
+            fields = "id",
+            query = "!valuelike(@key, @search)"
+        });
+
+        var result = (await service.Search(search))["valuemacro"];
+        var castResult = service.ToStronglyTyped<ContentView>(result);
+
+        //At least half the content should have the "one" keyword, and they should all have
+        //an id with the keyword flag set
+        Assert.Equal(fixture.ContentCount / 2, result.Count());
+        Assert.All(castResult, x =>
+        {
+            Assert.True(((x.id - 1) & (int)ContentVariations.Values) > 0);
+        });
+    }
+
+    [Fact]
+    public async Task GenericSearch_Search_ValueMacro_None()
+    {
+        var search = new SearchRequests();
+        search.values.Add("key", "%nope%");
+        search.values.Add("search", "value_%"); //even though this one is fine
+        search.requests.Add(new SearchRequest()
+        {
+            name = "valuemacro",
+            type = "content",
+            fields = "id",
+            query = "!valuelike(@key, @search)"
+        });
+
+        var result = (await service.Search(search))["valuemacro"];
+        Assert.Empty(result);
+    }
+
     //This test tests a LOT of systems all at once! Does the macro system work?
     //Does the search system automatically limit, and does it do it correctly?
     //Can we actually retrieve the last post ID for all content while doing
