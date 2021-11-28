@@ -59,7 +59,8 @@ public class GenericSearcher : IGenericSearch
         { RequestType.content, typeof(ContentView) },
         { RequestType.page, typeof(PageView) },
         { RequestType.module, typeof(ModuleView) },
-        { RequestType.file, typeof(FileView) }
+        { RequestType.file, typeof(FileView) },
+        { RequestType.activity, typeof(ActivityView) }
     };
 
     protected static readonly List<RequestType> ContentRequestTypes = new List<RequestType>()
@@ -71,15 +72,17 @@ public class GenericSearcher : IGenericSearch
     public const string LastPostIdField = nameof(ContentView.lastCommentId);
     public const string QuantizationField = nameof(FileView.quantization);
     public const string DescriptionField = nameof(ModuleView.description);
-    public const string InternalTypeStringField = nameof(ContentView.internalTypeString);
+    public const string InternalTypeField = nameof(ContentView.internalType);
     public const string PostCountField = nameof(ContentView.commentCount);
     public const string WatchCountField = nameof(ContentView.watchCount);
+    public const string ActionField = nameof(ActivityView.action);
 
     //These fields are too difficult to modify with the attributes, so we do it in code here
     protected readonly Dictionary<(RequestType, string),string> StandardModifiedFields = new Dictionary<(RequestType, string), string> {
         { (RequestType.file, QuantizationField), $"(select value from content_values where {MainAlias}.id = contentId and key='{QuantizationField}' limit 1) as {QuantizationField}" },
         { (RequestType.module, DescriptionField), $"(select value from content_values where {MainAlias}.id = contentId and key='{DescriptionField}' limit 1) as {DescriptionField}" },
-        { (RequestType.user, "registered"), $"(registrationKey IS NULL) as registered" }
+        { (RequestType.user, "registered"), $"(registrationKey IS NULL) as registered" },
+        { (RequestType.activity, ActionField), EnumToCase<UserAction>(ActionField, ActionField)}
     };
 
     //Some searches can easily be modified afterwards with constants, put that here.
@@ -149,8 +152,8 @@ public class GenericSearcher : IGenericSearch
         //Because of how content is, we need to add these content fields to all things
         foreach(var type in ContentRequestTypes)
         {
-            StandardModifiedFields.Add((type, InternalTypeStringField), 
-                EnumToCase<InternalContentType>(nameof(Db.Content.internalType), InternalTypeStringField));
+            StandardModifiedFields.Add((type, InternalTypeField), 
+                EnumToCase<InternalContentType>(nameof(Db.Content.internalType), InternalTypeField));
             StandardModifiedFields.Add((type, LastPostDateField), 
                 $"(select createDate from comments where {MainAlias}.id = contentId order by id desc limit 1) as {LastPostDateField}");
             StandardModifiedFields.Add((type, LastPostIdField), 
@@ -162,7 +165,7 @@ public class GenericSearcher : IGenericSearch
         }
     }
 
-    public string EnumToCase<T>(string fieldName, string outputName) where T : struct, System.Enum 
+    public static string EnumToCase<T>(string fieldName, string outputName) where T : struct, System.Enum 
     {
         var values = Enum.GetValues<T>();
         var whens = values.Select(x => $"WHEN {Unsafe.As<T, int>(ref x)} THEN '{x.ToString()}'");
@@ -647,8 +650,6 @@ public class GenericSearcher : IGenericSearch
 
             var dp = new DynamicParameters(parameterValues);
             var qresult = await QueryAsyncCast(sql, dp);
-
-            //mapper.Map()
 
             //Just because we got the qresult doesn't mean we can stop! if it's content, we need
             //to fill in the values, keywords, and permissions!

@@ -7,5 +7,6 @@ public enum RequestType
     comment,
     page,
     file,
-    module
+    module,
+    activity
 }

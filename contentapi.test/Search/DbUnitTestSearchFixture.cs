@@ -107,6 +107,7 @@ public class DbUnitTestSearchFixture : DbUnitTestBase, IDisposable
                 var permissions = new List<Db.ContentPermission>();
                 var watchers = new List<Db.ContentWatch>();
                 var votes = new List<Db.ContentVote>();
+                var history = new List<Db.ContentHistory>();
                 ContentCount = (int)Math.Pow(2, Enum.GetValues<ContentVariations>().Count());
 
                 for(var i = 0; i < ContentCount; i++)
@@ -122,6 +123,20 @@ public class DbUnitTestSearchFixture : DbUnitTestBase, IDisposable
 
                     c.deleted = (i & (int)ContentVariations.Deleted) > 0;
                     c.internalType = (Db.InternalContentType)(i % 4);//(i & (int)ContentVariations.PageOrFile) > 0 ? Db.InternalContentType.page : Db.InternalContentType.file;
+
+                    //The activity is inversely proportional to i, but only 1/16 of the whatevers.
+                    //If the content is deleted, the last history inserted should be a delete
+                    var historyCount = (ContentCount - i) / 16;
+                    for(var j = 0; j < historyCount; j++)
+                    {
+                        history.Add(new Db.ContentHistory()
+                        {
+                            contentId = i + 1,
+                            createDate = DateTime.Now.AddDays(j - i),
+                            createUserId = i % UserCount, //All same user. Hm
+                            action = (j == historyCount - 1 && c.deleted) ? Db.UserAction.delete : Db.UserAction.update
+                        });
+                    }
 
                     //Always insert watches, the amount of people watching is 1/usercount of the id.
                     //Thus the last one might have all users watching it... maybe?? mm idk. 
@@ -226,6 +241,7 @@ public class DbUnitTestSearchFixture : DbUnitTestBase, IDisposable
                 conn.Insert(permissions, tsx);
                 conn.Insert(watchers, tsx);
                 conn.Insert(votes, tsx);
+                conn.Insert(history, tsx);
 
                 tsx.Commit();
             }

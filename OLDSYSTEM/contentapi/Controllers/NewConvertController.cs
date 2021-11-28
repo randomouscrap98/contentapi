@@ -331,7 +331,7 @@ namespace contentapi.Controllers
                     Log($"Successfully inserted watches, {count} in table");
 
                     await ConvertCt(
-                        () => fileSource.SimpleSearchAsync(new FileSearch()), 
+                        () => fileSource.SimpleSearchAsync(new FileSearch() { SearchAllBuckets = true }), 
                         (id) => fileSource.GetRevisions(id) ,
                         (n, o) =>
                         {

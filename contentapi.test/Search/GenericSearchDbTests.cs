@@ -108,7 +108,7 @@ public class GenericSearchDbTests : UnitTestBase, IClassFixture<DbUnitTestSearch
         Assert.All(castResult, x =>
         {
             Assert.False(string.IsNullOrWhiteSpace(x.name), "Content name wasn't cast properly!");
-            Assert.False(string.IsNullOrWhiteSpace(x.internalTypeString), "Content internalTypeString wasn't cast properly!");
+            Assert.False(string.IsNullOrWhiteSpace(x.internalType), "Content internalType (string) wasn't cast properly!");
             if(((x.id - 1) & (int)ContentVariations.Comments) > 0)
                 Assert.Equal(x.id - 1, x.commentCount);
             else
@@ -122,7 +122,7 @@ public class GenericSearchDbTests : UnitTestBase, IClassFixture<DbUnitTestSearch
 
         Assert.Equal(4, Enum.GetValues<InternalContentType>().Count());
         foreach(var type in Enum.GetValues<InternalContentType>())
-            Assert.Equal(fixture.ContentCount / 4, castResult.Where(x => x.internalType == (int)type).Count());
+            Assert.Equal(fixture.ContentCount / 4, castResult.Where(x => x.internalType == type.ToString()).Count());
         Assert.Equal(fixture.ContentCount / 2, castResult.Where(x => x.deleted).Count());
         Assert.Equal(fixture.ContentCount - 4, castResult.Where(x => x.parentId > 0).Count());
         //It's minus four because the parent id is actually divided by 4, so only the first 4 values will be 0
@@ -718,8 +718,8 @@ public class GenericSearchDbTests : UnitTestBase, IClassFixture<DbUnitTestSearch
 
         Assert.All(content, x => 
         {
-            Assert.Equal((int)InternalContentType.page, x.internalType);
-            Assert.Equal("page", x.internalTypeString);
+            Assert.Equal(InternalContentType.page.ToString(), x.internalType);
+            //Assert.Equal("page", x.internalTypeString);
             Assert.Contains(0, x.permissions.Keys);
             Assert.Contains("R", x.permissions[0]);
             Assert.True(users.Any(y => y.id == x.createUserId), "Didn't return matched content user!");

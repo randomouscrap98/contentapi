@@ -19,9 +19,7 @@ public class ContentView
     public DateTime createDate { get; set; }
 
     [Searchable]
-    public int internalType {get;set;}
-
-    public string internalTypeString {get;set;} = "";
+    public string internalType {get;set;} = "";
 
     [Searchable]
     public string name { get; set; } = "";
