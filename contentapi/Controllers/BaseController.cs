@@ -1,3 +1,4 @@
+using AutoMapper;
 using contentapi.Security;
 using Microsoft.AspNetCore.Mvc;
 
@@ -6,12 +7,15 @@ namespace contentapi.Controllers;
 public class BaseControllerServices
 {
     public ILogger<BaseController> logger;
+    public IMapper mapper;
     public IAuthTokenService<long> authService;
 
-    public BaseControllerServices(ILogger<BaseController> logger, IAuthTokenService<long> authService)
+    public BaseControllerServices(ILogger<BaseController> logger, IAuthTokenService<long> authService, 
+        IMapper mapper)
     {
         this.logger = logger;
         this.authService = authService;
+        this.mapper = mapper;
     }
 }
 

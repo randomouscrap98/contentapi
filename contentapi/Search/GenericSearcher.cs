@@ -1,4 +1,5 @@
 using System.Data;
+using System.Diagnostics;
 using AutoMapper;
 using contentapi.Db;
 using contentapi.Utilities;
@@ -15,6 +16,9 @@ public class GenericSearcherConfig
     public int MaxIndividualResultSet {get;set;} = 1000;
 }
 
+//Note to self: ALL query limiters NEED to go in THIS class, all together!
+//Any permission limits, count limits, etc. The "QueryBuilder" needs to allow
+//ANY query to go through, so it is useful in far more contexts.
 public class GenericSearcher : IGenericSearch
 {
     protected ILogger logger;
@@ -107,23 +111,23 @@ public class GenericSearcher : IGenericSearch
 
     //A basic search doesn't have a concept of a "request user" or permissions, those are set up
     //prior to this. This function just wants to build a query based on what you give it
-    protected async Task<Dictionary<string, IEnumerable<IDictionary<string, object>>>> SearchBase(
-        List<SearchRequest> requests, Dictionary<string, object> parameterValues)
+    protected async Task<GenericSearchResult> SearchBase(
+        SearchRequests requests, Dictionary<string, object> parameterValues)
     {
-        var result = new Dictionary<string, IEnumerable<IDictionary<string, object>>>();
+        var result = new GenericSearchResult() { search = requests };
 
         //Nothing to do!
-        if(requests.Count == 0)
+        if(requests.requests.Count == 0)
             return result;
         
         //Some nice prechecks
-        foreach(var request in requests)
+        foreach(var request in requests.requests)
         {
-            if(requests.Count(x => x.name == request.name) > 1)
+            if(requests.requests.Count(x => x.name == request.name) > 1)
                 throw new ArgumentException($"Duplicate name {request.name} in requests!");
         }
 
-        foreach(var request in requests)
+        foreach(var request in requests.requests)
         {
             //Need to limit the 'limit'!
             request.limit = Math.Min(request.limit > 0 ? request.limit : int.MaxValue, config.MaxIndividualResultSet);
@@ -132,7 +136,12 @@ public class GenericSearcher : IGenericSearch
 
             //Warn: we repeatedly do this because the FullParseRequest CAN modify parameter values
             var dp = new DynamicParameters(parameterValues);
+
+            var timer = new Stopwatch();
+            timer.Start();
             var qresult = await QueryAsyncCast(reqplus.computedSql, dp);
+            timer.Stop();
+            result.databaseTimes.Add(request.name, timer.Elapsed.TotalMilliseconds);
 
             //Just because we got the qresult doesn't mean we can stop! if it's content, we need
             //to fill in the values, keywords, and permissions!
@@ -140,7 +149,7 @@ public class GenericSearcher : IGenericSearch
 
             //Add the results to the USER results, AND add it to our list of values so it can
             //be used in chaining. It's just a reference, don't worry about duplication or whatever.
-            result.Add(request.name, qresult);
+            result.data.Add(request.name, qresult);
             parameterValues.Add(request.name, qresult);
         }
 
@@ -148,8 +157,7 @@ public class GenericSearcher : IGenericSearch
     }
 
     //A restricted search doesn't allow you to retrieve results that the given request user can't read
-    public async Task<Dictionary<string, IEnumerable<IDictionary<string, object>>>> SearchRestricted(
-        SearchRequests requests, long requestUserId = 0)
+    public async Task<GenericSearchResult> SearchRestricted(SearchRequests requests, long requestUserId = 0)
     {
         var globalId = Guid.NewGuid();
         Db.User requester = new Db.User() //This is a default user, make SURE all the relevant fields are set!
@@ -190,13 +198,13 @@ public class GenericSearcher : IGenericSearch
                 request.query = queryBuilder.CombineQueryClause(request.query, $"!permissionlimit(@{requesterKey}, contentId)");
         }
 
-        return await SearchBase(requests.requests, parameterValues);
+        return await SearchBase(requests, parameterValues);
     }
 
     //This search is a plain search, no permission limits or user lookups.
-    public async Task<Dictionary<string, IEnumerable<IDictionary<string, object>>>> Search(SearchRequests requests)
+    public async Task<GenericSearchResult> Search(SearchRequests requests)
     {
-        return await SearchBase(requests.requests, new Dictionary<string, object>(requests.values));
+        return await SearchBase(requests, new Dictionary<string, object>(requests.values));
     }
 
     public List<T> ToStronglyTyped<T>(IEnumerable<IDictionary<string, object>> singleResults)

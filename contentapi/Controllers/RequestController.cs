@@ -1,16 +1,23 @@
 using System.Diagnostics;
+using AutoMapper;
 using contentapi.Search;
 using Microsoft.AspNetCore.Mvc;
 
 namespace contentapi.Controllers;
 
-public class RequestResponse
+public class RequestResponse : GenericSearchResult
 {
-    public SearchRequests search {get;set;} = new SearchRequests();
-    public Dictionary<string, IEnumerable<IDictionary<string, object>>> data {get;set;} = 
-        new Dictionary<string, IEnumerable<IDictionary<string, object>>>();
-    public double time {get;set;}
+    public double totalTime {get;set;}
+    public double nonDbTime {get;set;}
     public bool loggedIn {get;set;}
+}
+
+public class RequestResponseProfile : Profile
+{
+    public RequestResponseProfile()
+    {
+        CreateMap<GenericSearchResult, RequestResponse>().ReverseMap();
+    }
 }
 
 public class RequestController : BaseController
@@ -28,21 +35,19 @@ public class RequestController : BaseController
     [HttpPost()]
     public Task<ActionResult<RequestResponse>> RequestAsync([FromBody]SearchRequests search)
     {
+        var sw = new Stopwatch();
+        sw.Start();
+
         return MatchExceptions(async () =>
         {
-            var sw = new Stopwatch();
-
-            sw.Start();
             var data = await searcher.SearchRestricted(search);
+            var result = services.mapper.Map<RequestResponse>(data);
+            result.loggedIn = IsUserLoggedIn();
             sw.Stop();
+            result.totalTime = sw.Elapsed.TotalMilliseconds;
+            result.nonDbTime = result.totalTime - result.databaseTimes.Sum(x => x.Value);
 
-            return new RequestResponse()
-            {
-                search = search,
-                data = data,
-                time = sw.Elapsed.TotalMilliseconds,
-                loggedIn = IsUserLoggedIn()
-            };
+            return result;
         });
     }
 

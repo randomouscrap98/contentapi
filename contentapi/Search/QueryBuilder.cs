@@ -95,6 +95,7 @@ public class QueryBuilder : IQueryBuilder
         { "valuelike", new MacroDescription("vv", "ValueLike", CONTENTREQUESTTYPES) },
         { "onlyparents", new MacroDescription("", "OnlyParents", CONTENTREQUESTTYPES) },
         { "basichistory", new MacroDescription("", "BasicHistory", new List<RequestType> { RequestType.activity })},
+        { "notnull", new MacroDescription("f", "NotNullMacro", Enum.GetValues<RequestType>().ToList()) },
         //WARN: permission limiting could be very dangerous! Make sure that no matter how the user uses
         //this, they still ONLY get the stuff they're allowed to read!
         { "permissionlimit", new MacroDescription("vf", "PermissionLimit", new List<RequestType> {
@@ -177,6 +178,11 @@ public class QueryBuilder : IQueryBuilder
              where internalType = {(int)InternalContentType.page}
              and deleted = 0
             )";
+    }
+
+    public string NotNullMacro(SearchRequestPlus request, string field)
+    {
+        return $"{field} IS NOT NULL"; 
     }
 
     //For now, this is JUST read limit!!
@@ -341,7 +347,7 @@ public class QueryBuilder : IQueryBuilder
                 throw new ArgumentException($"Link result {resultName} has no field {resultField} for {value} in {request.name}");
 
             //OK we finally have it, let's go
-            parameters.Add(newName, valList.Select(x => x[resultField]));
+            parameters.Add(newName, valList.Select(x => x[resultField]).Where(x => x != null));
             return $"@{newName}";
         }
         return value;

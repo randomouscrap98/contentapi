@@ -8,9 +8,8 @@ public interface IGenericSearch
     //which produced a tree, but the amount of cons it brings us far outweigh the pros imo,
     //so I'd rather just give out these basic lists of objects all the time and have
     //other endpoints which consume this have a MUCH easier time.
-    Task<Dictionary<string, IEnumerable<IDictionary<string, object>>>> Search(SearchRequests requests);
-    Task<Dictionary<string, IEnumerable<IDictionary<string, object>>>> SearchRestricted(SearchRequests requests,
-        long requestUserId = 0);
+    Task<GenericSearchResult> Search(SearchRequests requests);
+    Task<GenericSearchResult> SearchRestricted(SearchRequests requests, long requestUserId = 0);
 
     List<T> ToStronglyTyped<T>(IEnumerable<IDictionary<string, object>> singleResults);
 }
