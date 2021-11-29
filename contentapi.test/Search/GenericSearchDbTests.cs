@@ -703,6 +703,37 @@ public class GenericSearchDbTests : UnitTestBase, IClassFixture<DbUnitTestSearch
         Assert.Empty(result);
     }
 
+    [Fact]
+    public async Task GenericSearch_Search_BasicHistoryMacro()
+    {
+        var search = new SearchRequests();
+        search.requests.Add(new SearchRequest()
+        {
+            name = "historymacro",
+            type = "activity",
+            fields = "*",
+            query = "!basichistory()"
+        });
+        search.requests.Add(new SearchRequest()
+        {
+            name = "actcon",
+            type = "content",
+            fields = "*",
+            query = "id in @historymacro.contentId"
+        });
+
+        var result = (await service.Search(search));//["historymacro"];
+        var castResult = service.ToStronglyTyped<ActivityView>(result["historymacro"]);
+        var content = service.ToStronglyTyped<ContentView>(result["actcon"]);
+
+        Assert.All(castResult, x =>
+        {
+            var c = content.First(y => y.id == x.contentId);
+            Assert.False(c.deleted);
+            Assert.Equal(InternalContentType.page.ToString(), c.internalType);
+        });
+    }
+
     //This test tests a LOT of systems all at once! Does the macro system work?
     //Does the search system automatically limit, and does it do it correctly?
     //Can we actually retrieve the last post ID for all content while doing

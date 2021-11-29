@@ -127,6 +127,7 @@ public class GenericSearcher : IGenericSearch
         { "keywordlike", new MacroDescription("v", "KeywordLike", ContentRequestTypes) },
         { "valuelike", new MacroDescription("vv", "ValueLike", ContentRequestTypes) },
         { "onlyparents", new MacroDescription("", "OnlyParents", ContentRequestTypes) },
+        { "basichistory", new MacroDescription("", "BasicHistory", new List<RequestType> { RequestType.activity })},
         //WARN: permission limiting could be very dangerous! Make sure that no matter how the user uses
         //this, they still ONLY get the stuff they're allowed to read!
         { "permissionlimit", new MacroDescription("vf", "PermissionLimit", new List<RequestType> {
@@ -200,6 +201,17 @@ public class GenericSearcher : IGenericSearch
             (select {nameof(Content.parentId)} 
              from {typeInfo.database} 
              group by {nameof(Content.parentId)}
+            )";
+    }
+
+    public string BasicHistory(SearchRequestPlus request)
+    {
+        var typeInfo = typeService.GetTypeInfo<Content>();
+        return $@"{MainAlias}.contentId in 
+            (select {nameof(Content.id)} 
+             from {typeInfo.database} 
+             where internalType = {(int)InternalContentType.page}
+             and deleted = 0
             )";
     }
 
@@ -675,7 +687,7 @@ public class GenericSearcher : IGenericSearch
             //This is VERY important: limit content searches based on permissions!
             if(ContentRequestTypes.Contains(reqplus.requestType))
                 reqplus.query = CombineQueryClause(reqplus.query, $"!permissionlimit(@{reqplus.RequesterKey()}, id)");
-            else if(reqplus.requestType == RequestType.comment) //ALSO MODULEMESSAGE!@!
+            else if(reqplus.requestType == RequestType.comment || reqplus.requestType == RequestType.activity) //ALSO MODULEMESSAGE!@!
                 reqplus.query = CombineQueryClause(reqplus.query, $"!permissionlimit(@{reqplus.RequesterKey()}, contentId)");
         }
 
