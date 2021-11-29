@@ -141,18 +141,18 @@ public class DbUnitTestSearchFixture : DbUnitTestBase, IDisposable
                     //Always insert watches, the amount of people watching is 1/usercount of the id.
                     //Thus the last one might have all users watching it... maybe?? mm idk. 
                     //Anyway, first few usercount content have no watches
-                    for(var j = 0; j < i / ContentCount * UserCount; j++)
+                    for(var j = 0; j < i / (ContentCount / UserCount); j++)
                     {
                         watchers.Add(new Db.ContentWatch()
                         {
                             contentId = i + 1,
-                            userId = j % UserCount,
+                            userId = 1 + (j % UserCount),
                             createDate = DateTime.Now
                         });
                     }
 
                     var random = new Random(i);
-                    for(var j = 0; j < i / ContentCount * UserCount; j++)
+                    for(var j = 0; j < i / (ContentCount / UserCount); j++)
                     {
                         votes.Add(new Db.ContentVote()
                         {

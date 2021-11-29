@@ -8,5 +8,6 @@ public enum RequestType
     page,
     file,
     module,
-    activity
+    activity,
+    watch
 }

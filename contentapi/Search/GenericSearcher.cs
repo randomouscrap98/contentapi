@@ -157,7 +157,7 @@ public class GenericSearcher : IGenericSearch
     }
 
     //A restricted search doesn't allow you to retrieve results that the given request user can't read
-    public async Task<GenericSearchResult> SearchRestricted(SearchRequests requests, long requestUserId = 0)
+    public async Task<GenericSearchResult> Search(SearchRequests requests, long requestUserId = 0)
     {
         var globalId = Guid.NewGuid();
         Db.User requester = new Db.User() //This is a default user, make SURE all the relevant fields are set!
@@ -193,16 +193,24 @@ public class GenericSearcher : IGenericSearch
         {
             //This is VERY important: limit content searches based on permissions!
             if(queryBuilder.ContentRequestTypes.Select(x => x.ToString()).Contains(request.type))
+            {
                 request.query = queryBuilder.CombineQueryClause(request.query, $"!permissionlimit(@{requesterKey}, id)");
-            else if(request.type == "comment" || request.type == "activity") //ALSO MODULEMESSAGE!@!
+            }
+            if(request.type == "comment" || request.type == "activity" || request.type == "watch") //ALSO MODULEMESSAGE!@!
+            {
                 request.query = queryBuilder.CombineQueryClause(request.query, $"!permissionlimit(@{requesterKey}, contentId)");
+            }
+            if(request.type == "watch")
+            {
+                request.query = queryBuilder.CombineQueryClause(request.query, $"userId = @{requesterKey}");
+            }
         }
 
         return await SearchBase(requests, parameterValues);
     }
 
     //This search is a plain search, no permission limits or user lookups.
-    public async Task<GenericSearchResult> Search(SearchRequests requests)
+    public async Task<GenericSearchResult> SearchUnrestricted(SearchRequests requests)
     {
         return await SearchBase(requests, new Dictionary<string, object>(requests.values));
     }

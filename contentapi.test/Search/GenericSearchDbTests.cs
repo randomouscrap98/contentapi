@@ -53,7 +53,7 @@ public class GenericSearchDbTests : UnitTestBase, IClassFixture<DbUnitTestSearch
                 fields = "*", //THIS is what we're testing
             });
 
-            var result = service.Search(search).Result.data["testStar"];
+            var result = service.SearchUnrestricted(search).Result.data["testStar"];
             Assert.NotEmpty(result);
 
             //Here, we're just making sure that "*" didn't break anything. We assume
@@ -74,7 +74,7 @@ public class GenericSearchDbTests : UnitTestBase, IClassFixture<DbUnitTestSearch
             fields = "*", //THIS is what we're testing
         });
 
-        var result = (await service.Search(search)).data["test"];
+        var result = (await service.SearchUnrestricted(search)).data["test"];
         var castResult = service.ToStronglyTyped<UserView>(result);
         Assert.NotEmpty(castResult);
         Assert.All(castResult, x =>
@@ -102,7 +102,7 @@ public class GenericSearchDbTests : UnitTestBase, IClassFixture<DbUnitTestSearch
             fields = "*", //THIS is what we're testing
         });
 
-        var result = (await service.Search(search)).data["test"];
+        var result = (await service.SearchUnrestricted(search)).data["test"];
         var castResult = service.ToStronglyTyped<ContentView>(result);
         Assert.NotEmpty(castResult);
         Assert.All(castResult, x =>
@@ -113,8 +113,8 @@ public class GenericSearchDbTests : UnitTestBase, IClassFixture<DbUnitTestSearch
                 Assert.Equal(x.id - 1, x.commentCount);
             else
                 Assert.Equal(0, x.commentCount);
-            Assert.Equal((x.id - 1) / fixture.ContentCount * fixture.UserCount, x.watchCount);
-            Assert.Equal((x.id - 1) / fixture.ContentCount * fixture.UserCount, x.votes.Sum(x => x.Value));
+            Assert.Equal((x.id - 1) / (fixture.ContentCount / fixture.UserCount), x.watchCount);
+            Assert.Equal((x.id - 1) / (fixture.ContentCount / fixture.UserCount), x.votes.Sum(x => x.Value));
             Assert.True(x.id > 0, "ContentId not cast properly!");
             Assert.True(x.createUserId > 0, "Content createuserid not cast properly!");
             Assert.True(x.createDate.Ticks > 0, "Content createdate not cast properly!");
@@ -149,7 +149,7 @@ public class GenericSearchDbTests : UnitTestBase, IClassFixture<DbUnitTestSearch
             fields = "*"
         });
 
-        var result = (await service.Search(search)).data["test"];
+        var result = (await service.SearchUnrestricted(search)).data["test"];
         var castResult = service.ToStronglyTyped<ActivityView>(result);
         Assert.NotEmpty(castResult);
         Assert.All(castResult, x =>
@@ -180,7 +180,7 @@ public class GenericSearchDbTests : UnitTestBase, IClassFixture<DbUnitTestSearch
             //query = "username like @userlike" //Don't need to test syntax btw! Already done!
         });
 
-        var result = service.Search(search).Result.data;
+        var result = service.SearchUnrestricted(search).Result.data;
 
         Assert.All(result["fieldLimit"], x => {
             Assert.Equal(2, x.Keys.Count);
@@ -202,7 +202,7 @@ public class GenericSearchDbTests : UnitTestBase, IClassFixture<DbUnitTestSearch
             query = "id < @maxid" //Don't need to test syntax btw! Already done!
         });
 
-        var result = service.Search(search).Result.data;
+        var result = service.SearchUnrestricted(search).Result.data;
 
         Assert.Equal(9, result["lessthan"].Count());
     }
@@ -220,7 +220,7 @@ public class GenericSearchDbTests : UnitTestBase, IClassFixture<DbUnitTestSearch
             query = "id <= @maxid"
         });
 
-        var result = service.Search(search).Result.data;
+        var result = service.SearchUnrestricted(search).Result.data;
 
         Assert.Equal(10, result["lessthanequal"].Count());
     }
@@ -238,7 +238,7 @@ public class GenericSearchDbTests : UnitTestBase, IClassFixture<DbUnitTestSearch
             query = "id > @minid" //Don't need to test syntax btw! Already done!
         });
 
-        var result = service.Search(search).Result.data;
+        var result = service.SearchUnrestricted(search).Result.data;
 
         Assert.Equal(fixture.UserCount - 10, result["greaterthan"].Count());
     }
@@ -256,7 +256,7 @@ public class GenericSearchDbTests : UnitTestBase, IClassFixture<DbUnitTestSearch
             query = "id >= @minid" //Don't need to test syntax btw! Already done!
         });
 
-        var result = service.Search(search).Result.data;
+        var result = service.SearchUnrestricted(search).Result.data;
 
         Assert.Equal(fixture.UserCount - 9, result["greaterthanequal"].Count());
     }
@@ -274,7 +274,7 @@ public class GenericSearchDbTests : UnitTestBase, IClassFixture<DbUnitTestSearch
             query = "id = @id"
         });
 
-        var result = service.Search(search).Result.data;
+        var result = service.SearchUnrestricted(search).Result.data;
 
         Assert.Single(result["equal"]);
         Assert.Equal(10L, result["equal"].First()["id"]);
@@ -293,7 +293,7 @@ public class GenericSearchDbTests : UnitTestBase, IClassFixture<DbUnitTestSearch
             query = "id <> @id"
         });
 
-        var result = service.Search(search).Result.data;
+        var result = service.SearchUnrestricted(search).Result.data;
 
         Assert.Equal(fixture.UserCount - 1, result["noequal"].Count());
         Assert.All(result["noequal"], x =>
@@ -316,7 +316,7 @@ public class GenericSearchDbTests : UnitTestBase, IClassFixture<DbUnitTestSearch
             query = "username like @userlike"
         });
 
-        var result = service.Search(search).Result.data["testlike"];
+        var result = service.SearchUnrestricted(search).Result.data["testlike"];
         Assert.Equal(16, fixture.UserCount); //This test only works while this is 16
         Assert.Equal(7, result.Count()); //There are 16 users, so 6 from 10s and 1 from the 1
     }
@@ -334,7 +334,7 @@ public class GenericSearchDbTests : UnitTestBase, IClassFixture<DbUnitTestSearch
             query = "username not like @usernotlike"
         });
 
-        var result = service.Search(search).Result.data["testnotlike"];
+        var result = service.SearchUnrestricted(search).Result.data["testnotlike"];
         Assert.Equal(16, fixture.UserCount); //This test only works while this is 16
         Assert.Equal(fixture.UserCount - 7, result.Count()); //There are 16 users, so 6 from 10s and 1 from the 1
     }
@@ -352,7 +352,7 @@ public class GenericSearchDbTests : UnitTestBase, IClassFixture<DbUnitTestSearch
             query = "id in @ids"
         });
 
-        var result = service.Search(search).Result.data["idin"];
+        var result = service.SearchUnrestricted(search).Result.data["idin"];
         Assert.Equal(3, result.Count()); //There are 16 users, so 6 from 10s and 1 from the 1
         Assert.Contains(1L, result.Select(x => x["id"]));
         Assert.Contains(10L, result.Select(x => x["id"]));
@@ -372,7 +372,7 @@ public class GenericSearchDbTests : UnitTestBase, IClassFixture<DbUnitTestSearch
             query = "id not in @ids"
         });
 
-        var result = service.Search(search).Result.data["idnotin"];
+        var result = service.SearchUnrestricted(search).Result.data["idnotin"];
         Assert.Equal(fixture.UserCount - 3, result.Count()); //There are 16 users, so 6 from 10s and 1 from the 1
         Assert.DoesNotContain(1L, result.Select(x => x["id"]));
         Assert.DoesNotContain(10L, result.Select(x => x["id"]));
@@ -394,7 +394,7 @@ public class GenericSearchDbTests : UnitTestBase, IClassFixture<DbUnitTestSearch
         });
 
         await Assert.ThrowsAnyAsync<ArgumentException>(async () => {
-            var result = await service.Search(search);
+            var result = await service.SearchUnrestricted(search);
         });
     }
 
@@ -417,7 +417,7 @@ public class GenericSearchDbTests : UnitTestBase, IClassFixture<DbUnitTestSearch
         });
 
         await Assert.ThrowsAnyAsync<ArgumentException>(async () => {
-            var result = await service.Search(search);
+            var result = await service.SearchUnrestricted(search);
         });
     }
 
@@ -439,7 +439,7 @@ public class GenericSearchDbTests : UnitTestBase, IClassFixture<DbUnitTestSearch
             query = "id in @allpages.createUserId"
         });
 
-        var result = (await service.Search(search)).data;
+        var result = (await service.SearchUnrestricted(search)).data;
         Assert.Contains("allpages", result.Keys);
         Assert.Contains("createusers", result.Keys);
         Assert.Equal(fixture.ContentCount, result["allpages"].Count());
@@ -468,7 +468,7 @@ public class GenericSearchDbTests : UnitTestBase, IClassFixture<DbUnitTestSearch
             query = "username like @userlike"
         });
 
-        var result = (await service.Search(search)).data["basicfield"];
+        var result = (await service.SearchUnrestricted(search)).data["basicfield"];
         Assert.Equal(fixture.UserCount, result.Count());
     }
 
@@ -488,7 +488,7 @@ public class GenericSearchDbTests : UnitTestBase, IClassFixture<DbUnitTestSearch
             query = "hash = @hash"
         });
 
-        var result = (await service.Search(search)).data["complex"];
+        var result = (await service.SearchUnrestricted(search)).data["complex"];
         Assert.Equal(fixture.ContentCount / 4 / 2, result.Count());
     }
 
@@ -506,7 +506,7 @@ public class GenericSearchDbTests : UnitTestBase, IClassFixture<DbUnitTestSearch
         });
 
         await Assert.ThrowsAnyAsync<ArgumentException>(async () => {
-            var result = await service.Search(search);
+            var result = await service.SearchUnrestricted(search);
         });
     }
 
@@ -532,7 +532,7 @@ public class GenericSearchDbTests : UnitTestBase, IClassFixture<DbUnitTestSearch
         //Here, I'm using a keyword as the start of different names. This would normally fail
         //in the regular lexer, but with the additions, it will allow this to work(?)
 
-        var result = (await service.Search(search)).data;
+        var result = (await service.SearchUnrestricted(search)).data;
         foreach(var k in keywords)
         {
             var r = result[$"{k}test"];
@@ -554,7 +554,7 @@ public class GenericSearchDbTests : UnitTestBase, IClassFixture<DbUnitTestSearch
             fields = "*"
         });
 
-        var result = (await service.SearchRestricted(search)).data["permissiondefault"];
+        var result = (await service.Search(search)).data["permissiondefault"];
         var castResult = service.ToStronglyTyped<ContentView>(result);
 
         //Because the permission thing "all or none" is just based on a bit, it will
@@ -583,7 +583,7 @@ public class GenericSearchDbTests : UnitTestBase, IClassFixture<DbUnitTestSearch
             query = "!keywordlike(@search)"
         });
 
-        var result = (await service.Search(search)).data["keywordmacro"];
+        var result = (await service.SearchUnrestricted(search)).data["keywordmacro"];
         var castResult = service.ToStronglyTyped<ContentView>(result);
 
         //At least half the content should have the "one" keyword, and they should all have
@@ -608,7 +608,7 @@ public class GenericSearchDbTests : UnitTestBase, IClassFixture<DbUnitTestSearch
             query = "!keywordlike(@search)"
         });
 
-        var result = (await service.Search(search)).data["keywordmacro"];
+        var result = (await service.SearchUnrestricted(search)).data["keywordmacro"];
         var castResult = service.ToStronglyTyped<ContentView>(result);
         //This also secretly tests if ToStronglyTyped accepts blanks
         Assert.Empty(result);
@@ -628,7 +628,7 @@ public class GenericSearchDbTests : UnitTestBase, IClassFixture<DbUnitTestSearch
             query = "!valuelike(@key, @search)"
         });
 
-        var result = (await service.Search(search)).data["valuemacro"];
+        var result = (await service.SearchUnrestricted(search)).data["valuemacro"];
         var castResult = service.ToStronglyTyped<ContentView>(result);
 
         //At least half the content should have the "one" keyword, and they should all have
@@ -654,7 +654,7 @@ public class GenericSearchDbTests : UnitTestBase, IClassFixture<DbUnitTestSearch
             query = "!valuelike(@key, @search)"
         });
 
-        var result = (await service.Search(search)).data["valuemacro"];
+        var result = (await service.SearchUnrestricted(search)).data["valuemacro"];
         Assert.Empty(result);
     }
 
@@ -670,7 +670,7 @@ public class GenericSearchDbTests : UnitTestBase, IClassFixture<DbUnitTestSearch
             query = "!onlyparents()"
         });
 
-        var result = (await service.Search(search)).data["parentmacro"];
+        var result = (await service.SearchUnrestricted(search)).data["parentmacro"];
         var castResult = service.ToStronglyTyped<ContentView>(result);
 
         //Parents are assigned / 4, so there should be that many (minus 0 parents)
@@ -694,7 +694,7 @@ public class GenericSearchDbTests : UnitTestBase, IClassFixture<DbUnitTestSearch
             query = "id > @minId and !onlyparents()"
         });
 
-        var result = (await service.Search(search)).data["parentmacro"];
+        var result = (await service.SearchUnrestricted(search)).data["parentmacro"];
         Assert.Empty(result);
     }
 
@@ -717,7 +717,7 @@ public class GenericSearchDbTests : UnitTestBase, IClassFixture<DbUnitTestSearch
             query = "id in @historymacro.contentId"
         });
 
-        var result = (await service.Search(search)).data;
+        var result = (await service.SearchUnrestricted(search)).data;
         var castResult = service.ToStronglyTyped<ActivityView>(result["historymacro"]);
         var content = service.ToStronglyTyped<ContentView>(result["actcon"]);
 
@@ -727,6 +727,32 @@ public class GenericSearchDbTests : UnitTestBase, IClassFixture<DbUnitTestSearch
             Assert.False(c.deleted);
             Assert.Equal(InternalContentType.page.ToString(), c.internalType);
         });
+    }
+
+    [Fact]
+    public async Task GenericSearch_Search_OnlyUserWatches()
+    {
+        //Do a NORMAL search with a requester
+        for(var i = 1; i <= fixture.UserCount; i++)
+        {
+            //DON'T REUSE SEARCHES!!! DINGUS!!
+            var search = new SearchRequests();
+            search.requests.Add(new SearchRequest()
+            {
+                name = "watches",
+                type = "watch",
+                fields = "*"
+            });
+
+            var result = (await service.Search(search)).data["watches"];
+            var castResult = service.ToStronglyTyped<ContentWatch>(result);
+
+            //Make sure ALL the watches we got back are SPECIFICALLY for us, nobody else
+            Assert.All(castResult, x =>
+            {
+                Assert.Equal(i, x.userId);
+            });
+        }
     }
 
     //This test tests a LOT of systems all at once! Does the macro system work?
@@ -761,7 +787,7 @@ public class GenericSearchDbTests : UnitTestBase, IClassFixture<DbUnitTestSearch
         });
 
         //Get results as "default" user (meaning not logged in)
-        var result = (await service.SearchRestricted(search)).data;
+        var result = (await service.Search(search)).data;
 
         Assert.Contains("allreadable", result.Keys);
         Assert.Contains("createusers", result.Keys);
@@ -814,7 +840,7 @@ public class GenericSearchDbTests : UnitTestBase, IClassFixture<DbUnitTestSearch
         });
 
         //Get results as "default" user (meaning not logged in)
-        var result = (await service.SearchRestricted(search)).data;
+        var result = (await service.Search(search)).data;
 
         Assert.Contains("allreadable", result.Keys);
         Assert.Contains("lastcomments", result.Keys);

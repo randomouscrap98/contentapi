@@ -40,7 +40,7 @@ public class RequestController : BaseController
 
         return MatchExceptions(async () =>
         {
-            var data = await searcher.SearchRestricted(search);
+            var data = await searcher.Search(search);
             var result = services.mapper.Map<RequestResponse>(data);
             result.loggedIn = IsUserLoggedIn();
             sw.Stop();

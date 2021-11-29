@@ -27,7 +27,8 @@ public class QueryBuilder : IQueryBuilder
         { RequestType.page, typeof(PageView) },
         { RequestType.module, typeof(ModuleView) },
         { RequestType.file, typeof(FileView) },
-        { RequestType.activity, typeof(ActivityView) }
+        { RequestType.activity, typeof(ActivityView) },
+        { RequestType.watch, typeof(WatchView) }
     };
 
     protected static readonly List<RequestType> CONTENTREQUESTTYPES = new List<RequestType>()
@@ -96,6 +97,7 @@ public class QueryBuilder : IQueryBuilder
         { "onlyparents", new MacroDescription("", "OnlyParents", CONTENTREQUESTTYPES) },
         { "basichistory", new MacroDescription("", "BasicHistory", new List<RequestType> { RequestType.activity })},
         { "notnull", new MacroDescription("f", "NotNullMacro", Enum.GetValues<RequestType>().ToList()) },
+        { "null", new MacroDescription("f", "NullMacro", Enum.GetValues<RequestType>().ToList()) },
         //WARN: permission limiting could be very dangerous! Make sure that no matter how the user uses
         //this, they still ONLY get the stuff they're allowed to read!
         { "permissionlimit", new MacroDescription("vf", "PermissionLimit", new List<RequestType> {
@@ -180,10 +182,8 @@ public class QueryBuilder : IQueryBuilder
             )";
     }
 
-    public string NotNullMacro(SearchRequestPlus request, string field)
-    {
-        return $"{field} IS NOT NULL"; 
-    }
+    public string NotNullMacro(SearchRequestPlus request, string field) { return $"{field} IS NOT NULL"; }
+    public string NullMacro(SearchRequestPlus request, string field) { return $"{field} IS NULL"; }
 
     //For now, this is JUST read limit!!
     public string PermissionLimit(SearchRequestPlus request, string requester, string idField)
