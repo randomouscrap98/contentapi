@@ -16,10 +16,13 @@ public class RequestResponse
 public class RequestController : BaseController
 {
     protected IGenericSearch searcher;
+    protected IQueryBuilder queryBuilder;
 
-    public RequestController(BaseControllerServices services, IGenericSearch search) : base(services)
+    public RequestController(BaseControllerServices services, IGenericSearch search,
+        IQueryBuilder queryBuilder) : base(services)
     {
         this.searcher = search;
+        this.queryBuilder = queryBuilder;
     }
 
     [HttpPost()]
@@ -53,7 +56,7 @@ public class RequestController : BaseController
                     "search objects. You must name each request, because you can reference requests in later " +
                     "requests to perform 'chaining'. You can use values in your query, but they must be parameters " +
                     "in the form of @value. For examples, please see the unit tests in github: https://github.com/randomouscrap98/contentapi/blob/master/contentapi.test/Search/GenericSearchDbTests.cs",
-            details = searcher.GetAboutSearch()
+            details = queryBuilder.GetAboutSearch()
         };
     }
 }

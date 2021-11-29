@@ -20,6 +20,7 @@ public static class DefaultSetup
         services.AddSingleton<IRuntimeInformation>(new MyRuntimeInformation(DateTime.Now));
         services.AddSingleton<ITypeInfoService, CachedTypeInfoService>();
         services.AddTransient<IGenericSearch, GenericSearcher>();
+        services.AddTransient<IQueryBuilder, QueryBuilder>();
         services.AddSingleton<IAuthTokenService<long>, JwtAuthTokenService<long>>();
         services.AddSingleton<ISearchQueryParser, SearchQueryParser>();
         services.AddSingleton<IHashService, HashService>();
