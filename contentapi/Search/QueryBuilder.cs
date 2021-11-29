@@ -5,16 +5,13 @@ using AutoMapper;
 using contentapi.Db;
 using contentapi.Utilities;
 using contentapi.Views;
-using Dapper;
 
 namespace contentapi.Search;
 
+//This assumes that WHATEVER is given, that's EXACTLY what's used. No limits, no nothing.
 public class QueryBuilder : IQueryBuilder
 {
-    //This assumes that WHATEVER is given, that's EXACTLY what's used. No limits, no nothing.
-
     protected ILogger logger;
-    protected IDbConnection dbcon;
     protected ITypeInfoService typeService;
     protected ISearchQueryParser parser;
     protected IMapper mapper;
@@ -109,11 +106,10 @@ public class QueryBuilder : IQueryBuilder
         }) }
     };
 
-    public QueryBuilder(ILogger<QueryBuilder> logger, ContentApiDbConnection connection,
-        ITypeInfoService typeInfoService, IMapper mapper, ISearchQueryParser parser)
+    public QueryBuilder(ILogger<QueryBuilder> logger, ITypeInfoService typeInfoService, 
+        IMapper mapper, ISearchQueryParser parser)
     {
         this.logger = logger;
-        this.dbcon = connection.Connection;
         this.typeService = typeInfoService;
         this.mapper = mapper;
         this.parser = parser;
@@ -199,10 +195,9 @@ public class QueryBuilder : IQueryBuilder
     /// Throw exceptions on any funky business we can quickly report
     /// </summary>
     /// <param name="requests"></param>
-    public SearchRequestPlus StandardRequestPreparse(SearchRequest request) //, long requestUserId)
+    public SearchRequestPlus StandardRequestPreparse(SearchRequest request, Dictionary<string, object> parameters)
     {
         var acceptedTypes = Enum.GetNames<RequestType>();
-        //var globalId = Guid.NewGuid();
 
         //Oops, unknown type
         if(!acceptedTypes.Contains(request.type))
@@ -215,6 +210,10 @@ public class QueryBuilder : IQueryBuilder
         if(!parser.IsFieldNameValid(request.name))
             throw new ArgumentException($"Malformed name '{request.name}'");
 
+        //Oops, there's a name collision! Might as well fail as early as possible
+        if(parameters.ContainsKey(request.name))
+            throw new ArgumentException($"Request name {request.name} collides with a key in your value array");
+
         //Now do some pre-parsing and data retrieval. If one of these fail, it's good that it
         //fails early (although it will only fail if me, the programmer, did something wrong,
         //not if the user supplies a weird request)
@@ -222,8 +221,6 @@ public class QueryBuilder : IQueryBuilder
         reqplus.requestType = Enum.Parse<RequestType>(reqplus.type); //I know this will succeed
         reqplus.typeInfo = typeService.GetTypeInfo(StandardViewRequests[reqplus.requestType]);
         reqplus.requestFields = ComputeRealFields(reqplus);
-        //reqplus.globalRequestId = globalId;
-        //reqplus.requester = requester;
 
         return reqplus;
     }
@@ -489,75 +486,12 @@ public class QueryBuilder : IQueryBuilder
         }
     }
 
-    //public async Task AddExtraFields(SearchRequestPlus r, IEnumerable<IDictionary<string, object>> result)
-    //{
-    //    if(ContentRequestTypes.Contains(r.requestType))
-    //    {
-    //        const string keykey = nameof(ContentView.keywords);
-    //        const string valkey = nameof(ContentView.values);
-    //        const string permkey = nameof(ContentView.permissions);
-    //        const string votekey = nameof(ContentView.votes);
-    //        const string cidkey = nameof(Db.ContentKeyword.contentId); //WARN: assuming it's the same for all!
-    //        var ids = result.Select(x => x["id"]);
-
-    //        if(r.requestFields.Contains(keykey))
-    //        {
-    //            var keyinfo = typeService.GetTypeInfo<Db.ContentKeyword>();
-    //            var keywords = await QueryAsyncCast($"select {cidkey},value from {keyinfo.database} where {cidkey} in @ids",
-    //                new { ids = ids });
-
-    //            foreach(var c in result)
-    //                c[keykey] = keywords.Where(x => x[cidkey].Equals(c["id"])).Select(x => x["value"]).ToList();
-    //        }
-    //        if(r.requestFields.Contains(valkey))
-    //        {
-    //            var valinfo = typeService.GetTypeInfo<Db.ContentValue>();
-    //            var values = await QueryAsyncCast($"select {cidkey},key,value from {valinfo.database} where {cidkey} in @ids",
-    //                new { ids = ids });
-
-    //            foreach(var c in result)
-    //                c[valkey] = values.Where(x => x[cidkey].Equals(c["id"])).ToDictionary(x => x["key"], y => y["value"]);
-    //        }
-    //        if(r.requestFields.Contains(permkey))
-    //        {
-    //            var perminfo = typeService.GetTypeInfo<Db.ContentPermission>();
-    //            var permissions = await dbcon.QueryAsync($"select * from {perminfo.database} where {cidkey} in @ids",
-    //                new { ids = ids });
-
-    //            foreach(var c in result)
-    //            {
-    //                //TODO: May need to move this conversion somewhere else... not sure
-    //                c[permkey] = permissions.Where(x => x.contentId.Equals(c["id"])).ToDictionary(
-    //                    x => x.userId, y => $"{(y.create==1?"C":"")}{(y.read==1?"R":"")}{(y.update==1?"U":"")}{(y.delete==1?"D":"")}");
-    //            }
-    //        }
-    //        if(r.requestFields.Contains(votekey))
-    //        {
-    //            var voteinfo = typeService.GetTypeInfo<Db.ContentVote>();
-    //            var votes = await dbcon.QueryAsync($"select {cidkey}, vote, count(*) as count from {voteinfo.database} where {cidkey} in @ids group by {cidkey}, vote",
-    //                new { ids = ids });
-    //            var displayVotes = Enum.GetValues<VoteType>().Where(x => x != VoteType.none).Select(x => x.ToString());
-
-    //            foreach(var c in result)
-    //            {
-    //                var cvotes = votes.Where(x => x.contentId.Equals(c["id"])).ToDictionary(x => ((VoteType)x.vote).ToString(), y => y.count);
-    //                foreach(var v in displayVotes)
-    //                {
-    //                    if(!cvotes.ContainsKey(v))
-    //                        cvotes.Add(v, 0);
-    //                }
-    //                c[votekey] = cvotes;
-    //            }
-    //        }
-    //    }
-    //}
-
     public SearchRequestPlus FullParseRequest(SearchRequest request, Dictionary<string, object> parameters)
     {
         var queryStr = new StringBuilder();
 
         //WARN: doing a standard preparse before knowing it's a standard request! fix some of this
-        var reqplus = StandardRequestPreparse(request);
+        var reqplus = StandardRequestPreparse(request, parameters);
 
         if(StandardViewRequests.ContainsKey(reqplus.requestType))
         {

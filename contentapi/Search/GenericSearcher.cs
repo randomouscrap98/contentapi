@@ -1,6 +1,4 @@
 using System.Data;
-using System.Runtime.CompilerServices;
-using System.Text;
 using AutoMapper;
 using contentapi.Db;
 using contentapi.Utilities;
@@ -17,122 +15,33 @@ public class GenericSearcherConfig
     public int MaxIndividualResultSet {get;set;} = 1000;
 }
 
-////This should probably move out at some point
-//public class SearchRequestPlus : SearchRequest
-//{
-//    public Db.User requester {get;set;} = new Db.User();
-//    public RequestType requestType {get;set;}
-//    public TypeInfo typeInfo {get;set;} = new TypeInfo();
-//    public List<string> requestFields {get;set;} = new List<string>();
-//    public Guid requestId = Guid.NewGuid();
-//    public Guid globalRequestId {get;set;} = Guid.Empty;
-//    public string UniqueRequestKey(string field)
-//    {
-//        return $"_req{requestId.ToString().Replace("-", "")}_{name}_{field}";
-//    }
-//    public string GlobalRequestKey(string field)
-//    {
-//        return $"_req{globalRequestId.ToString().Replace("-", "")}_{field}";
-//    }
-//    public string RequesterKey()
-//    {
-//        return GlobalRequestKey("requesterID");
-//    }
-//}
-
 public class GenericSearcher : IGenericSearch
 {
     protected ILogger logger;
     protected IDbConnection dbcon;
     protected ITypeInfoService typeService;
     protected GenericSearcherConfig config;
-    protected ISearchQueryParser parser;
     protected IMapper mapper;
     protected IQueryBuilder queryBuilder;
 
     public GenericSearcher(ILogger<GenericSearcher> logger, ContentApiDbConnection connection,
         ITypeInfoService typeInfoService, GenericSearcherConfig config, IMapper mapper,
-        ISearchQueryParser parser, IQueryBuilder queryBuilder)
+        IQueryBuilder queryBuilder)
     {
         this.logger = logger;
         this.dbcon = connection.Connection;
         this.typeService = typeInfoService;
         this.config = config;
         this.mapper = mapper;
-        this.parser = parser;
         this.queryBuilder = queryBuilder;
     }
-
-    ///// <summary>
-    ///// Throw exceptions on any funky business we can quickly report
-    ///// </summary>
-    ///// <param name="requests"></param>
-    //public async Task<List<SearchRequestPlus>> RequestPreparseAsync(SearchRequests requests, long requestUserId)
-    //{
-    //    var acceptedTypes = Enum.GetNames<RequestType>();
-    //    var result = new List<SearchRequestPlus>();
-    //    var globalId = Guid.NewGuid();
-    //    Db.User requester = new Db.User() //This is a default user, make SURE all the relevant fields are set!
-    //    {
-    //        id = 0,
-    //        super = false
-    //    };
-
-    //    //Do a (hopefully) quick lookup for the request user!
-    //    if(requestUserId > 0)
-    //    {
-    //        try
-    //        {
-    //            //This apparently throws an exception if it fails
-    //            requester = await dbcon.QuerySingleAsync<User>("select * from users where id = @requestUserId", 
-    //                new { requestUserId = requestUserId });
-    //        }
-    //        catch(Exception ex)
-    //        {
-    //            logger.LogWarning($"Error while looking up requester: {ex}");
-    //            throw new ArgumentException($"Unknown request user {requestUserId}");
-    //        }
-    //    }
-
-    //    foreach(var request in requests.requests)
-    //    {
-    //        //Oops, unknown type
-    //        if(!acceptedTypes.Contains(request.type))
-    //            throw new ArgumentException($"Unknown request type: {request.type} in request {request.name}");
-    //        
-    //        //Users HAVE to name their stuff! Otherwise the output of the data
-    //        //dictionary won't make any sense! Note that the method for this check 
-    //        //isn't EXACTLY right but... it should be fine, fields are all
-    //        //just regular identifiers, like in a programming language.
-    //        if(!parser.IsFieldNameValid(request.name))
-    //            throw new ArgumentException($"Malformed name '{request.name}'");
-
-    //        if(requests.values.ContainsKey(request.name))
-    //            throw new ArgumentException($"Key/name collision: request named {request.name}, which is also provided value");
-
-    //        if(requests.requests.Count(x => x.name == request.name) > 1)
-    //            throw new ArgumentException($"Name collision: request named {request.name} shows up twice!");
-    //        
-    //        //Now do some pre-parsing and data retrieval. If one of these fail, it's good that it
-    //        //fails early (although it will only fail if me, the programmer, did something wrong,
-    //        //not if the user supplies a weird request)
-    //        var reqplus = mapper.Map<SearchRequestPlus>(request);
-    //        reqplus.requestType = Enum.Parse<RequestType>(reqplus.type); //I know this will succeed
-    //        reqplus.typeInfo = typeService.GetTypeInfo(StandardViewRequests[reqplus.requestType]);
-    //        reqplus.requestFields = ComputeRealFields(reqplus);
-    //        reqplus.globalRequestId = globalId;
-    //        reqplus.requester = requester;
-    //        result.Add(reqplus);
-    //    }
-
-    //    return result;
-    //}
 
     public async Task<IEnumerable<IDictionary<string, object>>> QueryAsyncCast(string query, object parameters)
     {
         return (await dbcon.QueryAsync(query, parameters)).Cast<IDictionary<string, object>>();
     }
 
+    //WARN: should this be part of query builder?? who knows... it kinda doesn't need to be, it's not a big deal.
     public async Task AddExtraFields(SearchRequestPlus r, IEnumerable<IDictionary<string, object>> result)
     {
         if(queryBuilder.ContentRequestTypes.Contains(r.requestType))
@@ -206,6 +115,13 @@ public class GenericSearcher : IGenericSearch
         //Nothing to do!
         if(requests.Count == 0)
             return result;
+        
+        //Some nice prechecks
+        foreach(var request in requests)
+        {
+            if(requests.Count(x => x.name == request.name) > 1)
+                throw new ArgumentException($"Duplicate name {request.name} in requests!");
+        }
 
         foreach(var request in requests)
         {
@@ -214,6 +130,7 @@ public class GenericSearcher : IGenericSearch
             var reqplus = queryBuilder.FullParseRequest(request, parameterValues);
             logger.LogDebug($"Running SQL for {request.type}({request.name}): {reqplus.computedSql}");
 
+            //Warn: we repeatedly do this because the FullParseRequest CAN modify parameter values
             var dp = new DynamicParameters(parameterValues);
             var qresult = await QueryAsyncCast(reqplus.computedSql, dp);
 

@@ -27,8 +27,7 @@ public class GenericSearchDbTests : UnitTestBase, IClassFixture<DbUnitTestSearch
         var conWrap = fixture.GetService<ContentApiDbConnection>();
         service = new GenericSearcher(fixture.GetService<ILogger<GenericSearcher>>(), 
             conWrap, fixture.GetService<ITypeInfoService>(), fixture.GetService<GenericSearcherConfig>(),
-            fixture.GetService<IMapper>(), fixture.GetService<ISearchQueryParser>(),
-            fixture.GetService<IQueryBuilder>());
+            fixture.GetService<IMapper>(), fixture.GetService<IQueryBuilder>());
         dbcon = conWrap.Connection;
     }
 
@@ -320,11 +319,6 @@ public class GenericSearchDbTests : UnitTestBase, IClassFixture<DbUnitTestSearch
         var result = service.Search(search).Result["testlike"];
         Assert.Equal(16, fixture.UserCount); //This test only works while this is 16
         Assert.Equal(7, result.Count()); //There are 16 users, so 6 from 10s and 1 from the 1
-        //Assert.Single(result);
-        //var user = result.First();
-        //Assert.Equal("admin", user["username"]);
-        //Assert.Equal(1L, user["avatar"]);
-        //Assert.Equal("cutenickname", user["special"]);
     }
 
     [Fact]
