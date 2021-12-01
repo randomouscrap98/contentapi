@@ -3,6 +3,7 @@ using contentapi.Search;
 namespace contentapi.Views;
 
 [FromDb(typeof(Db.ContentHistory))]
+[FromRequest(RequestType.activity)]
 public class ActivityView
 {
     [Searchable]

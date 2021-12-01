@@ -9,5 +9,8 @@ public enum RequestType
     file,
     module,
     activity,
-    watch
+    watch,
+    adminlog,
+    agent, //This is 'all' users (including groups/etc), useful for permissions 
+    group
 }

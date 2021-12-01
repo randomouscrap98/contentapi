@@ -27,3 +27,10 @@ public class FromDbAttribute : System.Attribute
     public Type Type {get;}
     public FromDbAttribute(Type type) {  this.Type = type; }  
 }  
+
+[System.AttributeUsage(System.AttributeTargets.Class | System.AttributeTargets.Struct)]
+public class FromRequestAttribute : System.Attribute  
+{  
+    public RequestType Type {get;}
+    public FromRequestAttribute(RequestType type) {  this.Type = type; }  
+}  

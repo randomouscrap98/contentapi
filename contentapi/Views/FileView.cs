@@ -2,6 +2,7 @@ using contentapi.Search;
 
 namespace contentapi.Views;
 
+[FromRequest(RequestType.file)]
 public class FileView : ContentView
 {
     [Searchable]

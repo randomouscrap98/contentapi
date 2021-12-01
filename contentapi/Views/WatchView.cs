@@ -4,6 +4,7 @@ using contentapi.Search;
 namespace contentapi.Views;
 
 [FromDb(typeof(Db.ContentWatch))]
+[FromRequest(RequestType.watch)]
 public class WatchView
 {
     [Searchable]

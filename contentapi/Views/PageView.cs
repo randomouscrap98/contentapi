@@ -3,6 +3,7 @@ using contentapi.Search;
 
 namespace contentapi.Views;
 
+[FromRequest(RequestType.page)]
 public class PageView : ContentView
 {
     [Searchable]

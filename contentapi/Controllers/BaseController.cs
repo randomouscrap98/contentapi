@@ -1,5 +1,6 @@
 using AutoMapper;
 using contentapi.Security;
+using contentapi.Utilities;
 using Microsoft.AspNetCore.Mvc;
 
 namespace contentapi.Controllers;
@@ -46,6 +47,9 @@ public class BaseController : Controller
 
             if(ex is ArgumentException)
                 return BadRequest($"Argument error: {ex.Message}");
+
+            if(ex is ForbiddenException)
+                return Forbid($"Forbidden error: {ex.Message}");
             
             //Just rethrow if we couldn't figure out what it was.
             throw;

@@ -243,6 +243,22 @@ public class DbUnitTestSearchFixture : DbUnitTestBase, IDisposable
                 conn.Insert(votes, tsx);
                 conn.Insert(history, tsx);
 
+                var adminLogs = new List<Db.AdminLog>();
+
+                foreach(var type in Enum.GetValues<Db.AdminLogType>())
+                {
+                    adminLogs.Add(new Db.AdminLog()
+                    {
+                        initiator = 1 + (int)type,
+                        target = 2 + (int)type,
+                        text = StandardPublicTypes[(int)type],
+                        createDate = DateTime.Now.AddDays(-(int)type),
+                        type = type,
+                    });
+                }
+
+                conn.Insert(adminLogs);
+
                 tsx.Commit();
             }
         }

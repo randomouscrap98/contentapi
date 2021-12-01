@@ -257,13 +257,18 @@ public class GenericSearcher : IGenericSearch
             {
                 request.query = queryBuilder.CombineQueryClause(request.query, $"!permissionlimit(@{groupsKey}, id, R)");
             }
-            if(request.type == "comment" || request.type == "activity" || request.type == "watch") //ALSO MODULEMESSAGE!@!
+            if(request.type == RequestType.comment.ToString() || request.type == RequestType.activity.ToString() || request.type == RequestType.watch.ToString()) //ALSO MODULEMESSAGE!@!
             {
                 request.query = queryBuilder.CombineQueryClause(request.query, $"!permissionlimit(@{groupsKey}, contentId, R)");
             }
-            if(request.type == "watch")
+            if(request.type == RequestType.watch.ToString())
             {
                 request.query = queryBuilder.CombineQueryClause(request.query, $"userId = @{requesterKey}");
+            }
+            if(request.type == RequestType.adminlog.ToString())
+            {
+                if(!requester.super)
+                    throw new ForbiddenException("You must be super to access the admin logs!");
             }
         }
 

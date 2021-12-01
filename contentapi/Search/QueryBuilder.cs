@@ -19,24 +19,18 @@ public class QueryBuilder : IQueryBuilder
     public const string MainAlias = "main";
     public const string DescendingAppend = "_desc";
     
-    //Should this be configurable? I don't care for now
-    protected static readonly Dictionary<RequestType, Type> StandardViewRequests = new Dictionary<RequestType, Type> {
-        { RequestType.user, typeof(UserView) },
-        { RequestType.comment, typeof(CommentView) },
-        { RequestType.content, typeof(ContentView) },
-        { RequestType.page, typeof(PageView) },
-        { RequestType.module, typeof(ModuleView) },
-        { RequestType.file, typeof(FileView) },
-        { RequestType.activity, typeof(ActivityView) },
-        { RequestType.watch, typeof(WatchView) }
-    };
-
     protected static readonly List<RequestType> CONTENTREQUESTTYPES = new List<RequestType>()
     {
         RequestType.content, RequestType.file, RequestType.page, RequestType.module
     };
 
+    protected static readonly List<RequestType> USERREQUESTTYPES = new List<RequestType>()
+    {
+        RequestType.user
+    };
+
     public List<RequestType> ContentRequestTypes => CONTENTREQUESTTYPES;
+    public List<RequestType> UserRequestTypes => USERREQUESTTYPES;
 
     public const string LastPostDateField = nameof(ContentView.lastCommentDate);
     public const string LastPostIdField = nameof(ContentView.lastCommentId);
@@ -54,7 +48,7 @@ public class QueryBuilder : IQueryBuilder
         { (RequestType.module, DescriptionField), $"(select value from content_values where {MainAlias}.id = contentId and key='{DescriptionField}' limit 1) as {DescriptionField}" },
         { (RequestType.user, "registered"), $"(registrationKey IS NULL) as registered" },
         { (RequestType.activity, ActionField), EnumToCase<UserAction>(ActionField)},
-        { (RequestType.user, TypeField), EnumToCase<UserType>(TypeField)}
+        { (RequestType.adminlog, TypeField), EnumToCase<AdminLogType>(TypeField)}
     };
 
     //Some searches can easily be modified afterwards with constants, put that here.
@@ -63,36 +57,9 @@ public class QueryBuilder : IQueryBuilder
        { RequestType.file, $"internalType = {(int)InternalContentType.file}" },
        { RequestType.module, $"internalType = {(int)InternalContentType.module}" },
        { RequestType.page, $"internalType = {(int)InternalContentType.page}" },
-       { RequestType.comment, $"module IS NULL" } 
+       { RequestType.comment, $"module IS NULL" },
+       { RequestType.user, $"type = {(int)UserType.user}" } 
     };
-
-    protected enum MacroArgumentType { field, value, fieldImmediate }
-
-    protected class MacroDescription
-    {
-        public List<MacroArgumentType> argumentTypes = new List<MacroArgumentType>();
-        public System.Reflection.MethodInfo macroMethod;
-        public List<RequestType> allowedTypes;
-
-        public MacroDescription(string argTypes, string methodName, List<RequestType> allowedTypes)
-        {
-            this.allowedTypes = allowedTypes;
-            foreach(var c in argTypes)
-            {
-                if(c == 'v')
-                    argumentTypes.Add(MacroArgumentType.value);
-                else if(c == 'f')
-                    argumentTypes.Add(MacroArgumentType.field);
-                else if(c == 'i')
-                    argumentTypes.Add(MacroArgumentType.fieldImmediate);
-                else
-                    throw new InvalidOperationException($"Unknown arg type {c}");
-            }
-
-            macroMethod = typeof(QueryBuilder).GetMethod(methodName) ?? 
-                throw new InvalidOperationException($"Couldn't find macro definition {methodName}");
-        }
-    }
 
     protected readonly Dictionary<string, MacroDescription> StandardMacros = new Dictionary<string, MacroDescription>()
     {
@@ -113,6 +80,9 @@ public class QueryBuilder : IQueryBuilder
         }) }
     };
 
+    protected List<Type> ViewTypes;
+    protected Dictionary<RequestType, Type> StandardViewRequests;
+
     public QueryBuilder(ILogger<QueryBuilder> logger, ITypeInfoService typeInfoService, 
         IMapper mapper, ISearchQueryParser parser)
     {
@@ -120,6 +90,14 @@ public class QueryBuilder : IQueryBuilder
         this.typeService = typeInfoService;
         this.mapper = mapper;
         this.parser = parser;
+
+        var myType = GetType();
+        var assembly = System.Reflection.Assembly.GetAssembly(GetType()) ?? throw new InvalidOperationException("NO ASSEMBLY FOR QUERYBUILDER???");
+
+        ViewTypes = assembly.GetTypes().Where(t => String.Equals(t.Namespace, $"{nameof(contentapi)}.{nameof(contentapi.Views)}", StringComparison.Ordinal)).ToList();
+        var typeInfos = ViewTypes.Select(x => typeInfoService.GetTypeInfo(x));
+        StandardViewRequests = typeInfos.Where(x => x.requestType.HasValue).ToDictionary(
+            k => k.requestType ?? throw new InvalidOperationException("How did the HasValue check fail on StandardViewRequest build??"), v => v.type);
 
         //Because of how content is, we need to add these content fields to all things
         foreach(var type in ContentRequestTypes)
@@ -134,6 +112,11 @@ public class QueryBuilder : IQueryBuilder
                 $"(select count(*) from comments where {MainAlias}.id = contentId) as {PostCountField}");
             StandardModifiedFields.Add((type, WatchCountField), 
                 $"(select count(*) from content_watches where {MainAlias}.id = contentId) as {WatchCountField}");
+        }
+
+        foreach(var type in UserRequestTypes)
+        {
+            StandardModifiedFields.Add((type, TypeField), EnumToCase<UserType>(TypeField));
         }
     }
 
