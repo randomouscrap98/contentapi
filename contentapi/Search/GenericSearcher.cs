@@ -130,6 +130,39 @@ public class GenericSearcher : IGenericSearch
         }
     }
 
+    //The simple method for performing a SINGLE request as given. The database accesses are timed...
+    protected async Task<IEnumerable<IDictionary<string, object>>> SearchSingle(
+        SearchRequest request, 
+        Dictionary<string, object> parameterValues, 
+        Dictionary<string, double>? timedic = null)
+    {
+        //Need to limit the 'limit'!
+        request.limit = Math.Min(request.limit > 0 ? request.limit : int.MaxValue, config.MaxIndividualResultSet);
+        var reqplus = queryBuilder.FullParseRequest(request, parameterValues);
+        logger.LogDebug($"Running SQL for {request.type}({request.name}): {reqplus.computedSql}");
+
+        //Warn: we repeatedly do this because the FullParseRequest CAN modify parameter values
+        var dp = new DynamicParameters(parameterValues);
+
+        var timer = new Stopwatch();
+        timer.Start();
+        var qresult = await QueryAsyncCast(reqplus.computedSql, dp);
+        timer.Stop();
+
+        timedic?.Add(request.name, timer.Elapsed.TotalMilliseconds);
+
+        //We also want to time extra fields
+        timer.Restart();
+        //Just because we got the qresult doesn't mean we can stop! if it's content, we need
+        //to fill in the values, keywords, and permissions!
+        await AddExtraFields(reqplus, qresult);
+        timer.Stop();
+
+        timedic?.Add($"{request.name}_extras", timer.Elapsed.TotalMilliseconds);
+
+        return qresult;
+    }
+
     //A basic search doesn't have a concept of a "request user" or permissions, those are set up
     //prior to this. This function just wants to build a query based on what you give it
     protected async Task<GenericSearchResult> SearchBase(
@@ -150,23 +183,7 @@ public class GenericSearcher : IGenericSearch
 
         foreach(var request in requests.requests)
         {
-            //Need to limit the 'limit'!
-            request.limit = Math.Min(request.limit > 0 ? request.limit : int.MaxValue, config.MaxIndividualResultSet);
-            var reqplus = queryBuilder.FullParseRequest(request, parameterValues);
-            logger.LogDebug($"Running SQL for {request.type}({request.name}): {reqplus.computedSql}");
-
-            //Warn: we repeatedly do this because the FullParseRequest CAN modify parameter values
-            var dp = new DynamicParameters(parameterValues);
-
-            var timer = new Stopwatch();
-            timer.Start();
-            var qresult = await QueryAsyncCast(reqplus.computedSql, dp);
-            timer.Stop();
-            result.databaseTimes.Add(request.name, timer.Elapsed.TotalMilliseconds);
-
-            //Just because we got the qresult doesn't mean we can stop! if it's content, we need
-            //to fill in the values, keywords, and permissions!
-            await AddExtraFields(reqplus, qresult);
+            var qresult = await SearchSingle(request, parameterValues, result.databaseTimes);
 
             //Add the results to the USER results, AND add it to our list of values so it can
             //be used in chaining. It's just a reference, don't worry about duplication or whatever.
@@ -181,16 +198,17 @@ public class GenericSearcher : IGenericSearch
     {
         var values = new Dictionary<string, object>();
         values.Add("id", id);
-        var query = queryBuilder.FullParseRequest(new SearchRequest() { 
+
+        var result = await SearchSingle(new SearchRequest() { 
             name = "searchById", 
             type = type.ToString(), 
             fields = "*",
             query = "id = @id"
         }, values);
-        var result = await QueryAsyncCast(query.computedSql, values);
+
         if(result.Count() != 1)
             throw new ArgumentException($"{type} with ID {id} not found!"); 
-        await AddExtraFields(query, result);
+
         return ToStronglyTyped<T>(result).First();
     }
 

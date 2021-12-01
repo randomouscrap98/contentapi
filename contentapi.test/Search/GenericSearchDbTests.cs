@@ -760,8 +760,10 @@ public class GenericSearchDbTests : UnitTestBase, IClassFixture<DbUnitTestSearch
     //Can we actually retrieve the last post ID for all content while doing
     //all this other stuff?? This is the MOST like a regular user search! If this
     //is working correctly, chances are the whole system is at least MOSTLY working
-    [Fact]
-    public async Task GenericSearch_StandardUseCase1()
+    [Theory]
+    [InlineData(0)]
+    [InlineData((int)UserVariations.Super)] //Even though this is the user super bit, the UID is +1, so this means NOT super (confusingly)
+    public async Task GenericSearch_StandardUseCase1(long uid)
     {
         var search = new SearchRequests();
         search.requests.Add(new SearchRequest()
@@ -787,7 +789,7 @@ public class GenericSearchDbTests : UnitTestBase, IClassFixture<DbUnitTestSearch
         });
 
         //Get results as "default" user (meaning not logged in)
-        var result = (await service.Search(search)).data;
+        var result = (await service.Search(search, uid)).data;
 
         Assert.Contains("allreadable", result.Keys);
         Assert.Contains("createusers", result.Keys);

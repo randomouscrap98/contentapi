@@ -31,11 +31,11 @@ fi
 
 # rsync='rsync -zz -${rdf}vh -e "ssh -p $port"' 
 postinstallscript="postinstall.sh"
-postinstallargs=""
+postinstallargs="convertnow"
 projectdata="../projectData"
 newsys="../../Deploy"
-copyfolders="$projectdata/LanguageFiles $newsys/dbmigrate.sh $newsys/dbMigrations"
-removefiles="content.db newcontent.db dbMigrations/*.done"
+copyfolders="$projectdata/LanguageFiles $newsys/dbmigrate.sh $newsys/dbmigrations"
+removefiles="content.db newcontent.db dbmigrations/*.done"
 
 # Stuff for dotnet
 mtype=linux-x64      # The architecture of the target machine

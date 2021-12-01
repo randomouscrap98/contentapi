@@ -55,3 +55,6 @@ contentapi/dbmigrate.sh
 
 # Now, ALWAYS ignore content.db! we have dbmigrations set up, people can run them on their own
 content.db
+
+# Temporary(?) special ignores
+OLDSYSTEM/contentapi/publishAndConvert.sh

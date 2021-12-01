@@ -6,7 +6,7 @@ DB=${1:-content.db}
 DBMIGRATIONS=${2:-dbmigrations}
 
 # Make a backup of the current db, if it exists
-if [ -e $db ]
+if [ -e $DB ]
 then 
    cp $DB $DB.bak
 fi
@@ -22,4 +22,3 @@ do
    cat $f | sqlite3 $DB
    touch $df
 done
-
