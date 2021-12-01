@@ -8,6 +8,9 @@ public class MacroDescription
     public System.Reflection.MethodInfo macroMethod;
     public List<RequestType> allowedTypes;
 
+    //TODO: probably don't want this code in the constructor, but it's whatever, it's only called
+    //in OTHER constructors anyway, and it'll all fail immediately since it's used in a singleton.
+    //But still, kinda weird and ugly
     public MacroDescription(string argTypes, string methodName, List<RequestType> allowedTypes)
     {
         this.allowedTypes = allowedTypes;

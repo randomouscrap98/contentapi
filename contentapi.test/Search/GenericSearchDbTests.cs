@@ -174,26 +174,50 @@ public class GenericSearchDbTests : UnitTestBase, IClassFixture<DbUnitTestSearch
         search.requests.Add(new SearchRequest()
         {
             name = "test",
-            type = "activity",
+            type = "adminlog",
             fields = "*"
         });
 
         var result = (await service.SearchUnrestricted(search)).data["test"];
-        var castResult = service.ToStronglyTyped<ActivityView>(result);
+        var castResult = service.ToStronglyTyped<AdminLogView>(result);
         Assert.NotEmpty(castResult);
         Assert.All(castResult, x =>
         {
-            Assert.False(string.IsNullOrWhiteSpace(x.action), "Action wasn't cast properly!");
-            Assert.True(x.action == "update" || x.action == "delete", "Action wasn't an expected value!");
-            Assert.True(x.id > 0, "ActivityID not cast properly!");
-            Assert.True(x.userId > 0, "UserId not cast properly!");
-            Assert.True(x.contentId > 0, "ContentID not cast properly!");
-            Assert.True(x.date.Ticks > 0, "Activity date not cast properly!");
+            Assert.False(string.IsNullOrWhiteSpace(x.text), "Adminlog text wasn't cast properly!");
+            Assert.Contains(x.type, Enum.GetNames<AdminLogType>());
+            Assert.True(x.id > 0, "Adminlog ID not cast properly!");
+            Assert.True(x.initiator > 0, "Adminlog initiator not cast properly!");
+            Assert.True(x.target > 0, "AminLog target not cast properly!");
+            Assert.True(x.createDate.Ticks > 0, "AdminLog date not cast properly!");
+        });
+    }
+
+    [Theory]
+    [InlineData(0, false)]
+    [InlineData((int)UserVariations.Super, false)]
+    [InlineData(1 + (int)UserVariations.Super, true)]
+    public async Task GenericSearch_AdminLog_Gettable(long userId, bool expectResults)
+    {
+        var search = new SearchRequests();
+        search.requests.Add(new SearchRequest()
+        {
+            name = "test",
+            type = "adminlog",
+            fields = "*"
         });
 
-        //Assert.Equal(fixture.UserCount / 2, castResult.Where(x => x.registered).Count());
-        //Assert.Equal(fixture.UserCount / 2, castResult.Where(x => x.super).Count());
-        //Assert.Equal(fixture.UserCount / 2, castResult.Where(x => x.special != null).Count());
+        if(expectResults)
+        {
+            var result = (await service.Search(search, userId)).data["test"];
+            Assert.Equal(fixture.AdminLogCount, result.Count());
+        }
+        else
+        {
+            await Assert.ThrowsAnyAsync<ForbiddenException>(async() =>
+            {
+                var result = (await service.Search(search, userId)).data["test"];
+            });
+        }
     }
 
     [Fact]

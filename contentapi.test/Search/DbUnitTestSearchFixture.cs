@@ -50,6 +50,7 @@ public class DbUnitTestSearchFixture : DbUnitTestBase, IDisposable
 
     public readonly int UserCount;
     public readonly int ContentCount;
+    public readonly int AdminLogCount;
 
     public DbUnitTestSearchFixture()
     {
@@ -244,6 +245,7 @@ public class DbUnitTestSearchFixture : DbUnitTestBase, IDisposable
                 conn.Insert(history, tsx);
 
                 var adminLogs = new List<Db.AdminLog>();
+                AdminLogCount = Enum.GetValues<Db.AdminLogType>().Count();
 
                 foreach(var type in Enum.GetValues<Db.AdminLogType>())
                 {

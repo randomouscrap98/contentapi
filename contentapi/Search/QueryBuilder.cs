@@ -58,7 +58,8 @@ public class QueryBuilder : IQueryBuilder
        { RequestType.module, $"internalType = {(int)InternalContentType.module}" },
        { RequestType.page, $"internalType = {(int)InternalContentType.page}" },
        { RequestType.comment, $"module IS NULL" },
-       { RequestType.user, $"type = {(int)UserType.user}" } 
+       { RequestType.user, $"type = {(int)UserType.user}" }, 
+       { RequestType.group, $"type = {(int)UserType.group}" } 
     };
 
     protected readonly Dictionary<string, MacroDescription> StandardMacros = new Dictionary<string, MacroDescription>()
@@ -91,9 +92,10 @@ public class QueryBuilder : IQueryBuilder
         this.mapper = mapper;
         this.parser = parser;
 
-        var myType = GetType();
         var assembly = System.Reflection.Assembly.GetAssembly(GetType()) ?? throw new InvalidOperationException("NO ASSEMBLY FOR QUERYBUILDER???");
 
+        //Pull the view types out, compute the STANDARD mapping of requests to views. Requests that don't have a standard mapping have something custom and don't go through
+        //any of the standard codepaths (they do their own thing entirely)
         ViewTypes = assembly.GetTypes().Where(t => String.Equals(t.Namespace, $"{nameof(contentapi)}.{nameof(contentapi.Views)}", StringComparison.Ordinal)).ToList();
         var typeInfos = ViewTypes.Select(x => typeInfoService.GetTypeInfo(x));
         StandardViewRequests = typeInfos.Where(x => x.requestType.HasValue).ToDictionary(

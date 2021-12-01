@@ -5,7 +5,7 @@ namespace contentapi.Views;
 
 [FromDb(typeof(Db.AdminLog))]
 [FromRequest(RequestType.adminlog)]
-public class AdminLog
+public class AdminLogView
 {
     [Searchable]
     public long id {get;set;}
