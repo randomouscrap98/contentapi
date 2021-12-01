@@ -11,5 +11,8 @@ public interface IGenericSearch
     Task<GenericSearchResult> SearchUnrestricted(SearchRequests requests);
     Task<GenericSearchResult> Search(SearchRequests requests, long requestUserId = 0);
 
+    //Usually used for internal tasks
+    Task<T> GetById<T>(RequestType type, long id);
+
     List<T> ToStronglyTyped<T>(IEnumerable<IDictionary<string, object>> singleResults);
 }

@@ -33,7 +33,8 @@ fi
 postinstallscript="postinstall.sh"
 postinstallargs=""
 projectdata="../projectData"
-copyfolders="$projectdata/LanguageFiles $projectdata/dbmigrate.sh $projectdata/dbMigrations"
+newsys="../../Deploy"
+copyfolders="$projectdata/LanguageFiles $newsys/dbmigrate.sh $newsys/dbMigrations"
 removefiles="content.db newcontent.db dbMigrations/*.done"
 
 # Stuff for dotnet

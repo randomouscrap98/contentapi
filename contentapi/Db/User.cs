@@ -11,6 +11,7 @@ public class User
     public long avatar { get; set; }
     public string? special { get; set; }
     public bool super { get; set; }
+    public UserType type {get;set;}
     public DateTime createDate { get; set; }
     public DateTime editDate { get; set; }
     public string email { get; set; } = "";

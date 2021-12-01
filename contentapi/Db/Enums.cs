@@ -24,6 +24,27 @@ public enum UserAction
     delete = 8
 }
 
+public enum UserType
+{
+    user = 0,
+    group = 1
+}
+
+public enum UserRelationType
+{
+    inGroup = 0
+}
+
+public enum AdminLogType
+{
+    none = 0,
+    groupAssign = 1,
+    groupRemove = 2,
+    contentCreate = 3,
+    contentUpdate = 4,
+    contentDelete = 5
+}
+
 public enum VoteType
 {
     none = 0,

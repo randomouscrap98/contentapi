@@ -45,9 +45,30 @@ public class GenericSearcher : IGenericSearch
         return (await dbcon.QueryAsync(query, parameters)).Cast<IDictionary<string, object>>();
     }
 
+    public IEnumerable<object> GetIds(IEnumerable<IDictionary<string, object>> result) => result.Select(x => x["id"]);
+
     //WARN: should this be part of query builder?? who knows... it kinda doesn't need to be, it's not a big deal.
     public async Task AddExtraFields(SearchRequestPlus r, IEnumerable<IDictionary<string, object>> result)
     {
+        //This adds groups to users (if requested)
+        if(r.requestType == RequestType.user)
+        {
+            const string groupskey = nameof(UserView.groups);
+            const string ridkey =  nameof(Db.UserRelation.relatedId);
+            const string uidkey =  nameof(Db.UserRelation.userId);
+            const string typekey = nameof(Db.UserRelation.type);
+
+            if(r.requestFields.Contains(groupskey))
+            {
+                var keyinfo = typeService.GetTypeInfo<Db.UserRelation>();
+                var groups = await QueryAsyncCast($"select {ridkey},{uidkey} from {keyinfo.database} where {typekey} = @type and {uidkey} in @ids",
+                    new { ids = GetIds(result), type = (int)UserRelationType.inGroup }); 
+
+                foreach(var u in result)
+                    u[groupskey] = groups.Where(x => x[uidkey].Equals(u["id"])).Select(x => x[ridkey]).ToList();
+            }
+        }
+
         if(queryBuilder.ContentRequestTypes.Contains(r.requestType))
         {
             const string keykey = nameof(ContentView.keywords);
@@ -55,7 +76,7 @@ public class GenericSearcher : IGenericSearch
             const string permkey = nameof(ContentView.permissions);
             const string votekey = nameof(ContentView.votes);
             const string cidkey = nameof(Db.ContentKeyword.contentId); //WARN: assuming it's the same for all!
-            var ids = result.Select(x => x["id"]);
+            var ids = GetIds(result); //Even though we may not use it, it's better than calling it a million times?
 
             if(r.requestFields.Contains(keykey))
             {
@@ -156,14 +177,32 @@ public class GenericSearcher : IGenericSearch
         return result;
     }
 
+    public async Task<T> GetById<T>(RequestType type, long id)
+    {
+        var values = new Dictionary<string, object>();
+        values.Add("id", id);
+        var query = queryBuilder.FullParseRequest(new SearchRequest() { 
+            name = "searchById", 
+            type = type.ToString(), 
+            fields = "*",
+            query = "id = @id"
+        }, values);
+        var result = await QueryAsyncCast(query.computedSql, values);
+        if(result.Count() != 1)
+            throw new ArgumentException($"{type} with ID {id} not found!"); 
+        await AddExtraFields(query, result);
+        return ToStronglyTyped<T>(result).First();
+    }
+
     //A restricted search doesn't allow you to retrieve results that the given request user can't read
     public async Task<GenericSearchResult> Search(SearchRequests requests, long requestUserId = 0)
     {
         var globalId = Guid.NewGuid();
-        Db.User requester = new Db.User() //This is a default user, make SURE all the relevant fields are set!
+        UserView requester = new UserView() //This is a default user, make SURE all the relevant fields are set!
         {
             id = 0,
-            super = false
+            super = false,
+            groups = new List<long>()
         };
 
         //Do a (hopefully) quick lookup for the request user!
@@ -172,8 +211,7 @@ public class GenericSearcher : IGenericSearch
             try
             {
                 //This apparently throws an exception if it fails
-                requester = await dbcon.QuerySingleAsync<User>("select * from users where id = @requestUserId", 
-                    new { requestUserId = requestUserId });
+                requester = await GetById<UserView>(RequestType.user, requestUserId);
             }
             catch(Exception ex)
             {
@@ -183,9 +221,14 @@ public class GenericSearcher : IGenericSearch
         }
 
         //Need to add requester key to parameter list!
-        var requesterKey = $"_sys{globalId.ToString().Replace("-", "")}_requester";
+        var globalPre = $"_sys{globalId.ToString().Replace("-", "")}";
+        var requesterKey = $"{globalPre}_requester";
+        var groupsKey = $"{globalPre}_groups";
         var parameterValues = new Dictionary<string, object>(requests.values);
+        var groups = new List<long> { 0, requestUserId };
+        groups.AddRange(requester.groups);
         parameterValues.Add(requesterKey, requestUserId);
+        parameterValues.Add(groupsKey, groups);
 
         //Modify the queries before giving them out to the query builder! We NEED them
         //to be absolutely restricted by permissions!
@@ -194,11 +237,11 @@ public class GenericSearcher : IGenericSearch
             //This is VERY important: limit content searches based on permissions!
             if(queryBuilder.ContentRequestTypes.Select(x => x.ToString()).Contains(request.type))
             {
-                request.query = queryBuilder.CombineQueryClause(request.query, $"!permissionlimit(@{requesterKey}, id)");
+                request.query = queryBuilder.CombineQueryClause(request.query, $"!permissionlimit(@{groupsKey}, id, R)");
             }
             if(request.type == "comment" || request.type == "activity" || request.type == "watch") //ALSO MODULEMESSAGE!@!
             {
-                request.query = queryBuilder.CombineQueryClause(request.query, $"!permissionlimit(@{requesterKey}, contentId)");
+                request.query = queryBuilder.CombineQueryClause(request.query, $"!permissionlimit(@{groupsKey}, contentId, R)");
             }
             if(request.type == "watch")
             {

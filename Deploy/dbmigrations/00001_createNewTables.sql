@@ -8,6 +8,7 @@ create table if not exists users (
     -- also need to mark supers, they're pulled from a file for some reason.
     -- maybe change that?
     super int not null default 0,
+    type int not null default 0,  --The type of user, can specify that it's a group
     editDate text,
     -- user view also has ban object, represents current ban
     email text not null,
@@ -16,6 +17,29 @@ create table if not exists users (
     salt text not null,
     registrationKey text
 );
+
+-- Relates users to other things. Useful for groups, may be used for other things.
+create table if not exists user_relations (
+    id integer primary key,
+    type integer not null,
+    createDate text not null,
+    userId integer not null,
+    relatedId integer not null
+);
+
+create index if not exists idx_user_relations_typeuserid on user_relations(type, userId);
+
+-- A simple way to keep a human-readable log of many important actions, such as group assigns, bans, etc.
+create table if not exists admin_log (
+    id integer primary key,
+    type integer not null, -- The type of action; some things can be "none" for simple messages
+    `text` text,
+    createDate text not null,
+    initiator integer not null,
+    target integer not null
+);
+
+create index if not exists idx_admin_log_typedate on admin_log(type, createDate);
 
 -- To simplify, we're not letting content values be edited. as such, the
 -- content's modify date will become the value date

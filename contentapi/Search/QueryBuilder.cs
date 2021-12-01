@@ -46,13 +46,15 @@ public class QueryBuilder : IQueryBuilder
     public const string PostCountField = nameof(ContentView.commentCount);
     public const string WatchCountField = nameof(ContentView.watchCount);
     public const string ActionField = nameof(ActivityView.action);
+    public const string TypeField = "type";
 
     //These fields are too difficult to modify with the attributes, so we do it in code here
     protected readonly Dictionary<(RequestType, string),string> StandardModifiedFields = new Dictionary<(RequestType, string), string> {
         { (RequestType.file, QuantizationField), $"(select value from content_values where {MainAlias}.id = contentId and key='{QuantizationField}' limit 1) as {QuantizationField}" },
         { (RequestType.module, DescriptionField), $"(select value from content_values where {MainAlias}.id = contentId and key='{DescriptionField}' limit 1) as {DescriptionField}" },
         { (RequestType.user, "registered"), $"(registrationKey IS NULL) as registered" },
-        { (RequestType.activity, ActionField), EnumToCase<UserAction>(ActionField, ActionField)}
+        { (RequestType.activity, ActionField), EnumToCase<UserAction>(ActionField)},
+        { (RequestType.user, TypeField), EnumToCase<UserType>(TypeField)}
     };
 
     //Some searches can easily be modified afterwards with constants, put that here.
@@ -64,7 +66,7 @@ public class QueryBuilder : IQueryBuilder
        { RequestType.comment, $"module IS NULL" } 
     };
 
-    protected enum MacroArgumentType { field, value }
+    protected enum MacroArgumentType { field, value, fieldImmediate }
 
     protected class MacroDescription
     {
@@ -81,6 +83,8 @@ public class QueryBuilder : IQueryBuilder
                     argumentTypes.Add(MacroArgumentType.value);
                 else if(c == 'f')
                     argumentTypes.Add(MacroArgumentType.field);
+                else if(c == 'i')
+                    argumentTypes.Add(MacroArgumentType.fieldImmediate);
                 else
                     throw new InvalidOperationException($"Unknown arg type {c}");
             }
@@ -100,7 +104,7 @@ public class QueryBuilder : IQueryBuilder
         { "null", new MacroDescription("f", "NullMacro", Enum.GetValues<RequestType>().ToList()) },
         //WARN: permission limiting could be very dangerous! Make sure that no matter how the user uses
         //this, they still ONLY get the stuff they're allowed to read!
-        { "permissionlimit", new MacroDescription("vf", "PermissionLimit", new List<RequestType> {
+        { "permissionlimit", new MacroDescription("vfi", "PermissionLimit", new List<RequestType> {
             RequestType.content,
             RequestType.page,
             RequestType.file,
@@ -121,7 +125,7 @@ public class QueryBuilder : IQueryBuilder
         foreach(var type in ContentRequestTypes)
         {
             StandardModifiedFields.Add((type, InternalTypeField), 
-                EnumToCase<InternalContentType>(nameof(Db.Content.internalType), InternalTypeField));
+                EnumToCase<InternalContentType>(InternalTypeField));
             StandardModifiedFields.Add((type, LastPostDateField), 
                 $"(select createDate from comments where {MainAlias}.id = contentId order by id desc limit 1) as {LastPostDateField}");
             StandardModifiedFields.Add((type, LastPostIdField), 
@@ -138,6 +142,11 @@ public class QueryBuilder : IQueryBuilder
         var values = Enum.GetValues<T>();
         var whens = values.Select(x => $"WHEN {Unsafe.As<T, int>(ref x)} THEN '{x.ToString()}'");
         return $"CASE {fieldName} {string.Join(" ", whens)} ELSE 'unknown' END as {outputName}";
+    }
+
+    public static string EnumToCase<T>(string fieldName) where T : struct, System.Enum 
+    {
+        return EnumToCase<T>(fieldName, fieldName);
     }
 
     public string KeywordLike(SearchRequestPlus request, string value)
@@ -186,14 +195,23 @@ public class QueryBuilder : IQueryBuilder
     public string NullMacro(SearchRequestPlus request, string field) { return $"{field} IS NULL"; }
 
     //For now, this is JUST read limit!!
-    public string PermissionLimit(SearchRequestPlus request, string requester, string idField)
+    public string PermissionLimit(SearchRequestPlus request, string requesters, string idField, string type)
     {
         var typeInfo = typeService.GetTypeInfo<ContentPermission>();
+        var checkCol = "";
+        switch(type)
+        {
+            case "C": checkCol = nameof(ContentPermission.create); break;
+            case "R": checkCol = nameof(ContentPermission.read); break;
+            case "U": checkCol = nameof(ContentPermission.update); break;
+            case "D": checkCol = nameof(ContentPermission.delete); break;
+            default: throw new ArgumentException($"Unknown permission type {type}");
+        }
         return $@"{MainAlias}.{idField} in 
             (select {nameof(ContentPermission.contentId)} 
              from {typeInfo.database} 
-             where {nameof(ContentPermission.userId)} in (0,{requester})
-               and {nameof(ContentPermission.read)} = 1
+             where {nameof(ContentPermission.userId)} in {requesters}
+               and {checkCol} = 1
             )";
     }
 
@@ -384,6 +402,12 @@ public class QueryBuilder : IQueryBuilder
                 if(args[i].StartsWith("@"))
                     throw ex;
                 argVals.Add(ParseField(args[i], request));
+            }
+            else if(expArgType == MacroArgumentType.fieldImmediate)
+            {
+                if(args[i].StartsWith("@"))
+                    throw ex;
+                argVals.Add(args[i]); //Use the IMMEDIATE value!
             }
             else
             {

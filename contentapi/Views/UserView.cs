@@ -17,6 +17,9 @@ public class UserView
     [Searchable]
     public bool super {get;set;}
 
+    [Searchable]
+    public string type {get;set;} = "";
+
     public string? special {get;set;}
 
     [Searchable]
@@ -25,4 +28,7 @@ public class UserView
     [Searchable]
     [FromField("")] //Not a field you can select
     public bool registered {get;set;}
+
+    [FromField("")]
+    public List<long> groups {get;set;} = new List<long>();
 }
