@@ -115,7 +115,7 @@ public class DbUnitTestSearchFixture : DbUnitTestBase, IDisposable
                     for(var j = 0; j < UserCount / GroupCount; j++)
                     {
                         var userGroup = new Db.UserRelation() {
-                            userId = j + 1,
+                            userId = j + 1 + i * UserCount / GroupCount,
                             relatedId = UserCount + i + 1
                         };
 
@@ -189,6 +189,17 @@ public class DbUnitTestSearchFixture : DbUnitTestBase, IDisposable
                             vote = (Db.VoteType)(1 + random.Next() % 3)
                         });
                     }
+
+                    //Add the last group to all permissions
+                    permissions.Add(new Db.ContentPermission()
+                    {
+                        contentId = i + 1,
+                        userId = UserCount + GroupCount,
+                        create = true,
+                        read = true,
+                        update = true,
+                        delete = true
+                    });
 
                     if((i & (int)ContentVariations.AccessBySupers) > 0)
                     {
@@ -285,7 +296,7 @@ public class DbUnitTestSearchFixture : DbUnitTestBase, IDisposable
                     });
                 }
 
-                conn.Insert(adminLogs);
+                conn.Insert(adminLogs, tsx);
 
                 tsx.Commit();
             }

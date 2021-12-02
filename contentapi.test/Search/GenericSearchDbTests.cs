@@ -85,6 +85,11 @@ public class GenericSearchDbTests : UnitTestBase, IClassFixture<DbUnitTestSearch
             Assert.True(x.id > 0, "UserID not cast properly!");
             Assert.True(x.avatar > 0, "UserAvatar not cast properly!");
             Assert.True(x.createDate.Ticks > 0, "User createdate not cast properly!");
+
+            //In our system, all users are assigned to at least one group for testing
+            Assert.NotEmpty(x.groups);
+            //The group should be evenly split
+            Assert.Equal(fixture.UserCount + fixture.GroupCount * (x.id - 1) / fixture.UserCount, x.groups.First() - 1);
         });
 
         Assert.Equal(fixture.UserCount / 2, castResult.Where(x => x.registered).Count());
@@ -134,7 +139,7 @@ public class GenericSearchDbTests : UnitTestBase, IClassFixture<DbUnitTestSearch
         Assert.Equal(fixture.ContentCount / 2, castResult.Where(x => x.keywords.Count > 0).Count());
         Assert.Equal(fixture.ContentCount / 2, castResult.Where(x => x.values.Count > 0).Count());
         Assert.Equal(fixture.ContentCount / 2, castResult.Where(x => x.permissions.Where(x => x.Key == 0).Count() > 0).Count());
-        Assert.Equal(fixture.ContentCount / 2, castResult.Where(x => x.permissions.Where(x => x.Key != 0 && ((x.Key - 1) & (int)UserVariations.Super) > 0).Count() > 0).Count());
+        Assert.Equal(fixture.ContentCount / 2, castResult.Where(x => x.permissions.Where(x => x.Key != 0 && x.Key <= fixture.UserCount && ((x.Key - 1) & (int)UserVariations.Super) > 0).Count() > 0).Count());
         //Note for supers: the super permission given to each content is the content id with the user super bit
         //set modulo the user count. Thus, basically, the keys should all have the super bit set. But, subtract one
         //because database IDs are plus one.
@@ -220,6 +225,26 @@ public class GenericSearchDbTests : UnitTestBase, IClassFixture<DbUnitTestSearch
                 var result = (await service.Search(search, userId)).data["test"];
             });
         }
+    }
+    
+    [Fact]
+    public async Task GenericSearch_UsersAndGroupsTogether()
+    {
+        var search = new SearchRequests();
+        search.requests.Add(new SearchRequest()
+        {
+            name = "test",
+            type = "user",
+            fields = "*"
+        });
+
+        //Both should be castable to a userview
+        var result = (await service.SearchUnrestricted(search)).data["test"];
+        var castResult = service.ToStronglyTyped<UserView>(result);
+
+        Assert.Equal(fixture.UserCount + fixture.GroupCount, castResult.Count);
+        Assert.Equal(fixture.UserCount, castResult.Count(x => x.type == UserType.user.ToString()));
+        Assert.Equal(fixture.GroupCount, castResult.Count(x => x.type == UserType.group.ToString()));
     }
 
     [Fact]
@@ -623,6 +648,104 @@ public class GenericSearchDbTests : UnitTestBase, IClassFixture<DbUnitTestSearch
             Assert.Contains(0, x.permissions.Keys);
             Assert.Contains("R", x.permissions[0]);
         });
+    }
+
+    [Theory]
+    [InlineData(false)]
+    [InlineData(true)]
+    public async Task GenericSearch_Search_PermissionGroup(bool allContent)
+    {
+        var search = new SearchRequests();
+        search.requests.Add(new SearchRequest()
+        {
+            name = "permission",
+            type = "content",
+            fields = "*"
+        });
+
+        //Any user in the last group should have access to EVERY content! We know the very last user is in the last group
+        //because of how it works out! We can also verify that the first user, who is definitely NOT in the last group,
+        //has permissions only for half the content, just like the default user
+        if(allContent)
+        {
+            //Has to be a user that doesn't already have access, which would be the last non-super user
+            var result = (await service.Search(search, 1 + ((fixture.UserCount - 1) & ~((int)UserVariations.Super)))).data["permission"];
+            Assert.Equal(fixture.ContentCount, result.Count());
+        }
+        else
+        {
+            var result = (await service.Search(search, 1)).data["permission"];
+            Assert.Equal(fixture.ContentCount / 2, result.Count());
+        }
+        //var castResult = service.ToStronglyTyped<ContentView>(result);
+
+        ////Because the permission thing "all or none" is just based on a bit, it will
+        ////always be HALF of the content that we're allowed to get. The ID should also
+        ////be related to the ones that have it.
+        //Assert.Equal(fixture.ContentCount / 2, result.Count());
+        //Assert.All(castResult, x =>
+        //{
+        //    //Minus 1 because the database ids start at 1
+        //    Assert.True(((x.id - 1) & (int)ContentVariations.AccessByAll) > 0);
+        //    Assert.Contains(0, x.permissions.Keys);
+        //    Assert.Contains("R", x.permissions[0]);
+        //});
+    }
+
+    [Theory]
+    [InlineData("C", true)]
+    [InlineData("R", true)]
+    [InlineData("U", true)]
+    [InlineData("D", true)]
+    [InlineData("butts", false)]
+    public async Task GenericSearch_Search_PermissionMacro(string immediate, bool success)
+    {
+        var search = new SearchRequests();
+        search.values.Add("users", new[] { 0 });
+        search.requests.Add(new SearchRequest()
+        {
+            name = "permissionmacro",
+            type = "content",
+            fields = "id",
+            query = $"!permissionlimit(@users, id, {immediate})"
+        });
+
+        if(success)
+        {
+            var result = (await service.SearchUnrestricted(search)).data["permissionmacro"];
+            Assert.Equal(fixture.ContentCount / 2, result.Count());
+        }
+        else
+        {
+            await Assert.ThrowsAnyAsync<ArgumentException>(async () => {
+                var result = (await service.SearchUnrestricted(search)).data["permissionmacro"];
+            });
+        }
+    }
+
+    [Fact]
+    public async Task GenericSearch_Search_InGroupMacro()
+    {
+        for(var i = 0; i < fixture.GroupCount; i++)
+        {
+            var search = new SearchRequests();
+            search.values.Add("group", fixture.UserCount + i + 1);
+            search.requests.Add(new SearchRequest()
+            {
+                name = "ingroupmacro",
+                type = "user",
+                fields = "*",
+                query = "!ingroup(@group)"
+            });
+
+            var result = (await service.SearchUnrestricted(search)).data["ingroupmacro"];
+            var castResult = service.ToStronglyTyped<UserView>(result);
+
+            Assert.All(castResult, x => {
+                Assert.Equal(UserType.user.ToString(), x.type); //We're asking for USERS in groups only
+                Assert.True((x.id - 1) >= i * fixture.UserCount / fixture.GroupCount && (x.id - 1) < (i + 1) * fixture.UserCount / fixture.GroupCount, $"Unexpected user {x.id} for group {i}");
+            });
+        }
     }
 
     [Fact]

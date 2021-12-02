@@ -73,6 +73,7 @@ public class QueryBuilder : IQueryBuilder
         { "notnull", new MacroDescription("f", "NotNullMacro", Enum.GetValues<RequestType>().ToList()) },
         { "null", new MacroDescription("f", "NullMacro", Enum.GetValues<RequestType>().ToList()) },
         { "usertype", new MacroDescription("i", "UserTypeMacro", new List<RequestType> { RequestType.user }) },
+        { "ingroup", new MacroDescription("v", "InGroupMacro", new List<RequestType> { RequestType.user }) },
         //WARN: permission limiting could be very dangerous! Make sure that no matter how the user uses
         //this, they still ONLY get the stuff they're allowed to read!
         { "permissionlimit", new MacroDescription("vfi", "PermissionLimit", new List<RequestType> {
@@ -179,6 +180,16 @@ public class QueryBuilder : IQueryBuilder
             )";
     }
 
+    public string InGroupMacro(SearchRequestPlus request, string group)
+    {
+        var typeInfo = typeService.GetTypeInfo<UserRelation>();
+        return $@"{MainAlias}.id in 
+            (select {nameof(Db.UserRelation.userId)} 
+             from {typeInfo.database} 
+             where {nameof(Db.UserRelation.relatedId)} = {group}
+            )";
+    }
+
     public string NotNullMacro(SearchRequestPlus request, string field) { return $"{field} IS NOT NULL"; }
     public string NullMacro(SearchRequestPlus request, string field) { return $"{field} IS NULL"; }
     public string UserTypeMacro(SearchRequestPlus request, string type) { return EnumMacroSearch<UserType>(type); }
@@ -211,7 +222,7 @@ public class QueryBuilder : IQueryBuilder
             (select {nameof(ContentPermission.contentId)} 
              from {typeInfo.database} 
              where {nameof(ContentPermission.userId)} in {requesters}
-               and {checkCol} = 1
+               and `{checkCol}` = 1
             )";
     }
 
