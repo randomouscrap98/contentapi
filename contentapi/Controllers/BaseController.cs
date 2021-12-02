@@ -1,4 +1,5 @@
 using AutoMapper;
+using contentapi.Search;
 using contentapi.Security;
 using contentapi.Utilities;
 using Microsoft.AspNetCore.Mvc;
@@ -45,8 +46,8 @@ public class BaseController : Controller
             if(ex is AggregateException)
                 ex = ex.InnerException ?? throw new InvalidOperationException("Aggregate exception did not have inner exception!", ex); //Grab the first inner exception
 
-            if(ex is ArgumentException)
-                return BadRequest($"Argument error: {ex.Message}");
+            if(ex is ArgumentException || ex is RequestException || ex is ParseException)
+                return BadRequest($"Request error: {ex.Message}");
 
             if(ex is ForbiddenException)
                 return Forbid($"Forbidden error: {ex.Message}");

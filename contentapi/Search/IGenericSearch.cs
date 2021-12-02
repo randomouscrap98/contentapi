@@ -13,6 +13,11 @@ public interface IGenericSearch
 
     //Usually used for internal tasks
     Task<T> GetById<T>(RequestType type, long id);
+    Task<List<T>> GetByField<T>(RequestType type, string fieldname, object value, string comparator = "=");
+
+    //DEFINITELY used for internal tasks!
+    Task<IEnumerable<IDictionary<string, object>>> QueryRaw(string sql, Dictionary<string, object> values);
+    string GetDatabaseForType<T>();
 
     List<T> ToStronglyTyped<T>(IEnumerable<IDictionary<string, object>> singleResults);
 }

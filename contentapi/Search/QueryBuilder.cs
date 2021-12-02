@@ -428,7 +428,7 @@ public class QueryBuilder : IQueryBuilder
 
         //At this point, we have the macro function info, so we can just call it
         return (string)(macDef.macroMethod.Invoke(this, argVals.ToArray()) ?? 
-            throw new InvalidOperationException($""));
+            throw new InvalidOperationException($"Macro method for macro {m} returned null in request {request.name}!"));
     }
 
     /// <summary>
@@ -452,17 +452,17 @@ public class QueryBuilder : IQueryBuilder
             return parseResult;
 
         }
-        catch (ArgumentException)
+        catch (ParseException)
         {
-            //Skip argument exceptions, we already expect those.
+            //We know how to handle parse exceptions
             throw;
         }
         catch (Exception ex)
         {
             //Convert to argument exception so the user knows what's up. Nothing that happens here
             //is due to a database or other "internal" server error (other than stupid messups on my part)
-            logger.LogWarning($"Exception during query parse: {ex}");
-            throw new ArgumentException($"Parse  error: {ex.Message}");
+            logger.LogWarning($"Unknown exception during query parse: {ex}");
+            throw new ParseException($"Parse  error: {ex.Message}");
         }
     }
 

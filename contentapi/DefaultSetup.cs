@@ -1,3 +1,4 @@
+using contentapi.Main;
 using contentapi.Search;
 using contentapi.Security;
 using contentapi.Utilities;
@@ -25,11 +26,13 @@ public static class DefaultSetup
         services.AddSingleton<IAuthTokenService<long>, JwtAuthTokenService<long>>();
         services.AddSingleton<ISearchQueryParser, SearchQueryParser>();
         services.AddSingleton<IHashService, HashService>();
+        services.AddSingleton<IUserService, UserService>();
 
         //Configs (these have default values given in configs)
         services.AddSingleton<GenericSearcherConfig>();
         services.AddSingleton<JwtAuthTokenServiceConfig>();
         services.AddSingleton<HashServiceConfig>();
+        services.AddSingleton<UserServiceConfig>();
     }
 
     /// <summary>

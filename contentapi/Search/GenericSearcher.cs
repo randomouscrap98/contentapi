@@ -130,6 +130,18 @@ public class GenericSearcher : IGenericSearch
         }
     }
 
+    public Task<IEnumerable<IDictionary<string, object>>> QueryRaw(string sql, Dictionary<string, object> values)
+    {
+        var dp = new DynamicParameters(values);
+        return QueryAsyncCast(sql, dp);
+    }
+
+    public string GetDatabaseForType<T>()
+    {
+        var typeinfo = typeService.GetTypeInfo<T>();
+        return typeinfo.database ?? throw new InvalidOperationException($"No database for type {typeof(T).Name}");
+    }    
+
     //The simple method for performing a SINGLE request as given. The database accesses are timed...
     protected async Task<IEnumerable<IDictionary<string, object>>> SearchSingle(
         SearchRequest request, 
@@ -210,6 +222,21 @@ public class GenericSearcher : IGenericSearch
             throw new ArgumentException($"{type} with ID {id} not found!"); 
 
         return ToStronglyTyped<T>(result).First();
+    }
+
+    public async Task<List<T>> GetByField<T>(RequestType type, string fieldname, object value, string comparator = "=")
+    {
+        var values = new Dictionary<string, object>();
+        values.Add("value", value);
+
+        var result = await SearchSingle(new SearchRequest() { 
+            name = "searchByField", 
+            type = type.ToString(), 
+            fields = "*",
+            query = $"{fieldname} {comparator} @value"
+        }, values);
+
+        return ToStronglyTyped<T>(result);
     }
 
     //A restricted search doesn't allow you to retrieve results that the given request user can't read

@@ -9,7 +9,7 @@ public class RequestResponse : GenericSearchResult
 {
     public double totalTime {get;set;}
     public double nonDbTime {get;set;}
-    public bool loggedIn {get;set;}
+    public long? requestUser {get;set;}
 }
 
 public class RequestResponseProfile : Profile
@@ -40,9 +40,9 @@ public class RequestController : BaseController
 
         return MatchExceptions(async () =>
         {
-            var data = await searcher.Search(search);
+            var data = await searcher.Search(search, GetUserId() ?? 0);
             var result = services.mapper.Map<RequestResponse>(data);
-            result.loggedIn = IsUserLoggedIn();
+            result.requestUser = GetUserId();
             sw.Stop();
             result.totalTime = sw.Elapsed.TotalMilliseconds;
             result.nonDbTime = result.totalTime - result.databaseTimes.Sum(x => x.Value);

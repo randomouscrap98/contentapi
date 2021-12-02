@@ -68,9 +68,9 @@ public class SearchQueryParser : ISearchQueryParser
                 if (result.IsError)
                 {
                     if (result.Errors != null && result.Errors.Any())
-                        throw new ArgumentException("ERROR DURING QUERY PARSE: " + string.Join("\n", result.Errors.Select(x => x.ErrorMessage)));
+                        throw new ParseException("ERROR DURING QUERY PARSE: " + string.Join("\n", result.Errors.Select(x => x.ErrorMessage)));
                     else
-                        throw new ArgumentException("Unknown error during query parse");
+                        throw new ParseException("Unknown error during query parse");
                 }
                 else
                 {
