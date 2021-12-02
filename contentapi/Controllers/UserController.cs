@@ -1,5 +1,6 @@
 using contentapi.Main;
 using contentapi.Security;
+using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
 
 namespace contentapi.Controllers;
@@ -42,5 +43,12 @@ public class UserController : BaseController
             else
                 return userService.LoginEmailAsync(loginInfo.email, loginInfo.password, expireOverride);
         });
+    }
+
+    [Authorize]
+    [HttpPost("invalidateall")]
+    public void InvalidateAll()
+    {
+        userService.InvalidateAllTokens(GetUserId() ?? throw new InvalidOperationException("SOMEHOW YOU WEREN'T LOGGED IN???"));
     }
 }

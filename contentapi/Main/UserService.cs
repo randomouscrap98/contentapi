@@ -86,6 +86,11 @@ public class UserService : IUserService
         return LoginGeneric("email", email, password, expireOverride);
     }
 
+    public void InvalidateAllTokens(long userId)
+    {
+        authTokenService.InvalidateAllTokens(userId);
+    }
+
     public Task<string> LoginUsernameAsync(string username, string password, TimeSpan? expireOverride)
     {
         return LoginGeneric("username", username, password, expireOverride);
