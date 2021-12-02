@@ -4,7 +4,7 @@ using contentapi.Search;
 namespace contentapi.Views;
 
 [FromDb(typeof(Db.AdminLog))]
-[FromRequest(RequestType.adminlog)]
+[ForRequest(RequestType.adminlog)]
 public class AdminLogView
 {
     [Searchable]

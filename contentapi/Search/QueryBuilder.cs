@@ -18,19 +18,20 @@ public class QueryBuilder : IQueryBuilder
 
     public const string MainAlias = "main";
     public const string DescendingAppend = "_desc";
+    public const string NaturalCommentQuery = "deleted = 0 and module IS NULL";
     
     protected static readonly List<RequestType> CONTENTREQUESTTYPES = new List<RequestType>()
     {
         RequestType.content, RequestType.file, RequestType.page, RequestType.module
     };
 
-    protected static readonly List<RequestType> USERREQUESTTYPES = new List<RequestType>()
-    {
-        RequestType.user
-    };
+    //protected static readonly List<RequestType> USERREQUESTTYPES = new List<RequestType>()
+    //{
+    //    RequestType.user
+    //};
 
     public List<RequestType> ContentRequestTypes => CONTENTREQUESTTYPES;
-    public List<RequestType> UserRequestTypes => USERREQUESTTYPES;
+    //public List<RequestType> UserRequestTypes => USERREQUESTTYPES;
 
     public const string LastPostDateField = nameof(ContentView.lastCommentDate);
     public const string LastPostIdField = nameof(ContentView.lastCommentId);
@@ -48,7 +49,8 @@ public class QueryBuilder : IQueryBuilder
         { (RequestType.module, DescriptionField), $"(select value from content_values where {MainAlias}.id = contentId and key='{DescriptionField}' limit 1) as {DescriptionField}" },
         { (RequestType.user, "registered"), $"(registrationKey IS NULL) as registered" },
         { (RequestType.activity, ActionField), EnumToCase<UserAction>(ActionField)},
-        { (RequestType.adminlog, TypeField), EnumToCase<AdminLogType>(TypeField)}
+        { (RequestType.adminlog, TypeField), EnumToCase<AdminLogType>(TypeField)},
+        { (RequestType.user, TypeField), EnumToCase<UserType>(TypeField) }
     };
 
     //Some searches can easily be modified afterwards with constants, put that here.
@@ -58,8 +60,8 @@ public class QueryBuilder : IQueryBuilder
        { RequestType.module, $"internalType = {(int)InternalContentType.module}" },
        { RequestType.page, $"internalType = {(int)InternalContentType.page}" },
        { RequestType.comment, $"module IS NULL" },
-       { RequestType.user, $"type = {(int)UserType.user}" }, 
-       { RequestType.group, $"type = {(int)UserType.group}" } 
+       //{ RequestType.user, $"type = {(int)UserType.user}" }, 
+       //{ RequestType.group, $"type = {(int)UserType.group}" } 
     };
 
     protected readonly Dictionary<string, MacroDescription> StandardMacros = new Dictionary<string, MacroDescription>()
@@ -67,9 +69,10 @@ public class QueryBuilder : IQueryBuilder
         { "keywordlike", new MacroDescription("v", "KeywordLike", CONTENTREQUESTTYPES) },
         { "valuelike", new MacroDescription("vv", "ValueLike", CONTENTREQUESTTYPES) },
         { "onlyparents", new MacroDescription("", "OnlyParents", CONTENTREQUESTTYPES) },
-        { "basichistory", new MacroDescription("", "BasicHistory", new List<RequestType> { RequestType.activity })},
+        { "basichistory", new MacroDescription("", "BasicHistory", new List<RequestType> { RequestType.activity }) },
         { "notnull", new MacroDescription("f", "NotNullMacro", Enum.GetValues<RequestType>().ToList()) },
         { "null", new MacroDescription("f", "NullMacro", Enum.GetValues<RequestType>().ToList()) },
+        { "usertype", new MacroDescription("i", "UserTypeMacro", new List<RequestType> { RequestType.user }) },
         //WARN: permission limiting could be very dangerous! Make sure that no matter how the user uses
         //this, they still ONLY get the stuff they're allowed to read!
         { "permissionlimit", new MacroDescription("vfi", "PermissionLimit", new List<RequestType> {
@@ -107,19 +110,19 @@ public class QueryBuilder : IQueryBuilder
             StandardModifiedFields.Add((type, InternalTypeField), 
                 EnumToCase<InternalContentType>(InternalTypeField));
             StandardModifiedFields.Add((type, LastPostDateField), 
-                $"(select createDate from comments where {MainAlias}.id = contentId order by id desc limit 1) as {LastPostDateField}");
+                $"(select createDate from comments where {MainAlias}.id = contentId and {NaturalCommentQuery} order by id desc limit 1) as {LastPostDateField}");
             StandardModifiedFields.Add((type, LastPostIdField), 
-                $"(select id from comments where {MainAlias}.id = contentId order by id desc limit 1) as {LastPostIdField}");
+                $"(select id from comments where {MainAlias}.id = contentId and {NaturalCommentQuery} order by id desc limit 1) as {LastPostIdField}");
             StandardModifiedFields.Add((type, PostCountField), 
-                $"(select count(*) from comments where {MainAlias}.id = contentId) as {PostCountField}");
+                $"(select count(*) from comments where {MainAlias}.id = contentId and {NaturalCommentQuery}) as {PostCountField}");
             StandardModifiedFields.Add((type, WatchCountField), 
                 $"(select count(*) from content_watches where {MainAlias}.id = contentId) as {WatchCountField}");
         }
 
-        foreach(var type in UserRequestTypes)
-        {
-            StandardModifiedFields.Add((type, TypeField), EnumToCase<UserType>(TypeField));
-        }
+        //foreach(var type in UserRequestTypes)
+        //{
+        //    StandardModifiedFields.Add((type, TypeField), EnumToCase<UserType>(TypeField));
+        //}
     }
 
     public static string EnumToCase<T>(string fieldName, string outputName) where T : struct, System.Enum 
@@ -178,6 +181,18 @@ public class QueryBuilder : IQueryBuilder
 
     public string NotNullMacro(SearchRequestPlus request, string field) { return $"{field} IS NOT NULL"; }
     public string NullMacro(SearchRequestPlus request, string field) { return $"{field} IS NULL"; }
+    public string UserTypeMacro(SearchRequestPlus request, string type) { return EnumMacroSearch<UserType>(type); }
+
+    /// <summary>
+    /// A helper to generate optimized clauses against enum fields using a string type
+    /// </summary>
+    public string EnumMacroSearch<T>(string type, string name = "type") where T : struct, System.Enum 
+    {
+        T result;
+        if(!Enum.TryParse<T>(type, out result))
+            throw new ArgumentException($"Unknown type '{type}' for set '{typeof(T).Name}'");
+        return $"{name} = {Unsafe.As<T, int>(ref result)}";
+    }
 
     //For now, this is JUST read limit!!
     public string PermissionLimit(SearchRequestPlus request, string requesters, string idField, string type)

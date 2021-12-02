@@ -29,8 +29,8 @@ public class FromDbAttribute : System.Attribute
 }  
 
 [System.AttributeUsage(System.AttributeTargets.Class | System.AttributeTargets.Struct)]
-public class FromRequestAttribute : System.Attribute  
+public class ForRequestAttribute : System.Attribute  
 {  
     public RequestType Type {get;}
-    public FromRequestAttribute(RequestType type) {  this.Type = type; }  
+    public ForRequestAttribute(RequestType type) {  this.Type = type; }  
 }  

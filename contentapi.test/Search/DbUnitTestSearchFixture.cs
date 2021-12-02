@@ -51,6 +51,7 @@ public class DbUnitTestSearchFixture : DbUnitTestBase, IDisposable
     public readonly int UserCount;
     public readonly int ContentCount;
     public readonly int AdminLogCount;
+    public readonly int GroupCount;
 
     public DbUnitTestSearchFixture()
     {
@@ -65,6 +66,7 @@ public class DbUnitTestSearchFixture : DbUnitTestBase, IDisposable
             {
                 var users = new List<Db.User>();
                 var userVariables = new List<Db.UserVariable>();
+                var userRelations = new List<Db.UserRelation>();
                 UserCount = (int)Math.Pow(2, Enum.GetValues<UserVariations>().Count());
 
                 for(var i = 0; i < UserCount; i++)
@@ -98,8 +100,32 @@ public class DbUnitTestSearchFixture : DbUnitTestBase, IDisposable
                     users.Add(user);
                 }
 
+                //Split up the users into groups evenly
+                GroupCount = 2;
+                for(var i = 0; i < GroupCount; i++)
+                {
+                    //We don't have to test all the user stuff about this, so only the important fields
+                    var group = new Db.User() {
+                        username = $"group_{i}",
+                        type = Db.UserType.group
+                    };
+
+                    users.Add(group);
+
+                    for(var j = 0; j < UserCount / GroupCount; j++)
+                    {
+                        var userGroup = new Db.UserRelation() {
+                            userId = j + 1,
+                            relatedId = UserCount + i + 1
+                        };
+
+                        userRelations.Add(userGroup);
+                    }
+                }
+
                 conn.Insert(users, tsx);
                 conn.Insert(userVariables, tsx);
+                conn.Insert(userRelations, tsx);
 
                 var content = new List<Db.Content>();
                 var comments = new List<Db.Comment>();

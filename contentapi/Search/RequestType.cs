@@ -11,6 +11,6 @@ public enum RequestType
     activity,
     watch,
     adminlog,
-    agent, //This is 'all' users (including groups/etc), useful for permissions 
-    group
+    //agent, //This is 'all' users (including groups/etc), useful for permissions 
+    //group
 }

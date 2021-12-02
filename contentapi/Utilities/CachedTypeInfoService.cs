@@ -35,7 +35,7 @@ public class CachedTypeInfoService : ITypeInfoService
                 //we kind of expect it to be null
                 result.dbType = t.GetCustomAttribute<FromDbAttribute>()?.Type;
                 result.database = (result.dbType ?? t).GetCustomAttribute<Dapper.Contrib.Extensions.TableAttribute>()?.Name;
-                result.requestType = t.GetCustomAttribute<FromRequestAttribute>()?.Type;
+                result.requestType = t.GetCustomAttribute<ForRequestAttribute>()?.Type;
 
                 result.queryableFields = props.Select(x => x.Name).ToList();
                 result.searchableFields = props.Where(x => Attribute.IsDefined(x, searchattr)).Select(x => x.Name).ToList();

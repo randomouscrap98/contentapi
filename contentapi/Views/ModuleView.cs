@@ -2,7 +2,7 @@ using contentapi.Search;
 
 namespace contentapi.Views;
 
-[FromRequest(RequestType.module)]
+[ForRequest(RequestType.module)]
 public class ModuleView : ContentView
 {
     [FromField("content")]

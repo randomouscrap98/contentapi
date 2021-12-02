@@ -4,7 +4,7 @@ using contentapi.Search;
 namespace contentapi.Views;
 
 [FromDb(typeof(Db.Content))]
-[FromRequest(RequestType.content)]
+[ForRequest(RequestType.content)]
 public class ContentView
 {
     [Searchable]

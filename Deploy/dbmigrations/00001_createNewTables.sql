@@ -186,7 +186,7 @@ create table if not exists comments(
 -- TRY TO LIMIT INDEXES ON COMMENTS! I'm worried about the insert speed.
 -- This index is useful for massive comment searches within particularly rooms.
 -- Don't need to search EVERY comment in existence for values...
-create index if not exists idx_comment_contentId on comments(contentId, deleted);
+create index if not exists idx_comment_contentId on comments(contentId, deleted, module);
 
 -- IF READ PERFORMANCE BECOMES AN ISSUE AGAIN: index on createDate and deleted
 

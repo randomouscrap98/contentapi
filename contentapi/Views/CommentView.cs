@@ -3,7 +3,7 @@ using contentapi.Search;
 namespace contentapi.Views;
 
 [FromDb(typeof(Db.Comment))]
-[FromRequest(RequestType.comment)]
+[ForRequest(RequestType.comment)]
 public class CommentView
 {
     [Searchable]

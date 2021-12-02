@@ -63,6 +63,7 @@ public class GenericSearchDbTests : UnitTestBase, IClassFixture<DbUnitTestSearch
         }
     }
 
+    //This ALSO TESTS parts of the usertype macro!
     [Fact]
     public async Task GenericSearch_ToStronglyTyped_User()
     {
@@ -72,6 +73,7 @@ public class GenericSearchDbTests : UnitTestBase, IClassFixture<DbUnitTestSearch
             name = "test",
             type = "user",
             fields = "*", //THIS is what we're testing
+            query = "!usertype(user)"
         });
 
         var result = (await service.SearchUnrestricted(search)).data["test"];
@@ -250,7 +252,7 @@ public class GenericSearchDbTests : UnitTestBase, IClassFixture<DbUnitTestSearch
         search.requests.Add(new SearchRequest()
         {
             name = "lessthan",
-            type = "user",
+            type = "content",
             fields = "id",
             query = "id < @maxid" //Don't need to test syntax btw! Already done!
         });
@@ -268,7 +270,7 @@ public class GenericSearchDbTests : UnitTestBase, IClassFixture<DbUnitTestSearch
         search.requests.Add(new SearchRequest()
         {
             name = "lessthanequal",
-            type = "user",
+            type = "content",
             fields = "id",
             query = "id <= @maxid"
         });
@@ -286,14 +288,14 @@ public class GenericSearchDbTests : UnitTestBase, IClassFixture<DbUnitTestSearch
         search.requests.Add(new SearchRequest()
         {
             name = "greaterthan",
-            type = "user",
+            type = "content",
             fields = "id",
             query = "id > @minid" //Don't need to test syntax btw! Already done!
         });
 
         var result = service.SearchUnrestricted(search).Result.data;
 
-        Assert.Equal(fixture.UserCount - 10, result["greaterthan"].Count());
+        Assert.Equal(fixture.ContentCount - 10, result["greaterthan"].Count());
     }
 
     [Fact]
@@ -304,14 +306,14 @@ public class GenericSearchDbTests : UnitTestBase, IClassFixture<DbUnitTestSearch
         search.requests.Add(new SearchRequest()
         {
             name = "greaterthanequal",
-            type = "user",
+            type = "content",
             fields = "id",
             query = "id >= @minid" //Don't need to test syntax btw! Already done!
         });
 
         var result = service.SearchUnrestricted(search).Result.data;
 
-        Assert.Equal(fixture.UserCount - 9, result["greaterthanequal"].Count());
+        Assert.Equal(fixture.ContentCount - 9, result["greaterthanequal"].Count());
     }
 
     [Fact]
@@ -322,7 +324,7 @@ public class GenericSearchDbTests : UnitTestBase, IClassFixture<DbUnitTestSearch
         search.requests.Add(new SearchRequest()
         {
             name = "equal",
-            type = "user",
+            type = "content",
             fields = "id",
             query = "id = @id"
         });
@@ -341,14 +343,14 @@ public class GenericSearchDbTests : UnitTestBase, IClassFixture<DbUnitTestSearch
         search.requests.Add(new SearchRequest()
         {
             name = "noequal", //can't have keywords in names for now, oops
-            type = "user",
+            type = "content",
             fields = "id",
             query = "id <> @id"
         });
 
         var result = service.SearchUnrestricted(search).Result.data;
 
-        Assert.Equal(fixture.UserCount - 1, result["noequal"].Count());
+        Assert.Equal(fixture.ContentCount - 1, result["noequal"].Count());
         Assert.All(result["noequal"], x =>
         {
             //Make sure that one we didn't want wasn't included
@@ -360,36 +362,36 @@ public class GenericSearchDbTests : UnitTestBase, IClassFixture<DbUnitTestSearch
     public void GenericSearch_Search_Like()
     {
         var search = new SearchRequests();
-        search.values.Add("userlike", "user_1%");
+        search.values.Add("contentlike", "content_1%");
         search.requests.Add(new SearchRequest()
         {
             name = "testlike",
-            type = "user",
-            fields = "id, username",
-            query = "username like @userlike"
+            type = "content",
+            fields = "id, name",
+            query = "name like @contentlike"
         });
 
         var result = service.SearchUnrestricted(search).Result.data["testlike"];
-        Assert.Equal(16, fixture.UserCount); //This test only works while this is 16
-        Assert.Equal(7, result.Count()); //There are 16 users, so 6 from 10s and 1 from the 1
+        Assert.True(fixture.ContentCount >= 20); //This test only works when there's a lot of content
+        Assert.Equal(11, result.Count()); //There are 16 users, so 6 from 10s and 1 from the 1
     }
 
     [Fact]
     public void GenericSearch_Search_NotLike()
     {
         var search = new SearchRequests();
-        search.values.Add("usernotlike", "user_1%");
+        search.values.Add("contentnotlike", "content_1%");
         search.requests.Add(new SearchRequest()
         {
             name = "testnotlike",
-            type = "user",
+            type = "content",
             fields = "id",
-            query = "username not like @usernotlike"
+            query = "name not like @contentnotlike"
         });
 
         var result = service.SearchUnrestricted(search).Result.data["testnotlike"];
-        Assert.Equal(16, fixture.UserCount); //This test only works while this is 16
-        Assert.Equal(fixture.UserCount - 7, result.Count()); //There are 16 users, so 6 from 10s and 1 from the 1
+        Assert.True(fixture.ContentCount >= 20); //This test only works when there's a lot of content
+        Assert.Equal(fixture.ContentCount - 11, result.Count()); //There are 16 users, so 6 from 10s and 1 from the 1
     }
 
     [Fact]
@@ -400,7 +402,7 @@ public class GenericSearchDbTests : UnitTestBase, IClassFixture<DbUnitTestSearch
         search.requests.Add(new SearchRequest()
         {
             name = "idin",
-            type = "user",
+            type = "content",
             fields = "id",
             query = "id in @ids"
         });
@@ -420,13 +422,13 @@ public class GenericSearchDbTests : UnitTestBase, IClassFixture<DbUnitTestSearch
         search.requests.Add(new SearchRequest()
         {
             name = "idnotin",
-            type = "user",
+            type = "content",
             fields = "id",
             query = "id not in @ids"
         });
 
         var result = service.SearchUnrestricted(search).Result.data["idnotin"];
-        Assert.Equal(fixture.UserCount - 3, result.Count()); //There are 16 users, so 6 from 10s and 1 from the 1
+        Assert.Equal(fixture.ContentCount - 3, result.Count()); //There are 16 users, so 6 from 10s and 1 from the 1
         Assert.DoesNotContain(1L, result.Select(x => x["id"]));
         Assert.DoesNotContain(10L, result.Select(x => x["id"]));
         Assert.DoesNotContain(15L, result.Select(x => x["id"]));
@@ -577,7 +579,7 @@ public class GenericSearchDbTests : UnitTestBase, IClassFixture<DbUnitTestSearch
             search.requests.Add(new SearchRequest()
             {
                 name = $"{k}test",
-                type = "user",
+                type = "content",
                 fields = "id",
                 query = $"id not in @{k}ids"
             });
@@ -589,7 +591,7 @@ public class GenericSearchDbTests : UnitTestBase, IClassFixture<DbUnitTestSearch
         foreach(var k in keywords)
         {
             var r = result[$"{k}test"];
-            Assert.Equal(fixture.UserCount - 3, r.Count());
+            Assert.Equal(fixture.ContentCount - 3, r.Count());
             Assert.DoesNotContain(1L, r.Select(x => x["id"]));
             Assert.DoesNotContain(10L, r.Select(x => x["id"]));
             Assert.DoesNotContain(15L, r.Select(x => x["id"]));
