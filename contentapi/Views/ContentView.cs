@@ -62,5 +62,9 @@ public class ContentView
 
     [Searchable]
     [FromField("")]
+    public DateTime lastRevisionDate {get;set;}
+
+    [Searchable]
+    [FromField("")]
     public long lastRevisionId {get;set;}
 }
