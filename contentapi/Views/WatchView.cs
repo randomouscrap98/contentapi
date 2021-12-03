@@ -3,7 +3,7 @@ using contentapi.Search;
 
 namespace contentapi.Views;
 
-[FromDb(typeof(Db.ContentWatch))]
+[FromTable(typeof(Db.ContentWatch))]
 [ForRequest(RequestType.watch)]
 public class WatchView
 {

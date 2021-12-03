@@ -22,10 +22,10 @@ public class FromFieldAttribute : System.Attribute
 }  
 
 [System.AttributeUsage(System.AttributeTargets.Class | System.AttributeTargets.Struct)]
-public class FromDbAttribute : System.Attribute  
+public class FromTableAttribute : System.Attribute  
 {  
     public Type Type {get;}
-    public FromDbAttribute(Type type) {  this.Type = type; }  
+    public FromTableAttribute(Type type) {  this.Type = type; }  
 }  
 
 [System.AttributeUsage(System.AttributeTargets.Class | System.AttributeTargets.Struct)]

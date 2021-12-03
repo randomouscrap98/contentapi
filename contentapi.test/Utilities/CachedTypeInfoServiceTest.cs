@@ -71,7 +71,7 @@ public class CachedTypeInfoServiceTest : UnitTestBase
     public void GetTypeInfoDbObject() //Get the typeinfo for a DB object, which we still expect to fill in various fields
     {
         var typeInfo = service.GetTypeInfo<Db.ContentPermission>();
-        Assert.Equal("content_permissions", typeInfo.database); //Ofc, if you change the database name, change this here too
+        Assert.Equal("content_permissions", typeInfo.table); //Ofc, if you change the database name, change this here too
         //Assert.Single(typeInfo.fieldRemap.Keys);
         //Assert.Contains("remappedField", typeInfo.fieldRemap.Keys);
         //Assert.Equal("otherField", typeInfo.fieldRemap["remappedField"]);

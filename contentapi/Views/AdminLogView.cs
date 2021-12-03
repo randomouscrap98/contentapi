@@ -3,7 +3,7 @@ using contentapi.Search;
 
 namespace contentapi.Views;
 
-[FromDb(typeof(Db.AdminLog))]
+[FromTable(typeof(Db.AdminLog))]
 [ForRequest(RequestType.adminlog)]
 public class AdminLogView
 {

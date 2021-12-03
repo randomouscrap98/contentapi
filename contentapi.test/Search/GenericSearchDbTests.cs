@@ -168,10 +168,6 @@ public class GenericSearchDbTests : UnitTestBase, IClassFixture<DbUnitTestSearch
             Assert.True(x.contentId > 0, "ContentID not cast properly!");
             Assert.True(x.date.Ticks > 0, "Activity date not cast properly!");
         });
-
-        //Assert.Equal(fixture.UserCount / 2, castResult.Where(x => x.registered).Count());
-        //Assert.Equal(fixture.UserCount / 2, castResult.Where(x => x.super).Count());
-        //Assert.Equal(fixture.UserCount / 2, castResult.Where(x => x.special != null).Count());
     }
 
     [Fact]
@@ -460,6 +456,24 @@ public class GenericSearchDbTests : UnitTestBase, IClassFixture<DbUnitTestSearch
     }
 
     [Fact]
+    public void GenericSearch_Search_Autoname() //A newer feature, name is just type
+    {
+        var search = new SearchRequests();
+        search.values.Add("id", 10);
+        search.requests.Add(new SearchRequest()
+        {
+            type = "content",
+            fields = "id",
+            query = "id = @id"
+        });
+
+        var result = service.SearchUnrestricted(search).Result.data;
+
+        Assert.Single(result["content"]);
+        Assert.Equal(10L, result["content"].First()["id"]);
+    }
+
+    [Fact]
     public async Task GenericSearch_Search_FailGracefully_NameValueCollision()
     {
         //The exact setup that produced the failure, oops
@@ -677,19 +691,6 @@ public class GenericSearchDbTests : UnitTestBase, IClassFixture<DbUnitTestSearch
             var result = (await service.Search(search, 1)).data["permission"];
             Assert.Equal(fixture.ContentCount / 2, result.Count());
         }
-        //var castResult = service.ToStronglyTyped<ContentView>(result);
-
-        ////Because the permission thing "all or none" is just based on a bit, it will
-        ////always be HALF of the content that we're allowed to get. The ID should also
-        ////be related to the ones that have it.
-        //Assert.Equal(fixture.ContentCount / 2, result.Count());
-        //Assert.All(castResult, x =>
-        //{
-        //    //Minus 1 because the database ids start at 1
-        //    Assert.True(((x.id - 1) & (int)ContentVariations.AccessByAll) > 0);
-        //    Assert.Contains(0, x.permissions.Keys);
-        //    Assert.Contains("R", x.permissions[0]);
-        //});
     }
 
     [Theory]
@@ -717,7 +718,7 @@ public class GenericSearchDbTests : UnitTestBase, IClassFixture<DbUnitTestSearch
         }
         else
         {
-            await Assert.ThrowsAnyAsync<ArgumentException>(async () => {
+            await Assert.ThrowsAnyAsync<ParseException>(async () => {
                 var result = (await service.SearchUnrestricted(search)).data["permissionmacro"];
             });
         }
@@ -948,7 +949,6 @@ public class GenericSearchDbTests : UnitTestBase, IClassFixture<DbUnitTestSearch
         {
             name = "allreadable",
             type = "page",
-            //fields = "id, name, createUserId, createDate, lastPostId"
             fields = "*"
         });
         search.requests.Add(new SearchRequest()
@@ -980,7 +980,6 @@ public class GenericSearchDbTests : UnitTestBase, IClassFixture<DbUnitTestSearch
         Assert.All(content, x => 
         {
             Assert.Equal(InternalContentType.page.ToString(), x.internalType);
-            //Assert.Equal("page", x.internalTypeString);
             Assert.Contains(0, x.permissions.Keys);
             Assert.Contains("R", x.permissions[0]);
             Assert.True(users.Any(y => y.id == x.createUserId), "Didn't return matched content user!");
@@ -991,13 +990,6 @@ public class GenericSearchDbTests : UnitTestBase, IClassFixture<DbUnitTestSearch
             Assert.True(content.Any(y => y.id == x.contentId), "returned comment not in content list!");
             Assert.True(users.Any(y => y.id == x.createUserId), "Didn't return matched comment user!");
         });
-
-        //Assert.Equal(2, result["recentpages"].Count());
-        //Assert.Equal(2, result["createusers"].Count());
-        //Assert.Single(result["createusers"].Where(x => 
-        //    x["id"].Equals(1L) && x["username"].Equals("firstUser")));
-        //Assert.Single(result["createusers"].Where(x => 
-        //    x["id"].Equals(2L) && x["username"].Equals("admin")));
     }
 
     [Fact]
@@ -1033,7 +1025,6 @@ public class GenericSearchDbTests : UnitTestBase, IClassFixture<DbUnitTestSearch
 
         Assert.All(content, x => 
         {
-            //Assert.Equal(InternalContentType.page.ToString(), x.internalType);
             Assert.Contains(0, x.permissions.Keys);
             Assert.Contains("R", x.permissions[0]);
             if(x.lastCommentId != 0)

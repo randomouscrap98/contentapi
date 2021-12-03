@@ -2,7 +2,7 @@ using contentapi.Search;
 
 namespace contentapi.Views;
 
-[FromDb(typeof(Db.Comment))]
+[FromTable(typeof(Db.Comment))]
 [ForRequest(RequestType.comment)]
 public class CommentView
 {

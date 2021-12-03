@@ -3,7 +3,7 @@ using contentapi.Search;
 
 namespace contentapi.Views;
 
-[FromDb(typeof(Db.Content))]
+[FromTable(typeof(Db.Content))]
 [ForRequest(RequestType.content)]
 public class ContentView
 {

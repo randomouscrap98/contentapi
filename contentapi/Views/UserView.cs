@@ -2,7 +2,7 @@ using contentapi.Search;
 
 namespace contentapi.Views;
 
-[FromDb(typeof(Db.User))]
+[FromTable(typeof(Db.User))]
 [ForRequest(RequestType.user)]
 public class UserView //: AgentView
 {

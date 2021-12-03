@@ -25,13 +25,7 @@ public class QueryBuilder : IQueryBuilder
         RequestType.content, RequestType.file, RequestType.page, RequestType.module
     };
 
-    //protected static readonly List<RequestType> USERREQUESTTYPES = new List<RequestType>()
-    //{
-    //    RequestType.user
-    //};
-
     public List<RequestType> ContentRequestTypes => CONTENTREQUESTTYPES;
-    //public List<RequestType> UserRequestTypes => USERREQUESTTYPES;
 
     public const string LastPostDateField = nameof(ContentView.lastCommentDate);
     public const string LastPostIdField = nameof(ContentView.lastCommentId);
@@ -60,8 +54,6 @@ public class QueryBuilder : IQueryBuilder
        { RequestType.module, $"internalType = {(int)InternalContentType.module}" },
        { RequestType.page, $"internalType = {(int)InternalContentType.page}" },
        { RequestType.comment, $"module IS NULL" },
-       //{ RequestType.user, $"type = {(int)UserType.user}" }, 
-       //{ RequestType.group, $"type = {(int)UserType.group}" } 
     };
 
     protected readonly Dictionary<string, MacroDescription> StandardMacros = new Dictionary<string, MacroDescription>()
@@ -119,11 +111,6 @@ public class QueryBuilder : IQueryBuilder
             StandardModifiedFields.Add((type, WatchCountField), 
                 $"(select count(*) from content_watches where {MainAlias}.id = contentId) as {WatchCountField}");
         }
-
-        //foreach(var type in UserRequestTypes)
-        //{
-        //    StandardModifiedFields.Add((type, TypeField), EnumToCase<UserType>(TypeField));
-        //}
     }
 
     public static string EnumToCase<T>(string fieldName, string outputName) where T : struct, System.Enum 
@@ -143,7 +130,7 @@ public class QueryBuilder : IQueryBuilder
         var typeInfo = typeService.GetTypeInfo<ContentKeyword>();
         return $@"{MainAlias}.id in 
             (select {nameof(ContentKeyword.contentId)} 
-             from {typeInfo.database} 
+             from {typeInfo.table} 
              where {nameof(ContentKeyword.value)} like {value}
             )";
     }
@@ -153,7 +140,7 @@ public class QueryBuilder : IQueryBuilder
         var typeInfo = typeService.GetTypeInfo<ContentValue>();
         return $@"{MainAlias}.id in 
             (select {nameof(ContentValue.contentId)} 
-             from {typeInfo.database} 
+             from {typeInfo.table} 
              where {nameof(ContentValue.key)} like {key} 
                and {nameof(ContentValue.value)} like {value}
             )";
@@ -164,7 +151,7 @@ public class QueryBuilder : IQueryBuilder
         var typeInfo = typeService.GetTypeInfo<Content>();
         return $@"{MainAlias}.id in 
             (select {nameof(Content.parentId)} 
-             from {typeInfo.database} 
+             from {typeInfo.table} 
              group by {nameof(Content.parentId)}
             )";
     }
@@ -174,7 +161,7 @@ public class QueryBuilder : IQueryBuilder
         var typeInfo = typeService.GetTypeInfo<Content>();
         return $@"{MainAlias}.contentId in 
             (select {nameof(Content.id)} 
-             from {typeInfo.database} 
+             from {typeInfo.table} 
              where internalType = {(int)InternalContentType.page}
              and deleted = 0
             )";
@@ -185,7 +172,7 @@ public class QueryBuilder : IQueryBuilder
         var typeInfo = typeService.GetTypeInfo<UserRelation>();
         return $@"{MainAlias}.id in 
             (select {nameof(Db.UserRelation.userId)} 
-             from {typeInfo.database} 
+             from {typeInfo.table} 
              where {nameof(Db.UserRelation.relatedId)} = {group}
             )";
     }
@@ -220,7 +207,7 @@ public class QueryBuilder : IQueryBuilder
         }
         return $@"{MainAlias}.{idField} in 
             (select {nameof(ContentPermission.contentId)} 
-             from {typeInfo.database} 
+             from {typeInfo.table} 
              where {nameof(ContentPermission.userId)} in {requesters}
                and `{checkCol}` = 1
             )";
@@ -296,11 +283,22 @@ public class QueryBuilder : IQueryBuilder
 
     public List<string> ComputeRealFields(SearchRequestPlus r)
     {
+        bool inverted = false;
+
+        if(r.fields.StartsWith("~"))
+        {
+            inverted = true;
+            r.fields = r.fields.TrimStart('~');
+        }
+
         var fields = r.fields.Split(",".ToCharArray(), StringSplitOptions.RemoveEmptyEntries).Select(x => x.Trim()).ToList(); 
 
         //Redo fieldlist if they asked for special formats
         if (r.fields == "*")
             fields = new List<string>(r.typeInfo.queryableFields);
+        
+        if (inverted)
+            fields = r.typeInfo.queryableFields.Except(fields).ToList();
         
         //Check for bad fields
         foreach (var field in fields)
@@ -452,17 +450,15 @@ public class QueryBuilder : IQueryBuilder
             return parseResult;
 
         }
-        catch (ParseException)
-        {
-            //We know how to handle parse exceptions
-            throw;
-        }
+        //We know how to handle these exceptions
+        catch (ParseException) { throw; }
+        catch (ArgumentException) { throw; }
         catch (Exception ex)
         {
             //Convert to argument exception so the user knows what's up. Nothing that happens here
             //is due to a database or other "internal" server error (other than stupid messups on my part)
             logger.LogWarning($"Unknown exception during query parse: {ex}");
-            throw new ParseException($"Parse  error: {ex.Message}");
+            throw new ParseException($"Parse error: {ex.Message}");
         }
     }
 
@@ -479,7 +475,7 @@ public class QueryBuilder : IQueryBuilder
         queryStr.Append("SELECT ");
         queryStr.Append(string.Join(",", fieldSelect));
         queryStr.Append(" FROM ");
-        queryStr.Append(r.typeInfo.database ?? throw new InvalidOperationException($"Standard select {r.type} doesn't map to database table in request {r.name}!"));
+        queryStr.Append(r.typeInfo.table ?? throw new InvalidOperationException($"Standard select {r.type} doesn't map to database table in request {r.name}!"));
         queryStr.Append($" AS {MainAlias} ");
     }
 

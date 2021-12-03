@@ -29,5 +29,5 @@ public class TypeInfo
     //These don't necessarily map to direct database things, even though they MOSTLY do
     public RequestType? requestType {get;set;}
     public Type? dbType {get;set;}
-    public string? database {get;set;}
+    public string? table {get;set;}
 }

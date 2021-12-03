@@ -33,8 +33,8 @@ public class CachedTypeInfoService : ITypeInfoService
 
                 //All of these could be null, and that's ok! If it's a complex type,
                 //we kind of expect it to be null
-                result.dbType = t.GetCustomAttribute<FromDbAttribute>()?.Type;
-                result.database = (result.dbType ?? t).GetCustomAttribute<Dapper.Contrib.Extensions.TableAttribute>()?.Name;
+                result.dbType = t.GetCustomAttribute<FromTableAttribute>()?.Type;
+                result.table = (result.dbType ?? t).GetCustomAttribute<Dapper.Contrib.Extensions.TableAttribute>()?.Name;
                 result.requestType = t.GetCustomAttribute<ForRequestAttribute>()?.Type;
 
                 result.queryableFields = props.Select(x => x.Name).ToList();
