@@ -29,6 +29,7 @@ public class QueryBuilder : IQueryBuilder
 
     public const string LastPostDateField = nameof(ContentView.lastCommentDate);
     public const string LastPostIdField = nameof(ContentView.lastCommentId);
+    public const string LastRevisionIdField = nameof(ContentView.lastRevisionId);
     public const string QuantizationField = nameof(FileView.quantization);
     public const string DescriptionField = nameof(ModuleView.description);
     public const string InternalTypeField = nameof(ContentView.internalType);
@@ -106,6 +107,8 @@ public class QueryBuilder : IQueryBuilder
                 $"(select createDate from comments where {MainAlias}.id = contentId and {NaturalCommentQuery} order by id desc limit 1) as {LastPostDateField}");
             StandardModifiedFields.Add((type, LastPostIdField), 
                 $"(select id from comments where {MainAlias}.id = contentId and {NaturalCommentQuery} order by id desc limit 1) as {LastPostIdField}");
+            StandardModifiedFields.Add((type, LastRevisionIdField), 
+                $"(select id from content_history where {MainAlias}.id = contentId order by id desc limit 1) as {LastRevisionIdField}");
             StandardModifiedFields.Add((type, PostCountField), 
                 $"(select count(*) from comments where {MainAlias}.id = contentId and {NaturalCommentQuery}) as {PostCountField}");
             StandardModifiedFields.Add((type, WatchCountField), 

@@ -59,4 +59,8 @@ public class ContentView
     [Searchable]
     [FromField("")]
     public int watchCount {get;set;}
+
+    [Searchable]
+    [FromField("")]
+    public long lastRevisionId {get;set;}
 }
