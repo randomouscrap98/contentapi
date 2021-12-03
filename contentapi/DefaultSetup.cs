@@ -25,6 +25,7 @@ public static class DefaultSetup
         services.AddSingleton<IQueryBuilder, QueryBuilder>();
         services.AddSingleton<IAuthTokenService<long>, JwtAuthTokenService<long>>();
         services.AddSingleton<ISearchQueryParser, SearchQueryParser>();
+        services.AddSingleton<ICacheCheckpointTracker, CacheCheckpointTracker>();
         services.AddSingleton<IHashService, HashService>();
         services.AddSingleton<IUserService, UserService>();
 
@@ -33,6 +34,7 @@ public static class DefaultSetup
         services.AddSingleton<JwtAuthTokenServiceConfig>();
         services.AddSingleton<HashServiceConfig>();
         services.AddSingleton<UserServiceConfig>();
+        services.AddSingleton<CacheCheckpointTrackerConfig>();
     }
 
     /// <summary>
