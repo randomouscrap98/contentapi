@@ -343,7 +343,6 @@ namespace contentapi.Controllers
                                 o.permissions.Remove(0);
                                 o.values.Add("bucket", o.bucket);
                             }
-                            o.values.Add("quantization", o.quantization.ToString());
                             return n;
                         });
                     await ConvertCt(
@@ -359,7 +358,6 @@ namespace contentapi.Controllers
                         (id) => moduleSource.GetRevisions(id),
                         (n, o) =>
                         {
-                            o.values.Add("description", o.description ?? "");
                             o.permissions.Add(0, "CR"); //Create lets people... comment on modules?? cool?
                             return n;
                         });

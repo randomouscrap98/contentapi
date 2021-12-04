@@ -78,6 +78,7 @@ create table if not exists content (
     publicType text not null,
     `name` text not null,
     content text not null,
+    extra1 text default null,  -- extra fields used for special content type fields
     parentId int not null default 0 -- each content can only physically exist in one parent
 );
 

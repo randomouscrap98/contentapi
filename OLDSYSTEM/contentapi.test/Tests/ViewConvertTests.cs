@@ -1,6 +1,5 @@
 using System;
 using System.Collections.Generic;
-using contentapi.Db;
 using contentapi.Services.Constants;
 using contentapi.Services.Implementations;
 using contentapi.Views;

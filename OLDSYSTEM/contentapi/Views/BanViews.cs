@@ -1,15 +1,14 @@
 using System;
-using contentapi.Db;
 //using System.Text.Json.Serialization;
 //using Newtonsoft.Json.Converters;
 
 namespace contentapi.Views
 {
-    //public enum BanType 
-    //{
-    //    none = 0,
-    //    @public = 1
-    //}
+    public enum BanType 
+    {
+        none = 0,
+        @public = 1
+    }
 
     public class BanView : BaseView, IBaseView
     {

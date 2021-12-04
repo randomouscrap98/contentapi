@@ -20,6 +20,7 @@ using System;
 using Newtonsoft.Json;
 using contentapi.Db;
 using Microsoft.Data.Sqlite;
+using contentapi.Db.History;
 
 namespace contentapi
 {
@@ -62,6 +63,8 @@ namespace contentapi
                 options.EnableSensitiveDataLogging(dbConfig.SensitiveLogging);
             });
 
+            Db.Setup.DefaultSetup.AddDefaultServices(services);
+
             //Fix some entity system stuff. We need singletons but the default is transient
             //The IEntityProvider that we give out needs to have only a single access
             services.AddSingleton(new EntityQueryableEfCoreConfig() { ConcurrentAccess = 1 });
@@ -80,9 +83,7 @@ namespace contentapi
             services.AddTransient<BaseSimpleControllerServices>();
             services.AddTransient<IContentHistoryConverter, ContentHistoryConverter>();
 
-            services.AddTransient<ContentApiDbConnection>(ctx => new ContentApiDbConnection() {
-                Connection = new SqliteConnection("Data Source=newcontent.db")
-            });
+            services.AddTransient<ContentApiDbConnection>(ctx => new Db.ContentApiDbConnection(new SqliteConnection("Data Source=newcontent.db")));
 
             //The rest is http stuff I think
 
