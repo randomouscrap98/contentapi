@@ -17,6 +17,7 @@ using contentapi.Services.Constants;
 using contentapi.Views;
 using System.Collections.Generic;
 using contentapi.Services;
+using contentapi.Db.History;
 
 namespace contentapi.Controllers
 {
@@ -252,7 +253,7 @@ namespace contentapi.Controllers
                     for(int i = 0; i < revisions.Count; i++)
                     {
                         var rv = mapper.Map<Db.Content>(revisions[i]);
-                        var sn = mapper.Map<ContentSnapshot>(rv);
+                        var sn = mapper.Map<Db.History.ContentSnapshot>(rv);
                         sn.values = vls;
                         sn.permissions = pms;
                         sn.keywords = kws;

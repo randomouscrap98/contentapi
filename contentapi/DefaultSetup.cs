@@ -18,6 +18,11 @@ public static class DefaultSetup
     /// <param name="services"></param>
     public static void AddDefaultServices(IServiceCollection services)
     {
+        //Since we consume the db, also call their setup here
+        Db.Setup.DefaultSetup.AddDefaultServices(services);
+
+        services.AddAutoMapper(typeof(SearchRequestPlusProfile)); //You can pick ANY profile, it just needs some type from this binary
+
         services.AddSingleton<IRuntimeInformation>(new MyRuntimeInformation(DateTime.Now));
         services.AddSingleton<ITypeInfoService, CachedTypeInfoService>();
         //This NEEDS to stay transient because it holds onto a DB connection! We want those recycled!
