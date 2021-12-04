@@ -23,6 +23,7 @@
 
   <ItemGroup>
     <ProjectReference Include="..\contentapi\contentapi.csproj" />
+    <ProjectReference Include="..\contentapi.db\contentapi.db.csproj" />
   </ItemGroup>
 
   <Target Name="CopyFiles" BeforeTargets="AfterBuild">

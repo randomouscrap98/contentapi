@@ -1,6 +1,7 @@
+using System;
 using System.Data;
 
-namespace contentapi
+namespace contentapi.Db
 {
     /// <summary>
     /// A simple wrapper which lets consumers of a dependency injected connection request particular connections STILL without

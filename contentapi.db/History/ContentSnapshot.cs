@@ -1,4 +1,4 @@
-using contentapi.Db;
+using System.Collections.Generic;
 
 namespace contentapi.Db.History
 {
