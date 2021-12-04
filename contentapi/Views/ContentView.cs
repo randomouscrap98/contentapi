@@ -5,7 +5,7 @@ namespace contentapi.Views;
 
 [FromTable(typeof(Db.Content))]
 [ForRequest(RequestType.content)]
-public class ContentView
+public class ContentView : IIdView
 {
     [Searchable]
     public long id { get; set; }

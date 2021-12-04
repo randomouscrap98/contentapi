@@ -4,7 +4,7 @@ namespace contentapi.Views;
 
 [FromTable(typeof(Db.ContentHistory))]
 [ForRequest(RequestType.activity)]
-public class ActivityView
+public class ActivityView : IIdView
 {
     [Searchable]
     public long id { get; set; }

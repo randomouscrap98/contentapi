@@ -31,8 +31,6 @@ public class QueryBuilder : IQueryBuilder
     public const string LastPostIdField = nameof(ContentView.lastCommentId);
     public const string LastRevisionDateField = nameof(ContentView.lastRevisionDate);
     public const string LastRevisionIdField = nameof(ContentView.lastRevisionId);
-    public const string QuantizationField = nameof(FileView.quantization);
-    public const string DescriptionField = nameof(ModuleView.description);
     public const string InternalTypeField = nameof(ContentView.internalType);
     public const string PostCountField = nameof(ContentView.commentCount);
     public const string WatchCountField = nameof(ContentView.watchCount);
@@ -41,8 +39,6 @@ public class QueryBuilder : IQueryBuilder
 
     //These fields are too difficult to modify with the attributes, so we do it in code here
     protected readonly Dictionary<(RequestType, string),string> StandardModifiedFields = new Dictionary<(RequestType, string), string> {
-        { (RequestType.file, QuantizationField), $"(select value from content_values where {MainAlias}.id = contentId and key='{QuantizationField}' limit 1) as {QuantizationField}" },
-        { (RequestType.module, DescriptionField), $"(select value from content_values where {MainAlias}.id = contentId and key='{DescriptionField}' limit 1) as {DescriptionField}" },
         { (RequestType.user, "registered"), $"(registrationKey IS NULL) as registered" },
         { (RequestType.activity, ActionField), EnumToCase<UserAction>(ActionField)},
         { (RequestType.adminlog, TypeField), EnumToCase<AdminLogType>(TypeField)},

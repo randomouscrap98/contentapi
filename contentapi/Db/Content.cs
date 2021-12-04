@@ -15,4 +15,6 @@ public class Content
     public string name { get; set; } = "";
     public string content { get; set; } = "";
     public long parentId { get; set; }
+
+    public string extra1 {get;set;} = "";
 }

@@ -4,7 +4,7 @@ namespace contentapi.Views;
 
 [FromTable(typeof(Db.Comment))]
 [ForRequest(RequestType.comment)]
-public class CommentView
+public class CommentView : IIdView
 {
     [Searchable]
     public long id {get;set;}

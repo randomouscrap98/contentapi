@@ -5,7 +5,7 @@ namespace contentapi.Views;
 
 [FromTable(typeof(Db.ContentWatch))]
 [ForRequest(RequestType.watch)]
-public class WatchView
+public class WatchView : IIdView
 {
     [Searchable]
     public long id { get; set; }

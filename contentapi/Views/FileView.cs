@@ -12,6 +12,6 @@ public class FileView : ContentView
     [FromField("content")]
     public string mimetype { get; set; } = "";
 
-    [FromField("")]
-    public int quantization {get;set;}
+    [FromField("extra1")]  //Quantization is string in case more info should be provided
+    public string quantization {get;set;} = "";
 }

@@ -8,6 +8,6 @@ public class ModuleView : ContentView
     [FromField("content")]
     public string code { get; set; } = "";
 
-    [FromField("")] //From values
+    [FromField("extra1")] 
     public int description {get;set;}
 }

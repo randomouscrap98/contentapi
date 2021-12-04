@@ -4,7 +4,7 @@ namespace contentapi.Views;
 
 [FromTable(typeof(Db.User))]
 [ForRequest(RequestType.user)]
-public class UserView //: AgentView
+public class UserView : IIdView
 {
     [Searchable]
     public long id {get;set;}
