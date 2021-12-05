@@ -77,7 +77,7 @@ namespace contentapi.Services.Implementations
 
             if(orderedRelations.Count() > 0)
             {
-                view.history = JsonConvert.SerializeObject(orderedRelations.Select(x => new
+                view.history = JsonConvert.SerializeObject(orderedRelations.Select(x => new Db.History.CommentSnapshot
                 {
                     userId = -x.entityId1,
                     action = x.type.StartsWith(Keys.CommentDeleteHack) ? Db.UserAction.delete : Db.UserAction.update,
