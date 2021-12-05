@@ -53,6 +53,9 @@ public class DbUnitTestSearchFixture : DbUnitTestBase, IDisposable
     public readonly int AdminLogCount;
     public readonly int GroupCount;
 
+    public long SuperUid() => 1 + (int)UserVariations.Super;
+    public long StandardUid() => (int)UserVariations.Super;
+
     public DbUnitTestSearchFixture()
     {
         logger.LogDebug($"Adding users to database {MasterConnectionString}");
@@ -301,5 +304,8 @@ public class DbUnitTestSearchFixture : DbUnitTestBase, IDisposable
                 tsx.Commit();
             }
         }
+
+        //Make sure that resets include all these changes we just made!
+        SetBackupNow();
     }
 }

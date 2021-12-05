@@ -222,7 +222,7 @@ public class GenericSearcher : IGenericSearch
         }, values);
 
         if(result.Count() != 1)
-            throw new ArgumentException($"{type} with ID {id} not found!"); 
+            throw new NotFoundException($"{type} with ID {id} not found!"); 
 
         return ToStronglyTyped<T>(result).First();
     }

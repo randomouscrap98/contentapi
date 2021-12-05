@@ -33,15 +33,7 @@ public class DbWriter
     //Consider how to write a user? Users are one of the only things that have private information, so 
     //perhaps it needs its own unique writer endpoint
 
-    //public async Task WriteRaw<T>(T dbItem) where T : class
-    //{
-    //    await dbcon.InsertAsync(dbItem);
-    //}
-
-
-    //Avoid generic constraints unless they're required by the underlying system. Just restricting because it's
-    //"all" you expect is bad, remember all the problems you had before with that
-    public async Task<T> WriteAsync<T>(T view, long requestUserId) where T : class, IIdView
+    public async Task<UserView> GetRequestUser(long requestUserId)
     {
         if(requestUserId <= 0)
             throw new InvalidOperationException("Can't use system UIDs right now for writes! It's reserved!");
@@ -59,26 +51,130 @@ public class DbWriter
             throw new ArgumentException($"Unknown request user {requestUserId}");
         }
 
-        UserAction action = view.id == 0 ? UserAction.create : UserAction.update;
-        await PermissionPrecheck(view, requester, action);
+        return requester;
+    }
+
+    //Avoid generic constraints unless they're required by the underlying system. Just restricting because it's
+    //"all" you expect is bad, remember all the problems you had before with that
+    public async Task<T> WriteAsync<T>(T view, long requestUserId) where T : class, IIdView, new()
+    {
+        return await GenericWorkAsync(view, await GetRequestUser(requestUserId), view.id == 0 ? UserAction.create : UserAction.update);
+    }
+
+    public async Task<T> DeleteAsync<T>(long id, long requestUserId) where T : class, IIdView, new()
+    {
+        return await GenericWorkAsync(new T() { id = id }, await GetRequestUser(requestUserId), UserAction.delete);
+    }
+
+    /// <summary>
+    /// Throws "ForbiddenException" for any kind of permission error that could arise for a modification given
+    /// </summary>
+    /// <typeparam name="T"></typeparam>
+    public async Task CheckPermissionsAsync<T>(T view, UserView requester, UserAction action) where T : class, IIdView, new()
+    {
+        //Each type needs a different kind of check
+        if(view is ContentView)
+        {
+            //Create is special, because we need the parent create permission
+            if(action == UserAction.create)
+            {
+                //Only supers can create modules, but after that, permissions are based on their internal permissions.
+                if(view is ModuleView && !requester.super)
+                    throw new ForbiddenException($"Only supers can create modules!");
+
+                var cView = view as ContentView ?? throw new InvalidOperationException("Somehow, ContentView could not be cast to a ContentView");
+
+                //Only need to check parent for create if it's actually a place! This is because we treat non-valid 
+                //ids as orphaned pages
+                if (cView.parentId > 0)
+                {
+                    if(!(await UserCan(requester, action, cView.parentId)))
+                        throw new ForbiddenException($"User {requester.id} can't '{action}' content in parent {cView.parentId}!");
+                }
+            }
+        }
+        else if(view is CommentView)
+        {
+            var cView = view as CommentView ?? throw new InvalidOperationException("Somehow, CommentView could not be cast to a CommentView");
+
+            //Create is special, because we need the parent create permission
+            if(action == UserAction.create)
+            {
+                //Can't post in invalid locations! So we check ANY contentId passed in, even if it's invalid
+                if(!(await UserCan(requester, action, cView.contentId)))
+                    throw new ForbiddenException($"User {requester.id} can't '{action}' comments in content {cView.contentId}!");
+            }
+            //All other non-read actions can only ber performed the original user or supers
+            else if(action != UserAction.read)
+            {
+                if(!requester.super || cView.createUserId != requester.id)
+                    throw new ForbiddenException($"Only the original poster and supers can modify existing comments!");
+            }
+        }
+        else 
+        {
+            //Be SAFER than sorry! All views when created are by default NOT writable!
+            throw new ForbiddenException($"View of type {view.GetType().Name} cannot be user-modified!");
+        }
+    }
+
+    /// <summary>
+    /// Inserts, updates, and deletes for any type should call THIS function
+    /// </summary>
+    /// <typeparam name="T"></typeparam>
+    public async Task<T> GenericWorkAsync<T>(T view, UserView requester, UserAction action) where T : class, IIdView, new()
+    {
+        CheckActionValidForView(action, view);
+        await CheckPermissionsAsync(view, requester, action);
 
         long id = 0;
         var typeInfo = typeInfoService.GetTypeInfo<T>();
-        var requestType = typeInfo.requestType ?? throw new InvalidOperationException($"Type {typeof(T).Name} has no associated request type for querying, don't know how to write! This usually means this type is a complex type that doesn't represent a database object, and thus the API has a configuration error!");
+        var requestType = typeInfo.requestType ?? throw new InvalidOperationException($"Type {typeof(T)} has no associated request type for querying, don't know how to write! This usually means this type is a complex type that doesn't represent a database object, and thus the API has a configuration error!");
+
+        //Now go get the existing if it's that kind of thing!
+        T? existing = null;
+
+        if(action == UserAction.update || action == UserAction.delete)
+        {
+            //This will throw an exception if we can't find it by id, so that's the end of that...
+            existing = await searcher.GetById<T>(requestType, view.id);
+        }
 
         //Ok at this point, we know everything is good to go, there shouldn't be ANY MORE permission checks required past here!
         if(view is ContentView)
         {
-            id = await WriteContent(view as ContentView ?? throw new InvalidOperationException("Somehow, ContentView couldn't be cast to ContentView??"), 
-                requester, typeInfo, action);
+            id = await DatabaseWork_Content(new DbWorkUnit<ContentView>(
+                view as ContentView ?? throw new InvalidOperationException("Somehow, ContentView couldn't be cast to ContentView??"), 
+                requester, typeInfo, action, existing as ContentView));
         }
         else
         {
             throw new ArgumentException($"Don't know how to write type {typeof(T).Name} to the database!");
         }
 
+        //The regardless, just go look up whatever work we just did, give the user the MOST up to date information, even if it's inefficient
         return await searcher.GetById<T>(requestType, id);
     }
+
+    //Ensure the action and the view make sense for each other
+    public void CheckActionValidForView(UserAction action, IIdView view)
+    {
+        if(action == UserAction.update || action == UserAction.delete)
+        {
+            if(view.id <= 0)
+                throw new InvalidOperationException($"Alteration action '{action}' requires id, but no id was set in view!");
+        }
+        else if(action == UserAction.create)
+        {
+            if(view.id != 0)
+                throw new InvalidOperationException($"Alteration action '{action} requires NO id set, but id was {view.id}");
+        }
+        else
+        {
+            throw new InvalidOperationException($"Unsupported action '{action}' inside modification context");
+        }
+    }
+
 
     /// <summary>
     /// Delete stuff of the given type associated with the given content. WARNING: THIS WORKS FOR COMMENTS, VOTES, WATCHES, ETC!!
@@ -175,34 +271,47 @@ public class DbWriter
         return unmapped;
     }
 
-    public async Task<long> WriteContent(ContentView view, UserView requester, TypeInfo typeInfo, UserAction action)
+    /// <summary>
+    /// This function handles any database modification for the given view, from inserts to updates to deletes.
+    /// </summary>
+    /// <param name="view"></param>
+    /// <param name="requester"></param>
+    /// <param name="typeInfo"></param>
+    /// <param name="action"></param>
+    /// <returns></returns>
+    public async Task<long> DatabaseWork_Content(DbWorkUnit<ContentView> work) //ContentView view, UserView requester, TypeInfo typeInfo, UserAction action)
     {
+        if(!work.typeInfo.type.IsAssignableFrom(typeof(ContentView)))
+            throw new InvalidOperationException($"TypeInfo given in DatabaseWork was for type '{work.typeInfo.type}', not '{typeof(ContentView)}'");
+
         //Always need an ID to link to, so we actually need to create the content first and get the ID.
         using(var tsx = dbcon.BeginTransaction())
         {
             //Need to convert views to db content... how to do so without a big mess?
             var content = new Db.Content();
-            var unmapped = SimpleViewDbMap(typeInfo, view, content);
+            var unmapped = SimpleViewDbMap(work.typeInfo, work.view, content);
 
             //Don't forget to set the type appropriately!
-            if(view is PageView)
+            if(work.view is PageView)
                 content.internalType = InternalContentType.page;
-            else if(view is FileView)
+            else if(work.view is FileView)
                 content.internalType = InternalContentType.file;
-            else if(view is ModuleView)
+            else if(work.view is ModuleView)
                 content.internalType = InternalContentType.module;
             else
-                throw new InvalidOperationException($"Don't know how to write type {typeInfo.type}!");
+                throw new InvalidOperationException($"Don't know how to write type {work.typeInfo.type}!");
             
-            if(action == UserAction.update)
+            if(work.action == UserAction.create)
+                work.view.id = await dbcon.InsertAsync(content, tsx);
+            else if(work.action == UserAction.update)
                 await dbcon.UpdateAsync(content, tsx);
-            else if(action == UserAction.create)
-                view.id = await dbcon.InsertAsync(content, tsx);
+            else if(work.action == UserAction.delete)
+                await dbcon.DeleteAsync(content, tsx);
             else 
-                throw new InvalidOperationException($"Can't perform action {action} in WriteContent!");
+                throw new InvalidOperationException($"Can't perform action {work.action} in WriteContent!");
 
             //Now that we have a content and got the ID for it, we can produce the snapshot used for history writing
-            var snapshot = CreateSnapshotFromBaseContent(content, view);
+            var snapshot = CreateSnapshotFromBaseContent(content, work.view);
 
             //These insert entire lists
             await dbcon.InsertAsync(snapshot.values, tsx);
@@ -210,11 +319,11 @@ public class DbWriter
             await dbcon.InsertAsync(snapshot.keywords, tsx);
 
             //Regardless of what we're doing, need to convert view into a bunch of keywords, permissions, values, and the content itself
-            var history = await historyConverter.ContentToHistoryAsync(snapshot, requester.id, action);
+            var history = await historyConverter.ContentToHistoryAsync(snapshot, work.requester.id, work.action);
 
             await dbcon.InsertAsync(history, tsx);
 
-            var adminLog = MakeContentLog(requester, view, action);
+            var adminLog = MakeContentLog(work.requester, work.view, work.action);
             await dbcon.InsertAsync(adminLog, tsx);
 
             tsx.Commit();
@@ -222,7 +331,7 @@ public class DbWriter
             logger.LogDebug(adminLog.text); //The admin log actually has the log text we want!
 
             //NOTE: this is the newly computed id, we place it inside the view for safekeeping 
-            return view.id;
+            return work.view.id;
         }
     }
 
@@ -262,57 +371,6 @@ public class DbWriter
         return snapshot;
     }
 
-    /// <summary>
-    /// Throws "ForbiddenException" for any kind of permission error that could arise for a modification given
-    /// </summary>
-    /// <typeparam name="T"></typeparam>
-    public async Task PermissionPrecheck<T>(T view, UserView requester, UserAction action) where T : class, IIdView
-    {
-        //Each type needs a different kind of check
-        if(view is ContentView)
-        {
-            //Create is special, because we need the parent create permission
-            if(action == UserAction.create)
-            {
-                //Only supers can create modules, but after that, permissions are based on their internal permissions.
-                if(view is ModuleView && !requester.super)
-                    throw new ForbiddenException($"Only supers can create modules!");
-
-                var cView = view as ContentView ?? throw new InvalidOperationException("Somehow, ContentView could not be cast to a ContentView");
-
-                //Only need to check parent for create if it's actually a place! This is because we treat non-valid 
-                //ids as orphaned pages
-                if (cView.parentId > 0)
-                {
-                    if(!(await UserCan(requester, action, cView.parentId)))
-                        throw new ForbiddenException($"User {requester.id} can't '{action}' content in parent {cView.parentId}!");
-                }
-            }
-        }
-        else if(view is CommentView)
-        {
-            var cView = view as CommentView ?? throw new InvalidOperationException("Somehow, CommentView could not be cast to a CommentView");
-
-            //Create is special, because we need the parent create permission
-            if(action == UserAction.create)
-            {
-                //Can't post in invalid locations! So we check ANY contentId passed in, even if it's invalid
-                if(!(await UserCan(requester, action, cView.contentId)))
-                    throw new ForbiddenException($"User {requester.id} can't '{action}' comments in content {cView.contentId}!");
-            }
-            //All other non-read actions can only ber performed the original user or supers
-            else if(action != UserAction.read)
-            {
-                if(!requester.super || cView.createUserId != requester.id)
-                    throw new ForbiddenException($"Only the original poster and supers can modify existing comments!");
-            }
-        }
-        else 
-        {
-            //Be SAFER than sorry! All views when created are by default NOT writable!
-            throw new ForbiddenException($"View of type {view.GetType().Name} cannot be user-modified!");
-        }
-    }
 
     /// <summary>
     /// Whether the given already-looked-up user is allowed to perform the given action to the given "thing" by id. 

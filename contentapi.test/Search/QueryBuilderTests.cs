@@ -38,7 +38,7 @@ public class QueryBuilderTests : UnitTestBase
         Assert.Equal("user", result.type);
         Assert.Equal(RequestType.user, result.requestType);
         Assert.NotNull(result.typeInfo);
-        Assert.Equal(result.typeInfo.table, "users");
+        Assert.Equal("users", result.typeInfo.table);
         Assert.NotEmpty(result.requestFields);
     }
 

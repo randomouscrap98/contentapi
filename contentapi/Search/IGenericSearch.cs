@@ -11,7 +11,13 @@ public interface IGenericSearch
     Task<GenericSearchResult> SearchUnrestricted(SearchRequests requests);
     Task<GenericSearchResult> Search(SearchRequests requests, long requestUserId = 0);
 
-    //Usually used for internal tasks
+    /// <summary>
+    /// Lookup type by id; throws "NotFoundException" if type with given id not found
+    /// </summary>
+    /// <param name="type"></param>
+    /// <param name="id"></param>
+    /// <typeparam name="T"></typeparam>
+    /// <returns></returns>
     Task<T> GetById<T>(RequestType type, long id);
     Task<List<T>> GetByField<T>(RequestType type, string fieldname, object value, string comparator = "=");
 

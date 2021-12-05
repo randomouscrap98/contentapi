@@ -49,6 +49,9 @@ public class BaseController : Controller
             if(ex is ArgumentException || ex is RequestException || ex is ParseException)
                 return BadRequest($"Request error: {ex.Message}");
 
+            if(ex is NotFoundException)
+                return NotFound($"Not found: {ex.Message}");
+
             if(ex is ForbiddenException)
                 return Forbid($"Forbidden error: {ex.Message}");
             

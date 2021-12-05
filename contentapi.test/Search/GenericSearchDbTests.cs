@@ -17,7 +17,7 @@ namespace contentapi.test;
 //keep it together, even if the class gets large!
 public class GenericSearchDbTests : UnitTestBase, IClassFixture<DbUnitTestSearchFixture>
 {
-    protected IDbConnection dbcon;
+    //protected IDbConnection dbcon;
     protected GenericSearcher service;
     protected DbUnitTestSearchFixture fixture;
 
@@ -28,7 +28,7 @@ public class GenericSearchDbTests : UnitTestBase, IClassFixture<DbUnitTestSearch
         service = new GenericSearcher(fixture.GetService<ILogger<GenericSearcher>>(), 
             conWrap, fixture.GetService<ITypeInfoService>(), fixture.GetService<GenericSearcherConfig>(),
             fixture.GetService<IMapper>(), fixture.GetService<IQueryBuilder>());
-        dbcon = conWrap.Connection;
+        //dbcon = conWrap.Connection;
     }
 
     [Fact]
@@ -36,7 +36,7 @@ public class GenericSearchDbTests : UnitTestBase, IClassFixture<DbUnitTestSearch
     {
         //If THIS fails, it'll be because you don't have the services or database set up 
         //correctly, and thus that needs to be fixed before any other tests in here are looked at
-        Assert.NotNull(dbcon);
+        //Assert.NotNull(dbcon);
         Assert.NotNull(service);
     }
 
