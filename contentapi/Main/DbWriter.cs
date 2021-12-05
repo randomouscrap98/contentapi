@@ -17,15 +17,17 @@ public class DbWriter
     protected IDbConnection dbcon;
     protected ITypeInfoService typeInfoService;
     protected IMapper mapper;
+    protected IContentHistoryConverter historyConverter;
 
     public DbWriter(ILogger<DbWriter> logger, IGenericSearch searcher, ContentApiDbConnection connection,
-        ITypeInfoService typeInfoService, IMapper mapper)
+        ITypeInfoService typeInfoService, IMapper mapper, IContentHistoryConverter historyConverter)
     {
         this.logger = logger;
         this.searcher = searcher;
         this.dbcon = connection.Connection;
         this.typeInfoService = typeInfoService;
         this.mapper = mapper;
+        this.historyConverter = historyConverter;
     }
 
     //Consider how to write a user? Users are one of the only things that have private information, so 
@@ -67,7 +69,8 @@ public class DbWriter
         //Ok at this point, we know everything is good to go, there shouldn't be ANY MORE permission checks required past here!
         if(view is ContentView)
         {
-            id = await WriteContent(view as ContentView ?? throw new InvalidOperationException("Somehow, ContentView couldn't be cast to ContentView??"), requester);
+            id = await WriteContent(view as ContentView ?? throw new InvalidOperationException("Somehow, ContentView couldn't be cast to ContentView??"), 
+                requester, typeInfo, action);
         }
         else
         {
@@ -77,18 +80,161 @@ public class DbWriter
         return await searcher.GetById<T>(requestType, id);
     }
 
-    public async Task<long> WriteContent(ContentView view, UserView requester)
+    /// <summary>
+    /// Delete stuff of the given type associated with the given content. WARNING: THIS WORKS FOR COMMENTS, VOTES, WATCHES, ETC!!
+    /// </summary>
+    /// <param name="id"></param>
+    /// <param name="tsx"></param>
+    /// <typeparam name="T"></typeparam>
+    /// <returns></returns>
+    public async Task DeleteOldContentThings<T>(long id, IDbTransaction tsx)
+    {
+        var tinfo = typeInfoService.GetTypeInfo<T>();
+        var parameters = new { id = id };
+        var deleteCount = await dbcon.ExecuteAsync($"delete from {tinfo.table} where contentId = @id", parameters, tsx);
+        logger.LogInformation($"Deleting {deleteCount} {typeof(T).Name} from content {id}");
+    }
+
+    /// <summary>
+    /// Delete the values, keywords, and permissions associted with the given content. Note that these are the things
+    /// which should be reset on content update.
+    /// </summary>
+    /// <param name="id"></param>
+    /// <param name="tsx"></param>
+    /// <returns></returns>
+    public async Task DeleteOldContentAssociated(long id, IDbTransaction tsx)
+    {
+        await DeleteOldContentThings<ContentValue>(id, tsx);
+        await DeleteOldContentThings<ContentKeyword>(id, tsx);
+        await DeleteOldContentThings<ContentPermission>(id, tsx);
+    }
+
+    public AdminLog MakeContentLog(UserView requester, ContentView view, UserAction action)
+    {
+        return new AdminLog {
+            text = $"User '{requester.username}'({requester.id}) {action}d '{view.name}'({view.id})",
+            type = action == UserAction.create ? AdminLogType.contentCreate :  
+                    action == UserAction.update ? AdminLogType.contentUpdate :
+                    action == UserAction.delete ? AdminLogType.contentDelete :
+                    throw new InvalidOperationException($"Unsupported admin log type {action}"),
+            target = view.id,
+            initiator = requester.id,
+            createDate = DateTime.Now
+        };
+    }
+
+    /// <summary>
+    /// Use TypeInfo given to trnanslate all standard mapped fields from view to model.
+    /// </summary>
+    /// <param name="tinfo"></param>
+    /// <param name="view"></param>
+    /// <param name="dbModel"></param>
+    /// <returns>Fields that were NOT mapped</returns>
+    public List<string> SimpleViewDbMap(TypeInfo tinfo, object view, object dbModel)
+    {
+        //This can happen if our view type has no associated table
+        if(tinfo.tableTypeProperties.Count == 0)
+            throw new InvalidOperationException($"Typeinfo for type {tinfo.type}, table type {tinfo.tableType} didn't compute table type properties!");
+    
+        //Assume no properties will be mapped
+        var unmapped = new List<string>(tinfo.tableTypeProperties.Keys);
+
+        //We want to get as many fields as possible. If there are some we can't map, that's ok.
+        foreach(var dbModelProp in tinfo.tableTypeProperties)
+        {
+            //These are ALWAYS dead ends: empty field remaps that have the same name as us are complicated....
+            if(tinfo.fieldRemap.ContainsKey(dbModelProp.Key) && string.IsNullOrWhiteSpace(tinfo.fieldRemap[dbModelProp.Key]))
+                continue;
+
+            //The viewfield we might use
+            var viewField = "";
+
+            //FieldRemap maps view properties to db, but we want where OUR property is in the value
+            var remap = tinfo.fieldRemap.FirstOrDefault(x => x.Value == dbModelProp.Key);
+
+            //It's a field remap, might work that way... always trust this over the defaults
+            if(!string.IsNullOrWhiteSpace(remap.Key))
+                viewField = remap.Key;
+            //Oh it's a queryable field, that works too. In that case, it's the same exact name
+            else if(tinfo.queryableFields.Contains(dbModelProp.Key))
+                viewField = dbModelProp.Key;
+
+            //Only do the reassign if we found a viewField
+            if(!string.IsNullOrWhiteSpace(viewField))
+            {
+                //Oh but somehow the view type doesn't have the field we thought it did? this shouldn't happen!
+                if (!tinfo.properties.ContainsKey(viewField))
+                    throw new InvalidOperationException($"Somehow, the typeinfo for {tinfo.type} didn't include a property for mapped field {viewField}");
+
+                //Set the dbmodel property value to be the view's property. Type matching is NOT checked, please be careful!
+                dbModelProp.Value.SetValue(dbModel, tinfo.properties[viewField].GetValue(view));
+                unmapped.Remove(dbModelProp.Key);
+            }
+        }
+
+        return unmapped;
+    }
+
+    public async Task<long> WriteContent(ContentView view, UserView requester, TypeInfo typeInfo, UserAction action)
     {
         //Always need an ID to link to, so we actually need to create the content first and get the ID.
         using(var tsx = dbcon.BeginTransaction())
         {
             //Need to convert views to db content... how to do so without a big mess?
+            var content = new Db.Content();
+            var unmapped = SimpleViewDbMap(typeInfo, view, content);
+
+            //Don't forget to set the type appropriately!
+            if(view is PageView)
+                content.internalType = InternalContentType.page;
+            else if(view is FileView)
+                content.internalType = InternalContentType.file;
+            else if(view is ModuleView)
+                content.internalType = InternalContentType.module;
+            else
+                throw new InvalidOperationException($"Don't know how to write type {typeInfo.type}!");
+            
+            if(action == UserAction.update)
+                await dbcon.UpdateAsync(content, tsx);
+            else if(action == UserAction.create)
+                view.id = await dbcon.InsertAsync(content, tsx);
+            else 
+                throw new InvalidOperationException($"Can't perform action {action} in WriteContent!");
+
+            //Now that we have a content and got the ID for it, we can produce the snapshot used for history writing
+            var snapshot = CreateSnapshotFromBaseContent(content, view);
+
+            //These insert entire lists
+            await dbcon.InsertAsync(snapshot.values, tsx);
+            await dbcon.InsertAsync(snapshot.permissions, tsx);
+            await dbcon.InsertAsync(snapshot.keywords, tsx);
 
             //Regardless of what we're doing, need to convert view into a bunch of keywords, permissions, values, and the content itself
-            return 0;
+            var history = await historyConverter.ContentToHistoryAsync(snapshot, requester.id, action);
+
+            await dbcon.InsertAsync(history, tsx);
+
+            var adminLog = MakeContentLog(requester, view, action);
+            await dbcon.InsertAsync(adminLog, tsx);
+
+            tsx.Commit();
+
+            logger.LogDebug(adminLog.text); //The admin log actually has the log text we want!
+
+            //NOTE: this is the newly computed id, we place it inside the view for safekeeping 
+            return view.id;
         }
     }
 
+    /// <summary>
+    /// Create a ContentSnapshot object using an existing content object, plus a view that presumably has the rest of the fields.
+    /// This is done like this because all the associated snapshot values must be linked to a valid ID, and we figure only a 
+    /// real "Content" object would have this information, and mapping occurs based on the values in a Content object, so just
+    /// give us a real, pre-filled-out content!
+    /// </summary>
+    /// <param name="content"></param>
+    /// <param name="originalView"></param>
+    /// <returns></returns>
     public ContentSnapshot CreateSnapshotFromBaseContent(Db.Content content, ContentView originalView)
     {
         var snapshot = mapper.Map<ContentSnapshot>(content);
@@ -104,9 +250,22 @@ public class DbWriter
             contentId = originalView.id
         }).ToList();
 
+        snapshot.permissions = originalView.permissions.Select(x => new Db.ContentPermission {
+            userId = x.Key,
+            contentId = originalView.id,
+            create = x.Value.Contains('C'),
+            read = x.Value.Contains('R'),
+            update = x.Value.Contains('U'),
+            delete = x.Value.Contains('D')
+        }).ToList();
+
         return snapshot;
     }
 
+    /// <summary>
+    /// Throws "ForbiddenException" for any kind of permission error that could arise for a modification given
+    /// </summary>
+    /// <typeparam name="T"></typeparam>
     public async Task PermissionPrecheck<T>(T view, UserView requester, UserAction action) where T : class, IIdView
     {
         //Each type needs a different kind of check

@@ -9,6 +9,7 @@ public class TypeInfo
     /// </summary>
     /// <returns></returns>
     public Type type {get;set;} = typeof(TypeInfo);
+    public Dictionary<string, System.Reflection.PropertyInfo> properties {get;set;} = new Dictionary<string, System.Reflection.PropertyInfo>();
 
     /// <summary>
     /// Fields the user is allowed to place in the "query"  
@@ -28,6 +29,7 @@ public class TypeInfo
 
     //These don't necessarily map to direct database things, even though they MOSTLY do
     public RequestType? requestType {get;set;}
-    public Type? dbType {get;set;}
+    public Type? tableType {get;set;}
     public string? table {get;set;}
+    public Dictionary<string, System.Reflection.PropertyInfo> tableTypeProperties {get;set;} = new Dictionary<string, System.Reflection.PropertyInfo>();
 }

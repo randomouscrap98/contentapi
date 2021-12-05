@@ -28,6 +28,7 @@ public class ContentView : IIdView
     [Searchable]
     public long parentId { get; set; }
 
+
     [FromField("")]
     public Dictionary<long, string> permissions {get;set;} = new Dictionary<long, string>();
 
@@ -43,6 +44,7 @@ public class ContentView : IIdView
 
     [FromField("")]
     public Dictionary<string, int> votes {get;set;} = new Dictionary<string, int>();
+
 
     [Searchable]
     [FromField("")]

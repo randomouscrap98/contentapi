@@ -25,17 +25,25 @@ public class CachedTypeInfoService : ITypeInfoService
         {
             if(!cachedTypes.ContainsKey(t))
             {
+                var result = new TypeInfo() { 
+                    type = t,
+                    properties = t.GetProperties().ToDictionary(x => x.Name, x => x)
+                };
+
                 var compattr = typeof(ComputedAttribute);
                 var searchattr = typeof(SearchableAttribute);
                 var ffattr = typeof(FromFieldAttribute);
-                var result = new TypeInfo() { type = t };
-                var props = t.GetProperties().Where(x => !Attribute.IsDefined(x, compattr));
+                var props = result.properties.Values.Where(x => !Attribute.IsDefined(x, compattr));
 
                 //All of these could be null, and that's ok! If it's a complex type,
                 //we kind of expect it to be null
-                result.dbType = t.GetCustomAttribute<FromTableAttribute>()?.Type;
-                result.table = (result.dbType ?? t).GetCustomAttribute<Dapper.Contrib.Extensions.TableAttribute>()?.Name;
+                result.tableType = t.GetCustomAttribute<FromTableAttribute>()?.Type;
+                result.table = (result.tableType ?? t).GetCustomAttribute<Dapper.Contrib.Extensions.TableAttribute>()?.Name;
                 result.requestType = t.GetCustomAttribute<ForRequestAttribute>()?.Type;
+
+                //Go get the table type properties, just to make life eaiser. The table type should be a db model... generally
+                if(result.tableType != null)
+                    result.tableTypeProperties = result.tableType.GetProperties().ToDictionary(x => x.Name, x => x);
 
                 result.queryableFields = props.Select(x => x.Name).ToList();
                 result.searchableFields = props.Where(x => Attribute.IsDefined(x, searchattr)).Select(x => x.Name).ToList();
