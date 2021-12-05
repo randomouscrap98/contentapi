@@ -7,7 +7,7 @@ namespace contentapi.Db
     public class Comment
     {
         [Key]
-        public long id { get; set; }
+        public virtual long id { get; set; }
         public long contentId { get; set; }
         public long createUserId { get; set; }
         public DateTime createDate { get; set; }
@@ -25,5 +25,12 @@ namespace contentapi.Db
         //Don't need to restore or any of that.
         public string history { get; set; } //history is nullable
         public bool deleted { get; set; }
+    }
+
+    [Table("comments")]
+    public class Comment_Convert : Comment
+    {
+        [ExplicitKey]
+        public override long id {get;set;}
     }
 }

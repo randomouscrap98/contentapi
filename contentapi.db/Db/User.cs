@@ -9,7 +9,7 @@ namespace contentapi.Db
     public class User
     {
         [Key]
-        public long id { get; set; }
+        public virtual long id { get; set; }
         public string username { get; set; } = "";
         public long avatar { get; set; }
         public string special { get; set; } //Special is nullable!
@@ -32,5 +32,12 @@ namespace contentapi.Db
                 return hidelist.Split(",".ToCharArray(), StringSplitOptions.RemoveEmptyEntries).Select(x => long.Parse(x.Trim())).ToList();
             }
         }
+    }
+
+    [Table("users")]
+    public class User_Convert : User
+    {
+        [ExplicitKey]
+        public override long id { get; set; }
     }
 }

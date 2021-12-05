@@ -2,6 +2,7 @@ using contentapi.Search;
 
 namespace contentapi.Views;
 
+[FromTable(typeof(Db.Content))]
 [ForRequest(RequestType.file)]
 public class FileView : ContentView
 {

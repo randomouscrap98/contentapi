@@ -8,7 +8,7 @@ namespace contentapi
     {
         public ModuleProfile()
         {
-            CreateMap<ModuleView, Db.Content>()
+            CreateMap<ModuleView, Db.Content_Convert>()
             .ForMember(x => x.extra1,
                 opt => opt.MapFrom(src => src.description))
             .ForMember(x => x.publicType, 

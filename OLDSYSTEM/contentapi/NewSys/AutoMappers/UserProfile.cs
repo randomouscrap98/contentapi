@@ -7,7 +7,7 @@ namespace contentapi
     {
         public UserProfile()
         {
-            CreateMap<UserViewFull, Db.User>().ForMember(x => x.hidelist, 
+            CreateMap<UserViewFull, Db.User_Convert>().ForMember(x => x.hidelist, 
                  opt => opt.MapFrom(src => string.Join(",", src.hidelist)));
         }
     }

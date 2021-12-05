@@ -119,7 +119,7 @@ namespace contentapi.Controllers
                     Log($"{users.Count} users found");
                     foreach (var user in users)
                     {
-                        var newUser = mapper.Map<Db.User>(user);
+                        var newUser = mapper.Map<Db.User_Convert>(user);
                         //User dapper to store?
                         var id = await newdb.InsertAsync(newUser);
                         Log($"Inserted user {newUser.username}({id})");
@@ -167,7 +167,7 @@ namespace contentapi.Controllers
                             editCount = 0,
                             key = uvar.key.Substring(Keys.VariableKey.Length),
                             value = uvar.value
-                        };//mapper.Map<Db.Ban>(ban);
+                        };
                         newvar.editDate = newvar.createDate;
                         var id = await newdb.InsertAsync(newvar);
                         Log($"Inserted uservariable {newvar.key} for {newvar.userId}({id})");
@@ -187,7 +187,7 @@ namespace contentapi.Controllers
             return DumpLog();
         }
 
-        protected async Task<List<long>> ConvertCt<T>(Func<Task<List<T>>> producer, Func<long, Task<List<T>>> historyProducer, Func<Db.Content, T, Db.Content> modify = null) where T : StandardView
+        protected async Task<List<long>> ConvertCt<T>(Func<Task<List<T>>> producer, Func<long, Task<List<T>>> historyProducer, Func<Db.Content_Convert, T, Db.Content_Convert> modify = null) where T : StandardView
         {
             var ids = new List<long>();
             var tn = typeof(T);
@@ -195,7 +195,7 @@ namespace contentapi.Controllers
             var content = await producer();
             foreach (var ct in content)
             {
-                var nc = mapper.Map<Db.Content>(ct);
+                var nc = mapper.Map<Db.Content_Convert>(ct);
                 nc.deleted = false;
                 if(modify != null)
                     nc = modify(nc, ct);
@@ -252,7 +252,7 @@ namespace contentapi.Controllers
                 {
                     for(int i = 0; i < revisions.Count; i++)
                     {
-                        var rv = mapper.Map<Db.Content>(revisions[i]);
+                        var rv = mapper.Map<Db.Content_Convert>(revisions[i]);
                         var sn = mapper.Map<Db.History.ContentSnapshot>(rv);
                         sn.values = vls;
                         sn.permissions = pms;
@@ -391,7 +391,7 @@ namespace contentapi.Controllers
                     foreach (var mm in mms)
                     {
                         var umm = mapper.Map<UnifiedModuleMessageView>(mm);
-                        var nmm = mapper.Map<Db.Comment>(umm);
+                        var nmm = mapper.Map<Db.Comment_Convert>(umm);
                         //User dapper to store?
                         mmids.Add(await newdb.InsertAsync(nmm));
                         if(mmids.Count >= 1000)
@@ -410,7 +410,7 @@ namespace contentapi.Controllers
                     foreach (var mm in cms)
                     {
                         var umm = mapper.Map<UnifiedModuleMessageView>(mm);
-                        var nmm = mapper.Map<Db.Comment>(umm);
+                        var nmm = mapper.Map<Db.Comment_Convert>(umm);
                         //User dapper to store?
                         mmids.Add(await newdb.InsertAsync(nmm));
                         if(mmids.Count >= 1000)
@@ -428,7 +428,7 @@ namespace contentapi.Controllers
                     var cmids = new List<long>();
                     foreach (var cmnt in cmnts)
                     {
-                        var ncmnt = mapper.Map<Db.Comment>(cmnt);
+                        var ncmnt = mapper.Map<Db.Comment_Convert>(cmnt);
                         //User dapper to store?
                         cmids.Add(await newdb.InsertAsync(ncmnt));
                         if(cmids.Count >= 1000)

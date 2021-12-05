@@ -8,7 +8,7 @@ namespace contentapi
     {
         public FileProfile()
         {
-            CreateMap<FileView, Db.Content>()
+            CreateMap<FileView, Db.Content_Convert>()
             .ForMember(x => x.extra1,
                 opt => opt.MapFrom(src => src.quantization.ToString()))
             .ForMember(x => x.name, 

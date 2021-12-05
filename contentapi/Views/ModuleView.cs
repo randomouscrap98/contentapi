@@ -2,6 +2,7 @@ using contentapi.Search;
 
 namespace contentapi.Views;
 
+[FromTable(typeof(Db.Content))]
 [ForRequest(RequestType.module)]
 public class ModuleView : ContentView
 {

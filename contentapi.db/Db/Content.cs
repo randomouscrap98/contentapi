@@ -7,7 +7,7 @@ namespace contentapi.Db
     public class Content
     {
         [Key]
-        public long id { get; set; }
+        public virtual long id { get; set; }
         public bool deleted { get; set; }
         public long createUserId { get; set; }
         public DateTime createDate { get; set; }
@@ -17,6 +17,13 @@ namespace contentapi.Db
         public string content { get; set; } = "";
         public long parentId { get; set; }
 
-        public string extra1 { get; set; } = "";
+        public string extra1 { get; set; }
+    }
+
+    [Table("content")]
+    public class Content_Convert : Content
+    {
+        [ExplicitKey]
+        public override long id {get;set;}
     }
 }

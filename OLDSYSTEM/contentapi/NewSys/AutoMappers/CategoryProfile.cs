@@ -8,7 +8,7 @@ namespace contentapi
     {
         public CategoryProfile()
         {
-            CreateMap<CategoryView, Db.Content>()
+            CreateMap<CategoryView, Db.Content_Convert>()
             .ForMember(x => x.publicType, 
                  opt => opt.MapFrom(src => "category")) //We're not using categories anymore
             .ForMember(x => x.content, 
