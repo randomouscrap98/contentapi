@@ -140,7 +140,7 @@ public class DbWriter
             existing = await searcher.GetById<T>(requestType, view.id);
         }
 
-        //Ok at this point, we know everything is good to go, there shouldn't be ANY MORE permission checks required past here!
+        //Ok at this point, we know everything is good to go, there shouldn't be ANY MORE checks required past here!
         if(view is ContentView)
         {
             id = await DatabaseWork_Content(new DbWorkUnit<ContentView>(
@@ -162,15 +162,16 @@ public class DbWriter
         if(action == UserAction.update || action == UserAction.delete)
         {
             if(view.id <= 0)
-                throw new InvalidOperationException($"Alteration action '{action}' requires id, but no id was set in view!");
+                throw new ArgumentException($"Alteration action '{action}' requires id, but no id was set in view!");
         }
         else if(action == UserAction.create)
         {
             if(view.id != 0)
-                throw new InvalidOperationException($"Alteration action '{action} requires NO id set, but id was {view.id}");
+                throw new ArgumentException($"Alteration action '{action} requires NO id set, but id was {view.id}");
         }
         else
         {
+            //This one should just never happen since it's internal, so it's an InvalidOperationException instead
             throw new InvalidOperationException($"Unsupported action '{action}' inside modification context");
         }
     }
@@ -283,42 +284,69 @@ public class DbWriter
     {
         if(!work.typeInfo.type.IsAssignableFrom(typeof(ContentView)))
             throw new InvalidOperationException($"TypeInfo given in DatabaseWork was for type '{work.typeInfo.type}', not '{typeof(ContentView)}'");
+        
+        //Need to convert views to db content... how to do so without a big mess?
+        var content = new Db.Content();
+        var unmapped = SimpleViewDbMap(work.typeInfo, work.view, content);
+
+        //Don't forget to set the type appropriately!
+        if(work.view is PageView)
+            content.internalType = InternalContentType.page;
+        else if(work.view is FileView)
+            content.internalType = InternalContentType.file;
+        else if(work.view is ModuleView)
+            content.internalType = InternalContentType.module;
+        else
+            throw new InvalidOperationException($"Don't know how to write type {work.typeInfo.type}!");
+
+        //Now modify the content before writing based on what we're doing. Some fields need to be reset/etc.
+        if(work.action == UserAction.delete)
+        {
+            content.content = "";
+            content.name = "";
+            content.deleted = true;
+            content.extra1 = null;
+            content.internalType = InternalContentType.none;
+            content.publicType = "";
+            work.view.keywords.Clear();
+            work.view.values.Clear();
+            work.view.permissions.Clear();
+        }
+        else if(work.action == UserAction.update)
+        {
+            var existing = work.existing ?? throw new InvalidOperationException("Delete specified, but no existing view looked up in database for snapshot!");
+            content.createUserId = existing.createUserId;
+            content.createDate = existing.createDate;
+        }
+        else if(work.action == UserAction.create)
+        {
+            content.createDate = DateTime.Now;
+            content.createUserId = work.requester.id;
+        }
 
         //Always need an ID to link to, so we actually need to create the content first and get the ID.
         using(var tsx = dbcon.BeginTransaction())
         {
-            //Need to convert views to db content... how to do so without a big mess?
-            var content = new Db.Content();
-            var unmapped = SimpleViewDbMap(work.typeInfo, work.view, content);
-
-            //Don't forget to set the type appropriately!
-            if(work.view is PageView)
-                content.internalType = InternalContentType.page;
-            else if(work.view is FileView)
-                content.internalType = InternalContentType.file;
-            else if(work.view is ModuleView)
-                content.internalType = InternalContentType.module;
-            else
-                throw new InvalidOperationException($"Don't know how to write type {work.typeInfo.type}!");
-            
             if(work.action == UserAction.create)
                 work.view.id = await dbcon.InsertAsync(content, tsx);
-            else if(work.action == UserAction.update)
+            else if(work.action == UserAction.update || work.action == UserAction.delete)
                 await dbcon.UpdateAsync(content, tsx);
-            else if(work.action == UserAction.delete)
-                await dbcon.DeleteAsync(content, tsx);
             else 
                 throw new InvalidOperationException($"Can't perform action {work.action} in WriteContent!");
 
             //Now that we have a content and got the ID for it, we can produce the snapshot used for history writing
             var snapshot = CreateSnapshotFromBaseContent(content, work.view);
 
-            //These insert entire lists
-            await dbcon.InsertAsync(snapshot.values, tsx);
-            await dbcon.InsertAsync(snapshot.permissions, tsx);
-            await dbcon.InsertAsync(snapshot.keywords, tsx);
+            //Note: when deleting, don't want to write ANY extra data, regardless of what's there!
+            if(work.action != UserAction.delete)
+            {
+                //These insert entire lists.
+                await dbcon.InsertAsync(snapshot.values, tsx);
+                await dbcon.InsertAsync(snapshot.permissions, tsx);
+                await dbcon.InsertAsync(snapshot.keywords, tsx);
+            }
 
-            //Regardless of what we're doing, need to convert view into a bunch of keywords, permissions, values, and the content itself
+            //Regardless of what we're doing (create/delete/update), need to convert snapshot to the history item to insert.
             var history = await historyConverter.ContentToHistoryAsync(snapshot, work.requester.id, work.action);
 
             await dbcon.InsertAsync(history, tsx);
