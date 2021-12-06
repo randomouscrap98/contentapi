@@ -1,4 +1,4 @@
-namespace contentapi;
+namespace contentapi.Utilities;
 
 public interface IRuntimeInformation
 {

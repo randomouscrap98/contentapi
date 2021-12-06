@@ -79,14 +79,14 @@ public class DbWriter : IDbWriter
         //Each type needs a different kind of check
         if(view is ContentView)
         {
+            var cView = view as ContentView ?? throw new InvalidOperationException("Somehow, ContentView could not be cast to a ContentView");
+
             //Create is special, because we need the parent create permission
             if(action == UserAction.create)
             {
                 //Only supers can create modules, but after that, permissions are based on their internal permissions.
                 if(view is ModuleView && !requester.super)
                     throw new ForbiddenException($"Only supers can create modules!");
-
-                var cView = view as ContentView ?? throw new InvalidOperationException("Somehow, ContentView could not be cast to a ContentView");
 
                 //Only need to check parent for create if it's actually a place! This is because we treat non-valid 
                 //ids as orphaned pages
@@ -95,6 +95,12 @@ public class DbWriter : IDbWriter
                     if(!(await UserCan(requester, action, cView.parentId)))
                         throw new ForbiddenException($"User {requester.id} can't '{action}' content in parent {cView.parentId}!");
                 }
+            }
+            else if(action != UserAction.read)
+            {
+                //We generally assume that the views and such have proper fields by the time it gets to us...
+                if(!(await UserCan(requester, action, cView.id)))
+                    throw new ForbiddenException($"User {requester.id} can't '{action}' content {cView.id}!");
             }
         }
         else if(view is CommentView)
@@ -231,7 +237,7 @@ public class DbWriter : IDbWriter
     /// <param name="view"></param>
     /// <param name="dbModel"></param>
     /// <returns>Fields that were NOT mapped</returns>
-    public List<string> SimpleViewDbMap(TypeInfo tinfo, object view, object dbModel)
+    public List<string> MapSimpleViewFields(TypeInfo tinfo, object view, object dbModel)
     {
         //This can happen if our view type has no associated table
         if(tinfo.tableTypeProperties.Count == 0)
@@ -290,36 +296,42 @@ public class DbWriter : IDbWriter
     }
 
     /// <summary>
-    /// Modify database content model before writing based on the work configuration (mostly the action)
+    /// Modify the view given by the user IN PLACE to nudge the data into something more appropriate for storage.
+    /// This mostly means making sure historic fields aren't overwritten, or that new content is stamped with the date, etc.
     /// </summary>
     /// <param name="work"></param>
-    /// <param name="content"></param>
-    public void ModifyContentByAction(DbWorkUnit<ContentView> work, Db.Content content)
+    public void TweakContentView(DbWorkUnit<ContentView> work)
     {
         if(work.action == UserAction.delete)
         {
-            content.content = "";
-            content.name = "";
-            content.deleted = true;
-            content.extra1 = null;
-            content.internalType = InternalContentType.none;
-            content.publicType = "";
             work.view.keywords.Clear();
             work.view.values.Clear();
             work.view.permissions.Clear();
         }
         else if(work.action == UserAction.update)
         {
-            var existing = work.existing ?? throw new InvalidOperationException("Delete specified, but no existing view looked up in database for snapshot!");
-            content.createUserId = existing.createUserId;
-            content.createDate = existing.createDate;
+            var existing = work.existing ?? throw new InvalidOperationException("Update specified, but no existing view looked up in database for snapshot!");
+            work.view.createUserId = existing.createUserId;
+            work.view.createDate = existing.createDate;
             work.view.permissions[work.requester.id] = "CRUD"; //FORCE permissions to include full access for creator all the time
+
+            //Many file fields CAN'T BE CHANGED!
+            if(work.view is FileView)
+            {
+                var file = work.view as FileView ?? throw new InvalidOperationException("Couldn't cast FileView to FileView???");
+                var existingFile = work.existing as FileView ?? throw new InvalidOperationException("Couldn't cast FileView to FileView???");
+                file.quantization = existingFile.quantization;
+                file.hash = existingFile.hash;
+            }
         }
         else if(work.action == UserAction.create)
         {
-            content.createDate = DateTime.UtcNow; // REMEMBER TO USE UTCNOW EVERYWHERE!
-            content.createUserId = work.requester.id;
+            work.view.createDate = DateTime.UtcNow; // REMEMBER TO USE UTCNOW EVERYWHERE!
+            work.view.createUserId = work.requester.id;
             work.view.permissions[work.requester.id] = "CRUD"; //FORCE permissions to include full access for creator all the time
+
+            //Note: for file create, we just "trust" the values given to us for the fileview, because we don't technically
+            //know what the quantization is, for example.
         }
     }
 
@@ -331,34 +343,55 @@ public class DbWriter : IDbWriter
     /// <param name="typeInfo"></param>
     /// <param name="action"></param>
     /// <returns></returns>
-    public async Task<long> DatabaseWork_Content(DbWorkUnit<ContentView> work) //ContentView view, UserView requester, TypeInfo typeInfo, UserAction action)
+    public async Task<long> DatabaseWork_Content(DbWorkUnit<ContentView> work)
     {
         if(!work.typeInfo.type.IsAssignableTo(typeof(ContentView)))
             throw new InvalidOperationException($"TypeInfo given in DatabaseWork was for type '{work.typeInfo.type}', not '{typeof(ContentView)}'");
-        
-        //Need to convert views to db content... how to do so without a big mess?
+
+        //Fix view so the data is more appropriate (don't let users have full free reign over important fields!)
+        TweakContentView(work);
+
+        await CheckPermissionValidityAsync(work.view.permissions);
+
         var content = new Db.Content();
-        var unmapped = SimpleViewDbMap(work.typeInfo, work.view, content);
+        var unmapped = MapSimpleViewFields(work.typeInfo, work.view, content);
 
         if(unmapped.Count > 0)
             logger.LogWarning($"Fields '{string.Join(",", unmapped)}' not mapped in content!");
 
-        //First, compute internal type. Then modify the content based on the action (resetting default fields, etc.)
-        //Finally, make sure the permissions are OK! This is just a bunch of precheck precompute stuff!
-        content.internalType = InternalContentTypeFromView(work.view);
-        ModifyContentByAction(work, content);
-        await CheckPermissionValidityAsync(work.view.permissions);
+        //And the final modification to content just before storing
+        if(work.action == UserAction.delete)
+        {
+            content.content = "";
+            content.name = "";
+            content.deleted = true;
+            content.extra1 = null;
+            content.internalType = InternalContentType.none;
+            content.publicType = "";
+        }
+        else
+        {
+            content.internalType = InternalContentTypeFromView(work.view);
+        }
 
         //Always need an ID to link to, so we actually need to create the content first and get the ID.
         using(var tsx = dbcon.BeginTransaction())
         {
             if(work.action == UserAction.create)
+            {
                 work.view.id = await dbcon.InsertAsync(content, tsx);
+            }
             else if(work.action == UserAction.update || work.action == UserAction.delete)
+            {
+                //Remove the old associated values
+                await DeleteOldContentAssociated(content.id, tsx);
                 await dbcon.UpdateAsync(content, tsx);
+            }
             else 
+            {
                 throw new InvalidOperationException($"Can't perform action {work.action} in WriteContent!");
-
+            }
+            
             //Now that we have a content and got the ID for it, we can produce the snapshot used for history writing
             var snapshot = CreateSnapshotFromBaseContent(content, work.view);
 

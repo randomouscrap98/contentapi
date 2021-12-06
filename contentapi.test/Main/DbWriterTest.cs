@@ -230,6 +230,46 @@ public class DbWriterTest : UnitTestBase, IClassFixture<DbUnitTestSearchFixture>
         }
     }
 
+    [Theory] //For modules, regular users can NEVER create!
+    [InlineData((int)UserVariations.Super, (int)ContentVariations.AccessByAll + 1, true)]
+    [InlineData(1+ (int)UserVariations.Super, (int)ContentVariations.AccessByAll + 1, true)] //this is super
+    [InlineData((int)UserVariations.Super, (int)ContentVariations.AccessBySupers + 1, false)]
+    [InlineData(1 + (int)UserVariations.Super, (int)ContentVariations.AccessBySupers + 1, true)] //THIS one is super
+    public async Task DeleteAsync_Basic(long uid, long contentId, bool allowed)
+    {
+        if(allowed)
+        {
+            var result = await writer.DeleteAsync<ContentView>(contentId, uid);
+            //Remember, we can generally trust what the functions return because they should be EXACTLY from the database!
+            //Testing to see if the ones from the database are exactly the same as those returned can be a different test
+            Assert.True(string.IsNullOrWhiteSpace(result.name), "Name was not cleared!");
+            Assert.Empty(result.keywords);
+            Assert.Empty(result.values);
+            Assert.Empty(result.permissions);
+            Assert.True(result.deleted, "Item wasn't marked deleted!");
+        }
+        else
+        {
+            await Assert.ThrowsAnyAsync<ForbiddenException>(async () =>
+            {
+                await writer.DeleteAsync<ContentView>(contentId, uid);
+            });
+        }
+    }
+
+    [Theory]
+    [InlineData((int)UserVariations.Super, 0)]
+    [InlineData(1+ (int)UserVariations.Super, 0)] //this is super
+    [InlineData((int)UserVariations.Super, -1)]
+    [InlineData(1+ (int)UserVariations.Super, -1)] //this is super
+    public async Task DeleteAsync_DumbId(long uid, long contentId)
+    {
+        await Assert.ThrowsAnyAsync<ArgumentException>(async () =>
+        {
+            await writer.DeleteAsync<ContentView>(contentId, uid);
+        });
+    }
+
     [Theory]
     [InlineData(1, "CRUD", true)]
     [InlineData(0, "CR", true)]

@@ -6,6 +6,7 @@ namespace contentapi.Views;
 [ForRequest(RequestType.file)]
 public class FileView : ContentView
 {
+    //Consider whether hashes should be searchable or not. Remember, if a file is private, it won't show up in the results anyway.
     [Searchable]
     [FromField("publicType")]
     public string hash { get; set; } = "";

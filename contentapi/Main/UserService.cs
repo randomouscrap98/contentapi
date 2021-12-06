@@ -66,11 +66,14 @@ public class UserService : IUserService
 
         //Next, get the LEGITIMATE data from the database
         var userSecrets = (await searcher.QueryRawAsync(
-            $"select id, password, salt from {searcher.GetDatabaseForType<UserView>()} where {fieldname} = @user",
+            $"select id, password, salt, registrationKey from {searcher.GetDatabaseForType<UserView>()} where {fieldname} = @user",
             new Dictionary<string, object> { { "user", value }})).FirstOrDefault();
 
         if(userSecrets == null)
             throw new ArgumentException("User not found!");
+        
+        if(!string.IsNullOrWhiteSpace((string)userSecrets["registrationKey"]))
+            throw new ArgumentException("User not registered! Can't log in!");
 
         //Finally, compare hashes and if good, send out the token
         if(!hashService.VerifyText(password, Convert.FromBase64String((string)userSecrets["password"]), Convert.FromBase64String((string)userSecrets["salt"])))
