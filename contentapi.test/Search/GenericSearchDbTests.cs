@@ -63,6 +63,42 @@ public class GenericSearchDbTests : UnitTestBase, IClassFixture<DbUnitTestSearch
         }
     }
 
+    protected async Task GetByIdBasicTest<T>(RequestType type, long id) where T : IIdView
+    {
+        var result = await service.GetById<T>(type, id); //The first content is just a content
+        Assert.Equal(id, result.id);
+        //We assume the searcher is using the same system as other searches, so don't need to super test everything
+    }
+
+    [Fact] public async Task GenericSearch_GetById_BasicContent() => await GetByIdBasicTest<ContentView>(RequestType.content, 1 + (int)InternalContentType.none);
+    [Fact] public async Task GenericSearch_GetById_BasicFile() => await GetByIdBasicTest<FileView>(RequestType.file, 1 + (int)InternalContentType.file);
+    [Fact] public async Task GenericSearch_GetById_BasicPage() => await GetByIdBasicTest<PageView>(RequestType.page, 1 + (int)InternalContentType.page);
+    [Fact] public async Task GenericSearch_GetById_BasicModule() => await GetByIdBasicTest<ModuleView>(RequestType.module, 1 + (int)InternalContentType.module);
+    [Fact] public async Task GenericSearch_GetById_BasicComment() => await GetByIdBasicTest<CommentView>(RequestType.comment, 1);
+    [Fact] public async Task GenericSearch_GetById_BasicActivity() => await GetByIdBasicTest<ActivityView>(RequestType.activity, 1);
+    [Fact] public async Task GenericSearch_GetById_BasicUser() => await GetByIdBasicTest<UserView>(RequestType.user, 1);
+    [Fact] public async Task GenericSearch_GetById_BasicWatch() => await GetByIdBasicTest<WatchView>(RequestType.watch, 1);
+
+    [Fact]
+    public async Task GenericSearch_GetById_Deleted()
+    {
+        var result = await service.GetById<ContentView>(RequestType.content, 1 + (int)ContentVariations.Deleted);
+        Assert.True(result.deleted);
+        Assert.Equal(1 + (int)ContentVariations.Deleted, result.id);
+    }
+
+    [Fact]
+    public async Task GenericSearch_GetById_Deleted_NotFound()
+    {
+        await Assert.ThrowsAnyAsync<NotFoundException>(async () => await service.GetById<ContentView>(RequestType.content, 1 + (int)ContentVariations.Deleted, true));
+    }
+
+    [Fact]
+    public async Task GenericSearch_GetById_NotFound()
+    {
+        await Assert.ThrowsAnyAsync<NotFoundException>(async () => await service.GetById<ContentView>(RequestType.content, 2 + fixture.ContentCount));
+    }
+
     //This ALSO TESTS parts of the usertype macro!
     [Fact]
     public async Task GenericSearch_ToStronglyTyped_User()
