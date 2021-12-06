@@ -220,7 +220,7 @@ public class DbWriter : IDbWriter
                     throw new InvalidOperationException($"Unsupported admin log type {action}"),
             target = view.id,
             initiator = requester.id,
-            createDate = DateTime.Now
+            createDate = DateTime.UtcNow
         };
     }
 
@@ -405,7 +405,7 @@ public class DbWriter : IDbWriter
                 throw new ArgumentException($"User {id} in permissions set not found in database! Are they a user?");
 
             //I don't care about uppercase or duplicates, fix that for the user, whatever
-            var original = permissions[id].Trim();
+            var original = Regex.Replace(permissions[id], @"\s+", "");
             permissions[id] = string.Concat(original.ToUpper().Distinct());
 
             //BUT, the right values need to be in there!

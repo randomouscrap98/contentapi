@@ -227,4 +227,39 @@ public class DbWriterTest : UnitTestBase, IClassFixture<DbUnitTestSearchFixture>
             });
         }
     }
+
+    [Theory]
+    [InlineData(1, "CRUD", true)]
+    [InlineData(0, "CR", true)]
+    [InlineData(2, "ud", true)]
+    [InlineData(1, " uR dC ", true)]
+    [InlineData(1, "CRUT", false)]
+    [InlineData(1, "#@%$", false)]
+    [InlineData(999999, "CRUD", false)] //Something that DEFINITELY isn't a user!
+    public async Task CheckPermissionValidityAsync(long uid, string crud, bool valid)
+    {
+        var perms = new Dictionary<long, string> { { uid, crud } };
+
+        if(valid)
+        {
+            await writer.CheckPermissionValidityAsync(perms);
+            Assert.True(true); //Not necessary but whatever
+        }
+        else
+        {
+            await Assert.ThrowsAnyAsync<ArgumentException>(async () => await writer.CheckPermissionValidityAsync(perms));
+        }
+    }
+
+    [Fact]
+    public async Task WriteAsync_BadType_Activity()
+    {
+        await Assert.ThrowsAnyAsync<ForbiddenException>(async () => await writer.WriteAsync(new ActivityView() { userId = 1 }, 1));
+    }
+
+    [Fact]
+    public async Task WriteAsync_BadType_AdminLog()
+    {
+        await Assert.ThrowsAnyAsync<ForbiddenException>(async () => await writer.WriteAsync(new AdminLogView() { initiator = 1, target = 1 }, 1));
+    }
 }
