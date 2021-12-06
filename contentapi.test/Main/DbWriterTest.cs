@@ -169,6 +169,7 @@ public class DbWriterTest : UnitTestBase, IClassFixture<DbUnitTestSearchFixture>
             mimetype = "image/png",
             quantization = "10",
             parentId = parentId,
+            hash = "babnana",
             values = new Dictionary<string, string> { { "one" , "thing" }, { "kek", "macaroni and things" } },
             keywords = new List<string> { "heck", "heck2", "dead" },
             permissions = new Dictionary<long, string> { { 0 , "CR" } },
@@ -180,6 +181,7 @@ public class DbWriterTest : UnitTestBase, IClassFixture<DbUnitTestSearchFixture>
             var result = await writer.WriteAsync(content, uid);
             StandardContentEqualityCheck(content, result, uid, InternalContentType.file);
             Assert.Equal(content.mimetype, result.mimetype);
+            Assert.Equal(content.hash, result.hash);
             Assert.Equal(content.quantization, result.quantization);
         }
         else

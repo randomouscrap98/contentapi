@@ -11,7 +11,7 @@ namespace contentapi.Db
         [Key]
         public virtual long id { get; set; }
         public string username { get; set; } = "";
-        public long avatar { get; set; }
+        public string avatar { get; set; } = "0";
         public string special { get; set; } //Special is nullable!
         public bool super { get; set; }
         public UserType type { get; set; }

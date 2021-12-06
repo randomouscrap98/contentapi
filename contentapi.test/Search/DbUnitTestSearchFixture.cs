@@ -1,6 +1,7 @@
 using System;
 using System.Collections.Generic;
 using System.Linq;
+using contentapi.Utilities;
 using Dapper.Contrib.Extensions;
 using Microsoft.Extensions.Logging;
 
@@ -60,6 +61,8 @@ public class DbUnitTestSearchFixture : DbUnitTestBase, IDisposable
     {
         logger.LogDebug($"Adding users to database {MasterConnectionString}");
 
+        var rng = GetService<IRandomGenerator>();
+
         //Create tables for the in-memory database we're testing against
         //for this particular test. Note that ALL tests that use this 
         //fixture will get the SAME database!
@@ -77,7 +80,7 @@ public class DbUnitTestSearchFixture : DbUnitTestBase, IDisposable
                     var user = new Db.User() {
                         username = $"user_{i}",
                         password = $"SECRETS_{i}",
-                        avatar = UserCount - i,
+                        avatar = rng.GetAlphaSequence(5),//UserCount - i,
                         createDate = DateTime.Now.AddDays(i - UserCount),
                         salt = $"SALTYSECRETS_{i}"
                     };

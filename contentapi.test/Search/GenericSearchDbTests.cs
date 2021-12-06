@@ -83,7 +83,7 @@ public class GenericSearchDbTests : UnitTestBase, IClassFixture<DbUnitTestSearch
         {
             Assert.False(string.IsNullOrWhiteSpace(x.username), "Username wasn't cast properly!");
             Assert.True(x.id > 0, "UserID not cast properly!");
-            Assert.True(x.avatar > 0, "UserAvatar not cast properly!");
+            Assert.False(string.IsNullOrWhiteSpace(x.avatar), "UserAvatar not cast properly!");
             Assert.True(x.createDate.Ticks > 0, "User createdate not cast properly!");
 
             //In our system, all users are assigned to at least one group for testing

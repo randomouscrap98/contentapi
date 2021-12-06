@@ -29,6 +29,7 @@ public static class DefaultSetup
         services.AddSingleton<IAuthTokenService<long>, JwtAuthTokenService<long>>();
         services.AddSingleton<ISearchQueryParser, SearchQueryParser>();
         services.AddSingleton<ICacheCheckpointTracker, CacheCheckpointTracker>();
+        services.AddSingleton<IRandomGenerator, RandomGenerator>();
         services.AddSingleton<IHashService, HashService>();
         services.AddSingleton<IUserService, UserService>();
 

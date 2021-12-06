@@ -1,7 +1,7 @@
 create table if not exists users (
     id integer primary key,
     username text not null,
-    avatar int not null default 0,
+    avatar text not null default '0',
     createDate text not null,
     special text,
     -- need bans, there's a bool banned in users

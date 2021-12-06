@@ -14,7 +14,7 @@ public class UserView : IIdView
     public string username {get;set;} = "";
 
     [Searchable]
-    public long avatar {get;set;}
+    public string avatar {get;set;} = "0";
 
     public string? special {get;set;}
 
