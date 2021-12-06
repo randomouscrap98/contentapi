@@ -10,5 +10,5 @@ public class ModuleView : ContentView
     public string code { get; set; } = "";
 
     [FromField("extra1")] 
-    public int description {get;set;}
+    public string? description {get;set;}
 }
