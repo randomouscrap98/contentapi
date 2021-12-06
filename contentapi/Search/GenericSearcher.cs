@@ -209,7 +209,7 @@ public class GenericSearcher : IGenericSearch
         return result;
     }
 
-    public async Task<T> GetById<T>(RequestType type, long id)
+    public async Task<T> GetById<T>(RequestType type, long id, bool throwIfDeleted = false)
     {
         var values = new Dictionary<string, object>();
         values.Add("id", id);
@@ -221,7 +221,7 @@ public class GenericSearcher : IGenericSearch
             query = "id = @id"
         }, values);
 
-        if(result.Count() != 1)
+        if(result.Count() != 1 || throwIfDeleted && (long)result.First()["deleted"] != 0)
             throw new NotFoundException($"{type} with ID {id} not found!"); 
 
         return ToStronglyTyped<T>(result).First();

@@ -115,6 +115,45 @@ public class DbWriterTest : UnitTestBase, IClassFixture<DbUnitTestSearchFixture>
         });
     }
 
+    protected PageView GetNewPageView(long parentId = 0, Dictionary<long, string>? permissions = null)
+    {
+        return new PageView {
+            name = "whatever",
+            content = "Yeah this is content!",
+            parentId = parentId,
+            values = new Dictionary<string, string> { { "one" , "thing" }, { "kek", "macaroni and things" } },
+            keywords = new List<string> { "heck", "heck2", "dead" },
+            permissions = permissions ?? new Dictionary<long, string> { { 0 , "CR" } }
+        };
+    }
+
+    protected FileView GetNewFileView(long parentId = 0, Dictionary<long, string>? permissions = null)
+    {
+        return new FileView {
+            name = "whatever",
+            mimetype = "image/png",
+            quantization = "10",
+            parentId = parentId,
+            hash = "babnana",
+            values = new Dictionary<string, string> { { "one" , "thing" }, { "kek", "macaroni and things" } },
+            keywords = new List<string> { "heck", "heck2", "dead" },
+            permissions = permissions ?? new Dictionary<long, string> { { 0 , "CR" } },
+        };
+    }
+
+    public ModuleView GetNewModuleView(long parentId = 0, Dictionary<long, string>? permissions = null)
+    {
+        return new ModuleView {
+            name = "whatever",
+            code = "Yeah this is... code? [beep boop] />?{Fd?>FDSI#!@$F--|='\"_+",
+            description = "Aha! An extra field!",
+            parentId = parentId,
+            values = new Dictionary<string, string> { { "one" , "thing" }, { "kek", "macaroni and things" } },
+            keywords = new List<string> { "heck", "heck2", "dead" },
+            permissions = permissions ?? new Dictionary<long, string> { { 0 , "CR" } },
+        };
+    }
+
     //This tests whether supers and non supers can both write orphaned pages AND write into 
     //existing pages that have access to all.
     [Theory]
@@ -127,15 +166,7 @@ public class DbWriterTest : UnitTestBase, IClassFixture<DbUnitTestSearchFixture>
     public async Task WriteAsync_BasicPage(long uid, long parentId, bool allowed)
     {
         //NOTE: DO NOT PROVIDE CREATEDATE! ALSO IT SHOULD BE UTC TIME!
-        var content = new PageView {
-            name = "whatever",
-            content = "Yeah this is content!",
-            parentId = parentId,
-            values = new Dictionary<string, string> { { "one" , "thing" }, { "kek", "macaroni and things" } },
-            keywords = new List<string> { "heck", "heck2", "dead" },
-            permissions = new Dictionary<long, string> { { 0 , "CR" } },
-            createUserId = uid
-        };
+        var content = GetNewPageView(parentId);
 
         if(allowed)
         {
@@ -164,17 +195,7 @@ public class DbWriterTest : UnitTestBase, IClassFixture<DbUnitTestSearchFixture>
     public async Task WriteAsync_BasicFile(long uid, long parentId, bool allowed)
     {
         //NOTE: DO NOT PROVIDE CREATEDATE! ALSO IT SHOULD BE UTC TIME!
-        var content = new FileView {
-            name = "whatever",
-            mimetype = "image/png",
-            quantization = "10",
-            parentId = parentId,
-            hash = "babnana",
-            values = new Dictionary<string, string> { { "one" , "thing" }, { "kek", "macaroni and things" } },
-            keywords = new List<string> { "heck", "heck2", "dead" },
-            permissions = new Dictionary<long, string> { { 0 , "CR" } },
-            createUserId = uid
-        };
+        var content = GetNewFileView(parentId);
 
         if(allowed)
         {
@@ -203,16 +224,7 @@ public class DbWriterTest : UnitTestBase, IClassFixture<DbUnitTestSearchFixture>
     public async Task WriteAsync_BasicModule(long uid, long parentId, bool allowed)
     {
         //NOTE: DO NOT PROVIDE CREATEDATE! ALSO IT SHOULD BE UTC TIME!
-        var content = new ModuleView {
-            name = "whatever",
-            code = "Yeah this is... code? [beep boop] />?{Fd?>FDSI#!@$F--|='\"_+",
-            description = "Aha! An extra field!",
-            parentId = parentId,
-            values = new Dictionary<string, string> { { "one" , "thing" }, { "kek", "macaroni and things" } },
-            keywords = new List<string> { "heck", "heck2", "dead" },
-            permissions = new Dictionary<long, string> { { 0 , "CR" } },
-            createUserId = uid
-        };
+        var content = GetNewModuleView(parentId);
 
         if(allowed)
         {
@@ -230,7 +242,97 @@ public class DbWriterTest : UnitTestBase, IClassFixture<DbUnitTestSearchFixture>
         }
     }
 
-    [Theory] //For modules, regular users can NEVER create!
+    //Also need to test if ANYBODY can update deleted content
+    //Also need to test whether updating to a bad parent is bad
+
+    [Theory] 
+    [InlineData((int)UserVariations.Super, "U", true)]
+    [InlineData(1+ (int)UserVariations.Super, "U", true)] //this is super
+    [InlineData((int)UserVariations.Super, "", false)]
+    [InlineData(1 + (int)UserVariations.Super, "", true)] //THIS one is super
+    public async Task WriteAsync_UpdateBasic(long uid, string globalPerms, bool allowed)
+    {
+        //This should be a "writable by anybody" thingy
+        var content = GetNewPageView(0, new Dictionary<long, string> { { 0 , globalPerms } });
+
+        //Write by anybody OTHER THAN the users you might pick
+        var writeUser = 2 + (int)UserVariations.Super;
+        var original = await writer.WriteAsync(content, writeUser);
+        Assert.True(original.id > 0);
+
+        //Now we edit the view
+        original.name = "SOME EDITED NAME!";
+
+        if(allowed)
+        {
+            var result = await writer.WriteAsync(original, uid);
+            StandardContentEqualityCheck(original, result, writeUser, InternalContentType.page);
+        }
+        else
+        {
+            await Assert.ThrowsAnyAsync<ForbiddenException>(async () =>
+            {
+                await writer.WriteAsync(original, uid);
+            });
+        }
+    }
+
+    [Theory] //NOTE: these updates using the AccessBySupers isn't about whether the user is super or not!
+    [InlineData((int)UserVariations.Super, (int)ContentVariations.AccessByAll + 1, true)]
+    [InlineData(1 + (int)UserVariations.Super, (int)ContentVariations.AccessByAll + 1, true)] //THIS one is super
+    [InlineData((int)UserVariations.Super, (int)ContentVariations.AccessBySupers + 1, false)]
+    [InlineData(1 + (int)UserVariations.Super, (int)ContentVariations.AccessBySupers + 1, true)] //THIS one is super
+    public async Task WriteAsync_UpdateParentId(long uid, int parentId, bool allowed)
+    {
+        //This should be a "writable by anybody" thingy
+        var content = GetNewPageView(0, new Dictionary<long, string> { { 0 , "U" } }); //Everyone can edit, but that doesn't mean everyone can put content anywhere
+
+        //Write by anybody OTHER THAN the users you might pick
+        var writeUser = 2 + (int)UserVariations.Super;
+        var original = await writer.WriteAsync(content, writeUser);
+        Assert.True(original.id > 0);
+
+        //Now we edit the view
+        original.parentId = parentId;
+
+        if(allowed)
+        {
+            var result = await writer.WriteAsync(original, uid);
+            StandardContentEqualityCheck(original, result, writeUser, InternalContentType.page);
+        }
+        else
+        {
+            await Assert.ThrowsAnyAsync<ForbiddenException>(async () =>
+            {
+                await writer.WriteAsync(original, uid);
+            });
+        }
+    }
+
+    [Theory] //NOTE: these updates using the AccessBySupers isn't about whether the user is super or not!
+    [InlineData((int)UserVariations.Super)]
+    [InlineData(1 + (int)UserVariations.Super)]
+    public async Task WriteAsync_UpdateDeletedContent(long uid)
+    {
+        //This should be a "writable by anybody" thingy
+        var content = GetNewPageView(0, new Dictionary<long, string> { { 0 , "U" } }); //Everyone can edit, but that doesn't mean everyone can put content anywhere
+
+        //Write by anybody OTHER THAN the users you might pick
+        var writeUser = 2 + (int)UserVariations.Super;
+        var original = await writer.WriteAsync(content, writeUser);
+        Assert.True(original.id > 0);
+
+        var deleteResult = await writer.DeleteAsync<ContentView>(original.id, writeUser);
+        content.id = original.id;
+
+        //The content was deleted, so technically it's "not found"
+        await Assert.ThrowsAnyAsync<NotFoundException>(async () =>
+        {
+            await writer.WriteAsync(content, uid);
+        });
+    }
+
+    [Theory] 
     [InlineData((int)UserVariations.Super, (int)ContentVariations.AccessByAll + 1, true)]
     [InlineData(1+ (int)UserVariations.Super, (int)ContentVariations.AccessByAll + 1, true)] //this is super
     [InlineData((int)UserVariations.Super, (int)ContentVariations.AccessBySupers + 1, false)]
@@ -268,6 +370,32 @@ public class DbWriterTest : UnitTestBase, IClassFixture<DbUnitTestSearchFixture>
         {
             await writer.DeleteAsync<ContentView>(contentId, uid);
         });
+    }
+
+    [Fact]
+    public async Task DeleteAsync_ForcedBaseType()
+    {
+        var modUid = 1 + (int)UserVariations.Super;
+
+        //Ensure there's something of every type in there
+        var pv = await writer.WriteAsync(GetNewPageView(), 1);
+        var fv = await writer.WriteAsync(GetNewFileView(), 1);
+        var mv = await writer.WriteAsync(GetNewModuleView(), modUid);
+
+        await Assert.ThrowsAnyAsync<InvalidOperationException>(async () => {
+            await writer.DeleteAsync<PageView>(pv.id, 1);
+        });
+        await Assert.ThrowsAnyAsync<InvalidOperationException>(async () => {
+            await writer.DeleteAsync<FileView>(fv.id, 1);
+        });
+        await Assert.ThrowsAnyAsync<InvalidOperationException>(async () => {
+            await writer.DeleteAsync<ModuleView>(mv.id, modUid);
+        });
+
+        //These should succeed
+        await writer.DeleteAsync<ContentView>(pv.id, 1);
+        await writer.DeleteAsync<ContentView>(fv.id, 1);
+        await writer.DeleteAsync<ContentView>(mv.id, modUid);
     }
 
     [Theory]

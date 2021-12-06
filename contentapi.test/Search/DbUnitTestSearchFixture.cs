@@ -23,6 +23,8 @@ public enum ContentVariations
     Keywords = 8,
     Comments = 16,
     Deleted = 32,
+    //TypeBits1 = 64,
+    //TypeBits2 = 128
 }
 
 public class DbUnitTestSearchFixture : DbUnitTestBase, IDisposable
@@ -155,7 +157,8 @@ public class DbUnitTestSearchFixture : DbUnitTestBase, IDisposable
                     };
 
                     c.deleted = (i & (int)ContentVariations.Deleted) > 0;
-                    c.internalType = (Db.InternalContentType)(i % 4);//(i & (int)ContentVariations.PageOrFile) > 0 ? Db.InternalContentType.page : Db.InternalContentType.file;
+                    //c.internalType = (Db.InternalContentType)((i & ((int)ContentVariations.TypeBits1 | (int)ContentVariations.TypeBits2)) >> (int)ContentVariations.TypeBits1);//(i % 4);//(i & (int)ContentVariations.PageOrFile) > 0 ? Db.InternalContentType.page : Db.InternalContentType.file;
+                    c.internalType = (Db.InternalContentType)(i % 4);
 
                     //The activity is inversely proportional to i, but only 1/16 of the whatevers.
                     //If the content is deleted, the last history inserted should be a delete

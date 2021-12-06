@@ -20,7 +20,7 @@ public interface IGenericSearch
     /// <param name="id"></param>
     /// <typeparam name="T"></typeparam>
     /// <returns></returns>
-    Task<T> GetById<T>(RequestType type, long id);
+    Task<T> GetById<T>(RequestType type, long id, bool throwIfDeleted = false);
     Task<List<T>> GetByField<T>(RequestType type, string fieldname, object value, string comparator = "=");
 
     //DEFINITELY used for internal tasks!

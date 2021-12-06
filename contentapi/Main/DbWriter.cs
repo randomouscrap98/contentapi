@@ -81,20 +81,20 @@ public class DbWriter : IDbWriter
         {
             var cView = view as ContentView ?? throw new InvalidOperationException("Somehow, ContentView could not be cast to a ContentView");
 
-            //Create is special, because we need the parent create permission
+            //Only need to check parent for create if it's actually a place! This is because we treat non-valid 
+            //ids as orphaned pages
+            if((action == UserAction.create || action == UserAction.update) && (cView.parentId > 0))
+            {
+                if(!(await UserCan(requester, action, cView.parentId)))
+                    throw new ForbiddenException($"User {requester.id} can't '{action}' content in parent {cView.parentId}!");
+            }
+
+            //Create is special, because we only check the parent for create (and we did that earlier)
             if(action == UserAction.create)
             {
                 //Only supers can create modules, but after that, permissions are based on their internal permissions.
                 if(view is ModuleView && !requester.super)
                     throw new ForbiddenException($"Only supers can create modules!");
-
-                //Only need to check parent for create if it's actually a place! This is because we treat non-valid 
-                //ids as orphaned pages
-                if (cView.parentId > 0)
-                {
-                    if(!(await UserCan(requester, action, cView.parentId)))
-                        throw new ForbiddenException($"User {requester.id} can't '{action}' content in parent {cView.parentId}!");
-                }
             }
             else if(action != UserAction.read)
             {
@@ -135,7 +135,6 @@ public class DbWriter : IDbWriter
     public async Task<T> GenericWorkAsync<T>(T view, UserView requester, UserAction action) where T : class, IIdView, new()
     {
         CheckActionValidForView(action, view);
-        await CheckAgainstPermissionsAsync(view, requester, action);
 
         long id = 0;
         var typeInfo = typeInfoService.GetTypeInfo<T>();
@@ -147,8 +146,14 @@ public class DbWriter : IDbWriter
         if(action == UserAction.update || action == UserAction.delete)
         {
             //This will throw an exception if we can't find it by id, so that's the end of that...
-            existing = await searcher.GetById<T>(requestType, view.id);
+            //ALSO we specifically ask to throw on deleted content, because we don't want ANYBODY to be touching that stuff
+            //through this interface. Deletes require a special restore!
+            existing = await searcher.GetById<T>(requestType, view.id, true);
         }
+
+        //It's more important to throw a NotFound exception than the permission exception, it keeps things more consistent, so
+        //keep this call down here.
+        await CheckAgainstPermissionsAsync(view, requester, action);
 
         //Ok at this point, we know everything is good to go, there shouldn't be ANY MORE checks required past here!
         if(view is ContentView)
@@ -292,7 +297,8 @@ public class DbWriter : IDbWriter
         else if(view is ModuleView)
             return  InternalContentType.module;
         else
-            throw new InvalidOperationException($"Don't know how to write type {view.GetType()}!");
+            return InternalContentType.none;
+            //throw new InvalidOperationException($"Don't know how to write type {view.GetType()}!");
     }
 
     /// <summary>
@@ -345,8 +351,13 @@ public class DbWriter : IDbWriter
     /// <returns></returns>
     public async Task<long> DatabaseWork_Content(DbWorkUnit<ContentView> work)
     {
+        //Some basic sanity checks
         if(!work.typeInfo.type.IsAssignableTo(typeof(ContentView)))
             throw new InvalidOperationException($"TypeInfo given in DatabaseWork was for type '{work.typeInfo.type}', not '{typeof(ContentView)}'");
+        if(work.action == UserAction.delete && work.typeInfo.type != typeof(ContentView))
+            throw new InvalidOperationException("You must use the basetype ContentView when deleting content!");
+        if((work.action == UserAction.create || work.action == UserAction.update) && work.typeInfo.type == typeof(ContentView))
+            throw new InvalidOperationException("You cannot write the raw type ContentView! It doesn't have enough information!");
 
         //Fix view so the data is more appropriate (don't let users have full free reign over important fields!)
         TweakContentView(work);
@@ -366,6 +377,7 @@ public class DbWriter : IDbWriter
             content.name = "";
             content.deleted = true;
             content.extra1 = null;
+            //Don't give out any information
             content.internalType = InternalContentType.none;
             content.publicType = "";
         }
