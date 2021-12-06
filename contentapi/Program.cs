@@ -1,7 +1,7 @@
 using System.Text;
 using contentapi.Controllers;
 using contentapi.Db;
-using contentapi.Db.History;
+using contentapi.Main;
 using contentapi.Search;
 using contentapi.Setup;
 using Microsoft.AspNetCore.Authentication.JwtBearer;
@@ -18,6 +18,7 @@ var builder = WebApplication.CreateBuilder(args);
 // or special deploys or whatever.
 DefaultSetup.AddDefaultServices(builder.Services);
 DefaultSetup.AddConfigBinding<GenericSearcherConfig>(builder.Services, builder.Configuration);
+DefaultSetup.AddConfigBinding<UserServiceConfig>(builder.Services, builder.Configuration);
 builder.Services.AddTransient<BaseControllerServices>();
 
 string secretKey = builder.Configuration.GetValue<string>("SecretKey"); //"pleasechangethis";

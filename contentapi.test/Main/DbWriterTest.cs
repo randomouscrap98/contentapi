@@ -47,12 +47,6 @@ public class DbWriterTest : UnitTestBase, IClassFixture<DbUnitTestSearchFixture>
         });
     }
 
-    private void AssertDateClose(DateTime dt1, DateTime? dt2 = null, double seconds = 5)
-    {
-        var dt2r = dt2 ?? DateTime.UtcNow;
-        Assert.True(Math.Abs((dt1 - dt2r).TotalSeconds) < seconds, $"Dates were not within an acceptable closeness in range! DT1: {dt1}, DT2: {dt2r}");
-    }
-
     private void AssertKeywordsEqual(ContentView original, ContentView result)
     {
         Assert.True(original.keywords.OrderBy(c => c).SequenceEqual(result.keywords.OrderBy(c => c)), "Keywords were changed!");
@@ -241,9 +235,6 @@ public class DbWriterTest : UnitTestBase, IClassFixture<DbUnitTestSearchFixture>
             });
         }
     }
-
-    //Also need to test if ANYBODY can update deleted content
-    //Also need to test whether updating to a bad parent is bad
 
     [Theory] 
     [InlineData((int)UserVariations.Super, "U", true)]
