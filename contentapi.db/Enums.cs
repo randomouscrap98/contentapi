@@ -1,13 +1,13 @@
 namespace contentapi.Db
 {
-    public enum BanType
+    public enum BanType : long
     {
         none = 0,
         @public = 1
     }
 
     //Nobody will see this type most likely
-    public enum InternalContentType
+    public enum InternalContentType : long
     {
         none = 0,
         page = 1,
@@ -16,7 +16,7 @@ namespace contentapi.Db
         //category = 4
     }
 
-    public enum UserAction
+    public enum UserAction : long
     {
         create = 1,
         read = 2,
@@ -24,18 +24,18 @@ namespace contentapi.Db
         delete = 8
     }
 
-    public enum UserType
+    public enum UserType : long
     {
         user = 0,
         group = 1
     }
 
-    public enum UserRelationType
+    public enum UserRelationType : long
     {
         inGroup = 0
     }
 
-    public enum AdminLogType
+    public enum AdminLogType : long
     {
         none = 0,
         groupAssign = 1,
@@ -45,7 +45,7 @@ namespace contentapi.Db
         contentDelete = 5
     }
 
-    public enum VoteType
+    public enum VoteType : long
     {
         none = 0,
         bad = 1,

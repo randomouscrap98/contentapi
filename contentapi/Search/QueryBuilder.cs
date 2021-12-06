@@ -40,9 +40,9 @@ public class QueryBuilder : IQueryBuilder
     //These fields are too difficult to modify with the attributes, so we do it in code here
     protected readonly Dictionary<(RequestType, string),string> StandardModifiedFields = new Dictionary<(RequestType, string), string> {
         { (RequestType.user, "registered"), $"(registrationKey IS NULL) as registered" },
-        { (RequestType.activity, ActionField), EnumToCase<UserAction>(ActionField)},
-        { (RequestType.adminlog, TypeField), EnumToCase<AdminLogType>(TypeField)},
-        { (RequestType.user, TypeField), EnumToCase<UserType>(TypeField) }
+        //{ (RequestType.activity, ActionField), EnumToCase<UserAction>(ActionField)},
+        //{ (RequestType.adminlog, TypeField), EnumToCase<AdminLogType>(TypeField)},
+        //{ (RequestType.user, TypeField), EnumToCase<UserType>(TypeField) }
     };
 
     //Some searches can easily be modified afterwards with constants, put that here.
@@ -98,8 +98,8 @@ public class QueryBuilder : IQueryBuilder
         //Because of how content is, we need to add these content fields to all things
         foreach(var type in ContentRequestTypes)
         {
-            StandardModifiedFields.Add((type, InternalTypeField), 
-                EnumToCase<InternalContentType>(InternalTypeField));
+            //StandardModifiedFields.Add((type, InternalTypeField), 
+            //    EnumToCase<InternalContentType>(InternalTypeField));
             StandardModifiedFields.Add((type, LastPostDateField), 
                 $"(select createDate from comments where {MainAlias}.id = contentId and {NaturalCommentQuery} order by id desc limit 1) as {LastPostDateField}");
             StandardModifiedFields.Add((type, LastPostIdField), 
@@ -115,17 +115,17 @@ public class QueryBuilder : IQueryBuilder
         }
     }
 
-    public static string EnumToCase<T>(string fieldName, string outputName) where T : struct, System.Enum 
-    {
-        var values = Enum.GetValues<T>();
-        var whens = values.Select(x => $"WHEN {Unsafe.As<T, int>(ref x)} THEN '{x.ToString()}'");
-        return $"CASE {fieldName} {string.Join(" ", whens)} ELSE 'unknown' END as {outputName}";
-    }
+    //public static string EnumToCase<T>(string fieldName, string outputName) where T : struct, System.Enum 
+    //{
+    //    var values = Enum.GetValues<T>();
+    //    var whens = values.Select(x => $"WHEN {Unsafe.As<T, int>(ref x)} THEN '{x.ToString()}'");
+    //    return $"CASE {fieldName} {string.Join(" ", whens)} ELSE 'unknown' END as {outputName}";
+    //}
 
-    public static string EnumToCase<T>(string fieldName) where T : struct, System.Enum 
-    {
-        return EnumToCase<T>(fieldName, fieldName);
-    }
+    //public static string EnumToCase<T>(string fieldName) where T : struct, System.Enum 
+    //{
+    //    return EnumToCase<T>(fieldName, fieldName);
+    //}
 
     public string KeywordLike(SearchRequestPlus request, string value)
     {

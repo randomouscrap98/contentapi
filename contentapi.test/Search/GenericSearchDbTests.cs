@@ -115,7 +115,7 @@ public class GenericSearchDbTests : UnitTestBase, IClassFixture<DbUnitTestSearch
         Assert.All(castResult, x =>
         {
             Assert.False(string.IsNullOrWhiteSpace(x.name), "Content name wasn't cast properly!");
-            Assert.False(string.IsNullOrWhiteSpace(x.internalType), "Content internalType (string) wasn't cast properly!");
+            //Assert.NotEqual(InternalContentType.none, x.internalType); //string.IsNullOrWhiteSpace(x.internalType), "Content internalType (string) wasn't cast properly!");
             if(((x.id - 1) & (int)ContentVariations.Comments) > 0)
                 Assert.Equal(x.id - 1, x.commentCount);
             else
@@ -129,7 +129,7 @@ public class GenericSearchDbTests : UnitTestBase, IClassFixture<DbUnitTestSearch
 
         Assert.Equal(4, Enum.GetValues<InternalContentType>().Count());
         foreach(var type in Enum.GetValues<InternalContentType>())
-            Assert.Equal(fixture.ContentCount / 4, castResult.Where(x => x.internalType == type.ToString()).Count());
+            Assert.Equal(fixture.ContentCount / 4, castResult.Where(x => x.internalType == type).Count());
         Assert.Equal(fixture.ContentCount / 2, castResult.Where(x => x.deleted).Count());
         Assert.Equal(fixture.ContentCount - 4, castResult.Where(x => x.parentId > 0).Count());
         //It's minus four because the parent id is actually divided by 4, so only the first 4 values will be 0
@@ -161,8 +161,8 @@ public class GenericSearchDbTests : UnitTestBase, IClassFixture<DbUnitTestSearch
         Assert.NotEmpty(castResult);
         Assert.All(castResult, x =>
         {
-            Assert.False(string.IsNullOrWhiteSpace(x.action), "Action wasn't cast properly!");
-            Assert.True(x.action == "update" || x.action == "delete", "Action wasn't an expected value!");
+            //Assert.False(string.IsNullOrWhiteSpace(x.action), "Action wasn't cast properly!");
+            Assert.True(x.action == UserAction.update || x.action == UserAction.delete, "Action wasn't an expected value!");
             Assert.True(x.id > 0, "ActivityID not cast properly!");
             Assert.True(x.userId > 0, "UserId not cast properly!");
             Assert.True(x.contentId > 0, "ContentID not cast properly!");
@@ -187,7 +187,7 @@ public class GenericSearchDbTests : UnitTestBase, IClassFixture<DbUnitTestSearch
         Assert.All(castResult, x =>
         {
             Assert.False(string.IsNullOrWhiteSpace(x.text), "Adminlog text wasn't cast properly!");
-            Assert.Contains(x.type, Enum.GetNames<AdminLogType>());
+            Assert.Contains(x.type, Enum.GetValues<AdminLogType>());
             Assert.True(x.id > 0, "Adminlog ID not cast properly!");
             Assert.True(x.initiator > 0, "Adminlog initiator not cast properly!");
             Assert.True(x.target > 0, "AminLog target not cast properly!");
@@ -239,8 +239,8 @@ public class GenericSearchDbTests : UnitTestBase, IClassFixture<DbUnitTestSearch
         var castResult = service.ToStronglyTyped<UserView>(result);
 
         Assert.Equal(fixture.UserCount + fixture.GroupCount, castResult.Count);
-        Assert.Equal(fixture.UserCount, castResult.Count(x => x.type == UserType.user.ToString()));
-        Assert.Equal(fixture.GroupCount, castResult.Count(x => x.type == UserType.group.ToString()));
+        Assert.Equal(fixture.UserCount, castResult.Count(x => x.type == UserType.user));
+        Assert.Equal(fixture.GroupCount, castResult.Count(x => x.type == UserType.group));
     }
 
     [Fact]
@@ -743,7 +743,7 @@ public class GenericSearchDbTests : UnitTestBase, IClassFixture<DbUnitTestSearch
             var castResult = service.ToStronglyTyped<UserView>(result);
 
             Assert.All(castResult, x => {
-                Assert.Equal(UserType.user.ToString(), x.type); //We're asking for USERS in groups only
+                Assert.Equal(UserType.user, x.type); //We're asking for USERS in groups only
                 Assert.True((x.id - 1) >= i * fixture.UserCount / fixture.GroupCount && (x.id - 1) < (i + 1) * fixture.UserCount / fixture.GroupCount, $"Unexpected user {x.id} for group {i}");
             });
         }
@@ -904,7 +904,7 @@ public class GenericSearchDbTests : UnitTestBase, IClassFixture<DbUnitTestSearch
         {
             var c = content.First(y => y.id == x.contentId);
             Assert.False(c.deleted);
-            Assert.Equal(InternalContentType.page.ToString(), c.internalType);
+            Assert.Equal(InternalContentType.page, c.internalType);
         });
     }
 
@@ -979,7 +979,7 @@ public class GenericSearchDbTests : UnitTestBase, IClassFixture<DbUnitTestSearch
 
         Assert.All(content, x => 
         {
-            Assert.Equal(InternalContentType.page.ToString(), x.internalType);
+            Assert.Equal(InternalContentType.page, x.internalType);
             Assert.Contains(0, x.permissions.Keys);
             Assert.Contains("R", x.permissions[0]);
             Assert.True(users.Any(y => y.id == x.createUserId), "Didn't return matched content user!");

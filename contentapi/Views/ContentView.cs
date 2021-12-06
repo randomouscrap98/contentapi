@@ -20,7 +20,7 @@ public class ContentView : IIdView
     public DateTime createDate { get; set; }
 
     [Searchable]
-    public string internalType {get;set;} = "";
+    public InternalContentType internalType {get;set;}
 
     [Searchable]
     public string name { get; set; } = "";

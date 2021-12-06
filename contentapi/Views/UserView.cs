@@ -1,3 +1,4 @@
+using contentapi.Db;
 using contentapi.Search;
 
 namespace contentapi.Views;
@@ -18,7 +19,7 @@ public class UserView : IIdView
     public string? special {get;set;}
 
     [Searchable]
-    public string type {get;set;} = "";
+    public UserType type {get;set;}
 
     [Searchable]
     public DateTime createDate {get;set;}

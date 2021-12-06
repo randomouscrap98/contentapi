@@ -1,7 +1,9 @@
+using System;
 using System.Collections.Generic;
 using System.Linq;
 using System.Threading.Tasks;
 using AutoMapper;
+using contentapi.Db;
 using contentapi.Main;
 using contentapi.Search;
 using contentapi.Utilities;
@@ -34,7 +36,7 @@ public class DbWriterTest : UnitTestBase, IClassFixture<DbUnitTestSearchFixture>
     [InlineData(-1)]
     public async Task WriteAsync_MustSetUser(long uid)
     {
-        var content = new ContentView {
+        var content = new PageView {
             createUserId = uid
         };
 
@@ -43,10 +45,44 @@ public class DbWriterTest : UnitTestBase, IClassFixture<DbUnitTestSearchFixture>
         });
     }
 
-    [Fact]
-    public async Task WriteAsync_MostSimple()
+    [Theory]
+    [InlineData((int)UserVariations.Super)]
+    [InlineData(1 + (int)UserVariations.Super)] //THIS one is super
+    public async Task WriteAsync_CantWriteRaw(long uid)
     {
+        var content = new ContentView {
+            name = "Yeah",
+            createDate = DateTime.Now,
+            parentId = 0,
+            createUserId = uid
+        };
 
-        Assert.Equal(fixture.ContentCount, (await searcher.QueryRaw("select * from content", new Dictionary<string, object>())).Count());
+        //Don't care what type, but it should fail somehow...
+        await Assert.ThrowsAnyAsync<Exception>(async () => {
+            await writer.WriteAsync(content, uid);
+        });
+    }
+
+    [Theory]
+    [InlineData((int)UserVariations.Super)]
+    [InlineData(1 + (int)UserVariations.Super)] //THIS one is super
+    public async Task WriteAsync_MostSimple(long uid)
+    {
+        var content = new PageView {
+            name = "whatever",
+            content = "Yeah this is content!",
+            createDate = DateTime.Now, 
+            parentId = 0, //Anyone should be able to write into orphan
+            createUserId = uid
+        };
+
+        var result = await writer.WriteAsync(content, uid);
+
+        Assert.True(result.id > 0, "ID was not assigned to returned view!");
+        Assert.Equal(content.name, result.name);
+        Assert.Equal(content.content, result.content);
+        Assert.Equal(content.createDate, result.createDate);
+        Assert.Equal(uid, result.createUserId);
+        Assert.Equal(InternalContentType.page.ToString(), result.type);
     }
 }

@@ -1,4 +1,5 @@
 
+using contentapi.Db;
 using contentapi.Search;
 
 namespace contentapi.Views;
@@ -10,7 +11,7 @@ public class AdminLogView : IIdView
     [Searchable]
     public long id {get;set;}
     [Searchable]
-    public string type {get;set;} = "";
+    public AdminLogType type {get;set;}
     [Searchable]
     public string? text {get;set;}
     [Searchable]

@@ -36,7 +36,7 @@ public class DbWriter
     public async Task<UserView> GetRequestUser(long requestUserId)
     {
         if(requestUserId <= 0)
-            throw new InvalidOperationException("Can't use system UIDs right now for writes! It's reserved!");
+            throw new ForbiddenException("Can't use system UIDs right now for writes! It's reserved!");
 
         var requester = new UserView() { };
         
@@ -282,7 +282,7 @@ public class DbWriter
     /// <returns></returns>
     public async Task<long> DatabaseWork_Content(DbWorkUnit<ContentView> work) //ContentView view, UserView requester, TypeInfo typeInfo, UserAction action)
     {
-        if(!work.typeInfo.type.IsAssignableFrom(typeof(ContentView)))
+        if(!work.typeInfo.type.IsAssignableTo(typeof(ContentView)))
             throw new InvalidOperationException($"TypeInfo given in DatabaseWork was for type '{work.typeInfo.type}', not '{typeof(ContentView)}'");
         
         //Need to convert views to db content... how to do so without a big mess?

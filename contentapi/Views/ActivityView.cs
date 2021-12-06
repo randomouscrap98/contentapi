@@ -1,3 +1,4 @@
+using contentapi.Db;
 using contentapi.Search;
 
 namespace contentapi.Views;
@@ -20,9 +21,6 @@ public class ActivityView : IIdView
     [FromField("createDate")]
     public DateTime date { get; set; }
 
-    //WARN: You may want to make the enum fields like this ACTUALLY enums, but then when users want to search in the 
-    //database for... well wait, that will be slow.
-    //It's fine; make macros for the important ones.
     [Searchable]
-    public string action {get;set;} = "";
+    public UserAction action {get;set;}
 }
