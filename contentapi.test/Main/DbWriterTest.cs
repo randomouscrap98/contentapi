@@ -45,6 +45,12 @@ public class DbWriterTest : UnitTestBase, IClassFixture<DbUnitTestSearchFixture>
         });
     }
 
+    private void AssertDateClose(DateTime dt1, DateTime? dt2 = null, double seconds = 1)
+    {
+        var dt2r = dt2 ?? DateTime.UtcNow;
+        Assert.True(Math.Abs((dt1 - dt2r).TotalSeconds) < seconds, $"Dates were not within an acceptable closeness in range! DT1: {dt1}, DT2: {dt2r}");
+    }
+
     [Theory]
     [InlineData((int)UserVariations.Super)]
     [InlineData(1 + (int)UserVariations.Super)] //THIS one is super
@@ -52,7 +58,6 @@ public class DbWriterTest : UnitTestBase, IClassFixture<DbUnitTestSearchFixture>
     {
         var content = new ContentView {
             name = "Yeah",
-            createDate = DateTime.Now,
             parentId = 0,
             createUserId = uid
         };
@@ -63,26 +68,43 @@ public class DbWriterTest : UnitTestBase, IClassFixture<DbUnitTestSearchFixture>
         });
     }
 
+    //This tests whether supers and non supers can both write orphaned pages AND write into 
+    //existing pages that have access to all.
     [Theory]
-    [InlineData((int)UserVariations.Super)]
-    [InlineData(1 + (int)UserVariations.Super)] //THIS one is super
-    public async Task WriteAsync_MostSimple(long uid)
+    [InlineData((int)UserVariations.Super, 0, true)]
+    [InlineData(1 + (int)UserVariations.Super, 0, true)] //THIS one is super
+    [InlineData((int)UserVariations.Super, (int)ContentVariations.AccessByAll + 1, true)]
+    [InlineData(1 + (int)UserVariations.Super, (int)ContentVariations.AccessByAll + 1, true)] //THIS one is super
+    public async Task WriteAsync_MostSimple(long uid, long parentId, bool allowed)
     {
+        //NOTE: DO NOT PROVIDE CREATEDATE! ALSO IT SHOULD BE UTC TIME!
         var content = new PageView {
             name = "whatever",
             content = "Yeah this is content!",
-            createDate = DateTime.Now, 
-            parentId = 0, //Anyone should be able to write into orphan
+            parentId = parentId,
+            values = new Dictionary<string, string> { { "one" , "thing" }, { "kek", "macaroni and things" } },
+            keywords = new List<string> { "heck", "heck2", "dead" },
             createUserId = uid
         };
 
-        var result = await writer.WriteAsync(content, uid);
+        if(allowed)
+        {
+            var result = await writer.WriteAsync(content, uid);
 
-        Assert.True(result.id > 0, "ID was not assigned to returned view!");
-        Assert.Equal(content.name, result.name);
-        Assert.Equal(content.content, result.content);
-        Assert.Equal(content.createDate, result.createDate);
-        Assert.Equal(uid, result.createUserId);
-        Assert.Equal(InternalContentType.page.ToString(), result.type);
+            AssertDateClose(result.createDate);
+            Assert.True(result.id > 0, "ID was not assigned to returned view!");
+            Assert.Equal(content.name, result.name);
+            Assert.Equal(content.content, result.content);
+            Assert.Equal(uid, result.createUserId);
+            Assert.Equal(parentId, result.parentId);
+            Assert.Equal(InternalContentType.page, result.internalType);
+        }
+        else
+        {
+            await Assert.ThrowsAnyAsync<ForbiddenException>(async () =>
+            {
+                await writer.WriteAsync(content, uid);
+            });
+        }
     }
 }

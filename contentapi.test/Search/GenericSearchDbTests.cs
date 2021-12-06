@@ -688,8 +688,13 @@ public class GenericSearchDbTests : UnitTestBase, IClassFixture<DbUnitTestSearch
         }
         else
         {
-            var result = (await service.Search(search, 1)).data["permission"];
-            Assert.Equal(fixture.ContentCount / 2, result.Count());
+            var uid = 1;
+            var result = (await service.Search(search, uid)).data["permission"];
+            var casted = service.ToStronglyTyped<ContentView>(result);
+            Assert.All(casted, x => {
+                //They're not in "the group", so they are either the creator OR the permissions have them directly in it
+                Assert.True(x.createUserId == uid || x.permissions.ContainsKey(uid) || x.permissions.ContainsKey(0), $"Found invalid content {x.id} for user {uid}, createuser: {x.createUserId}");
+            });
         }
     }
 

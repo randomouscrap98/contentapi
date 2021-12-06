@@ -9,5 +9,5 @@ public interface IDbWriter
 
     Task<T> DeleteAsync<T>(long id, long requestUserId) where T : class, IIdView, new();
 
-    Task CheckPermissionsAsync<T>(T view, UserView requester, UserAction action) where T : class, IIdView, new();
+    Task CheckAgainstPermissionsAsync<T>(T view, UserView requester, UserAction action) where T : class, IIdView, new();
 }

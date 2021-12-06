@@ -1,4 +1,5 @@
 using System.Data;
+using System.Text.RegularExpressions;
 using AutoMapper;
 using contentapi.Db;
 using contentapi.Db.History;
@@ -10,7 +11,7 @@ using Dapper.Contrib.Extensions;
 
 namespace contentapi.Main;
 
-public class DbWriter
+public class DbWriter : IDbWriter
 {
     protected ILogger logger;
     protected IGenericSearch searcher;
@@ -28,6 +29,9 @@ public class DbWriter
         this.typeInfoService = typeInfoService;
         this.mapper = mapper;
         this.historyConverter = historyConverter;
+    
+        //Preemptively open this, we know us (as a writer) SHOULD BE short-lived, so...
+        this.dbcon.Open();
     }
 
     //Consider how to write a user? Users are one of the only things that have private information, so 
@@ -70,7 +74,7 @@ public class DbWriter
     /// Throws "ForbiddenException" for any kind of permission error that could arise for a modification given
     /// </summary>
     /// <typeparam name="T"></typeparam>
-    public async Task CheckPermissionsAsync<T>(T view, UserView requester, UserAction action) where T : class, IIdView, new()
+    public async Task CheckAgainstPermissionsAsync<T>(T view, UserView requester, UserAction action) where T : class, IIdView, new()
     {
         //Each type needs a different kind of check
         if(view is ContentView)
@@ -125,7 +129,7 @@ public class DbWriter
     public async Task<T> GenericWorkAsync<T>(T view, UserView requester, UserAction action) where T : class, IIdView, new()
     {
         CheckActionValidForView(action, view);
-        await CheckPermissionsAsync(view, requester, action);
+        await CheckAgainstPermissionsAsync(view, requester, action);
 
         long id = 0;
         var typeInfo = typeInfoService.GetTypeInfo<T>();
@@ -272,34 +276,21 @@ public class DbWriter
         return unmapped;
     }
 
-    /// <summary>
-    /// This function handles any database modification for the given view, from inserts to updates to deletes.
-    /// </summary>
-    /// <param name="view"></param>
-    /// <param name="requester"></param>
-    /// <param name="typeInfo"></param>
-    /// <param name="action"></param>
-    /// <returns></returns>
-    public async Task<long> DatabaseWork_Content(DbWorkUnit<ContentView> work) //ContentView view, UserView requester, TypeInfo typeInfo, UserAction action)
+    public InternalContentType InternalContentTypeFromView(ContentView view)
     {
-        if(!work.typeInfo.type.IsAssignableTo(typeof(ContentView)))
-            throw new InvalidOperationException($"TypeInfo given in DatabaseWork was for type '{work.typeInfo.type}', not '{typeof(ContentView)}'");
-        
-        //Need to convert views to db content... how to do so without a big mess?
-        var content = new Db.Content();
-        var unmapped = SimpleViewDbMap(work.typeInfo, work.view, content);
-
         //Don't forget to set the type appropriately!
-        if(work.view is PageView)
-            content.internalType = InternalContentType.page;
-        else if(work.view is FileView)
-            content.internalType = InternalContentType.file;
-        else if(work.view is ModuleView)
-            content.internalType = InternalContentType.module;
+        if(view is PageView)
+            return InternalContentType.page;
+        else if(view is FileView)
+            return InternalContentType.file;
+        else if(view is ModuleView)
+            return  InternalContentType.module;
         else
-            throw new InvalidOperationException($"Don't know how to write type {work.typeInfo.type}!");
+            throw new InvalidOperationException($"Don't know how to write type {view.GetType()}!");
+    }
 
-        //Now modify the content before writing based on what we're doing. Some fields need to be reset/etc.
+    public void ModifyContentByAction(DbWorkUnit<ContentView> work, Db.Content content)
+    {
         if(work.action == UserAction.delete)
         {
             content.content = "";
@@ -320,9 +311,36 @@ public class DbWriter
         }
         else if(work.action == UserAction.create)
         {
-            content.createDate = DateTime.Now;
+            content.createDate = DateTime.UtcNow; // REMEMBER TO USE UTCNOW EVERYWHERE!
             content.createUserId = work.requester.id;
         }
+    }
+
+    /// <summary>
+    /// This function handles any database modification for the given view, from inserts to updates to deletes.
+    /// </summary>
+    /// <param name="view"></param>
+    /// <param name="requester"></param>
+    /// <param name="typeInfo"></param>
+    /// <param name="action"></param>
+    /// <returns></returns>
+    public async Task<long> DatabaseWork_Content(DbWorkUnit<ContentView> work) //ContentView view, UserView requester, TypeInfo typeInfo, UserAction action)
+    {
+        if(!work.typeInfo.type.IsAssignableTo(typeof(ContentView)))
+            throw new InvalidOperationException($"TypeInfo given in DatabaseWork was for type '{work.typeInfo.type}', not '{typeof(ContentView)}'");
+        
+        //Need to convert views to db content... how to do so without a big mess?
+        var content = new Db.Content();
+        var unmapped = SimpleViewDbMap(work.typeInfo, work.view, content);
+
+        if(unmapped.Count > 0)
+            logger.LogWarning($"Fields '{string.Join(",", unmapped)}' not mapped in content!");
+
+        //First, compute internal type. Then modify the content based on the action (resetting default fields, etc.)
+        //Finally, make sure the permissions are OK! This is just a bunch of precheck precompute stuff!
+        content.internalType = InternalContentTypeFromView(work.view);
+        ModifyContentByAction(work, content);
+        await CheckPermissionValidityAsync(work.view.permissions);
 
         //Always need an ID to link to, so we actually need to create the content first and get the ID.
         using(var tsx = dbcon.BeginTransaction())
@@ -360,6 +378,32 @@ public class DbWriter
 
             //NOTE: this is the newly computed id, we place it inside the view for safekeeping 
             return work.view.id;
+        }
+    }
+
+    public async Task CheckPermissionValidityAsync(Dictionary<long, string> permissions)
+    {
+        if(permissions.Keys.Distinct().Count() != permissions.Keys.Count())
+            throw new ArgumentException("Duplicate user(s) in permissions set!");
+
+        //Look up all users, DON'T NEED all fields
+        var utinfo = typeInfoService.GetTypeInfo<UserView>();
+        var foundUsers = await searcher.QueryRawAsync($"select id from {utinfo.table} where id in @ids", new Dictionary<string, object> { { "ids",  permissions.Keys } });
+        var foundUserIds = foundUsers.Select(x => x["id"]);
+
+        //Do the per-permission check now!
+        foreach(var id in permissions.Keys)
+        {
+            if (id != 0 && !foundUserIds.Contains(id))
+                throw new ArgumentException($"User {id} in permissions set not found in database! Are they a user?");
+
+            //I don't care about uppercase or duplicates, fix that for the user, whatever
+            var original = permissions[id].Trim();
+            permissions[id] = string.Concat(original.ToUpper().Distinct());
+
+            //BUT, the right values need to be in there!
+            if(!Regex.IsMatch(permissions[id], @"^[CRUD]*$"))
+                throw new ArgumentException($"Unrecognized permission for user {id} in string: {permissions[id]}");
         }
     }
 
@@ -433,11 +477,11 @@ public class DbWriter
         //AND the contentId search is from an index so... at most it'll be like log2(n) + C where
         //C is the amount of users defined in the content permission set, and N is the total amount
         //of pages. So if we had oh I don't know, 2 billion pages, it might take like 40 iterations.
-        return (await dbcon.ExecuteScalarAsync<int>(@$"(select 
+        return (await dbcon.ExecuteScalarAsync<int>(@$"select count(*)
              from {typeInfo.table} 
              where {nameof(ContentPermission.contentId)} = @contentId
                and {nameof(ContentPermission.userId)} in @requesters 
                and `{checkCol}` = 1
-            )")) > 0;
+            ", new { contentId = thing, requesters = searcher.GetPermissionSearchIdsForUser(requester) })) > 0;
     }
 }

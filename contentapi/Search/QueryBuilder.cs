@@ -27,22 +27,9 @@ public class QueryBuilder : IQueryBuilder
 
     public List<RequestType> ContentRequestTypes => CONTENTREQUESTTYPES;
 
-    public const string LastPostDateField = nameof(ContentView.lastCommentDate);
-    public const string LastPostIdField = nameof(ContentView.lastCommentId);
-    public const string LastRevisionDateField = nameof(ContentView.lastRevisionDate);
-    public const string LastRevisionIdField = nameof(ContentView.lastRevisionId);
-    public const string InternalTypeField = nameof(ContentView.internalType);
-    public const string PostCountField = nameof(ContentView.commentCount);
-    public const string WatchCountField = nameof(ContentView.watchCount);
-    public const string ActionField = nameof(ActivityView.action);
-    public const string TypeField = "type";
-
     //These fields are too difficult to modify with the attributes, so we do it in code here
-    protected readonly Dictionary<(RequestType, string),string> StandardModifiedFields = new Dictionary<(RequestType, string), string> {
+    protected readonly Dictionary<(RequestType, string),string> StandardComplexFields = new Dictionary<(RequestType, string), string> {
         { (RequestType.user, "registered"), $"(registrationKey IS NULL) as registered" },
-        //{ (RequestType.activity, ActionField), EnumToCase<UserAction>(ActionField)},
-        //{ (RequestType.adminlog, TypeField), EnumToCase<AdminLogType>(TypeField)},
-        //{ (RequestType.user, TypeField), EnumToCase<UserType>(TypeField) }
     };
 
     //Some searches can easily be modified afterwards with constants, put that here.
@@ -95,37 +82,35 @@ public class QueryBuilder : IQueryBuilder
         StandardViewRequests = typeInfos.Where(x => x.requestType.HasValue).ToDictionary(
             k => k.requestType ?? throw new InvalidOperationException("How did the HasValue check fail on StandardViewRequest build??"), v => v.type);
 
+        SetupContentComplexFields();
+    }
+
+    public void SetupContentComplexFields()
+    {
+        const string LastPostDateField = nameof(ContentView.lastCommentDate);
+        const string LastPostIdField = nameof(ContentView.lastCommentId);
+        const string LastRevisionDateField = nameof(ContentView.lastRevisionDate);
+        const string LastRevisionIdField = nameof(ContentView.lastRevisionId);
+        const string PostCountField = nameof(ContentView.commentCount);
+        const string WatchCountField = nameof(ContentView.watchCount);
+
         //Because of how content is, we need to add these content fields to all things
         foreach(var type in ContentRequestTypes)
         {
-            //StandardModifiedFields.Add((type, InternalTypeField), 
-            //    EnumToCase<InternalContentType>(InternalTypeField));
-            StandardModifiedFields.Add((type, LastPostDateField), 
+            StandardComplexFields.Add((type, LastPostDateField), 
                 $"(select createDate from comments where {MainAlias}.id = contentId and {NaturalCommentQuery} order by id desc limit 1) as {LastPostDateField}");
-            StandardModifiedFields.Add((type, LastPostIdField), 
+            StandardComplexFields.Add((type, LastPostIdField), 
                 $"(select id from comments where {MainAlias}.id = contentId and {NaturalCommentQuery} order by id desc limit 1) as {LastPostIdField}");
-            StandardModifiedFields.Add((type, LastRevisionDateField), 
+            StandardComplexFields.Add((type, LastRevisionDateField), 
                 $"(select createDate from content_history where {MainAlias}.id = contentId order by id desc limit 1) as {LastRevisionDateField}");
-            StandardModifiedFields.Add((type, LastRevisionIdField), 
+            StandardComplexFields.Add((type, LastRevisionIdField), 
                 $"(select id from content_history where {MainAlias}.id = contentId order by id desc limit 1) as {LastRevisionIdField}");
-            StandardModifiedFields.Add((type, PostCountField), 
+            StandardComplexFields.Add((type, PostCountField), 
                 $"(select count(*) from comments where {MainAlias}.id = contentId and {NaturalCommentQuery}) as {PostCountField}");
-            StandardModifiedFields.Add((type, WatchCountField), 
+            StandardComplexFields.Add((type, WatchCountField), 
                 $"(select count(*) from content_watches where {MainAlias}.id = contentId) as {WatchCountField}");
         }
     }
-
-    //public static string EnumToCase<T>(string fieldName, string outputName) where T : struct, System.Enum 
-    //{
-    //    var values = Enum.GetValues<T>();
-    //    var whens = values.Select(x => $"WHEN {Unsafe.As<T, int>(ref x)} THEN '{x.ToString()}'");
-    //    return $"CASE {fieldName} {string.Join(" ", whens)} ELSE 'unknown' END as {outputName}";
-    //}
-
-    //public static string EnumToCase<T>(string fieldName) where T : struct, System.Enum 
-    //{
-    //    return EnumToCase<T>(fieldName, fieldName);
-    //}
 
     public string KeywordLike(SearchRequestPlus request, string value)
     {
@@ -207,12 +192,15 @@ public class QueryBuilder : IQueryBuilder
             case "D": checkCol = nameof(ContentPermission.delete); break;
             default: throw new ArgumentException($"Unknown permission type {type}");
         }
-        return $@"{MainAlias}.{idField} in 
+
+        //Note: we're checking createUserId against ALL requester values they gave us! This is OK, because the
+        //additional values are things like 0 or their groups, and groups can't create content
+        return $@"({MainAlias}.{nameof(Content.createUserId)} in {requesters} or {MainAlias}.{idField} in 
             (select {nameof(ContentPermission.contentId)} 
              from {typeInfo.table} 
              where {nameof(ContentPermission.userId)} in {requesters}
                and `{checkCol}` = 1
-            )";
+            ))";
     }
 
     /// <summary>
@@ -262,9 +250,9 @@ public class QueryBuilder : IQueryBuilder
     public string StandardFieldRemap(string fieldName, SearchRequestPlus r)
     {
         //Our personal field modifiers always override all
-        if (StandardModifiedFields.ContainsKey((r.requestType, fieldName)))
+        if (StandardComplexFields.ContainsKey((r.requestType, fieldName)))
         {
-            return StandardModifiedFields[(r.requestType, fieldName)];
+            return StandardComplexFields[(r.requestType, fieldName)];
         }
         else if (r.typeInfo.fieldRemap.ContainsKey(fieldName))
         {
@@ -326,7 +314,7 @@ public class QueryBuilder : IQueryBuilder
 
         //Oops, this is a dangerous field, we can't just use it without requesting it because
         //it's COMPUTED
-        if(StandardModifiedFields.ContainsKey((request.requestType, field)) || 
+        if(StandardComplexFields.ContainsKey((request.requestType, field)) || 
             request.typeInfo.fieldRemap.ContainsKey(field))
         {
             if(!request.requestFields.Contains(field))

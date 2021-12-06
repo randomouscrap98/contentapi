@@ -25,14 +25,16 @@ public static class DefaultSetup
 
         services.AddSingleton<IRuntimeInformation>(new MyRuntimeInformation(DateTime.Now));
         services.AddSingleton<ITypeInfoService, CachedTypeInfoService>();
-        //This NEEDS to stay transient because it holds onto a DB connection! We want those recycled!
-        services.AddTransient<IGenericSearch, GenericSearcher>();
         services.AddSingleton<IQueryBuilder, QueryBuilder>();
         services.AddSingleton<IAuthTokenService<long>, JwtAuthTokenService<long>>();
         services.AddSingleton<ISearchQueryParser, SearchQueryParser>();
         services.AddSingleton<ICacheCheckpointTracker, CacheCheckpointTracker>();
         services.AddSingleton<IHashService, HashService>();
         services.AddSingleton<IUserService, UserService>();
+
+        //This NEEDS to stay transient because it holds onto a DB connection! We want those recycled!
+        services.AddTransient<IGenericSearch, GenericSearcher>();
+        services.AddTransient<IDbWriter, DbWriter>();
 
         //Configs (these have default values given in configs)
         services.AddSingleton<GenericSearcherConfig>();

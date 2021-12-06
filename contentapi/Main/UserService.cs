@@ -65,7 +65,7 @@ public class UserService : IUserService
         //First, find the user they're even talking about. 
 
         //Next, get the LEGITIMATE data from the database
-        var userSecrets = (await searcher.QueryRaw(
+        var userSecrets = (await searcher.QueryRawAsync(
             $"select id, password, salt from {searcher.GetDatabaseForType<UserView>()} where {fieldname} = @user",
             new Dictionary<string, object> { { "user", value }})).FirstOrDefault();
 

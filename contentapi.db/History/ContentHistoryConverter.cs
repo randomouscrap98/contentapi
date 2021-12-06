@@ -21,7 +21,7 @@ namespace contentapi.Db.History
             var history = new ContentHistory()
             {
                 action = action,
-                createDate = specificTime ?? DateTime.Now,
+                createDate = specificTime ?? DateTime.UtcNow,
                 createUserId = user,
                 contentId = content.id,
                 snapshotVersion = 1,

@@ -130,7 +130,7 @@ public class GenericSearcher : IGenericSearch
         }
     }
 
-    public Task<IEnumerable<IDictionary<string, object>>> QueryRaw(string sql, Dictionary<string, object> values)
+    public Task<IEnumerable<IDictionary<string, object>>> QueryRawAsync(string sql, Dictionary<string, object> values)
     {
         var dp = new DynamicParameters(values);
         return QueryAsyncCast(sql, dp);
@@ -242,6 +242,13 @@ public class GenericSearcher : IGenericSearch
         return ToStronglyTyped<T>(result);
     }
 
+    public List<long> GetPermissionSearchIdsForUser(UserView requester)
+    {
+        var groups = new List<long> { 0, requester.id };
+        groups.AddRange(requester.groups);
+        return groups;
+    }
+
     //A restricted search doesn't allow you to retrieve results that the given request user can't read
     public async Task<GenericSearchResult> Search(SearchRequests requests, long requestUserId = 0)
     {
@@ -273,10 +280,8 @@ public class GenericSearcher : IGenericSearch
         var requesterKey = $"{globalPre}_requester";
         var groupsKey = $"{globalPre}_groups";
         var parameterValues = new Dictionary<string, object>(requests.values);
-        var groups = new List<long> { 0, requestUserId };
-        groups.AddRange(requester.groups);
         parameterValues.Add(requesterKey, requestUserId);
-        parameterValues.Add(groupsKey, groups);
+        parameterValues.Add(groupsKey, GetPermissionSearchIdsForUser(requester));
 
         //Modify the queries before giving them out to the query builder! We NEED them
         //to be absolutely restricted by permissions!

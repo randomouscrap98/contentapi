@@ -1,3 +1,5 @@
+using contentapi.Views;
+
 namespace contentapi.Search;
 
 public interface IGenericSearch
@@ -22,8 +24,10 @@ public interface IGenericSearch
     Task<List<T>> GetByField<T>(RequestType type, string fieldname, object value, string comparator = "=");
 
     //DEFINITELY used for internal tasks!
-    Task<IEnumerable<IDictionary<string, object>>> QueryRaw(string sql, Dictionary<string, object> values);
+    Task<IEnumerable<IDictionary<string, object>>> QueryRawAsync(string sql, Dictionary<string, object> values);
+
     string GetDatabaseForType<T>();
+    List<long> GetPermissionSearchIdsForUser(UserView requester);
 
     List<T> ToStronglyTyped<T>(IEnumerable<IDictionary<string, object>> singleResults);
 }
