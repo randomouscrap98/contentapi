@@ -289,6 +289,11 @@ public class DbWriter : IDbWriter
             throw new InvalidOperationException($"Don't know how to write type {view.GetType()}!");
     }
 
+    /// <summary>
+    /// Modify database content model before writing based on the work configuration (mostly the action)
+    /// </summary>
+    /// <param name="work"></param>
+    /// <param name="content"></param>
     public void ModifyContentByAction(DbWorkUnit<ContentView> work, Db.Content content)
     {
         if(work.action == UserAction.delete)
@@ -308,11 +313,13 @@ public class DbWriter : IDbWriter
             var existing = work.existing ?? throw new InvalidOperationException("Delete specified, but no existing view looked up in database for snapshot!");
             content.createUserId = existing.createUserId;
             content.createDate = existing.createDate;
+            work.view.permissions[work.requester.id] = "CRUD"; //FORCE permissions to include full access for creator all the time
         }
         else if(work.action == UserAction.create)
         {
             content.createDate = DateTime.UtcNow; // REMEMBER TO USE UTCNOW EVERYWHERE!
             content.createUserId = work.requester.id;
+            work.view.permissions[work.requester.id] = "CRUD"; //FORCE permissions to include full access for creator all the time
         }
     }
 

@@ -221,7 +221,8 @@ namespace contentapi.Controllers
                 lcnt = await newdb.InsertAsync(vls); //IDK if the list version has async
                 Log($"Inserted {lcnt} values for '{nc.name}'");
 
-                var pms = ct.permissions.Select(x => new ContentPermission()
+                //Remove createuser if there, then readd with full permissions
+                var pms = ct.permissions.Where(x => x.Key != ct.createUserId).Select(x => new ContentPermission()
                 {
                     contentId = id,
                     userId = x.Key,
@@ -230,6 +231,12 @@ namespace contentapi.Controllers
                     update = x.Value.ToLower().Contains(Actions.KeyMap[Keys.UpdateAction].ToLower()),
                     delete= x.Value.ToLower().Contains(Actions.KeyMap[Keys.DeleteAction].ToLower())
                 }).ToList();
+
+                pms.Add(new ContentPermission {
+                    contentId = id,
+                    userId = ct.createUserId,
+                    create = true, read = true, update = true, delete = true
+                });
 
                 lcnt = await newdb.InsertAsync(pms); //IDK if the list version has async
                 Log($"Inserted {lcnt} permissions for '{nc.name}'");

@@ -195,12 +195,12 @@ public class QueryBuilder : IQueryBuilder
 
         //Note: we're checking createUserId against ALL requester values they gave us! This is OK, because the
         //additional values are things like 0 or their groups, and groups can't create content
-        return $@"({MainAlias}.{nameof(Content.createUserId)} in {requesters} or {MainAlias}.{idField} in 
+        return $@"({MainAlias}.{idField} in 
             (select {nameof(ContentPermission.contentId)} 
              from {typeInfo.table} 
              where {nameof(ContentPermission.userId)} in {requesters}
                and `{checkCol}` = 1
-            ))";
+            ))"; //NOTE: DO NOT CHECK CREATE USER! ALL PERMISSIONS ARE NOW IN THE TABLE! NOTHING IMPLIED!
     }
 
     /// <summary>
