@@ -100,7 +100,8 @@ public class DbUnitTestSearchFixture : DbUnitTestBase, IDisposable
                             {
                                 userId = i + 1,
                                 key = $"userval_{j}_{i}",
-                                value = $"value_{j}"
+                                value = $"value_{j}",
+                                createDate = DateTime.Now.AddMinutes(-i - j)
                             });
                         }
                     }

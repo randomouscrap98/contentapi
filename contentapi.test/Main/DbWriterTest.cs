@@ -403,12 +403,12 @@ public class DbWriterTest : UnitTestBase, IClassFixture<DbUnitTestSearchFixture>
 
         if(valid)
         {
-            await writer.CheckPermissionValidityAsync(perms);
+            await writer.ValidatePermissionFormat(perms);
             Assert.True(true); //Not necessary but whatever
         }
         else
         {
-            await Assert.ThrowsAnyAsync<ArgumentException>(async () => await writer.CheckPermissionValidityAsync(perms));
+            await Assert.ThrowsAnyAsync<ArgumentException>(async () => await writer.ValidatePermissionFormat(perms));
         }
     }
 

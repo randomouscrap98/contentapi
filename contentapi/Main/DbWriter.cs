@@ -74,7 +74,7 @@ public class DbWriter : IDbWriter
     /// Throws "ForbiddenException" for any kind of permission error that could arise for a modification given
     /// </summary>
     /// <typeparam name="T"></typeparam>
-    public async Task CheckAgainstPermissionsAsync<T>(T view, UserView requester, UserAction action) where T : class, IIdView, new()
+    public async Task ValidateUserPermissionForAction<T>(T view, UserView requester, UserAction action) where T : class, IIdView, new()
     {
         //Each type needs a different kind of check
         if(view is ContentView)
@@ -85,7 +85,7 @@ public class DbWriter : IDbWriter
             //ids as orphaned pages
             if((action == UserAction.create || action == UserAction.update) && (cView.parentId > 0))
             {
-                if(!(await UserCan(requester, action, cView.parentId)))
+                if(!(await CanUser(requester, action, cView.parentId)))
                     throw new ForbiddenException($"User {requester.id} can't '{action}' content in parent {cView.parentId}!");
             }
 
@@ -99,7 +99,7 @@ public class DbWriter : IDbWriter
             else if(action != UserAction.read)
             {
                 //We generally assume that the views and such have proper fields by the time it gets to us...
-                if(!(await UserCan(requester, action, cView.id)))
+                if(!(await CanUser(requester, action, cView.id)))
                     throw new ForbiddenException($"User {requester.id} can't '{action}' content {cView.id}!");
             }
         }
@@ -115,7 +115,7 @@ public class DbWriter : IDbWriter
                 var parent = await searcher.GetById<CommentView>(RequestType.content, cView.contentId, true);
 
                 //Can't post in invalid locations! So we check ANY contentId passed in, even if it's invalid
-                if(!(await UserCan(requester, action, cView.contentId)))
+                if(!(await CanUser(requester, action, cView.contentId)))
                     throw new ForbiddenException($"User {requester.id} can't '{action}' comments in content {cView.contentId}!");
             }
             //All other non-read actions can only ber performed the original user or supers
@@ -132,13 +132,33 @@ public class DbWriter : IDbWriter
         }
     }
 
+    //Ensure the action and the view make sense for each other
+    public void ValidateViewForAction(UserAction action, IIdView view)
+    {
+        if(action == UserAction.update || action == UserAction.delete)
+        {
+            if(view.id <= 0)
+                throw new ArgumentException($"Alteration action '{action}' requires id, but no id was set in view!");
+        }
+        else if(action == UserAction.create)
+        {
+            if(view.id != 0)
+                throw new ArgumentException($"Alteration action '{action} requires NO id set, but id was {view.id}");
+        }
+        else
+        {
+            //This one should just never happen since it's internal, so it's an InvalidOperationException instead
+            throw new InvalidOperationException($"Unsupported action '{action}' inside modification context");
+        }
+    }
+
     /// <summary>
     /// Inserts, updates, and deletes for any type should call THIS function
     /// </summary>
     /// <typeparam name="T"></typeparam>
     public async Task<T> GenericWorkAsync<T>(T view, UserView requester, UserAction action, string? message) where T : class, IIdView, new()
     {
-        CheckActionValidForView(action, view);
+        ValidateViewForAction(action, view);
 
         long id = 0;
         var typeInfo = typeInfoService.GetTypeInfo<T>();
@@ -157,7 +177,7 @@ public class DbWriter : IDbWriter
 
         //It's more important to throw a NotFound exception than the permission exception, it keeps things more consistent, so
         //keep this call down here.
-        await CheckAgainstPermissionsAsync(view, requester, action);
+        await ValidateUserPermissionForAction(view, requester, action);
 
         //Ok at this point, we know everything is good to go, there shouldn't be ANY MORE checks required past here!
         if(view is ContentView)
@@ -179,26 +199,6 @@ public class DbWriter : IDbWriter
 
         //The regardless, just go look up whatever work we just did, give the user the MOST up to date information, even if it's inefficient
         return await searcher.GetById<T>(requestType, id);
-    }
-
-    //Ensure the action and the view make sense for each other
-    public void CheckActionValidForView(UserAction action, IIdView view)
-    {
-        if(action == UserAction.update || action == UserAction.delete)
-        {
-            if(view.id <= 0)
-                throw new ArgumentException($"Alteration action '{action}' requires id, but no id was set in view!");
-        }
-        else if(action == UserAction.create)
-        {
-            if(view.id != 0)
-                throw new ArgumentException($"Alteration action '{action} requires NO id set, but id was {view.id}");
-        }
-        else
-        {
-            //This one should just never happen since it's internal, so it's an InvalidOperationException instead
-            throw new InvalidOperationException($"Unsupported action '{action}' inside modification context");
-        }
     }
 
     /// <summary>
@@ -371,7 +371,7 @@ public class DbWriter : IDbWriter
         //Fix view so the data is more appropriate (don't let users have full free reign over important fields!)
         TweakContentView(work);
 
-        await CheckPermissionValidityAsync(work.view.permissions);
+        await ValidatePermissionFormat(work.view.permissions);
 
         var content = new Db.Content();
         var unmapped = MapSimpleViewFields(work.typeInfo, work.view, content);
@@ -526,7 +526,7 @@ public class DbWriter : IDbWriter
         }
     }
 
-    public async Task CheckPermissionValidityAsync(Dictionary<long, string> permissions)
+    public async Task ValidatePermissionFormat(Dictionary<long, string> permissions)
     {
         if(permissions.Keys.Distinct().Count() != permissions.Keys.Count())
             throw new ArgumentException("Duplicate user(s) in permissions set!");
@@ -600,7 +600,7 @@ public class DbWriter : IDbWriter
     /// <param name="action"></param>
     /// <param name="thing"></param>
     /// <returns></returns>
-    public async Task<bool> UserCan(UserView requester, UserAction action, long thing)
+    public async Task<bool> CanUser(UserView requester, UserAction action, long thing)
     {
         //Supers can update/insert/delete anything they want, but they can't read secret things.
         if(action != UserAction.read && requester.super)

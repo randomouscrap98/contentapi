@@ -296,7 +296,8 @@ public class GenericSearcher : IGenericSearch
             {
                 request.query = queryBuilder.CombineQueryClause(request.query, $"!permissionlimit(@{groupsKey}, contentId, R)");
             }
-            if(request.type == RequestType.watch.ToString())
+            //Watches and variables are per-user!
+            if(request.type == RequestType.watch.ToString() || request.type == RequestType.uservariable.ToString())
             {
                 request.query = queryBuilder.CombineQueryClause(request.query, $"userId = @{requesterKey}");
             }

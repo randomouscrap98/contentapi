@@ -1,6 +1,7 @@
 using System;
 using System.Data;
 using System.Linq;
+using System.Text.RegularExpressions;
 using System.Threading.Tasks;
 using AutoMapper;
 using contentapi.Db;
@@ -228,6 +229,30 @@ public class GenericSearchDbTests : UnitTestBase, IClassFixture<DbUnitTestSearch
             Assert.True(x.initiator > 0, "Adminlog initiator not cast properly!");
             Assert.True(x.target > 0, "AminLog target not cast properly!");
             Assert.True(x.createDate.Ticks > 0, "AdminLog date not cast properly!");
+        });
+    }
+
+    [Fact]
+    public async Task GenericSearch_ToStronglyTyped_UserVariable()
+    {
+        var search = new SearchRequests();
+        search.requests.Add(new SearchRequest()
+        {
+            name = "test",
+            type = "uservariable",
+            fields = "*"
+        });
+
+        var result = (await service.SearchUnrestricted(search)).data["test"];
+        var castResult = service.ToStronglyTyped<UserVariableView>(result);
+        Assert.NotEmpty(castResult);
+        Assert.All(castResult, x =>
+        {
+            Assert.False(string.IsNullOrWhiteSpace(x.key), "UserVariable key wasn't cast properly!");
+            Assert.False(string.IsNullOrWhiteSpace(x.value), "UserVariable value wasn't cast properly!");
+            Assert.True(x.id > 0, "UserVariable ID not cast properly!");
+            Assert.True(x.userId > 0, "UserVariable userId not cast properly!");
+            Assert.True(x.createDate.Ticks > 0, "UserVariable createDate date not cast properly!");
         });
     }
 
@@ -731,6 +756,39 @@ public class GenericSearchDbTests : UnitTestBase, IClassFixture<DbUnitTestSearch
                 //They're not in "the group", so they are either the creator OR the permissions have them directly in it
                 Assert.True(x.createUserId == uid || x.permissions.ContainsKey(uid) || x.permissions.ContainsKey(0), $"Found invalid content {x.id} for user {uid}, createuser: {x.createUserId}");
             });
+        }
+    }
+
+    [Theory]
+    [InlineData(0)]
+    [InlineData(1 + (int)UserVariations.Super + (int)UserVariations.Variables)]
+    [InlineData(1 + (int)UserVariations.Variables)] //NOT super
+    [InlineData(1 + (int)UserVariations.Special, true)] //Just some random user that doesn't have variables
+    public async Task GenericSearch_Search_OnlyUserVariables(long uid, bool empty = false)
+    {
+        var search = new SearchRequests();
+        search.requests.Add(new SearchRequest()
+        {
+            type = "uservariable",
+            fields = "*"
+        });
+
+        var result = (await service.Search(search, uid)).data["uservariable"];
+        var castResult = service.ToStronglyTyped<UserVariable>(result);
+
+        if(empty)
+        {
+            Assert.Empty(result);
+            return;
+        }
+
+        Assert.Equal(uid, result.Count());
+
+        for(var i = 0; i < castResult.Count(); i++)
+        {
+            Assert.Equal(uid, castResult[i].userId);
+            Assert.Equal($"userval_{i}_{uid - 1}", castResult[i].key);
+            Assert.Equal($"value_{i}", castResult[i].value);
         }
     }
 
