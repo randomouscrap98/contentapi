@@ -18,6 +18,9 @@ namespace contentapi.Db
         public byte[] snapshot { get; set; } = new byte[0];
         public int snapshotVersion { get; set; }
 
+        //Very helpful, users can put edit messages or the system can generate the revision redo messages
+        public string message {get;set;} //This can be null!
+
         // The user that did the actions and when
         public long createUserId { get; set; }
         public DateTime createDate { get; set; }

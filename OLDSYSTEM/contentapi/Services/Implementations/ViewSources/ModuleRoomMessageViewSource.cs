@@ -1,6 +1,7 @@
 using System.Collections.Generic;
 using System.Linq;
 using System.Threading.Tasks;
+using contentapi.Db.History;
 using contentapi.Services.Constants;
 using Microsoft.Extensions.Logging;
 using Randomous.EntitySystem;
@@ -13,8 +14,8 @@ namespace contentapi.Services.Implementations
     {
         public override string EntityType => Keys.ModuleHack;
 
-        public ModuleRoomMessageViewSource(ILogger<CommentViewSource> logger, BaseViewSourceServices services)
-            : base(logger, services) {}
+        public ModuleRoomMessageViewSource(ILogger<CommentViewSource> logger, IHistoryConverter hconv, BaseViewSourceServices services)
+            : base(logger, hconv, services) {}
 
         public override Task<List<EntityRelationPackage>> LinkAsync(List<EntityRelation> relations)
         {

@@ -49,7 +49,7 @@ namespace contentapi.Controllers
         protected IEntityProvider entityProvider;
         protected IHistoryService historyService;
         protected NewConvertControllerConfig config;
-        protected IContentHistoryConverter historyConverter;
+        protected IHistoryConverter historyConverter;
 
 
         public NewConvertController(ILogger<NewConvertController> logger, UserViewSource userSource, BanViewSource banSource,
@@ -61,7 +61,7 @@ namespace contentapi.Controllers
             ModuleRoomMessageViewSource moduleRoomMessageViewSource,
             NewConvertControllerConfig config,
             IHistoryService historyService,
-            IContentHistoryConverter historyConverter,
+            IHistoryConverter historyConverter,
             /*ContentApiDbContext ctapiContext,*/ IMapper mapper)
         {
             this.logger = logger;

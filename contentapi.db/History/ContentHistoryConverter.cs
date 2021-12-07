@@ -1,4 +1,5 @@
 using System;
+using System.Collections.Generic;
 using System.IO;
 using System.IO.Compression;
 using System.Threading.Tasks;
@@ -7,11 +8,11 @@ using Newtonsoft.Json;
 
 namespace contentapi.Db.History
 {
-    public class ContentHistoryConverter : IContentHistoryConverter
+    public class HistoryConverter : IHistoryConverter
     {
         protected ILogger logger;
 
-        public ContentHistoryConverter(ILogger<ContentHistoryConverter> logger)
+        public HistoryConverter(ILogger<HistoryConverter> logger)
         {
             this.logger = logger;
         }
@@ -45,6 +46,23 @@ namespace contentapi.Db.History
                 //Apparently you HAVE to do it afterwards? IDK
                 return memstream.ToArray();
             }
+        }
+
+        public void AddCommentHistory(CommentSnapshot snapshot, Comment current)
+        {
+            List<CommentSnapshot> snapshots = new List<CommentSnapshot>();
+
+            if(!string.IsNullOrWhiteSpace(current.history))
+                snapshots = JsonConvert.DeserializeObject<List<CommentSnapshot>>(current.history);
+            
+            snapshots.Add(snapshot);
+
+            SetCommentHistory(snapshots, current);
+        }
+
+        public void SetCommentHistory(List<CommentSnapshot> snapshots, Comment current)
+        {
+            current.history = JsonConvert.SerializeObject(snapshots);
         }
     }
 }

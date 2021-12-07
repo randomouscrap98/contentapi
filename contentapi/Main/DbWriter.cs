@@ -18,10 +18,10 @@ public class DbWriter : IDbWriter
     protected IDbConnection dbcon;
     protected ITypeInfoService typeInfoService;
     protected IMapper mapper;
-    protected IContentHistoryConverter historyConverter;
+    protected IHistoryConverter historyConverter;
 
     public DbWriter(ILogger<DbWriter> logger, IGenericSearch searcher, ContentApiDbConnection connection,
-        ITypeInfoService typeInfoService, IMapper mapper, IContentHistoryConverter historyConverter)
+        ITypeInfoService typeInfoService, IMapper mapper, IHistoryConverter historyConverter)
     {
         this.logger = logger;
         this.searcher = searcher;
@@ -107,9 +107,13 @@ public class DbWriter : IDbWriter
         {
             var cView = view as CommentView ?? throw new InvalidOperationException("Somehow, CommentView could not be cast to a CommentView");
 
-            //Create is special, because we need the parent create permission
-            if(action == UserAction.create)
+            //Create is special, because we need the parent create permission. We also check updates so users can't 
+            //move a comment into an unusable room (if that ever gets allowed)
+            if(action == UserAction.create || action == UserAction.update)
             {
+                //No orphaned comments, so the parent MUST exist! This is an easy check. You will get a "notfound" exception
+                var parent = await searcher.GetById<CommentView>(RequestType.content, cView.contentId, true);
+
                 //Can't post in invalid locations! So we check ANY contentId passed in, even if it's invalid
                 if(!(await UserCan(requester, action, cView.contentId)))
                     throw new ForbiddenException($"User {requester.id} can't '{action}' comments in content {cView.contentId}!");
@@ -162,6 +166,12 @@ public class DbWriter : IDbWriter
                 view as ContentView ?? throw new InvalidOperationException("Somehow, ContentView couldn't be cast to ContentView??"), 
                 requester, typeInfo, action, existing as ContentView));
         }
+        else if(view is CommentView)
+        {
+            id = await DatabaseWork_Comments(new DbWorkUnit<CommentView>(
+                view as CommentView ?? throw new InvalidOperationException("Somehow, CommentView couldn't be cast to CommentView??"), 
+                requester, typeInfo, action, existing as CommentView));
+        }
         else
         {
             throw new ArgumentException($"Don't know how to write type {typeof(T).Name} to the database!");
@@ -189,50 +199,6 @@ public class DbWriter : IDbWriter
             //This one should just never happen since it's internal, so it's an InvalidOperationException instead
             throw new InvalidOperationException($"Unsupported action '{action}' inside modification context");
         }
-    }
-
-
-    /// <summary>
-    /// Delete stuff of the given type associated with the given content. WARNING: THIS WORKS FOR COMMENTS, VOTES, WATCHES, ETC!!
-    /// </summary>
-    /// <param name="id"></param>
-    /// <param name="tsx"></param>
-    /// <typeparam name="T"></typeparam>
-    /// <returns></returns>
-    public async Task DeleteOldContentThings<T>(long id, IDbTransaction tsx)
-    {
-        var tinfo = typeInfoService.GetTypeInfo<T>();
-        var parameters = new { id = id };
-        var deleteCount = await dbcon.ExecuteAsync($"delete from {tinfo.table} where contentId = @id", parameters, tsx);
-        logger.LogInformation($"Deleting {deleteCount} {typeof(T).Name} from content {id}");
-    }
-
-    /// <summary>
-    /// Delete the values, keywords, and permissions associted with the given content. Note that these are the things
-    /// which should be reset on content update.
-    /// </summary>
-    /// <param name="id"></param>
-    /// <param name="tsx"></param>
-    /// <returns></returns>
-    public async Task DeleteOldContentAssociated(long id, IDbTransaction tsx)
-    {
-        await DeleteOldContentThings<ContentValue>(id, tsx);
-        await DeleteOldContentThings<ContentKeyword>(id, tsx);
-        await DeleteOldContentThings<ContentPermission>(id, tsx);
-    }
-
-    public AdminLog MakeContentLog(UserView requester, ContentView view, UserAction action)
-    {
-        return new AdminLog {
-            text = $"User '{requester.username}'({requester.id}) {action}d '{view.name}'({view.id})",
-            type = action == UserAction.create ? AdminLogType.contentCreate :  
-                    action == UserAction.update ? AdminLogType.contentUpdate :
-                    action == UserAction.delete ? AdminLogType.contentDelete :
-                    throw new InvalidOperationException($"Unsupported admin log type {action}"),
-            target = view.id,
-            initiator = requester.id,
-            createDate = DateTime.UtcNow
-        };
     }
 
     /// <summary>
@@ -285,6 +251,49 @@ public class DbWriter : IDbWriter
         }
 
         return unmapped;
+    }
+
+    /// <summary>
+    /// Delete stuff of the given type associated with the given content. WARNING: THIS WORKS FOR COMMENTS, VOTES, WATCHES, ETC!!
+    /// </summary>
+    /// <param name="id"></param>
+    /// <param name="tsx"></param>
+    /// <typeparam name="T"></typeparam>
+    /// <returns></returns>
+    public async Task DeleteOldContentThings<T>(long id, IDbTransaction tsx)
+    {
+        var tinfo = typeInfoService.GetTypeInfo<T>();
+        var parameters = new { id = id };
+        var deleteCount = await dbcon.ExecuteAsync($"delete from {tinfo.table} where contentId = @id", parameters, tsx);
+        logger.LogInformation($"Deleting {deleteCount} {typeof(T).Name} from content {id}");
+    }
+
+    /// <summary>
+    /// Delete the values, keywords, and permissions associted with the given content. Note that these are the things
+    /// which should be reset on content update.
+    /// </summary>
+    /// <param name="id"></param>
+    /// <param name="tsx"></param>
+    /// <returns></returns>
+    public async Task DeleteOldContentAssociated(long id, IDbTransaction tsx)
+    {
+        await DeleteOldContentThings<ContentValue>(id, tsx);
+        await DeleteOldContentThings<ContentKeyword>(id, tsx);
+        await DeleteOldContentThings<ContentPermission>(id, tsx);
+    }
+
+    public AdminLog MakeContentLog(UserView requester, ContentView view, UserAction action)
+    {
+        return new AdminLog {
+            text = $"User '{requester.username}'({requester.id}) {action}d '{view.name}'({view.id})",
+            type = action == UserAction.create ? AdminLogType.contentCreate :  
+                    action == UserAction.update ? AdminLogType.contentUpdate :
+                    action == UserAction.delete ? AdminLogType.contentDelete :
+                    throw new InvalidOperationException($"Unsupported admin log type {action}"),
+            target = view.id,
+            initiator = requester.id,
+            createDate = DateTime.UtcNow
+        };
     }
 
     public InternalContentType InternalContentTypeFromView(ContentView view)
@@ -373,6 +382,7 @@ public class DbWriter : IDbWriter
         //And the final modification to content just before storing
         if(work.action == UserAction.delete)
         {
+            content.createUserId = 0;
             content.content = "";
             content.name = "";
             content.deleted = true;
@@ -427,6 +437,76 @@ public class DbWriter : IDbWriter
             tsx.Commit();
 
             logger.LogDebug(adminLog.text); //The admin log actually has the log text we want!
+
+            //NOTE: this is the newly computed id, we place it inside the view for safekeeping 
+            return work.view.id;
+        }
+    }
+    
+    public void TweakCommentView(DbWorkUnit<CommentView> work)
+    {
+        if(work.action == UserAction.delete)
+        {
+            work.view.text = "";
+            work.view.createUserId = 0;
+            work.view.editUserId = 0;
+            work.view.createUserId = 0;
+            work.view.contentId = 0;
+            work.view.deleted = true;
+        }
+        if(work.action == UserAction.update)
+        {
+            var existing = work.existing ?? throw new InvalidOperationException("Update specified, but no existing view looked up in database for snapshot!");
+            work.view.createUserId = existing.createUserId;
+            work.view.createDate = existing.createDate;
+            work.view.editDate = DateTime.UtcNow;
+            work.view.editUserId = work.requester.id;
+
+            //We don't want users to be allowed to change contentId right now, and we want them to KNOW they're doing something wrong
+            if(work.view.contentId != existing.contentId)
+                throw new RequestException($"Can't move comments between pages just yet! Original: {existing.contentId}, new: {work.view.contentId}, for comment {work.view.id}");
+            //work.view.contentId = existing.contentId; //CAN'T change the parent of a comment... yet
+        }
+        else if(work.action == UserAction.create)
+        {
+            work.view.createDate = DateTime.UtcNow; // REMEMBER TO USE UTCNOW EVERYWHERE!
+            work.view.createUserId = work.requester.id;
+            work.view.editDate = work.view.createDate;
+            work.view.editUserId = 0;
+        }
+    }
+
+    public async Task<long> DatabaseWork_Comments(DbWorkUnit<CommentView> work)
+    {
+        if(!work.typeInfo.type.IsAssignableTo(typeof(CommentView)))
+            throw new InvalidOperationException($"TypeInfo given in DatabaseWork was for type '{work.typeInfo.type}', not '{typeof(CommentView)}'");
+
+        TweakCommentView(work);
+
+        var comment = new Db.Comment();
+        var unmapped = MapSimpleViewFields(work.typeInfo, work.view, comment);
+
+        if(unmapped.Count > 0)
+            logger.LogWarning($"Fields '{string.Join(",", unmapped)}' not mapped in comment!");
+
+        //Always ensure these fields are like this for comments
+        comment.module = null;
+        comment.receiveUserId = 0;
+
+        //Need to update the edit history with the previous comment!
+        //Always need an ID to link to, so we actually need to create the content first and get the ID.
+        using(var tsx = dbcon.BeginTransaction())
+        {
+            if(work.action == UserAction.create)
+                work.view.id = await dbcon.InsertAsync(comment, tsx);
+            else if(work.action == UserAction.update || work.action == UserAction.delete)
+                await dbcon.UpdateAsync(comment, tsx);
+            else 
+                throw new InvalidOperationException($"Can't perform action {work.action} in DatabaseWork_Comments!");
+
+            tsx.Commit();
+
+            logger.LogDebug($"User {work.requester.id} commented on {comment.contentId}"); //The admin log actually has the log text we want!
 
             //NOTE: this is the newly computed id, we place it inside the view for safekeeping 
             return work.view.id;

@@ -4,6 +4,7 @@ using System.Linq;
 using System.Linq.Expressions;
 using System.Threading.Tasks;
 using AutoMapper;
+using contentapi.Db.History;
 using contentapi.Services.Constants;
 using contentapi.Views;
 using Microsoft.EntityFrameworkCore;
@@ -38,9 +39,13 @@ namespace contentapi.Services.Implementations
     {
         public override string EntityType => Keys.CommentHack;
         public override Expression<Func<EntityRelation, long>> PermIdSelector => x => x.entityId1;
+        protected IHistoryConverter historyService;
 
-        public CommentViewSource(ILogger<CommentViewSource> logger, BaseViewSourceServices services)
-            : base(logger, services) {}
+        public CommentViewSource(ILogger<CommentViewSource> logger, IHistoryConverter historyService, BaseViewSourceServices services)
+            : base(logger, services) 
+        {
+            this.historyService = historyService;
+        }
 
         public CommentView ToViewSimple(EntityRelation relation)
         {
@@ -77,13 +82,17 @@ namespace contentapi.Services.Implementations
 
             if(orderedRelations.Count() > 0)
             {
-                view.history = JsonConvert.SerializeObject(orderedRelations.Select(x => new Db.History.CommentSnapshot
+                var fakeComment = new Db.Comment();
+
+                historyService.SetCommentHistory(orderedRelations.Select(x => new Db.History.CommentSnapshot
                 {
                     userId = -x.entityId1,
                     action = x.type.StartsWith(Keys.CommentDeleteHack) ? Db.UserAction.delete : Db.UserAction.update,
                     editDate = (DateTime)x.createDateProper(),
                     previous = x.value
-                }).ToList());
+                }).ToList(), fakeComment);
+
+                view.history = fakeComment.history;
             }
 
             if(lastEdit != null)
