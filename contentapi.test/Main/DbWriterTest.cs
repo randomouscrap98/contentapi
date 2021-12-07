@@ -87,6 +87,14 @@ public class DbWriterTest : UnitTestBase, IClassFixture<DbUnitTestSearchFixture>
         Assert.Equal(original.contentId, result.contentId);
     }
 
+    private async Task AssertHistoryMatchesAsync(ContentView content, UserAction expected)
+    {
+        Assert.True(content.lastRevisionId > 0, "Content didn't have lastRevisionId!"); //ALL content should have a revision id
+        var history = await searcher.GetById<ActivityView>(RequestType.activity, content.lastRevisionId, true);
+        Assert.Equal(history.contentId, content.id);
+        Assert.Equal(expected, history.action);
+    }
+
     protected PageView GetNewPageView(long parentId = 0, Dictionary<long, string>? permissions = null)
     {
         return new PageView {
@@ -184,6 +192,7 @@ public class DbWriterTest : UnitTestBase, IClassFixture<DbUnitTestSearchFixture>
         {
             var result = await writer.WriteAsync(content, uid);
             StandardContentEqualityCheck(content, result, uid, InternalContentType.page);
+            await AssertHistoryMatchesAsync(result, UserAction.create);
             Assert.Equal(content.content, result.content);
         }
         else
@@ -213,6 +222,7 @@ public class DbWriterTest : UnitTestBase, IClassFixture<DbUnitTestSearchFixture>
         {
             var result = await writer.WriteAsync(content, uid);
             StandardContentEqualityCheck(content, result, uid, InternalContentType.file);
+            await AssertHistoryMatchesAsync(result, UserAction.create);
             Assert.Equal(content.mimetype, result.mimetype);
             Assert.Equal(content.hash, result.hash);
             Assert.Equal(content.quantization, result.quantization);
@@ -242,6 +252,7 @@ public class DbWriterTest : UnitTestBase, IClassFixture<DbUnitTestSearchFixture>
         {
             var result = await writer.WriteAsync(content, uid);
             StandardContentEqualityCheck(content, result, uid, InternalContentType.module);
+            await AssertHistoryMatchesAsync(result, UserAction.create);
             Assert.Equal(content.code, result.code);
             Assert.Equal(content.description, result.description);
         }
@@ -276,6 +287,7 @@ public class DbWriterTest : UnitTestBase, IClassFixture<DbUnitTestSearchFixture>
         {
             var result = await writer.WriteAsync(original, uid);
             StandardContentEqualityCheck(original, result, writeUser, InternalContentType.page);
+            await AssertHistoryMatchesAsync(result, UserAction.update);
         }
         else
         {
@@ -330,6 +342,7 @@ public class DbWriterTest : UnitTestBase, IClassFixture<DbUnitTestSearchFixture>
         {
             var result = await writer.WriteAsync(original, uid);
             StandardContentEqualityCheck(original, result, writeUser, InternalContentType.page);
+            await AssertHistoryMatchesAsync(result, UserAction.update);
         }
         else
         {
@@ -373,6 +386,8 @@ public class DbWriterTest : UnitTestBase, IClassFixture<DbUnitTestSearchFixture>
         if(allowed)
         {
             var result = await writer.DeleteAsync<ContentView>(contentId, uid);
+            //Even after deletion, the lastRevisionId should be set!
+            await AssertHistoryMatchesAsync(result, UserAction.delete);
             //Remember, we can generally trust what the functions return because they should be EXACTLY from the database!
             //Testing to see if the ones from the database are exactly the same as those returned can be a different test
             Assert.True(string.IsNullOrWhiteSpace(result.name), "Name was not cleared!");
