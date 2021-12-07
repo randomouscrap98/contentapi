@@ -19,6 +19,7 @@ var builder = WebApplication.CreateBuilder(args);
 DefaultSetup.AddDefaultServices(builder.Services);
 DefaultSetup.AddConfigBinding<GenericSearcherConfig>(builder.Services, builder.Configuration);
 DefaultSetup.AddConfigBinding<UserServiceConfig>(builder.Services, builder.Configuration);
+DefaultSetup.AddConfigBinding<FileControllerConfig>(builder.Services, builder.Configuration);
 builder.Services.AddTransient<BaseControllerServices>();
 
 string secretKey = builder.Configuration.GetValue<string>("SecretKey"); //"pleasechangethis";
