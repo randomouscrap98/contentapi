@@ -4,6 +4,7 @@ using contentapi.Security;
 using contentapi.Utilities;
 using Microsoft.Extensions.DependencyInjection.Extensions;
 using Microsoft.Extensions.Options;
+using Microsoft.IdentityModel.Tokens;
 
 namespace contentapi.Setup;
 
@@ -43,6 +44,27 @@ public static class DefaultSetup
         services.AddSingleton<HashServiceConfig>();
         services.AddSingleton<UserServiceConfig>();
         services.AddSingleton<CacheCheckpointTrackerConfig>();
+    }
+
+    public static TokenValidationParameters AddSecurity(IServiceCollection services, string secretKey)
+    {
+        //Not sure if this is ok, but adding security stuff to the service collection.
+        //It's just me using it, and I need this stuff in multiple places
+        var validationParameters = new TokenValidationParameters()
+        {
+            ValidateIssuerSigningKey = true,
+            RequireExpirationTime = true,
+            IssuerSigningKey = new SymmetricSecurityKey(System.Text.Encoding.UTF8.GetBytes(secretKey)),
+            ValidateIssuer = false,
+            ValidateAudience = false
+        };
+        services.AddSingleton(validationParameters);
+        services.AddSingleton(
+            new SigningCredentials(
+                new SymmetricSecurityKey(System.Text.Encoding.ASCII.GetBytes(secretKey)),
+                SecurityAlgorithms.HmacSha256Signature)
+        );
+        return validationParameters;
     }
 
     /// <summary>

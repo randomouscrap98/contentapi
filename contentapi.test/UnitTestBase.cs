@@ -11,11 +11,13 @@ public class UnitTestBase
     protected ILogger logger;
     protected IServiceCollection baseCollection;
     protected IServiceProvider baseProvider;
+    public const string SecretKey = "Not very secret, now is it? 7483927932";
 
     public UnitTestBase()//Action<IServiceCollection>? modify = null)
     {
         baseCollection = new ServiceCollection();
         DefaultSetup.AddDefaultServices(baseCollection);
+        DefaultSetup.AddSecurity(baseCollection, SecretKey);
 
         baseCollection.AddLogging(builder => {
             builder.AddDebug();

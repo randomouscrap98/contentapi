@@ -60,34 +60,36 @@ public class UserService : IUserService
     //    return request;
     //}
 
-    public async Task<UserView?> GetByEmailAsync(string email)
-    {
-        //var request = GetBasicRequest("email = @email");
-        //request.values["email"] = email;
-        //var result = (await searcher.SearchUnrestricted(request)).data[BasicRequestName];
-        var result = await searcher.GetByField<UserView>(RequestType.user, "email", email);
-        if(result.Count < 1) return null;
-        return result.First();
-    }
+    //public async Task<UserView?> GetByEmailAsync(string email)
+    //{
+    //    //var request = GetBasicRequest("email = @email");
+    //    //request.values["email"] = email;
+    //    //var result = (await searcher.SearchUnrestricted(request)).data[BasicRequestName];
+    //    var result = await searcher.GetByField<UserView>(RequestType.user, "email", email);
+    //    if(result.Count < 1) return null;
+    //    return result.First();
+    //}
 
-    public async Task<UserView?> GetByUsernameAsync(string username)
-    {
-        var result = await searcher.GetByField<UserView>(RequestType.user, "username", username);
-        if(result.Count < 1) return null;
-        return result.First();
-    }
+    //public async Task<UserView?> GetByUsernameAsync(string username)
+    //{
+    //    var result = await searcher.GetByField<UserView>(RequestType.user, "username", username);
+    //    if(result.Count < 1) return null;
+    //    return result.First();
+    //}
 
     public async Task CheckValidUsernameAsync(string username)
     {
         if(string.IsNullOrWhiteSpace(username))
             throw new ArgumentException("Username can't be null or whitespace only!");
+        if(username.Length < config.MinUsernameLength)
+            throw new ArgumentException($"Username too short! Min length: {config.MinUsernameLength}");
         if(username.Length > config.MaxUsernameLength)
             throw new ArgumentException($"Username too long! Max length: {config.MaxUsernameLength}");
         if(!Regex.IsMatch(username, config.UsernameRegex))
             throw new ArgumentException($"Username has invalid characters, must match regex: {config.UsernameRegex}");
 
-        var existingByName = await GetByUsernameAsync(username);
-        if(existingByName != null)
+        var existing = await dbcon.ExecuteScalarAsync<int>($"select count(*) from {searcher.GetDatabaseForType<UserView>()} where username = @user", new { user = username });
+        if(existing > 0)
             throw new ArgumentException($"Username '{username}' already taken!");
     }
 
@@ -109,8 +111,8 @@ public class UserService : IUserService
         if(string.IsNullOrWhiteSpace(email))
             throw new ArgumentException("Must provide email to create new user!");
 
-        var existingByEmail = await GetByEmailAsync(email);
-        if(existingByEmail != null)
+        var existing = await dbcon.ExecuteScalarAsync<int>($"select count(*) from {searcher.GetDatabaseForType<UserView>()} where email = @user", new { user = email });
+        if(existing > 0)
             throw new ArgumentException($"Duplicate email in system: '{email}'");
         
         var salt = hashService.GetSalt();
@@ -125,20 +127,24 @@ public class UserService : IUserService
 
         user.password = Convert.ToBase64String(hashService.GetHash(password, salt));
 
+        long id;
+
         using(var tsx = dbcon.BeginTransaction())
         {
-            var id = await dbcon.InsertAsync(user, tsx);
+            id = await dbcon.InsertAsync(user, tsx);
 
-            if(id <= 0)
+            if(id <= 0) 
                 throw new InvalidOperationException("For some reason, writing the user to the database failed!");
-            
-            //This might (confusingly) throw a "not found" exception. Mmmm
-            var userView = await searcher.GetById<UserView>(RequestType.user, id, true);
 
-            RegistrationLog.TryAdd(user.id, user.registrationKey);
-
-            return userView;
+            tsx.Commit();
         }
+
+        //This might (confusingly) throw a "not found" exception. Mmmm
+        var userView = await searcher.GetById<UserView>(RequestType.user, id, true);
+
+        RegistrationLog.TryAdd(user.id, user.registrationKey);
+
+        return userView;
     }
     
     public string GetNewTokenForUser(long uid, TimeSpan? expireOverride = null)
@@ -160,10 +166,10 @@ public class UserService : IUserService
         string realKey = (string)userRegistration["registrationKey"];
 
         if(string.IsNullOrWhiteSpace(realKey))
-            throw new ArgumentException($"User {userId} seems to already be registered!");
+            throw new RequestException($"User {userId} seems to already be registered!");
 
         if(realKey != registrationKey)       
-            throw new ArgumentException($"Invalid registration key!");
+            throw new RequestException($"Invalid registration key!");
         
         var count = await dbcon.ExecuteAsync("update users set registrationKey = NULL where id = @id", new { id = userId });
 

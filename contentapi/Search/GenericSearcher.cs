@@ -221,7 +221,7 @@ public class GenericSearcher : IGenericSearch
             query = "id = @id"
         }, values);
 
-        if(result.Count() != 1 || throwIfDeleted && (long)result.First()["deleted"] != 0)
+        if(result.Count() != 1 || (throwIfDeleted && result.First().ContainsKey("deleted") && (long)result.First()["deleted"] != 0))
             throw new NotFoundException($"{type} with ID {id} not found!"); 
 
         return ToStronglyTyped<T>(result).First();

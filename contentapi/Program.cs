@@ -22,27 +22,11 @@ DefaultSetup.AddConfigBinding<UserServiceConfig>(builder.Services, builder.Confi
 builder.Services.AddTransient<BaseControllerServices>();
 
 string secretKey = builder.Configuration.GetValue<string>("SecretKey"); //"pleasechangethis";
+var validationParameters = DefaultSetup.AddSecurity(builder.Services, secretKey);
 
 //The default setup doesn't set up our database provider though
 builder.Services.AddTransient<ContentApiDbConnection>(ctx => 
     new ContentApiDbConnection(new SqliteConnection(builder.Configuration.GetConnectionString("contentapi"))));
-
-//Not sure if this is ok, but adding security stuff to the service collection.
-//It's just me using it, and I need this stuff in multiple places
-var validationParameters = new TokenValidationParameters()
-{
-    ValidateIssuerSigningKey = true,
-    RequireExpirationTime = true,
-    IssuerSigningKey = new SymmetricSecurityKey(Encoding.UTF8.GetBytes(secretKey)),
-    ValidateIssuer = false,
-    ValidateAudience = false
-};
-builder.Services.AddSingleton(validationParameters);
-builder.Services.AddSingleton(
-    new SigningCredentials(
-        new SymmetricSecurityKey(System.Text.Encoding.ASCII.GetBytes(secretKey)), 
-        SecurityAlgorithms.HmacSha256Signature)
-);
 
 builder.Services.AddCors();
 
