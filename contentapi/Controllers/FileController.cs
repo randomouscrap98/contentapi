@@ -33,8 +33,8 @@ public class FileController : BaseController
    protected IGenericSearch searcher;
    protected IRandomGenerator rng;
 
-   protected readonly SemaphoreSlim filelock = new SemaphoreSlim(1, 1);
-   protected readonly SemaphoreSlim hashLock = new SemaphoreSlim(1, 1);
+   protected static readonly SemaphoreSlim filelock = new SemaphoreSlim(1, 1);
+   protected static readonly SemaphoreSlim hashLock = new SemaphoreSlim(1, 1);
 
    public FileController(BaseControllerServices services, FileControllerConfig config,
       IDbWriter writer, IGenericSearch searcher, IRandomGenerator rng)
@@ -46,7 +46,7 @@ public class FileController : BaseController
       this.rng = rng;
    }
 
-   protected string GetPath(string hash, GetFileModify? modify = null)
+   protected string GetUploadPath(string hash, GetFileModify? modify = null)
    {
       if (modify != null)
       {
@@ -73,9 +73,9 @@ public class FileController : BaseController
    }
 
    //Should be thread safe
-   protected string GetAndMakePath(string hash, GetFileModify? modify = null)
+   protected string GetAndMakeUploadPath(string hash, GetFileModify? modify = null)
    {
-      var result = GetPath(hash, modify);
+      var result = GetUploadPath(hash, modify);
       System.IO.Directory.CreateDirectory(Path.GetDirectoryName(result) ?? throw new InvalidOperationException("Couldn't compute path for file upload!"));
       return result;
    }
@@ -87,13 +87,11 @@ public class FileController : BaseController
       return result;
    }
 
-   //protected async Task<string> GetUniqueHash
-
    [HttpPost]
    [Authorize]
    public async Task<ActionResult<FileView>> UploadFile(IFormFile? file = null, List<IFormFile>? files = null,
-         [FromQuery] bool tryresize = true, [FromQuery]int quantize = -1, [FromQuery] string name = "",
-         [FromQuery] string globalPerms = "CR")
+         [FromQuery] bool tryresize = true, [FromQuery]int quantize = -1, [FromQuery]string? name = null,
+         [FromQuery] string? globalPerms = null)
    {
       //File ALWAYS takes precedence, but have a nice fallback.
       if (file == null)
@@ -120,61 +118,59 @@ public class FileController : BaseController
       return await MatchExceptions(async () =>
       {
          var newView = new FileView() { 
-            name = name,
-            quantization = quantize.ToString()
+            name = name ?? ""
          };
 
-         newView.permissions[0] = globalPerms;
+         newView.permissions[0] = globalPerms ?? "CR";
 
          IImageFormat? format = null;
          long imageByteCount = file.Length;
          Stream imageStream = file.OpenReadStream();
+         var tempLocation = GetAndMakeTempPath();
 
-         //This will throw an exception if it's not an image (most likely)
-         using (var image = Image.Load(imageStream, out format))
+         using(var memStream = new MemoryStream())
          {
-            newView.mimetype = format.DefaultMimeType;
+            await imageStream.CopyToAsync(memStream);
+            imageStream.Seek(0, SeekOrigin.Begin);
 
-            double sizeFactor = config.ResizeRepeatFactor;
-            int width = image.Width;
-            int height = image.Height;
-
-            while (tryresize && imageByteCount > config.MaxSize && sizeFactor > 0)
+            //This will throw an exception if it's not an image (most likely)
+            using (var image = Image.Load(imageStream, out format))
             {
-               double resize = 1 / Math.Sqrt(imageByteCount / (config.MaxSize * sizeFactor));
-               services.logger.LogWarning($"User image too large ({imageByteCount}), trying ONE resize by {resize}");
-               width = (int)(width * resize);
-               height = (int)(height * resize);
-               image.Mutate(x => x.Resize(width, height, KnownResamplers.Lanczos3));
+               newView.mimetype = format.DefaultMimeType;
 
-               imageStream = new MemoryStream();
-               image.Save(imageStream, format);
-               imageByteCount = imageStream.Length;
+               double sizeFactor = config.ResizeRepeatFactor;
+               int width = image.Width;
+               int height = image.Height;
 
-               //Keep targeting an EVEN more harsh error margin (even if it's incorrect because
-               //it stacks with previous resizes), also this makes the loop guaranteed to end
-               sizeFactor -= 0.2;
+               while (tryresize && imageByteCount > config.MaxSize && sizeFactor > 0)
+               {
+                  double resize = 1 / Math.Sqrt(imageByteCount / (config.MaxSize * sizeFactor));
+                  services.logger.LogWarning($"User image too large ({imageByteCount}), trying ONE resize by {resize}");
+                  width = (int)(width * resize);
+                  height = (int)(height * resize);
+                  image.Mutate(x => x.Resize(width, height, KnownResamplers.Lanczos3));
+
+                  memStream.SetLength(0);
+                  image.Save(memStream, format);
+                  imageByteCount = memStream.Length;
+
+                  //Keep targeting an EVEN more harsh error margin (even if it's incorrect because
+                  //it stacks with previous resizes), also this makes the loop guaranteed to end
+                  sizeFactor -= 0.2;
+               }
+
+               //If the image is still too big, bad ok bye
+               if (imageByteCount > config.MaxSize)
+                  throw new RequestException("File too large!");
             }
 
-            //If the image is still too big, bad ok bye
-            if (imageByteCount > config.MaxSize)
-               throw new RequestException("File too large!");
-         }
+            services.logger.LogDebug($"New image size: {imageByteCount}");
+            memStream.Seek(0, SeekOrigin.Begin);
 
-         imageStream.Seek(0, SeekOrigin.Begin);
-         services.logger.LogDebug($"New image size: {imageByteCount}");
-
-         //Write to a temporary location while we work on the file. When it's all done, we generate a hash in a lock,
-         //copy the file, then write the fileView, releasing the lock
-
-         //We HAVE to write now to reserve an ID (and we found the mime type)
-         //newView = await writer.WriteAsync(newView, requester);
-         //var finalLocation = GetAndMakePath(newView.hash);
-
-         var tempLocation = GetAndMakeTempPath();
-         using (var stream = System.IO.File.Create(tempLocation))
-         {
-            await imageStream.CopyToAsync(stream);
+            using (var stream = System.IO.File.Create(tempLocation))
+            {
+               await memStream.CopyToAsync(stream);
+            }
          }
 
          try
@@ -189,7 +185,7 @@ public class FileController : BaseController
             try
             {
                //NOW we can generate a hash!
-               newView.hash = ""; //rng.GetAlphaSequence(config.HashChars);
+               newView.hash = "";
                int retries = 0;
                while (true)
                {
@@ -203,7 +199,7 @@ public class FileController : BaseController
                   if (retries > config.MacHashRetries)
                       throw new InvalidOperationException("Ran out of hash retries! Maybe there's too many files on the system?");
                }
-               var finalLocation = GetAndMakePath(newView.hash);
+               var finalLocation = GetAndMakeUploadPath(newView.hash);
                System.IO.File.Copy(tempLocation, finalLocation);
                newView = await writer.WriteAsync(newView, requester);
             }
@@ -333,7 +329,7 @@ public class FileController : BaseController
 
       if (hash == config.DefaultHash)
       {
-         if (System.IO.File.Exists(GetAndMakePath(hash)))
+         if (System.IO.File.Exists(GetAndMakeUploadPath(hash)))
             fileData = new FileView() { id = 0, mimetype = "image/png" };
       }
       else
@@ -345,7 +341,7 @@ public class FileController : BaseController
       if (fileData == null || fileData.deleted)
          return NotFound();
 
-      var finalPath = GetAndMakePath(fileData.hash, modify);
+      var finalPath = GetAndMakeUploadPath(fileData.hash, modify);
 
       //Ok NOW we can go get it. We may need to perform a resize beforehand if we can't find the file.
       //NOTE: locking on the entire write may increase wait times for brand new images (and image uploads) but it saves cpu cycles
@@ -357,7 +353,7 @@ public class FileController : BaseController
          //Will checking the fileinfo be too much??
          if (!System.IO.File.Exists(finalPath) || (new FileInfo(finalPath)).Length == 0)
          {
-            var baseImage = GetPath(fileData.hash);
+            var baseImage = GetUploadPath(fileData.hash);
             IImageFormat format;
 
             if(!System.IO.File.Exists(baseImage))

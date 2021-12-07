@@ -85,7 +85,12 @@ var app = builder.Build();
 // Configure the HTTP request pipeline.
 // I ALWAYS want swagger, no matter what environment it is
 app.UseSwagger();
-app.UseSwaggerUI();
+app.UseSwaggerUI(c => {
+    c.ConfigObject.AdditionalItems["syntaxHighlight"] = new Dictionary<string, object>
+    {
+        ["activated"] = false
+    };
+});
 //c =>
 //{
 //    c.SwaggerEndpoint("/swagger/v1/swagger.json", "My API V1");
