@@ -60,14 +60,14 @@ public class DbWriter : IDbWriter
 
     //Avoid generic constraints unless they're required by the underlying system. Just restricting because it's
     //"all" you expect is bad, remember all the problems you had before with that
-    public async Task<T> WriteAsync<T>(T view, long requestUserId) where T : class, IIdView, new()
+    public async Task<T> WriteAsync<T>(T view, long requestUserId, string? message = null) where T : class, IIdView, new()
     {
-        return await GenericWorkAsync(view, await GetRequestUser(requestUserId), view.id == 0 ? UserAction.create : UserAction.update);
+        return await GenericWorkAsync(view, await GetRequestUser(requestUserId), view.id == 0 ? UserAction.create : UserAction.update, message);
     }
 
-    public async Task<T> DeleteAsync<T>(long id, long requestUserId) where T : class, IIdView, new()
+    public async Task<T> DeleteAsync<T>(long id, long requestUserId, string? message = null) where T : class, IIdView, new()
     {
-        return await GenericWorkAsync(new T() { id = id }, await GetRequestUser(requestUserId), UserAction.delete);
+        return await GenericWorkAsync(new T() { id = id }, await GetRequestUser(requestUserId), UserAction.delete, message);
     }
 
     /// <summary>
@@ -136,7 +136,7 @@ public class DbWriter : IDbWriter
     /// Inserts, updates, and deletes for any type should call THIS function
     /// </summary>
     /// <typeparam name="T"></typeparam>
-    public async Task<T> GenericWorkAsync<T>(T view, UserView requester, UserAction action) where T : class, IIdView, new()
+    public async Task<T> GenericWorkAsync<T>(T view, UserView requester, UserAction action, string? message) where T : class, IIdView, new()
     {
         CheckActionValidForView(action, view);
 
@@ -164,13 +164,13 @@ public class DbWriter : IDbWriter
         {
             id = await DatabaseWork_Content(new DbWorkUnit<ContentView>(
                 view as ContentView ?? throw new InvalidOperationException("Somehow, ContentView couldn't be cast to ContentView??"), 
-                requester, typeInfo, action, existing as ContentView));
+                requester, typeInfo, action, existing as ContentView, message));
         }
         else if(view is CommentView)
         {
             id = await DatabaseWork_Comments(new DbWorkUnit<CommentView>(
                 view as CommentView ?? throw new InvalidOperationException("Somehow, CommentView couldn't be cast to CommentView??"), 
-                requester, typeInfo, action, existing as CommentView));
+                requester, typeInfo, action, existing as CommentView, message));
         }
         else
         {
@@ -428,6 +428,7 @@ public class DbWriter : IDbWriter
 
             //Regardless of what we're doing (create/delete/update), need to convert snapshot to the history item to insert.
             var history = await historyConverter.ContentToHistoryAsync(snapshot, work.requester.id, work.action);
+            history.message = work.message;
 
             await dbcon.InsertAsync(history, tsx);
 
