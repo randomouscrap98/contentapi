@@ -47,36 +47,6 @@ public class UserService : IUserService
 
     public const string BasicRequestName = "userservicesearch";
 
-    //protected SearchRequests GetBasicRequest(string query = "", string fields = "*")
-    //{
-    //    var request = new SearchRequests();
-    //    request.requests.Add(new SearchRequest()
-    //    {
-    //        name = BasicRequestName,
-    //        type = RequestType.user.ToString(),
-    //        fields = fields,
-    //        query = query
-    //    });
-    //    return request;
-    //}
-
-    //public async Task<UserView?> GetByEmailAsync(string email)
-    //{
-    //    //var request = GetBasicRequest("email = @email");
-    //    //request.values["email"] = email;
-    //    //var result = (await searcher.SearchUnrestricted(request)).data[BasicRequestName];
-    //    var result = await searcher.GetByField<UserView>(RequestType.user, "email", email);
-    //    if(result.Count < 1) return null;
-    //    return result.First();
-    //}
-
-    //public async Task<UserView?> GetByUsernameAsync(string username)
-    //{
-    //    var result = await searcher.GetByField<UserView>(RequestType.user, "username", username);
-    //    if(result.Count < 1) return null;
-    //    return result.First();
-    //}
-
     public async Task CheckValidUsernameAsync(string username)
     {
         if(string.IsNullOrWhiteSpace(username))
@@ -122,7 +92,8 @@ public class UserService : IUserService
             email = email,
             salt = Convert.ToBase64String(salt),
             createDate = DateTime.UtcNow,
-            registrationKey = Guid.NewGuid().ToString()
+            registrationKey = Guid.NewGuid().ToString(),
+            type = UserType.user
         };
 
         user.password = Convert.ToBase64String(hashService.GetHash(password, salt));

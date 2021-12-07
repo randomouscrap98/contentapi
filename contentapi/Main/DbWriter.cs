@@ -379,7 +379,8 @@ public class DbWriter : IDbWriter
         if(unmapped.Count > 0)
             logger.LogWarning($"Fields '{string.Join(",", unmapped)}' not mapped in content!");
 
-        //And the final modification to content just before storing
+        //And the final modification to content just before storing. NORMALLY we'd want to do this in the "Tweak" function but
+        //content is special and some fields are inaccessible in the base view form.
         if(work.action == UserAction.delete)
         {
             content.createUserId = 0;
@@ -472,7 +473,7 @@ public class DbWriter : IDbWriter
         {
             work.view.createDate = DateTime.UtcNow; // REMEMBER TO USE UTCNOW EVERYWHERE!
             work.view.createUserId = work.requester.id;
-            work.view.editDate = work.view.createDate;
+            work.view.editDate = null;
             work.view.editUserId = 0;
         }
     }
@@ -493,6 +494,17 @@ public class DbWriter : IDbWriter
         //Always ensure these fields are like this for comments
         comment.module = null;
         comment.receiveUserId = 0;
+
+        //Append the history to the comment if we're modifying the comment instead of inserting a new one!
+        if(work.action == UserAction.update || work.action == UserAction.delete)
+        {
+            historyConverter.AddCommentHistory(new CommentSnapshot {
+                userId = work.requester.id,
+                editDate = DateTime.UtcNow,
+                previous = work.existing?.text,
+                action = work.action
+            }, comment);
+        }
 
         //Need to update the edit history with the previous comment!
         //Always need an ID to link to, so we actually need to create the content first and get the ID.

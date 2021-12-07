@@ -46,6 +46,7 @@ public class UserServiceTests : UnitTestBase, IClassFixture<DbUnitTestBase>
         Assert.True(user.id > 0);
         Assert.False(user.registered);
         Assert.Equal("hello", user.username);
+        Assert.Equal(UserType.user, user.type);
     }
 
     [Fact]
