@@ -87,12 +87,15 @@ public class DbWriterTest : UnitTestBase, IClassFixture<DbUnitTestSearchFixture>
         Assert.Equal(original.contentId, result.contentId);
     }
 
-    private async Task AssertHistoryMatchesAsync(ContentView content, UserAction expected)
+    private async Task AssertHistoryMatchesAsync(ContentView content, UserAction expected, string? message = null)
     {
         Assert.True(content.lastRevisionId > 0, "Content didn't have lastRevisionId!"); //ALL content should have a revision id
         var history = await searcher.GetById<ActivityView>(RequestType.activity, content.lastRevisionId, true);
         Assert.Equal(history.contentId, content.id);
         Assert.Equal(expected, history.action);
+
+        if(message != null)
+            Assert.Equal(message, history.message);
     }
 
     protected PageView GetNewPageView(long parentId = 0, Dictionary<long, string>? permissions = null)
@@ -296,6 +299,24 @@ public class DbWriterTest : UnitTestBase, IClassFixture<DbUnitTestSearchFixture>
                 await writer.WriteAsync(original, uid);
             });
         }
+    }
+
+    [Fact]
+    public async Task WriteAsync_HistoryAndMessage()
+    {
+        //This should be a "writable by anybody" thingy
+        var content = GetNewPageView(0);
+
+        //Write by anybody OTHER THAN the users you might pick
+        var writeUser = 2 + (int)UserVariations.Super;
+        var create = await writer.WriteAsync(content, writeUser, "The first message!");
+        await AssertHistoryMatchesAsync(create, UserAction.create, "The first message!");
+        //Now we edit the view
+        create.name = "SOME EDITED NAME!";
+        var update = await writer.WriteAsync(create, writeUser, "The update message.");
+        await AssertHistoryMatchesAsync(update, UserAction.update, "The update message.");
+        var delete = await writer.DeleteAsync<ContentView>(update.id, writeUser, "The delete message...");
+        await AssertHistoryMatchesAsync(delete, UserAction.delete, "The delete message...");
     }
 
     [Theory] //No matter who you are, you can't delete things by setting the deleted field

@@ -22,5 +22,8 @@ public class ActivityView : IIdView
     public DateTime date { get; set; }
 
     [Searchable]
+    public string? message {get;set;}
+
+    [Searchable]
     public UserAction action {get;set;}
 }
