@@ -74,7 +74,7 @@ public class DbWriter : IDbWriter
     /// Throws "ForbiddenException" for any kind of permission error that could arise for a modification given
     /// </summary>
     /// <typeparam name="T"></typeparam>
-    public async Task ValidateUserPermissionForAction<T>(T view, UserView requester, UserAction action) where T : class, IIdView, new()
+    public async Task ValidateUserPermissionForAction<T>(T view, T? existing, UserView requester, UserAction action) where T : class, IIdView, new()
     {
         //Each type needs a different kind of check
         if(view is ContentView)
@@ -107,22 +107,25 @@ public class DbWriter : IDbWriter
         {
             var cView = view as CommentView ?? throw new InvalidOperationException("Somehow, CommentView could not be cast to a CommentView");
 
+            //Modification actions
+            if(action == UserAction.update || action == UserAction.delete)
+            {
+                var exView = existing as CommentView ?? throw new InvalidOperationException("Permissions wasn't given the old view during check!");
+
+                if(!(requester.super || exView.createUserId == requester.id))
+                    throw new ForbiddenException($"Only the original poster and supers can modify existing comments!");
+            }
+
             //Create is special, because we need the parent create permission. We also check updates so users can't 
             //move a comment into an unusable room (if that ever gets allowed)
             if(action == UserAction.create || action == UserAction.update)
             {
                 //No orphaned comments, so the parent MUST exist! This is an easy check. You will get a "notfound" exception
-                var parent = await searcher.GetById<CommentView>(RequestType.content, cView.contentId, true);
+                var parent = await searcher.GetById<ContentView>(RequestType.content, cView.contentId, true);
 
                 //Can't post in invalid locations! So we check ANY contentId passed in, even if it's invalid
                 if(!(await CanUser(requester, action, cView.contentId)))
                     throw new ForbiddenException($"User {requester.id} can't '{action}' comments in content {cView.contentId}!");
-            }
-            //All other non-read actions can only ber performed the original user or supers
-            else if(action != UserAction.read)
-            {
-                if(!requester.super || cView.createUserId != requester.id)
-                    throw new ForbiddenException($"Only the original poster and supers can modify existing comments!");
             }
         }
         else 
@@ -177,7 +180,7 @@ public class DbWriter : IDbWriter
 
         //It's more important to throw a NotFound exception than the permission exception, it keeps things more consistent, so
         //keep this call down here.
-        await ValidateUserPermissionForAction(view, requester, action);
+        await ValidateUserPermissionForAction(view, existing, requester, action);
 
         //Ok at this point, we know everything is good to go, there shouldn't be ANY MORE checks required past here!
         if(view is ContentView)
@@ -323,30 +326,36 @@ public class DbWriter : IDbWriter
             work.view.values.Clear();
             work.view.permissions.Clear();
         }
-        else if(work.action == UserAction.update)
+        else if(work.action != UserAction.read)
         {
-            var existing = work.existing ?? throw new InvalidOperationException("Update specified, but no existing view looked up in database for snapshot!");
-            work.view.createUserId = existing.createUserId;
-            work.view.createDate = existing.createDate;
             work.view.permissions[work.requester.id] = "CRUD"; //FORCE permissions to include full access for creator all the time
 
-            //Many file fields CAN'T BE CHANGED!
-            if(work.view is FileView)
+            if(work.view.deleted)
+                throw new RequestException("Don't delete content by setting the deleted flag!");
+
+            if (work.action == UserAction.update)
             {
-                var file = work.view as FileView ?? throw new InvalidOperationException("Couldn't cast FileView to FileView???");
-                var existingFile = work.existing as FileView ?? throw new InvalidOperationException("Couldn't cast FileView to FileView???");
-                file.quantization = existingFile.quantization;
-                file.hash = existingFile.hash;
-            }
-        }
-        else if(work.action == UserAction.create)
-        {
-            work.view.createDate = DateTime.UtcNow; // REMEMBER TO USE UTCNOW EVERYWHERE!
-            work.view.createUserId = work.requester.id;
-            work.view.permissions[work.requester.id] = "CRUD"; //FORCE permissions to include full access for creator all the time
+                var existing = work.existing ?? throw new InvalidOperationException("Update specified, but no existing view looked up in database for snapshot!");
+                work.view.createUserId = existing.createUserId;
+                work.view.createDate = existing.createDate;
 
-            //Note: for file create, we just "trust" the values given to us for the fileview, because we don't technically
-            //know what the quantization is, for example.
+                //Many file fields CAN'T BE CHANGED!
+                if (work.view is FileView)
+                {
+                    var file = work.view as FileView ?? throw new InvalidOperationException("Couldn't cast FileView to FileView???");
+                    var existingFile = work.existing as FileView ?? throw new InvalidOperationException("Couldn't cast FileView to FileView???");
+                    file.quantization = existingFile.quantization;
+                    file.hash = existingFile.hash;
+                }
+            }
+            else if (work.action == UserAction.create)
+            {
+                work.view.createDate = DateTime.UtcNow; // REMEMBER TO USE UTCNOW EVERYWHERE!
+                work.view.createUserId = work.requester.id;
+
+                //Note: for file create, we just "trust" the values given to us for the fileview, because we don't technically
+                //know what the quantization is, for example.
+            }
         }
     }
 
@@ -456,25 +465,30 @@ public class DbWriter : IDbWriter
             work.view.contentId = 0;
             work.view.deleted = true;
         }
-        if(work.action == UserAction.update)
+        else if(work.action != UserAction.read)
         {
-            var existing = work.existing ?? throw new InvalidOperationException("Update specified, but no existing view looked up in database for snapshot!");
-            work.view.createUserId = existing.createUserId;
-            work.view.createDate = existing.createDate;
-            work.view.editDate = DateTime.UtcNow;
-            work.view.editUserId = work.requester.id;
+            if(work.view.deleted)
+                throw new RequestException("Don't delete content by setting the deleted flag!");
 
-            //We don't want users to be allowed to change contentId right now, and we want them to KNOW they're doing something wrong
-            if(work.view.contentId != existing.contentId)
-                throw new RequestException($"Can't move comments between pages just yet! Original: {existing.contentId}, new: {work.view.contentId}, for comment {work.view.id}");
-            //work.view.contentId = existing.contentId; //CAN'T change the parent of a comment... yet
-        }
-        else if(work.action == UserAction.create)
-        {
-            work.view.createDate = DateTime.UtcNow; // REMEMBER TO USE UTCNOW EVERYWHERE!
-            work.view.createUserId = work.requester.id;
-            work.view.editDate = null;
-            work.view.editUserId = 0;
+            if(work.action == UserAction.update)
+            {
+                var existing = work.existing ?? throw new InvalidOperationException("Update specified, but no existing view looked up in database for snapshot!");
+                work.view.createUserId = existing.createUserId;
+                work.view.createDate = existing.createDate;
+                work.view.editDate = DateTime.UtcNow;
+                work.view.editUserId = work.requester.id;
+
+                //We don't want users to be allowed to change contentId right now, and we want them to KNOW they're doing something wrong
+                if(work.view.contentId != existing.contentId)
+                    throw new RequestException($"Can't move comments between pages just yet! Original: {existing.contentId}, new: {work.view.contentId}, for comment {work.view.id}");
+            }
+            else if(work.action == UserAction.create)
+            {
+                work.view.createDate = DateTime.UtcNow; // REMEMBER TO USE UTCNOW EVERYWHERE!
+                work.view.createUserId = work.requester.id;
+                work.view.editDate = null;
+                work.view.editUserId = 0;
+            }
         }
     }
 

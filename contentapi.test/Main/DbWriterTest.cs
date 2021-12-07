@@ -33,20 +33,6 @@ public class DbWriterTest : UnitTestBase, IClassFixture<DbUnitTestSearchFixture>
         fixture.ResetDatabase();
     }
 
-    [Theory]
-    [InlineData(0)]
-    [InlineData(-1)]
-    public async Task WriteAsync_MustSetUser(long uid)
-    {
-        var content = new PageView {
-            createUserId = uid
-        };
-
-        await Assert.ThrowsAnyAsync<ForbiddenException>(async () => {
-            await writer.WriteAsync(content, uid);
-        });
-    }
-
     private void AssertKeywordsEqual(ContentView original, ContentView result)
     {
         Assert.True(original.keywords.OrderBy(c => c).SequenceEqual(result.keywords.OrderBy(c => c)), "Keywords were changed!");
@@ -92,21 +78,13 @@ public class DbWriterTest : UnitTestBase, IClassFixture<DbUnitTestSearchFixture>
         AssertPermissionsNormal(original, result);
     }
 
-    [Theory]
-    [InlineData((int)UserVariations.Super)]
-    [InlineData(1 + (int)UserVariations.Super)] //THIS one is super
-    public async Task WriteAsync_CantWriteRaw(long uid)
+    private void StandardCommentEqualityCheck(CommentView original, CommentView result, long uid)
     {
-        var content = new ContentView {
-            name = "Yeah",
-            parentId = 0,
-            createUserId = uid
-        };
-
-        //Don't care what type, but it should fail somehow...
-        await Assert.ThrowsAnyAsync<Exception>(async () => {
-            await writer.WriteAsync(content, uid);
-        });
+        AssertDateClose(result.createDate);
+        Assert.True(result.id > 0, "ID was not assigned to returned view!");
+        Assert.Equal(original.text, result.text);
+        Assert.Equal(uid, result.createUserId);
+        Assert.Equal(original.contentId, result.contentId);
     }
 
     protected PageView GetNewPageView(long parentId = 0, Dictionary<long, string>? permissions = null)
@@ -146,6 +124,46 @@ public class DbWriterTest : UnitTestBase, IClassFixture<DbUnitTestSearchFixture>
             keywords = new List<string> { "heck", "heck2", "dead" },
             permissions = permissions ?? new Dictionary<long, string> { { 0 , "CR" } },
         };
+    }
+
+    protected CommentView GetNewCommentView(long contentId)//, Dictionary<long, string>? permissions = null)
+    {
+        return new CommentView {
+            text = "Yeah this is comment!",
+            contentId = contentId,
+        };
+    }
+
+    [Theory]
+    [InlineData(0)]
+    [InlineData(-1)]
+    public async Task WriteAsync_MustSetUser(long uid)
+    {
+        var content = new PageView {
+            createUserId = uid
+        };
+
+        await Assert.ThrowsAnyAsync<ForbiddenException>(async () => {
+            await writer.WriteAsync(content, uid);
+        });
+    }
+
+
+    [Theory]
+    [InlineData((int)UserVariations.Super)]
+    [InlineData(1 + (int)UserVariations.Super)] //THIS one is super
+    public async Task WriteAsync_CantWriteRaw(long uid)
+    {
+        var content = new ContentView {
+            name = "Yeah",
+            parentId = 0,
+            createUserId = uid
+        };
+
+        //Don't care what type, but it should fail somehow...
+        await Assert.ThrowsAnyAsync<Exception>(async () => {
+            await writer.WriteAsync(content, uid);
+        });
     }
 
     //This tests whether supers and non supers can both write orphaned pages AND write into 
@@ -268,6 +286,28 @@ public class DbWriterTest : UnitTestBase, IClassFixture<DbUnitTestSearchFixture>
         }
     }
 
+    [Theory] //No matter who you are, you can't delete things by setting the deleted field
+    [InlineData((int)UserVariations.Super)]
+    [InlineData(1+ (int)UserVariations.Super)] //this is super
+    public async Task WriteAsync_ForbidDeleteField(long uid)
+    {
+        //This should be a "writable by anybody" thingy
+        var content = GetNewPageView(0);
+
+        //Write by the user themselves
+        var original = await writer.WriteAsync(content, uid);
+        Assert.True(original.id > 0);
+
+        //Now we edit the view
+        original.deleted = true;
+
+        //Don't let people set deleted!
+        await Assert.ThrowsAnyAsync<RequestException>(async () =>
+        {
+            await writer.WriteAsync(original, uid);
+        });
+    }
+
     [Theory] //NOTE: these updates using the AccessBySupers isn't about whether the user is super or not!
     [InlineData((int)UserVariations.Super, (int)ContentVariations.AccessByAll + 1, true)]
     [InlineData(1 + (int)UserVariations.Super, (int)ContentVariations.AccessByAll + 1, true)] //THIS one is super
@@ -387,6 +427,125 @@ public class DbWriterTest : UnitTestBase, IClassFixture<DbUnitTestSearchFixture>
         await writer.DeleteAsync<ContentView>(pv.id, 1);
         await writer.DeleteAsync<ContentView>(fv.id, 1);
         await writer.DeleteAsync<ContentView>(mv.id, modUid);
+    }
+
+    [Theory]
+    [InlineData((int)UserVariations.Super, (int)ContentVariations.AccessByAll + 1, true)]
+    [InlineData(1 + (int)UserVariations.Super, (int)ContentVariations.AccessByAll + 1, true)] //THIS one is super
+    [InlineData((int)UserVariations.Super, (int)ContentVariations.AccessBySupers + 1, false)]
+    [InlineData(1 + (int)UserVariations.Super, (int)ContentVariations.AccessBySupers + 1, true)] //THIS one is super
+    public async Task WriteAsync_BasicComment(long uid, long parentId, bool allowed)
+    {
+        //NOTE: DO NOT PROVIDE CREATEDATE! ALSO IT SHOULD BE UTC TIME!
+        var comment = GetNewCommentView(parentId);
+
+        if(allowed)
+        {
+            var result = await writer.WriteAsync(comment, uid);
+            StandardCommentEqualityCheck(comment, result, uid);
+            //StandardContentEqualityCheck(, result, uid, InternalContentType.page);
+            //Assert.Equal(content.content, result.content);
+        }
+        else
+        {
+            await Assert.ThrowsAnyAsync<ForbiddenException>(async () =>
+            {
+                await writer.WriteAsync(comment, uid);
+            });
+        }
+    }
+
+    [Theory]
+    [InlineData((int)UserVariations.Super, (int)UserVariations.Super, true)] //User can edit their own comment
+    [InlineData((int)UserVariations.Super, 1+ (int)UserVariations.Super, true)] //Supers can edit anybody's comment
+    [InlineData(1 + (int)UserVariations.Super, 1 + (int)UserVariations.Super, true)] //Supers can edit their own comment
+    [InlineData(1 + (int)UserVariations.Super, (int)UserVariations.Super, false)] //Users can't edit other people's comments
+    public async Task WriteAsync_BasicUpdateComment(long poster, long editor, bool allowed)
+    {
+        var comment = GetNewCommentView(1 + (int)ContentVariations.AccessByAll);
+        var written = await writer.WriteAsync(comment, poster);
+        StandardCommentEqualityCheck(comment, written, poster);
+
+        //Now try to edit it!
+        written.text = "Something new`!!";
+
+        if(allowed)
+        {
+            var result = await writer.WriteAsync(written, editor);
+            AssertDateClose(result.editDate ?? throw new InvalidOperationException("NO EDIT DATE SET"));
+            StandardCommentEqualityCheck(written, result, poster); //Original poster should be preserved
+            Assert.Equal(editor, result.editUserId);
+        }
+        else
+        {
+            await Assert.ThrowsAnyAsync<ForbiddenException>(async () =>
+            {
+                await writer.WriteAsync(written, editor);
+            });
+        }
+    }
+
+    [Theory]
+    [InlineData((int)UserVariations.Super, (int)UserVariations.Super, true)] //User can edit their own comment
+    [InlineData((int)UserVariations.Super, 1+ (int)UserVariations.Super, true)] //Supers can edit anybody's comment
+    [InlineData(1 + (int)UserVariations.Super, 1 + (int)UserVariations.Super, true)] //Supers can edit their own comment
+    [InlineData(1 + (int)UserVariations.Super, (int)UserVariations.Super, false)] //Users can't edit other people's comments
+    public async Task WriteAsync_BasicDeleteComment(long poster, long editor, bool allowed)
+    {
+        var comment = GetNewCommentView(1 + (int)ContentVariations.AccessByAll);
+        var written = await writer.WriteAsync(comment, poster);
+        StandardCommentEqualityCheck(comment, written, poster);
+
+        //Now try to delete it!
+        if(allowed)
+        {
+            var result = await writer.DeleteAsync<CommentView>(written.id, editor);
+            Assert.True(result.deleted);
+            Assert.True(string.IsNullOrEmpty(result.text));
+            Assert.True(result.id > 0);
+        }
+        else
+        {
+            await Assert.ThrowsAnyAsync<ForbiddenException>(async () =>
+            {
+                await writer.DeleteAsync<CommentView>(written.id, editor);
+            });
+        }
+    }
+
+    [Theory]
+    [InlineData((int)UserVariations.Super, 0)] //Nobody can write to nothing!
+    [InlineData(1 + (int)UserVariations.Super, 0)] //THIS one is super
+    public async Task WriteAsync_ForbidOrphanedComment(long uid, long parentId)
+    {
+        var comment = GetNewCommentView(parentId);
+
+        await Assert.ThrowsAnyAsync<NotFoundException>(async () =>
+        {
+            await writer.WriteAsync(comment, uid);
+        });
+    }
+
+    [Theory] //No matter who you are, you can't delete things by setting the deleted field
+    [InlineData((int)UserVariations.Super)]
+    [InlineData(1+ (int)UserVariations.Super)] //this is super
+    public async Task WriteAsync_ForbidDeleteField_Comment(long uid)
+    {
+        //This should be a "writable by anybody" thingy
+        var comment = GetNewCommentView(1 + (int)ContentVariations.AccessByAll);
+
+        //Write by the user themselves
+        var original = await writer.WriteAsync(comment, uid);
+        Assert.True(original.id > 0);
+
+        //Now we edit the view
+        original.deleted = true;
+
+        //Don't let people set deleted!
+        await Assert.ThrowsAnyAsync<RequestException>(async () =>
+        {
+            await writer.WriteAsync(original, uid);
+        });
     }
 
     [Theory]
