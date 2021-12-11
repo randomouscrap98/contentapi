@@ -23,6 +23,7 @@ public class GenericSearcher : IGenericSearch
 {
     protected ILogger logger;
     protected IDbConnection dbcon;
+    protected IDbPermissionService permissionService;
     protected ITypeInfoService typeService;
     protected GenericSearcherConfig config;
     protected IMapper mapper;
@@ -30,7 +31,7 @@ public class GenericSearcher : IGenericSearch
 
     public GenericSearcher(ILogger<GenericSearcher> logger, ContentApiDbConnection connection,
         ITypeInfoService typeInfoService, GenericSearcherConfig config, IMapper mapper,
-        IQueryBuilder queryBuilder)
+        IQueryBuilder queryBuilder, IDbPermissionService permissionService)
     {
         this.logger = logger;
         this.dbcon = connection.Connection;
@@ -38,6 +39,9 @@ public class GenericSearcher : IGenericSearch
         this.config = config;
         this.mapper = mapper;
         this.queryBuilder = queryBuilder;
+        this.permissionService = permissionService;
+
+        //dbcon.Open();
     }
 
     public async Task<IEnumerable<IDictionary<string, object>>> QueryAsyncCast(string query, object parameters)
@@ -157,7 +161,14 @@ public class GenericSearcher : IGenericSearch
         var dp = new DynamicParameters(parameterValues);
 
         var timer = new Stopwatch();
-        timer.Start();
+
+        //To give it a fighting chance, here's the MOST RAW I can do.
+        //timer.Start();
+        //var whatever = dbcon.Execute(reqplus.computedSql, dp);
+        //timer.Stop();
+        //timedic?.Add(request.name + "_syncraw", timer.Elapsed.TotalMilliseconds);
+
+        timer.Restart();
         var qresult = await QueryAsyncCast(reqplus.computedSql, dp);
         timer.Stop();
 
@@ -242,12 +253,12 @@ public class GenericSearcher : IGenericSearch
         return ToStronglyTyped<T>(result);
     }
 
-    public List<long> GetPermissionSearchIdsForUser(UserView requester)
-    {
-        var groups = new List<long> { 0, requester.id };
-        groups.AddRange(requester.groups);
-        return groups;
-    }
+    //public List<long> GetPermissionSearchIdsForUser(UserView requester)
+    //{
+    //    var groups = new List<long> { 0, requester.id };
+    //    groups.AddRange(requester.groups);
+    //    return groups;
+    //}
 
     //A restricted search doesn't allow you to retrieve results that the given request user can't read
     public async Task<GenericSearchResult> Search(SearchRequests requests, long requestUserId = 0)
@@ -281,7 +292,7 @@ public class GenericSearcher : IGenericSearch
         var groupsKey = $"{globalPre}_groups";
         var parameterValues = new Dictionary<string, object>(requests.values);
         parameterValues.Add(requesterKey, requestUserId);
-        parameterValues.Add(groupsKey, GetPermissionSearchIdsForUser(requester));
+        parameterValues.Add(groupsKey, permissionService.GetPermissionIdsForUser(requester));
 
         //Modify the queries before giving them out to the query builder! We NEED them
         //to be absolutely restricted by permissions!

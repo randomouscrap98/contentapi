@@ -72,7 +72,10 @@ public class CacheCheckpointTracker : ICacheCheckpointTracker
 
     protected List<object> CacheAfter(CheckpointData checkpoint, int lastSeen)
     {
-        return checkpoint.Cache.Where(x => x.Key > lastSeen).Select(x => x.Value.data).ToList();
+        lock(checkpoint.SignalLock)
+        {
+            return checkpoint.Cache.Where(x => x.Key > lastSeen).Select(x => x.Value.data).ToList();
+        }
     }
 
     public async Task<CacheCheckpointResult> WaitForCheckpoint(string checkpointName, int lastSeen, CancellationToken cancelToken)

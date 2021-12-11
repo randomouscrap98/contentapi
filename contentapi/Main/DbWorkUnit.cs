@@ -4,6 +4,11 @@ using contentapi.Views;
 
 namespace contentapi.Main;
 
+/// <summary>
+/// A unit of work to be PERFORMED on the dictionary. This should represent a MODIFICATION, even if 
+/// action can technically be set to "read"
+/// </summary>
+/// <typeparam name="T"></typeparam>
 public class DbWorkUnit<T> where T : class, IIdView, new()
 {
     public T view {get;set;}

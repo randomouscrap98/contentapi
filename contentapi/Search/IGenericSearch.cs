@@ -27,7 +27,7 @@ public interface IGenericSearch
     Task<IEnumerable<IDictionary<string, object>>> QueryRawAsync(string sql, Dictionary<string, object> values);
 
     string GetDatabaseForType<T>();
-    List<long> GetPermissionSearchIdsForUser(UserView requester);
+    //List<long> GetPermissionSearchIdsForUser(UserView requester);
 
     List<T> ToStronglyTyped<T>(IEnumerable<IDictionary<string, object>> singleResults);
 }

@@ -1,4 +1,3 @@
-using System.Text;
 using contentapi.Controllers;
 using contentapi.Db;
 using contentapi.Main;
@@ -6,7 +5,6 @@ using contentapi.Search;
 using contentapi.Setup;
 using Microsoft.AspNetCore.Authentication.JwtBearer;
 using Microsoft.Data.Sqlite;
-using Microsoft.IdentityModel.Tokens;
 using Microsoft.OpenApi.Models;
 using Newtonsoft.Json.Converters;
 
