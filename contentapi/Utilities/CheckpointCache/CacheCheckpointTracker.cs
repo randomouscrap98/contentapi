@@ -8,12 +8,17 @@ public class CacheCheckpointTrackerConfig
     public int CacheCleanFrequency {get;set;} = 100;
 }
 
-public class CacheCheckpointTracker : ICacheCheckpointTracker
+public class CacheCheckpointTracker<T> : ICacheCheckpointTracker<T>
 {
-    public class CacheData 
+    public class CacheData
     {
-        public object data = 0;
-        public DateTime date;
+        public readonly T data;
+        public readonly DateTime date;
+
+        public CacheData(T data) {
+            this.data = data;
+            date = DateTime.Now;
+        }
     }
 
     public class CheckpointData
@@ -28,7 +33,7 @@ public class CacheCheckpointTracker : ICacheCheckpointTracker
     protected ILogger logger;
     protected CacheCheckpointTrackerConfig config;
 
-    public CacheCheckpointTracker(ILogger<CacheCheckpointTracker> logger, CacheCheckpointTrackerConfig config)
+    public CacheCheckpointTracker(ILogger<CacheCheckpointTracker<T>> logger, CacheCheckpointTrackerConfig config)
     {
         this.logger = logger;
         this.config = config;
@@ -39,7 +44,7 @@ public class CacheCheckpointTracker : ICacheCheckpointTracker
         return checkpoints.GetOrAdd(checkpointName, s => new CheckpointData());
     }
 
-    public int UpdateCheckpoint(string checkpointName, object newValue)
+    public int UpdateCheckpoint(string checkpointName, T newValue)
     {
         //Need at least SOME checkpoint data first so we have a lock
         var thisCheckpoint = GetCheckpoint(checkpointName);
@@ -58,7 +63,7 @@ public class CacheCheckpointTracker : ICacheCheckpointTracker
                     thisCheckpoint.Cache.Remove(key);
             }
 
-            thisCheckpoint.Cache.Add(newKey, new CacheData { data = newValue, date = DateTime.Now });
+            thisCheckpoint.Cache.Add(newKey, new CacheData(newValue));
 
             //Signal all waiters. Whatever, they'll all complete I guess.
             foreach(var waiter in thisCheckpoint.Waiters)
@@ -70,7 +75,7 @@ public class CacheCheckpointTracker : ICacheCheckpointTracker
         }
     }
 
-    protected List<object> CacheAfter(CheckpointData checkpoint, int lastSeen)
+    protected List<T> CacheAfter(CheckpointData checkpoint, int lastSeen)
     {
         lock(checkpoint.SignalLock)
         {
@@ -78,7 +83,7 @@ public class CacheCheckpointTracker : ICacheCheckpointTracker
         }
     }
 
-    public async Task<CacheCheckpointResult> WaitForCheckpoint(string checkpointName, int lastSeen, CancellationToken cancelToken)
+    public async Task<CacheCheckpointResult<T>> WaitForCheckpoint(string checkpointName, int lastSeen, CancellationToken cancelToken)
     {
         var thisCheckpoint = GetCheckpoint(checkpointName);
         var watchSem = new SemaphoreSlim(0,1); //Initialize a semaphore that needs to be released (0 out of 1)
@@ -95,7 +100,7 @@ public class CacheCheckpointTracker : ICacheCheckpointTracker
             //Easymode: done. Doesn't matter if the list is empty, we honor exactly what the checkpoint says. The caller has to decide
             //what to do when a list is empty.
             if(lastSeen < thisCheckpoint.Checkpoint)
-                return new CacheCheckpointResult { LastId = thisCheckpoint.Checkpoint, Data = CacheAfter(thisCheckpoint, lastSeen) };
+                return new CacheCheckpointResult<T> { LastId = thisCheckpoint.Checkpoint, Data = CacheAfter(thisCheckpoint, lastSeen) };
 
             //Oops now we wait, there was nothing.
             thisCheckpoint.Waiters.Add(watchSem);
@@ -104,6 +109,6 @@ public class CacheCheckpointTracker : ICacheCheckpointTracker
         await watchSem.WaitAsync(cancelToken);
 
         //We know that if we were released, SOMETHING must've been in here!
-        return new CacheCheckpointResult { LastId = Interlocked.CompareExchange (ref thisCheckpoint.Checkpoint, 0, 0), Data = CacheAfter(thisCheckpoint, lastSeen) };
+        return new CacheCheckpointResult<T> { LastId = Interlocked.CompareExchange (ref thisCheckpoint.Checkpoint, 0, 0), Data = CacheAfter(thisCheckpoint, lastSeen) };
     }
 }

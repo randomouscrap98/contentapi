@@ -253,13 +253,6 @@ public class GenericSearcher : IGenericSearch
         return ToStronglyTyped<T>(result);
     }
 
-    //public List<long> GetPermissionSearchIdsForUser(UserView requester)
-    //{
-    //    var groups = new List<long> { 0, requester.id };
-    //    groups.AddRange(requester.groups);
-    //    return groups;
-    //}
-
     //A restricted search doesn't allow you to retrieve results that the given request user can't read
     public async Task<GenericSearchResult> Search(SearchRequests requests, long requestUserId = 0)
     {

@@ -6,9 +6,9 @@ namespace contentapi.Utilities;
 /// Useful for a live data service with reconnects, as tracking the last checkpoint is easy, and waiting for
 /// checkpoints before the end of the cache returns instantly
 /// </summary>
-public interface ICacheCheckpointTracker
+public interface ICacheCheckpointTracker<T>
 {
-    int UpdateCheckpoint(string checkpointName, object newValue);
+    int UpdateCheckpoint(string checkpointName, T newValue);
 
-    Task<CacheCheckpointResult> WaitForCheckpoint(string checkpointName, int lastSeen, CancellationToken cancelToken);
+    Task<CacheCheckpointResult<T>> WaitForCheckpoint(string checkpointName, int lastSeen, CancellationToken cancelToken);
 }

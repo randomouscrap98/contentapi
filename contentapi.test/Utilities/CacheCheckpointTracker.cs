@@ -12,7 +12,7 @@ namespace contentapi.test;
 
 public class CacheCheckpointTrackerTest : UnitTestBase
 {
-    protected CacheCheckpointTracker tracker;
+    protected CacheCheckpointTracker<int> tracker;
     protected CacheCheckpointTrackerConfig config;
     protected CancellationTokenSource cancelSource;
     protected CancellationTokenSource safetySource;
@@ -20,7 +20,7 @@ public class CacheCheckpointTrackerTest : UnitTestBase
     public CacheCheckpointTrackerTest()
     {
         config = new CacheCheckpointTrackerConfig();
-        tracker = new CacheCheckpointTracker(GetService<ILogger<CacheCheckpointTracker>>(), config);
+        tracker = new CacheCheckpointTracker<int>(GetService<ILogger<CacheCheckpointTracker<int>>>(), config);
         cancelSource = new CancellationTokenSource();
         safetySource = new CancellationTokenSource();
         safetySource.CancelAfter(5000);
@@ -56,7 +56,7 @@ public class CacheCheckpointTrackerTest : UnitTestBase
     [Fact]
     public async Task WaitForCheckpoint_MultipleWaiters()
     {
-        List<Task<CacheCheckpointResult>> waiters = new List<Task<CacheCheckpointResult>>();
+        List<Task<CacheCheckpointResult<int>>> waiters = new List<Task<CacheCheckpointResult<int>>>();
         const int num = 3;
 
         for(int i = 0; i < num; i++)
@@ -114,7 +114,7 @@ public class CacheCheckpointTrackerTest : UnitTestBase
     public async Task WaitForCheckpoint_MultipleResults()
     {
         //Also test multiple waiters because why not
-        List<Task<CacheCheckpointResult>> waiters = new List<Task<CacheCheckpointResult>>();
+        List<Task<CacheCheckpointResult<int>>> waiters = new List<Task<CacheCheckpointResult<int>>>();
         const int num = 3;
 
         for(int i = 0; i < num; i++)
@@ -124,9 +124,8 @@ public class CacheCheckpointTrackerTest : UnitTestBase
         for(int i = 0; i < num; i++)
             Assert.False(waiters[i].IsCanceled || waiters[i].IsCompleted);
 
-        //Now do the updates. Don't care if the types aren't the same, this is used only for user output.
         tracker.UpdateCheckpoint("something", 89);
-        tracker.UpdateCheckpoint("something", true);
+        tracker.UpdateCheckpoint("something", -5);
 
         //All should get the correct results
         for(int i = 0; i < num; i++)
@@ -135,7 +134,7 @@ public class CacheCheckpointTrackerTest : UnitTestBase
             Assert.Equal(2, result.LastId);
             Assert.Equal(2, result.Data.Count());
             Assert.Equal(89, result.Data[0]);
-            Assert.Equal(true, result.Data[1]);
+            Assert.Equal(-5, result.Data[1]);
         }
     }
 

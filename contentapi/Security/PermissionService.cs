@@ -1,8 +1,6 @@
-using System.Data;
 using contentapi.Db;
 using contentapi.Utilities;
 using contentapi.Views;
-using Dapper;
 
 namespace contentapi;
 
@@ -10,13 +8,11 @@ public class PermissionService : IPermissionService
 {
     protected ILogger logger;
     protected ITypeInfoService typeInfoService;
-    //protected IDbConnection dbcon;
 
-    public PermissionService (ILogger<PermissionService> logger, /*ContentApiDbConnection conwrap,*/ ITypeInfoService typeInfoService)
+    public PermissionService (ILogger<PermissionService> logger, ITypeInfoService typeInfoService)
     {
         this.typeInfoService = typeInfoService;
         this.logger = logger;
-        //this.dbcon = conwrap.Connection;
     }
 
     public List<long> GetPermissionIdsForUser(UserView requester)

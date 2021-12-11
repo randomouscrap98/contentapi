@@ -27,9 +27,9 @@ public static class DefaultSetup
         services.AddSingleton<IRuntimeInformation>(new MyRuntimeInformation(DateTime.Now));
         services.AddSingleton<ITypeInfoService, CachedTypeInfoService>();
         services.AddSingleton<IQueryBuilder, QueryBuilder>();
-        services.AddSingleton<IAuthTokenService<long>, JwtAuthTokenService<long>>();
         services.AddSingleton<ISearchQueryParser, SearchQueryParser>();
-        services.AddSingleton<ICacheCheckpointTracker, CacheCheckpointTracker>();
+        services.AddSingleton(typeof(IAuthTokenService<>), typeof(JwtAuthTokenService<>));
+        services.AddSingleton(typeof(ICacheCheckpointTracker<>), typeof(CacheCheckpointTracker<>));
         services.AddSingleton<IRandomGenerator, RandomGenerator>();
         services.AddSingleton<IHashService, HashService>();
         services.AddSingleton<IUserService, UserService>();
