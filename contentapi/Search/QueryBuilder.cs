@@ -15,6 +15,7 @@ public class QueryBuilder : IQueryBuilder
     protected ITypeInfoService typeService;
     protected ISearchQueryParser parser;
     protected IMapper mapper;
+    protected IPermissionService permissionService;
 
     public const string MainAlias = "main";
     public const string DescendingAppend = "_desc";
@@ -66,12 +67,13 @@ public class QueryBuilder : IQueryBuilder
     protected Dictionary<RequestType, Type> StandardViewRequests;
 
     public QueryBuilder(ILogger<QueryBuilder> logger, ITypeInfoService typeInfoService, 
-        IMapper mapper, ISearchQueryParser parser)
+        IMapper mapper, ISearchQueryParser parser, IPermissionService permissionService)
     {
         this.logger = logger;
         this.typeService = typeInfoService;
         this.mapper = mapper;
         this.parser = parser;
+        this.permissionService = permissionService;
 
         var assembly = System.Reflection.Assembly.GetAssembly(GetType()) ?? throw new InvalidOperationException("NO ASSEMBLY FOR QUERYBUILDER???");
 
@@ -183,15 +185,7 @@ public class QueryBuilder : IQueryBuilder
     public string PermissionLimit(SearchRequestPlus request, string requesters, string idField, string type)
     {
         var typeInfo = typeService.GetTypeInfo<ContentPermission>();
-        var checkCol = "";
-        switch(type)
-        {
-            case "C": checkCol = nameof(ContentPermission.create); break;
-            case "R": checkCol = nameof(ContentPermission.read); break;
-            case "U": checkCol = nameof(ContentPermission.update); break;
-            case "D": checkCol = nameof(ContentPermission.delete); break;
-            default: throw new ArgumentException($"Unknown permission type {type}");
-        }
+        var checkCol = permissionService.ActionToColumn(permissionService.StringToAction(type));
 
         //Note: we're checking createUserId against ALL requester values they gave us! This is OK, because the
         //additional values are things like 0 or their groups, and groups can't create content

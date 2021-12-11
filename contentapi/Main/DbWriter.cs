@@ -19,11 +19,11 @@ public class DbWriter : IDbWriter
     protected ITypeInfoService typeInfoService;
     protected IMapper mapper;
     protected IHistoryConverter historyConverter;
-    protected IDbPermissionService permissionService;
+    protected IPermissionService permissionService;
 
     public DbWriter(ILogger<DbWriter> logger, IGenericSearch searcher, ContentApiDbConnection connection,
         ITypeInfoService typeInfoService, IMapper mapper, IHistoryConverter historyConverter,
-        IDbPermissionService permissionService)
+        IPermissionService permissionService)
     {
         this.logger = logger;
         this.searcher = searcher;
@@ -88,7 +88,7 @@ public class DbWriter : IDbWriter
             //ids as orphaned pages
             if((action == UserAction.create || action == UserAction.update) && (cView.parentId > 0))
             {
-                if(!(await permissionService.CanUserAsync(requester, action, cView.parentId)))
+                if(!(await CanUserAsync(requester, action, cView.parentId)))
                     throw new ForbiddenException($"User {requester.id} can't '{action}' content in parent {cView.parentId}!");
             }
 
@@ -102,7 +102,7 @@ public class DbWriter : IDbWriter
             else if(action != UserAction.read)
             {
                 //We generally assume that the views and such have proper fields by the time it gets to us...
-                if(!(await permissionService.CanUserAsync(requester, action, cView.id)))
+                if(!(await CanUserAsync(requester, action, cView.id)))
                     throw new ForbiddenException($"User {requester.id} can't '{action}' content {cView.id}!");
             }
         }
@@ -127,7 +127,7 @@ public class DbWriter : IDbWriter
                 var parent = await searcher.GetById<ContentView>(RequestType.content, cView.contentId, true);
 
                 //Can't post in invalid locations! So we check ANY contentId passed in, even if it's invalid
-                if(!(await permissionService.CanUserAsync(requester, action, cView.contentId)))
+                if(!(await CanUserAsync(requester, action, cView.contentId)))
                     throw new ForbiddenException($"User {requester.id} can't '{action}' comments in content {cView.contentId}!");
             }
         }
@@ -603,6 +603,38 @@ public class DbWriter : IDbWriter
         }).ToList();
 
         return snapshot;
+    }
+
+    /// <summary>
+    /// Whether the given already-looked-up user is allowed to perform the given action to the given "thing" by id. 
+    /// </summary>
+    /// <remarks>
+    /// This is ONLY permission based, and thus does not have the additional logic required for specific types. Because
+    /// of this, the entity id is enough to look up permissions
+    /// </remarks>
+    /// <param name="requester"></param>
+    /// <param name="action"></param>
+    /// <param name="thing"></param>
+    /// <returns></returns>
+    public async Task<bool> CanUserAsync(UserView requester, UserAction action, long thing)
+    {
+        //Supers can update/insert/delete anything they want, but they can't read secret things.
+        if(action != UserAction.read && requester.super)
+            return true;
+
+        var typeInfo = typeInfoService.GetTypeInfo<ContentPermission>();
+        string checkCol = permissionService.ActionToColumn(action);
+
+        //Just about as optimized as I can make it: a raw query that only returns a count,
+        //AND the contentId search is from an index so... at most it'll be like log2(n) + C where
+        //C is the amount of users defined in the content permission set, and N is the total amount
+        //of pages. So if we had oh I don't know, 2 billion pages, it might take like 40 iterations.
+        return (await dbcon.ExecuteScalarAsync<int>(@$"select count(*)
+             from {typeInfo.table} 
+             where {nameof(ContentPermission.contentId)} = @contentId
+               and {nameof(ContentPermission.userId)} in @requesters 
+               and `{checkCol}` = 1
+            ", new { contentId = thing, requesters = permissionService.GetPermissionIdsForUser(requester) })) > 0;
     }
 
 

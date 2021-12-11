@@ -26,7 +26,7 @@ public class DbWriterTest : UnitTestBase, IClassFixture<DbUnitTestSearchFixture>
         this.mapper = fixture.GetService<IMapper>();
         writer = new DbWriter(fixture.GetService<ILogger<DbWriter>>(), fixture.GetService<IGenericSearch>(),
             fixture.GetService<Db.ContentApiDbConnection>(), fixture.GetService<ITypeInfoService>(), fixture.GetService<IMapper>(),
-            fixture.GetService<Db.History.IHistoryConverter>(), fixture.GetService<IDbPermissionService>());
+            fixture.GetService<Db.History.IHistoryConverter>(), fixture.GetService<IPermissionService>());
         searcher = fixture.GetService<IGenericSearch>();
 
         //Reset it for every test

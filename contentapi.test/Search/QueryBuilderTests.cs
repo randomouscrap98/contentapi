@@ -20,7 +20,8 @@ public class QueryBuilderTests : UnitTestBase
     public QueryBuilderTests()
     {
         service = new QueryBuilder(GetService<ILogger<QueryBuilder>>(), 
-            GetService<ITypeInfoService>(), GetService<IMapper>(), GetService<ISearchQueryParser>());
+            GetService<ITypeInfoService>(), GetService<IMapper>(), GetService<ISearchQueryParser>(),
+            GetService<IPermissionService>());
         typeInfoService = GetService<ITypeInfoService>();
     }
 

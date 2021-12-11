@@ -29,7 +29,7 @@ public class GenericSearchDbTests : UnitTestBase, IClassFixture<DbUnitTestSearch
         service = new GenericSearcher(fixture.GetService<ILogger<GenericSearcher>>(), 
             conWrap, fixture.GetService<ITypeInfoService>(), fixture.GetService<GenericSearcherConfig>(),
             fixture.GetService<IMapper>(), fixture.GetService<IQueryBuilder>(), 
-            fixture.GetService<IDbPermissionService>());
+            fixture.GetService<IPermissionService>());
         //dbcon = conWrap.Connection;
     }
 

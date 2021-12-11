@@ -23,7 +23,7 @@ public class GenericSearcher : IGenericSearch
 {
     protected ILogger logger;
     protected IDbConnection dbcon;
-    protected IDbPermissionService permissionService;
+    protected IPermissionService permissionService;
     protected ITypeInfoService typeService;
     protected GenericSearcherConfig config;
     protected IMapper mapper;
@@ -31,7 +31,7 @@ public class GenericSearcher : IGenericSearch
 
     public GenericSearcher(ILogger<GenericSearcher> logger, ContentApiDbConnection connection,
         ITypeInfoService typeInfoService, GenericSearcherConfig config, IMapper mapper,
-        IQueryBuilder queryBuilder, IDbPermissionService permissionService)
+        IQueryBuilder queryBuilder, IPermissionService permissionService)
     {
         this.logger = logger;
         this.dbcon = connection.Connection;
@@ -321,6 +321,7 @@ public class GenericSearcher : IGenericSearch
 
         return await SearchBase(requests, parameterValues);
     }
+
 
     //This search is a plain search, no permission limits or user lookups.
     public async Task<GenericSearchResult> SearchUnrestricted(SearchRequests requests)
