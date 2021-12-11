@@ -33,11 +33,11 @@ public static class DefaultSetup
         services.AddSingleton<IRandomGenerator, RandomGenerator>();
         services.AddSingleton<IHashService, HashService>();
         services.AddSingleton<IUserService, UserService>();
+        services.AddSingleton<IPermissionService, PermissionService>();
 
         //This NEEDS to stay transient because it holds onto a DB connection! We want those recycled!
         services.AddTransient<IGenericSearch, GenericSearcher>();
         services.AddTransient<IDbWriter, DbWriter>();
-        services.AddTransient<IPermissionService, PermissionService>();
 
         //Configs (these have default values given in configs)
         services.AddSingleton<GenericSearcherConfig>();
