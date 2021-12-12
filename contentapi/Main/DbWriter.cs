@@ -593,14 +593,7 @@ public class DbWriter : IDbWriter
             contentId = originalView.id
         }).ToList();
 
-        snapshot.permissions = originalView.permissions.Select(x => new Db.ContentPermission {
-            userId = x.Key,
-            contentId = originalView.id,
-            create = x.Value.Contains('C'),
-            read = x.Value.Contains('R'),
-            update = x.Value.Contains('U'),
-            delete = x.Value.Contains('D')
-        }).ToList();
+        snapshot.permissions = permissionService.PermissionsToDb(originalView);
 
         return snapshot;
     }

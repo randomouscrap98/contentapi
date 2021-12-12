@@ -58,6 +58,24 @@ public class PermissionService : IPermissionService
         }
     }
 
+    public Dictionary<long, string> ResultToPermissions(IEnumerable<dynamic> permissions)
+    {
+        return permissions.ToDictionary(
+                x => (long)x.userId, y => $"{(y.create==1?"C":"")}{(y.read==1?"R":"")}{(y.update==1?"U":"")}{(y.delete==1?"D":"")}");
+    }
+
+    public List<Db.ContentPermission> PermissionsToDb(ContentView content)
+    {
+        return content.permissions.Select(x => new Db.ContentPermission {
+            userId = x.Key,
+            contentId = content.id,
+            create = x.Value.Contains('C'),
+            read = x.Value.Contains('R'),
+            update = x.Value.Contains('U'),
+            delete = x.Value.Contains('D')
+        }).ToList();
+    }
+
     public bool CanUserStatic(UserView requester, UserAction action, Dictionary<long, string> viewPerms)
     {
         var actionString = ActionToString(action);

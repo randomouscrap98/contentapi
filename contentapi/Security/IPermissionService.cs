@@ -11,4 +11,7 @@ public interface IPermissionService
     string ActionToString(UserAction action);
     UserAction StringToAction(string action);
     string ActionToColumn(UserAction action);
+
+    Dictionary<long, string> ResultToPermissions(IEnumerable<dynamic> permissions);
+    List<Db.ContentPermission> PermissionsToDb(ContentView content);
 }
