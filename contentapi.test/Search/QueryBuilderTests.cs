@@ -1,3 +1,4 @@
+using System;
 using System.Collections.Generic;
 using System.Linq;
 using AutoMapper;
@@ -78,5 +79,22 @@ public class QueryBuilderTests : UnitTestBase
         var fields = service.ComputeRealFields(req);
         var realSet = req.typeInfo.queryableFields.Except(new[] {"id","username"});
         Assert.True(new HashSet<string>(realSet).SetEquals(fields), "Inverted didn't generate correct set in ComputeRealFields!");
+    }
+
+    [Theory]
+    [InlineData("")]
+    [InlineData(null)]
+    [InlineData(" ")]
+    public void StandardRequestPreparse_NoEmptyFields(string fields)
+    {
+        Assert.ThrowsAny<ArgumentException>(() =>
+        {
+            var result = service.StandardRequestPreparse(new SearchRequest()
+            {
+                name = "somename",
+                type = "user",
+                fields = fields
+            }, new Dictionary<string, object>());
+        });
     }
 }

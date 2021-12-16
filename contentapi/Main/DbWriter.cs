@@ -3,6 +3,7 @@ using System.Text.RegularExpressions;
 using AutoMapper;
 using contentapi.Db;
 using contentapi.Db.History;
+using contentapi.Live;
 using contentapi.Search;
 using contentapi.Utilities;
 using contentapi.Views;
@@ -20,10 +21,11 @@ public class DbWriter : IDbWriter
     protected IMapper mapper;
     protected IHistoryConverter historyConverter;
     protected IPermissionService permissionService;
+    protected IEventQueue eventQueue;
 
     public DbWriter(ILogger<DbWriter> logger, IGenericSearch searcher, ContentApiDbConnection connection,
         ITypeInfoService typeInfoService, IMapper mapper, IHistoryConverter historyConverter,
-        IPermissionService permissionService)
+        IPermissionService permissionService, IEventQueue eventQueue)
     {
         this.logger = logger;
         this.searcher = searcher;
@@ -32,6 +34,7 @@ public class DbWriter : IDbWriter
         this.mapper = mapper;
         this.historyConverter = historyConverter;
         this.permissionService = permissionService;
+        this.eventQueue = eventQueue;
     
         //Preemptively open this, we know us (as a writer) SHOULD BE short-lived, so...
         this.dbcon.Open();
@@ -63,12 +66,12 @@ public class DbWriter : IDbWriter
 
     //Avoid generic constraints unless they're required by the underlying system. Just restricting because it's
     //"all" you expect is bad, remember all the problems you had before with that
-    public async Task<T> WriteAsync<T>(T view, long requestUserId, string? message = null) where T : class, IIdView, new()
+    public virtual async Task<T> WriteAsync<T>(T view, long requestUserId, string? message = null) where T : class, IIdView, new()
     {
         return await GenericWorkAsync(view, await GetRequestUser(requestUserId), view.id == 0 ? UserAction.create : UserAction.update, message);
     }
 
-    public async Task<T> DeleteAsync<T>(long id, long requestUserId, string? message = null) where T : class, IIdView, new()
+    public virtual async Task<T> DeleteAsync<T>(long id, long requestUserId, string? message = null) where T : class, IIdView, new()
     {
         return await GenericWorkAsync(new T() { id = id }, await GetRequestUser(requestUserId), UserAction.delete, message);
     }
@@ -191,12 +194,16 @@ public class DbWriter : IDbWriter
             id = await DatabaseWork_Content(new DbWorkUnit<ContentView>(
                 view as ContentView ?? throw new InvalidOperationException("Somehow, ContentView couldn't be cast to ContentView??"), 
                 requester, typeInfo, action, existing as ContentView, message));
+
+            await eventQueue.AddEventAsync(new EventData(requester.id, action, RequestType.content, id));
         }
         else if(view is CommentView)
         {
             id = await DatabaseWork_Comments(new DbWorkUnit<CommentView>(
                 view as CommentView ?? throw new InvalidOperationException("Somehow, CommentView couldn't be cast to CommentView??"), 
                 requester, typeInfo, action, existing as CommentView, message));
+
+            await eventQueue.AddEventAsync(new EventData(requester.id, action, RequestType.content, id));
         }
         else
         {

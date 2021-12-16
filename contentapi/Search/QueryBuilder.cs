@@ -219,6 +219,9 @@ public class QueryBuilder : IQueryBuilder
         //Oops, there's a name collision! Might as well fail as early as possible
         if(parameters.ContainsKey(request.name))
             throw new ArgumentException($"Request name {request.name} collides with a key in your value array");
+        
+        if(string.IsNullOrWhiteSpace(request.fields))
+            throw new ArgumentException($"No 'fields' value given in '{request.name}', try setting 'fields' to '*'");
 
         //Now do some pre-parsing and data retrieval. If one of these fail, it's good that it
         //fails early (although it will only fail if me, the programmer, did something wrong,

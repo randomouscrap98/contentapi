@@ -6,6 +6,7 @@ using AutoMapper;
 using contentapi.Db;
 using contentapi.Main;
 using contentapi.Search;
+using contentapi.test.Mock;
 using contentapi.Utilities;
 using contentapi.Views;
 using Microsoft.Extensions.Logging;
@@ -26,7 +27,8 @@ public class DbWriterTest : UnitTestBase, IClassFixture<DbUnitTestSearchFixture>
         this.mapper = fixture.GetService<IMapper>();
         writer = new DbWriter(fixture.GetService<ILogger<DbWriter>>(), fixture.GetService<IGenericSearch>(),
             fixture.GetService<Db.ContentApiDbConnection>(), fixture.GetService<ITypeInfoService>(), fixture.GetService<IMapper>(),
-            fixture.GetService<Db.History.IHistoryConverter>(), fixture.GetService<IPermissionService>());
+            fixture.GetService<Db.History.IHistoryConverter>(), fixture.GetService<IPermissionService>(),
+            new FakeEventQueue()); //NOT testing event queue with all this! These tests are a mess, consider fixing!
         searcher = fixture.GetService<IGenericSearch>();
 
         //Reset it for every test

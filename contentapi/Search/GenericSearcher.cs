@@ -105,13 +105,7 @@ public class GenericSearcher : IGenericSearch
                     new { ids = ids });
 
                 foreach(var c in result)
-                {
                     c[permkey] = permissionService.ResultToPermissions(permissions.Where(x => x.contentId.Equals(c["id"])));
-                    //TODO: May need to move this conversion somewhere else... not sure
-                    //.ToDictionary(
-                    //));
-                    //    x => x.userId, y => $"{(y.create==1?"C":"")}{(y.read==1?"R":"")}{(y.update==1?"U":"")}{(y.delete==1?"D":"")}");
-                }
             }
             if(r.requestFields.Contains(votekey))
             {

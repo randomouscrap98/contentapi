@@ -1,3 +1,4 @@
+using contentapi.Live;
 using contentapi.Main;
 using contentapi.Search;
 using contentapi.Security;
@@ -38,6 +39,7 @@ public static class DefaultSetup
         //This NEEDS to stay transient because it holds onto a DB connection! We want those recycled!
         services.AddTransient<IGenericSearch, GenericSearcher>();
         services.AddTransient<IDbWriter, DbWriter>();
+        services.AddTransient<IEventQueue, EventQueue>();
 
         //Configs (these have default values given in configs)
         services.AddSingleton<GenericSearcherConfig>();
