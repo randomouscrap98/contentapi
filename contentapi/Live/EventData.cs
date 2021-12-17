@@ -13,12 +13,12 @@ public class EventData
     public DateTime date {get;set;} = DateTime.UtcNow;              // 8
     public long userId {get;set;}                                   // 8 
     public UserAction action {get;set;}                             // 8
-    public RequestType type {get;set;}                              // 8
+    public EventType type {get;set;}                              // 8
     public long refId {get;set;}                                    // 8
 
     public EventData() { }
 
-    public EventData(long userId, UserAction action, RequestType type, long refId)
+    public EventData(long userId, UserAction action, EventType type, long refId)
     {
         this.userId = userId;
         this.action = action;

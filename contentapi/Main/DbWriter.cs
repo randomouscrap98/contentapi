@@ -195,7 +195,6 @@ public class DbWriter : IDbWriter
                 view as ContentView ?? throw new InvalidOperationException("Somehow, ContentView couldn't be cast to ContentView??"), 
                 requester, typeInfo, action, existing as ContentView, message));
 
-            await eventQueue.AddEventAsync(new EventData(requester.id, action, RequestType.content, id));
         }
         else if(view is CommentView)
         {
@@ -203,7 +202,6 @@ public class DbWriter : IDbWriter
                 view as CommentView ?? throw new InvalidOperationException("Somehow, CommentView couldn't be cast to CommentView??"), 
                 requester, typeInfo, action, existing as CommentView, message));
 
-            await eventQueue.AddEventAsync(new EventData(requester.id, action, RequestType.content, id));
         }
         else
         {
@@ -450,12 +448,14 @@ public class DbWriter : IDbWriter
             var history = await historyConverter.ContentToHistoryAsync(snapshot, work.requester.id, work.action);
             history.message = work.message;
 
-            await dbcon.InsertAsync(history, tsx);
+            var activityId = await dbcon.InsertAsync(history, tsx);
 
             var adminLog = MakeContentLog(work.requester, work.view, work.action);
             await dbcon.InsertAsync(adminLog, tsx);
 
             tsx.Commit();
+
+            await eventQueue.AddEventAsync(new EventData(work.requester.id, work.action, EventType.activity, activityId));
 
             logger.LogDebug(adminLog.text); //The admin log actually has the log text we want!
 
@@ -542,6 +542,8 @@ public class DbWriter : IDbWriter
                 throw new InvalidOperationException($"Can't perform action {work.action} in DatabaseWork_Comments!");
 
             tsx.Commit();
+
+            await eventQueue.AddEventAsync(new EventData(work.requester.id, work.action, EventType.comment, work.view.id));
 
             logger.LogDebug($"User {work.requester.id} commented on {comment.contentId}"); //The admin log actually has the log text we want!
 
