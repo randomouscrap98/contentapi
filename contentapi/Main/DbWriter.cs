@@ -173,16 +173,10 @@ public class DbWriter : IDbWriter
         var typeInfo = typeInfoService.GetTypeInfo<T>();
         var requestType = typeInfo.requestType ?? throw new InvalidOperationException($"Type {typeof(T)} has no associated request type for querying, don't know how to write! This usually means this type is a complex type that doesn't represent a database object, and thus the API has a configuration error!");
 
-        //Now go get the existing if it's that kind of thing!
-        T? existing = null;
-
-        if(action == UserAction.update || action == UserAction.delete)
-        {
-            //This will throw an exception if we can't find it by id, so that's the end of that...
-            //ALSO we specifically ask to throw on deleted content, because we don't want ANYBODY to be touching that stuff
-            //through this interface. Deletes require a special restore!
-            existing = await searcher.GetById<T>(requestType, view.id, true);
-        }
+        //This will throw an exception if we can't find it by id, so that's the end of that...
+        //ALSO we specifically ask to throw on deleted content, because we don't want ANYBODY to be touching that stuff
+        //through this interface. Deletes require a special restore!
+        T? existing = view.id == 0 ? null : await searcher.GetById<T>(requestType, view.id, true);
 
         //It's more important to throw a NotFound exception than the permission exception, it keeps things more consistent, so
         //keep this call down here.
@@ -213,7 +207,7 @@ public class DbWriter : IDbWriter
     }
 
     /// <summary>
-    /// Use TypeInfo given to trnanslate all standard mapped fields from view to model.
+    /// Use TypeInfo given to translate all standard mapped fields from view to model.
     /// </summary>
     /// <param name="tinfo"></param>
     /// <param name="view"></param>
@@ -271,7 +265,7 @@ public class DbWriter : IDbWriter
     /// <param name="tsx"></param>
     /// <typeparam name="T"></typeparam>
     /// <returns></returns>
-    public async Task DeleteOldContentThings<T>(long id, IDbTransaction tsx)
+    public async Task DeleteContentAssociatedType<T>(long id, IDbTransaction tsx)
     {
         var tinfo = typeInfoService.GetTypeInfo<T>();
         var parameters = new { id = id };
@@ -286,11 +280,11 @@ public class DbWriter : IDbWriter
     /// <param name="id"></param>
     /// <param name="tsx"></param>
     /// <returns></returns>
-    public async Task DeleteOldContentAssociated(long id, IDbTransaction tsx)
+    public async Task DeleteContentAssociatedAll(long id, IDbTransaction tsx)
     {
-        await DeleteOldContentThings<ContentValue>(id, tsx);
-        await DeleteOldContentThings<ContentKeyword>(id, tsx);
-        await DeleteOldContentThings<ContentPermission>(id, tsx);
+        await DeleteContentAssociatedType<ContentValue>(id, tsx);
+        await DeleteContentAssociatedType<ContentKeyword>(id, tsx);
+        await DeleteContentAssociatedType<ContentPermission>(id, tsx);
     }
 
     public AdminLog MakeContentLog(UserView requester, ContentView view, UserAction action)
@@ -424,7 +418,7 @@ public class DbWriter : IDbWriter
             else if(work.action == UserAction.update || work.action == UserAction.delete)
             {
                 //Remove the old associated values
-                await DeleteOldContentAssociated(content.id, tsx);
+                await DeleteContentAssociatedAll(content.id, tsx);
                 await dbcon.UpdateAsync(content, tsx);
             }
             else 
@@ -455,6 +449,7 @@ public class DbWriter : IDbWriter
 
             tsx.Commit();
 
+            //Content events are reported as activity
             await eventQueue.AddEventAsync(new EventData(work.requester.id, work.action, EventType.activity, activityId));
 
             logger.LogDebug(adminLog.text); //The admin log actually has the log text we want!
@@ -545,7 +540,7 @@ public class DbWriter : IDbWriter
 
             await eventQueue.AddEventAsync(new EventData(work.requester.id, work.action, EventType.comment, work.view.id));
 
-            logger.LogDebug($"User {work.requester.id} commented on {comment.contentId}"); //The admin log actually has the log text we want!
+            logger.LogDebug($"User {work.requester.id} commented on {comment.contentId}"); //No admin log for comments, so have to construct the message ourselves
 
             //NOTE: this is the newly computed id, we place it inside the view for safekeeping 
             return work.view.id;
