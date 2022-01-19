@@ -6,6 +6,8 @@ using contentapi.Utilities;
 using contentapi.Views;
 using Dapper;
 
+using QueryResultSet = System.Collections.Generic.IEnumerable<System.Collections.Generic.IDictionary<string, object>>;
+
 namespace contentapi.Search;
 
 /// <summary>
@@ -42,15 +44,15 @@ public class GenericSearcher : IGenericSearch
         this.permissionService = permissionService;
     }
 
-    public async Task<IEnumerable<IDictionary<string, object>>> QueryAsyncCast(string query, object parameters)
+    public async Task<QueryResultSet> QueryAsyncCast(string query, object parameters)
     {
         return (await dbcon.QueryAsync(query, parameters)).Cast<IDictionary<string, object>>();
     }
 
-    public IEnumerable<object> GetIds(IEnumerable<IDictionary<string, object>> result) => result.Select(x => x["id"]);
+    public IEnumerable<object> GetIds(QueryResultSet result) => result.Select(x => x["id"]);
 
     //WARN: should this be part of query builder?? who knows... it kinda doesn't need to be, it's not a big deal.
-    public async Task AddExtraFields(SearchRequestPlus r, IEnumerable<IDictionary<string, object>> result)
+    public async Task AddExtraFields(SearchRequestPlus r, QueryResultSet result)
     {
         //This adds groups to users (if requested)
         if(r.requestType == RequestType.user)
@@ -128,7 +130,7 @@ public class GenericSearcher : IGenericSearch
         }
     }
 
-    public Task<IEnumerable<IDictionary<string, object>>> QueryRawAsync(string sql, Dictionary<string, object> values)
+    public Task<QueryResultSet> QueryRawAsync(string sql, Dictionary<string, object> values)
     {
         var dp = new DynamicParameters(values);
         return QueryAsyncCast(sql, dp);
@@ -141,7 +143,7 @@ public class GenericSearcher : IGenericSearch
     }    
 
     //The simple method for performing a SINGLE request as given. The database accesses are timed...
-    protected async Task<IEnumerable<IDictionary<string, object>>> SearchSingle(
+    protected async Task<QueryResultSet> SearchSingle(
         SearchRequest request, 
         Dictionary<string, object> parameterValues, 
         Dictionary<string, double>? timedic = null)
@@ -316,7 +318,7 @@ public class GenericSearcher : IGenericSearch
         return await SearchBase(requests, new Dictionary<string, object>(requests.values));
     }
 
-    public List<T> ToStronglyTyped<T>(IEnumerable<IDictionary<string, object>> singleResults)
+    public List<T> ToStronglyTyped<T>(QueryResultSet singleResults)
     {
         return singleResults.Select(x => mapper.Map<T>(x)).ToList();
     }

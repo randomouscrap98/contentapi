@@ -4,6 +4,7 @@ using System.Linq;
 using System.Threading.Tasks;
 using AutoMapper;
 using contentapi.Db;
+using contentapi.Live;
 using contentapi.Main;
 using contentapi.Search;
 using contentapi.test.Mock;
@@ -20,15 +21,17 @@ public class DbWriterTest : UnitTestBase, IClassFixture<DbUnitTestSearchFixture>
     protected IGenericSearch searcher;
     protected DbUnitTestSearchFixture fixture;
     protected IMapper mapper;
+    protected FakeEventQueue events;
 
     public DbWriterTest(DbUnitTestSearchFixture fixture)
     {
         this.fixture = fixture;
         this.mapper = fixture.GetService<IMapper>();
+        this.events= new FakeEventQueue();
         writer = new DbWriter(fixture.GetService<ILogger<DbWriter>>(), fixture.GetService<IGenericSearch>(),
             fixture.GetService<Db.ContentApiDbConnection>(), fixture.GetService<ITypeInfoService>(), fixture.GetService<IMapper>(),
             fixture.GetService<Db.History.IHistoryConverter>(), fixture.GetService<IPermissionService>(),
-            new FakeEventQueue()); //NOT testing event queue with all this! These tests are a mess, consider fixing!
+            events); 
         searcher = fixture.GetService<IGenericSearch>();
 
         //Reset it for every test
@@ -98,6 +101,28 @@ public class DbWriterTest : UnitTestBase, IClassFixture<DbUnitTestSearchFixture>
 
         if(message != null)
             Assert.Equal(message, history.message);
+    }
+
+    private EventData AssertEventMatchesBase(long id, UserAction expected, long userId, EventType type)
+    {
+        var evs = events.Events.Where(x => x.refId == id && x.id > 0 && x.action == expected && x.type == type && x.userId == userId);
+        Assert.NotNull(evs);
+        Assert.Single(evs);
+        return evs.First();
+    }
+    private void AssertContentEventMatches(ContentView content, long userId, UserAction expected)
+    {
+        //Ensure the events are reported correctly.
+        //REMEMBER: we're looking for an ACTIVITY event, so the id is the revision id!
+        var ev = AssertEventMatchesBase(content.lastRevisionId, expected, userId, EventType.activity);
+        AssertDateClose(ev.date);
+    }
+
+    private void AssertCommentEventMatches(CommentView comment, long userId, UserAction expected)
+    {
+        //Ensure the events are reported correctly
+        var ev = AssertEventMatchesBase(comment.id, expected, userId, EventType.comment);
+        AssertDateClose(ev.date);
     }
 
     protected PageView GetNewPageView(long parentId = 0, Dictionary<long, string>? permissions = null)
@@ -199,6 +224,7 @@ public class DbWriterTest : UnitTestBase, IClassFixture<DbUnitTestSearchFixture>
             StandardContentEqualityCheck(content, result, uid, InternalContentType.page);
             await AssertHistoryMatchesAsync(result, UserAction.create);
             Assert.Equal(content.content, result.content);
+            AssertContentEventMatches(result, uid, UserAction.create);
         }
         else
         {
@@ -231,6 +257,7 @@ public class DbWriterTest : UnitTestBase, IClassFixture<DbUnitTestSearchFixture>
             Assert.Equal(content.mimetype, result.mimetype);
             Assert.Equal(content.hash, result.hash);
             Assert.Equal(content.quantization, result.quantization);
+            AssertContentEventMatches(result, uid, UserAction.create);
         }
         else
         {
@@ -260,6 +287,7 @@ public class DbWriterTest : UnitTestBase, IClassFixture<DbUnitTestSearchFixture>
             await AssertHistoryMatchesAsync(result, UserAction.create);
             Assert.Equal(content.code, result.code);
             Assert.Equal(content.description, result.description);
+            AssertContentEventMatches(result, uid, UserAction.create);
         }
         else
         {
@@ -293,6 +321,8 @@ public class DbWriterTest : UnitTestBase, IClassFixture<DbUnitTestSearchFixture>
             var result = await writer.WriteAsync(original, uid);
             StandardContentEqualityCheck(original, result, writeUser, InternalContentType.page);
             await AssertHistoryMatchesAsync(result, UserAction.update);
+            AssertContentEventMatches(original, writeUser, UserAction.create);
+            AssertContentEventMatches(result, uid, UserAction.update);
         }
         else
         {
@@ -366,6 +396,8 @@ public class DbWriterTest : UnitTestBase, IClassFixture<DbUnitTestSearchFixture>
             var result = await writer.WriteAsync(original, uid);
             StandardContentEqualityCheck(original, result, writeUser, InternalContentType.page);
             await AssertHistoryMatchesAsync(result, UserAction.update);
+            AssertContentEventMatches(original, writeUser, UserAction.create);
+            AssertContentEventMatches(result, uid, UserAction.update);
         }
         else
         {
@@ -411,6 +443,7 @@ public class DbWriterTest : UnitTestBase, IClassFixture<DbUnitTestSearchFixture>
             var result = await writer.DeleteAsync<ContentView>(contentId, uid);
             //Even after deletion, the lastRevisionId should be set!
             await AssertHistoryMatchesAsync(result, UserAction.delete);
+            AssertContentEventMatches(result, uid, UserAction.delete);
             //Remember, we can generally trust what the functions return because they should be EXACTLY from the database!
             //Testing to see if the ones from the database are exactly the same as those returned can be a different test
             Assert.True(string.IsNullOrWhiteSpace(result.name), "Name was not cleared!");

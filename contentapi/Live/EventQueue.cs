@@ -2,6 +2,7 @@ using System.Collections.Concurrent;
 using contentapi.Search;
 using contentapi.Utilities;
 using contentapi.Views;
+using QueryResultSet = System.Collections.Generic.IEnumerable<System.Collections.Generic.IDictionary<string, object>>;
 
 namespace contentapi.Live;
 
@@ -119,7 +120,7 @@ public class EventQueue : IEventQueue
     /// </summary>
     /// <param name="result"></param>
     /// <returns></returns>
-    public Dictionary<long, string> GetStandardContentPermissions(Dictionary<string, IEnumerable<IDictionary<string, object>>> result)
+    public Dictionary<long, string> GetStandardContentPermissions(Dictionary<string, QueryResultSet> result)
     {
         var key = RequestType.content.ToString();
 
@@ -200,7 +201,7 @@ public class EventQueue : IEventQueue
         return requests;
     }
 
-    public void AnnotateResult(Dictionary<string, IEnumerable<IDictionary<string, object>>> result, EventData evnt)
+    public void AnnotateResult(Dictionary<string, QueryResultSet> result, EventData evnt)
     {
         foreach(var annotate in SimpleResultAnnotations)
         {
