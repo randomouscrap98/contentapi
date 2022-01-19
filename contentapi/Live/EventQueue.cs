@@ -81,24 +81,22 @@ public class EventQueue : IEventQueue
     };
 
     protected ILogger<EventQueue> logger;
-    protected ICacheCheckpointTracker<EventData> eventTracker;
-    protected IGenericSearch search; //transient
+    protected ICacheCheckpointTracker<EventData> eventTracker; //THIS is the event queue!
+    protected Func<IGenericSearch> searchProducer; //A search generator to ensure this queue can be any lifetime it wants (this is an anti-pattern maybe?)
     protected IPermissionService permissionService;
 
     //The cache for the few (if any) fully-pulled data for live updates. This is NOT the event queue!
     protected ConcurrentDictionary<int, AnnotatedCacheItem> trueCache;
 
-    public EventQueue(ILogger<EventQueue> logger, ICacheCheckpointTracker<EventData> tracker, IGenericSearch search, 
-        IPermissionService permissionService, ConcurrentDictionary<int, AnnotatedCacheItem> trueCache)
+    public EventQueue(ILogger<EventQueue> logger, ICacheCheckpointTracker<EventData> tracker, Func<IGenericSearch> searchProducer, 
+        IPermissionService permissionService)
     {
         this.logger = logger;
         this.eventTracker = tracker;
-        this.search = search;
+        this.searchProducer = searchProducer;
         this.permissionService = permissionService; //TODO: MIGHT BE UNNECESSARY
-        this.trueCache = trueCache; //new ConcurrentDictionary<int, AnnotatedCacheItem>();
+        this.trueCache = new ConcurrentDictionary<int, AnnotatedCacheItem>();
     }
-
-    //public delegate Dictionary<long, string> PermissionPull(Dictionary<string, IEnumerable<IDictionary<string, object>>> result);
 
     public async Task<object> AddEventAsync(EventData data)
     {
@@ -233,6 +231,7 @@ public class EventQueue : IEventQueue
 
         //All of these are basically: construct a search, get data, set permissions
         var requests = GetSearchRequestsForEvents(new List<EventData> { evnt });
+        var search = searchProducer();
 
         var searchData = await search.SearchUnrestricted(requests);
         result.data = searchData.data;

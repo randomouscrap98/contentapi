@@ -18,7 +18,7 @@ public class EventQueueTest : UnitTestBase, IClassFixture<DbUnitTestSearchFixtur
     protected EventQueue queue;
     protected ICacheCheckpointTracker<EventData> tracker;
     protected IPermissionService permission;
-    protected ConcurrentDictionary<int, AnnotatedCacheItem> trueCache;
+    //protected ConcurrentDictionary<int, AnnotatedCacheItem> trueCache;
 
     //The tests here are rather complicated; we can probably simplify them in the future, but for now,
     //I just need a system that REALLY tests if this whole thing works, and that is most reliable if 
@@ -30,8 +30,8 @@ public class EventQueueTest : UnitTestBase, IClassFixture<DbUnitTestSearchFixtur
         this.tracker = fixture.GetService<ICacheCheckpointTracker<EventData>>();
         this.searcher = fixture.GetService<IGenericSearch>();
         this.permission = fixture.GetService<IPermissionService>();
-        this.trueCache = new ConcurrentDictionary<int, AnnotatedCacheItem>();
-        this.queue = new EventQueue(fixture.GetService<ILogger<EventQueue>>(), this.tracker, this.searcher, this.permission, this.trueCache);
+        //this.trueCache = new ConcurrentDictionary<int, AnnotatedCacheItem>();
+        this.queue = new EventQueue(fixture.GetService<ILogger<EventQueue>>(), this.tracker, () => this.searcher, this.permission); //, this.trueCache);
         writer = new DbWriter(fixture.GetService<ILogger<DbWriter>>(), this.searcher, 
             fixture.GetService<Db.ContentApiDbConnection>(), fixture.GetService<ITypeInfoService>(), this.mapper,
             fixture.GetService<Db.History.IHistoryConverter>(), this.permission, this.queue); 
@@ -39,4 +39,7 @@ public class EventQueueTest : UnitTestBase, IClassFixture<DbUnitTestSearchFixtur
         //Reset it for every test
         fixture.ResetDatabase();
     }
+
+    //First, without actually doing anything with the event part, ensure the core of the service works. Does
+    //building a request for events create something we expect?
 }

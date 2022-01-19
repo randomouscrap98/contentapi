@@ -26,6 +26,9 @@ public static class DefaultSetup
 
         services.AddAutoMapper(typeof(SearchRequestPlusProfile)); //You can pick ANY profile, it just needs some type from this binary
 
+        //For anything that just needs a simple search here and there, but doesn't want to be transient
+        services.AddSingleton(p => new Func<IGenericSearch>(() => p.GetService<IGenericSearch>() ?? throw new InvalidOperationException("Couldn't create IGenericSearch somehow!")));
+
         services.AddSingleton<IRuntimeInformation>(new MyRuntimeInformation(DateTime.Now));
         services.AddSingleton<ITypeInfoService, CachedTypeInfoService>();
         services.AddSingleton<IQueryBuilder, QueryBuilder>();
@@ -36,23 +39,11 @@ public static class DefaultSetup
         services.AddSingleton<IHashService, HashService>();
         services.AddSingleton<IUserService, UserService>();
         services.AddSingleton<IPermissionService, PermissionService>();
-
-        //Our singleton cache for the event queue!
-        var eventQueueCache = new ConcurrentDictionary<int, AnnotatedCacheItem>();
+        services.AddSingleton<IEventQueue, EventQueue>();
 
         //This NEEDS to stay transient because it holds onto a DB connection! We want those recycled!
         services.AddTransient<IGenericSearch, GenericSearcher>();
         services.AddTransient<IDbWriter, DbWriter>();
-        services.AddTransient<IEventQueue>(p =>
-        {
-            return new EventQueue(
-                p.GetService<ILogger<EventQueue>>() ?? throw new InvalidOperationException("Can't make ILogger for event queue!"), 
-                p.GetService<ICacheCheckpointTracker<EventData>>() ?? throw new InvalidOperationException("Can't make ICacheCheckpointTracker for event queue!"),
-                p.GetService<IGenericSearch>() ?? throw new InvalidOperationException("Can't make IGenericSearch for event queue!"),
-                p.GetService<IPermissionService>() ?? throw new InvalidOperationException("Can't make IPermissionService for event queue!"),
-                eventQueueCache
-            );
-        });
 
         //Configs (these have default values given in configs)
         services.AddSingleton<GenericSearcherConfig>();
