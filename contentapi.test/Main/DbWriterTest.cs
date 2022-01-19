@@ -514,6 +514,7 @@ public class DbWriterTest : UnitTestBase, IClassFixture<DbUnitTestSearchFixture>
         {
             var result = await writer.WriteAsync(comment, uid);
             StandardCommentEqualityCheck(comment, result, uid);
+            AssertCommentEventMatches(result, uid, UserAction.create);
             //StandardContentEqualityCheck(, result, uid, InternalContentType.page);
             //Assert.Equal(content.content, result.content);
         }
@@ -545,6 +546,8 @@ public class DbWriterTest : UnitTestBase, IClassFixture<DbUnitTestSearchFixture>
             var result = await writer.WriteAsync(written, editor);
             AssertDateClose(result.editDate ?? throw new InvalidOperationException("NO EDIT DATE SET"));
             StandardCommentEqualityCheck(written, result, poster); //Original poster should be preserved
+            AssertCommentEventMatches(written, poster, UserAction.create);
+            AssertCommentEventMatches(result, editor, UserAction.update);
             Assert.Equal(editor, result.editUserId);
         }
         else
@@ -571,6 +574,8 @@ public class DbWriterTest : UnitTestBase, IClassFixture<DbUnitTestSearchFixture>
         if(allowed)
         {
             var result = await writer.DeleteAsync<CommentView>(written.id, editor);
+            AssertCommentEventMatches(written, poster, UserAction.create);
+            AssertCommentEventMatches(result, editor, UserAction.delete);
             Assert.True(result.deleted);
             Assert.True(string.IsNullOrEmpty(result.text));
             Assert.True(result.id > 0);
