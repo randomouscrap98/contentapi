@@ -1,3 +1,4 @@
+using System.Collections.Concurrent;
 using contentapi.Live;
 using contentapi.Main;
 using contentapi.Search;
@@ -36,10 +37,22 @@ public static class DefaultSetup
         services.AddSingleton<IUserService, UserService>();
         services.AddSingleton<IPermissionService, PermissionService>();
 
+        //Our singleton cache for the event queue!
+        var eventQueueCache = new ConcurrentDictionary<int, AnnotatedCacheItem>();
+
         //This NEEDS to stay transient because it holds onto a DB connection! We want those recycled!
         services.AddTransient<IGenericSearch, GenericSearcher>();
         services.AddTransient<IDbWriter, DbWriter>();
-        services.AddTransient<IEventQueue, EventQueue>();
+        services.AddTransient<IEventQueue>(p =>
+        {
+            return new EventQueue(
+                p.GetService<ILogger<EventQueue>>() ?? throw new InvalidOperationException("Can't make ILogger for event queue!"), 
+                p.GetService<ICacheCheckpointTracker<EventData>>() ?? throw new InvalidOperationException("Can't make ICacheCheckpointTracker for event queue!"),
+                p.GetService<IGenericSearch>() ?? throw new InvalidOperationException("Can't make IGenericSearch for event queue!"),
+                p.GetService<IPermissionService>() ?? throw new InvalidOperationException("Can't make IPermissionService for event queue!"),
+                eventQueueCache
+            );
+        });
 
         //Configs (these have default values given in configs)
         services.AddSingleton<GenericSearcherConfig>();

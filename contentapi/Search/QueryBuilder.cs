@@ -114,6 +114,7 @@ public class QueryBuilder : IQueryBuilder
         }
     }
 
+    //NOTE: Even though these might say "0" references, they're all used by the macro system!
     public string KeywordLike(SearchRequestPlus request, string value)
     {
         var typeInfo = typeService.GetTypeInfo<ContentKeyword>();
@@ -170,6 +171,23 @@ public class QueryBuilder : IQueryBuilder
     public string NullMacro(SearchRequestPlus request, string field) { return $"{field} IS NULL"; }
     public string UserTypeMacro(SearchRequestPlus request, string type) { return EnumMacroSearch<UserType>(type); }
 
+    //NOTE: Even though these might say "0" references, they're all used by the macro system!
+    //For now, this is JUST read limit!!
+    public string PermissionLimit(SearchRequestPlus request, string requesters, string idField, string type)
+    {
+        var typeInfo = typeService.GetTypeInfo<ContentPermission>();
+        var checkCol = permissionService.ActionToColumn(permissionService.StringToAction(type));
+
+        //Note: we're checking createUserId against ALL requester values they gave us! This is OK, because the
+        //additional values are things like 0 or their groups, and groups can't create content
+        return $@"({MainAlias}.{idField} in 
+            (select {nameof(ContentPermission.contentId)} 
+             from {typeInfo.table} 
+             where {nameof(ContentPermission.userId)} in {requesters}
+               and `{checkCol}` = 1
+            ))"; //NOTE: DO NOT CHECK CREATE USER! ALL PERMISSIONS ARE NOW IN THE TABLE! NOTHING IMPLIED!
+    }
+
     /// <summary>
     /// A helper to generate optimized clauses against enum fields using a string type
     /// </summary>
@@ -180,22 +198,6 @@ public class QueryBuilder : IQueryBuilder
             throw new ArgumentException($"Unknown type '{type}' for set '{typeof(T).Name}'");
         return $"{name} = {Unsafe.As<T, int>(ref result)}";
     }
-
-    ////For now, this is JUST read limit!!
-    //public string PermissionLimit(SearchRequestPlus request, string requesters, string idField, string type)
-    //{
-    //    var typeInfo = typeService.GetTypeInfo<ContentPermission>();
-    //    var checkCol = permissionService.ActionToColumn(permissionService.StringToAction(type));
-
-    //    //Note: we're checking createUserId against ALL requester values they gave us! This is OK, because the
-    //    //additional values are things like 0 or their groups, and groups can't create content
-    //    return $@"({MainAlias}.{idField} in 
-    //        (select {nameof(ContentPermission.contentId)} 
-    //         from {typeInfo.table} 
-    //         where {nameof(ContentPermission.userId)} in {requesters}
-    //           and `{checkCol}` = 1
-    //        ))"; //NOTE: DO NOT CHECK CREATE USER! ALL PERMISSIONS ARE NOW IN THE TABLE! NOTHING IMPLIED!
-    //}
 
     /// <summary>
     /// Throw exceptions on any funky business we can quickly report

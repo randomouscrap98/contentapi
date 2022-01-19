@@ -58,6 +58,19 @@ namespace contentapi.Live;
   With 15 people, that's an unacceptable 450ms. But the system would undoubtedly be simpler to 
   implement to start with...
 */  
+/* --- Additional notes 1-2022 ---
+- An event system that the users can query against will always remove all privacy, or require excessive 
+  privacy calculations, otherwise everyone can see what everyone else is doing. As such, avoid such systems
+  at all costs; always assume events should be private at all times
+- Watch notifications (and other permanent alerts) will not be as granular as events. As such, don't start
+  overthinking the watch system; you will simply not get permanent updates to alert counts when comments
+  are edited or deleted, among other things. 
+- Users of the event queue should NOT be inserting the cached data (such as the page data), because the
+  event queue system ALREADY has to lookup that stuff when it is not present in the cache (for instance,
+  when a user reconnects, they will most likely need things outside the super small 2-3 live cache buffer,
+  and so a listen reconnect has to go get that data for itself ANYWAY, regardless of how the data was 
+  provided in the first place)
+*/
 public class EventQueue : IEventQueue
 {
     public const string MainCheckpointName = "main";
@@ -68,19 +81,20 @@ public class EventQueue : IEventQueue
 
     protected ILogger<EventQueue> logger;
     protected ICacheCheckpointTracker<EventData> eventTracker;
-    protected IGenericSearch search;
+    protected IGenericSearch search; //transient
     protected IPermissionService permissionService;
 
+    //The cache for the few (if any) fully-pulled data for live updates. This is NOT the event queue!
     protected ConcurrentDictionary<int, AnnotatedCacheItem> trueCache;
 
     public EventQueue(ILogger<EventQueue> logger, ICacheCheckpointTracker<EventData> tracker, IGenericSearch search, 
-        IPermissionService permissionService)
+        IPermissionService permissionService, ConcurrentDictionary<int, AnnotatedCacheItem> trueCache)
     {
         this.logger = logger;
         this.eventTracker = tracker;
-        this.trueCache = new ConcurrentDictionary<int, AnnotatedCacheItem>();
         this.search = search;
         this.permissionService = permissionService; //TODO: MIGHT BE UNNECESSARY
+        this.trueCache = trueCache; //new ConcurrentDictionary<int, AnnotatedCacheItem>();
     }
 
     //public delegate Dictionary<long, string> PermissionPull(Dictionary<string, IEnumerable<IDictionary<string, object>>> result);
