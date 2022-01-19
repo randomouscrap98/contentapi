@@ -152,7 +152,12 @@ public class EventQueue : IEventQueue
             throw new InvalidOperationException($"GetSearchRequestForEvents called with more or less than one event type! Events: {events.Count()}");
 
         var first = events.First();
-        var requests = new SearchRequests();
+        var requests = new SearchRequests()
+        {
+            values = new Dictionary<string, object> {
+                { "ids", events.Select(x => x.refId) }
+            }
+        };
 
         var contentRequest = new Func<string, SearchRequest>(q => new SearchRequest {
             type = RequestType.content.ToString(),
@@ -180,6 +185,12 @@ public class EventQueue : IEventQueue
         {
             requests.requests.Add(basicRequest(RequestType.activity.ToString())); 
             requests.requests.Add(contentRequest("id in @activity.contentId"));
+            requests.requests.Add(new SearchRequest()
+            {
+                type = RequestType.user.ToString(),
+                fields = "*",
+                query = "id in @content.createUserId or id in @activity.userId"
+            });
         }
         else if(first.type == EventType.user)
         {
@@ -203,6 +214,9 @@ public class EventQueue : IEventQueue
 
     public void AnnotateResult(Dictionary<string, QueryResultSet> result, EventData evnt)
     {
+        //For all result sets in our (probably truecache item result), see if any of them require annotations.
+        //If so, annotate the "action" on each of the items. I think this is because some of these database
+        //results don't have a concept of an action, such as watch create/delete, etc.
         foreach(var annotate in SimpleResultAnnotations)
         {
             if (result.ContainsKey(annotate))
