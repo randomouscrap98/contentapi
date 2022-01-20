@@ -10,15 +10,10 @@ namespace contentapi.test;
 public class CheckpointTracketTest : UnitTestBase
 {
     protected CheckpointTracker tracker;
-    protected CancellationTokenSource cancelSource;
-    protected CancellationTokenSource safetySource;
 
     public CheckpointTracketTest()
     {
         tracker = new CheckpointTracker(GetService<ILogger<CheckpointTracker>>());
-        cancelSource = new CancellationTokenSource();
-        safetySource = new CancellationTokenSource();
-        safetySource.CancelAfter(5000);
     }
 
     [Fact]

@@ -1,6 +1,8 @@
 using System.Collections.Generic;
+using System.Threading;
 using System.Threading.Tasks;
 using contentapi.Live;
+using contentapi.Views;
 
 namespace contentapi.test.Mock;
 
@@ -13,5 +15,10 @@ public class FakeEventQueue : IEventQueue
     {
         Events.Add(data);
         return Task.FromResult(ReturnData);
+    }
+
+    public Task<LiveData> ListenAsync(UserView listener, int lastId = -1, CancellationToken? token = null)
+    {
+        throw new System.NotImplementedException();
     }
 }

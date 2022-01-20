@@ -5,6 +5,7 @@ namespace contentapi.Live;
 
 public class LiveData
 {
+    public bool optimized {get;set;} = false;
     public int lastId {get;set;} = 0;
     public List<EventDataView> events {get;set;} = new List<EventDataView>();
     public Dictionary<EventType, Dictionary<string, QueryResultSet>> data {get;set;} = new Dictionary<EventType, Dictionary<string, QueryResultSet>>();

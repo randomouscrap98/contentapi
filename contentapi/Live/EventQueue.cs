@@ -225,7 +225,7 @@ public class EventQueue : IEventQueue
 
         var contentRequest = new Func<string, SearchRequest>(q => new SearchRequest {
             type = RequestType.content.ToString(),
-            fields = "id,name,parentId,createDate,createUserId,deleted",
+            fields = "id,name,parentId,createDate,createUserId,deleted,permissions",
             query = q
         });
         var basicRequest = new Func<string, SearchRequest>(t => new SearchRequest {
@@ -285,22 +285,29 @@ public class EventQueue : IEventQueue
         return new EventCacheData() { data = searchData.data };
     }
 
+    public async Task<CacheCheckpointResult<EventData>> ListenEventsAsync(int lastId = -1, CancellationToken? token = null)
+    {
+        var cancelToken = token ?? CancellationToken.None;
+        var checkpoint = await eventTracker.WaitForCheckpoint(MainCheckpointName, lastId, cancelToken);
+
+        //Should this check be here? Probably... it's part of listening; our system SHOULDN'T return an
+        //empty set ever, but hey who knows...
+        if(checkpoint.Data.Count == 0)
+            throw new InvalidOperationException("After waiting for checkpoint, received NO event data!");
+
+        return checkpoint;
+    }
+
     public async Task<LiveData> ListenAsync(UserView listener, int lastId = -1, CancellationToken? token = null)
     {
         //Use only ONE searcher for each listen call! Hopefully this isn't a problem!
         var search = searchProducer();
-        var cancelToken = token ?? CancellationToken.None;
-        var result = new LiveData() {
-            lastId = lastId
-        }; 
+        var result = new LiveData() { lastId = lastId }; 
 
         //No tail recursion optimization, don't do recursive call to self! Easier to just do loop anyway!
         while(true)
         {
-            var checkpoint = await eventTracker.WaitForCheckpoint(MainCheckpointName, result.lastId, cancelToken);
-
-            if(checkpoint.Data.Count == 0)
-                throw new InvalidOperationException("After waiting for checkpoint, received NO event data!");
+            var checkpoint = await ListenEventsAsync(result.lastId, token);
 
             //Always keep our "lastId" up to date!
             result.lastId = checkpoint.Data.Max(x => x.id);
@@ -329,6 +336,7 @@ public class EventQueue : IEventQueue
                     if(dataCache.ContainsKey(optimalEvent.id))
                     {
                         result.data.Add(optimalEvent.type, dataCache[optimalEvent.id].data ?? throw new InvalidOperationException($"No data set for event cache item {optimalEvent.id}"));
+                        result.optimized = true;
                         optimalRoute = true;
                     }
                 }

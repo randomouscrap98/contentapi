@@ -1,4 +1,5 @@
 using System.Collections.Concurrent;
+using System.Collections.Generic;
 using System.Linq;
 using System.Threading.Tasks;
 using AutoMapper;
@@ -53,14 +54,11 @@ public class EventQueueTest : UnitTestBase, IClassFixture<DbUnitTestSearchFixtur
         Assert.NotEmpty(request.values);
     }
 
-    //First, without actually doing anything with the event part, ensure the core of the service works. Does
-    //building a request for events create something we expect?
-    [Fact]
-    public async Task GetSearchRequestForEvents_Activity()
+    private async Task<List<ActivityView>> GetActivityForContentAsync(long id)
     {
         //Go get all activity for content 1
         var search = new SearchRequests();
-        search.values.Add("id", 1);
+        search.values.Add("id", id);
         search.requests.Add(new SearchRequest()
         {
             type = "activity",
@@ -69,8 +67,17 @@ public class EventQueueTest : UnitTestBase, IClassFixture<DbUnitTestSearchFixtur
         });
         var baseResult = await searcher.SearchUnrestricted(search);
         var activities = searcher.ToStronglyTyped<ActivityView>(baseResult.data["activity"]);
+        return activities;
+    }
 
+    //First, without actually doing anything with the event part, ensure the core of the service works. Does
+    //building a request for events create something we expect?
+    [Fact]
+    public async Task GetSearchRequestForEvents_Activity()
+    {
+        var activities = await GetActivityForContentAsync(1);
         Assert.True(activities.Count > 1); //It should be greater than 1 for content 1, because of inverse activity amounts
+
         foreach(var a in activities)
         {
             //The event user shouldn't matter but just in case...
@@ -81,6 +88,9 @@ public class EventQueueTest : UnitTestBase, IClassFixture<DbUnitTestSearchFixtur
             Assert.True(result.data.ContainsKey("content"));
             Assert.True(result.data.ContainsKey("activity"));
             Assert.True(result.data.ContainsKey("user"));
+
+            //The content, when requested, MUST have permissions!!
+            Assert.True(result.data["content"].First().ContainsKey("permissions"));
 
             var content = searcher.ToStronglyTyped<ContentView>(result.data["content"]);
             var activity = searcher.ToStronglyTyped<ActivityView>(result.data["activity"]);
@@ -125,6 +135,9 @@ public class EventQueueTest : UnitTestBase, IClassFixture<DbUnitTestSearchFixtur
             Assert.True(result.data.ContainsKey("comment"));
             Assert.True(result.data.ContainsKey("user"));
 
+            //The content, when requested, MUST have permissions!!
+            Assert.True(result.data["content"].First().ContainsKey("permissions"));
+
             var content = searcher.ToStronglyTyped<ContentView>(result.data["content"]);
             var comment = searcher.ToStronglyTyped<CommentView>(result.data["comment"]);
             var user = searcher.ToStronglyTyped<UserView>(result.data["user"]);
@@ -140,5 +153,20 @@ public class EventQueueTest : UnitTestBase, IClassFixture<DbUnitTestSearchFixtur
             Assert.Equal(contentId, comment.First().contentId);
             Assert.Equal(c.id, comment.First().id);
         }
+    }
+
+    [Fact]
+    public async Task AddEventAsync_EventAdded()
+    {
+        var activities = await GetActivityForContentAsync(1);
+        var a = activities.First();
+        var evnt = new EventData(a.userId, Db.UserAction.create, EventType.activity, a.id);
+        var result = await queue.AddEventAsync(evnt);
+
+        var checkpoint = await queue.ListenEventsAsync(-1, cancelSource.Token);
+        cancelSource.CancelAfter(10);
+
+        //Should not fail or throw an exception, the events should be returned...
+        Assert.Single(checkpoint.Data);
     }
 }

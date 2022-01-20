@@ -1,4 +1,5 @@
 using System;
+using System.Threading;
 using contentapi.Setup;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Logging;
@@ -11,6 +12,11 @@ public class UnitTestBase
     protected ILogger logger;
     protected IServiceCollection baseCollection;
     protected IServiceProvider baseProvider;
+
+    protected CancellationTokenSource cancelSource;
+    protected CancellationTokenSource safetySource;
+    //protected CancellationToken cancelToken;
+
     public const string SecretKey = "Not very secret, now is it? 7483927932";
 
     public UnitTestBase()//Action<IServiceCollection>? modify = null)
@@ -26,6 +32,11 @@ public class UnitTestBase
 
         baseProvider = baseCollection.BuildServiceProvider();
         logger = GetService<ILogger<UnitTestBase>>();
+
+        cancelSource = new CancellationTokenSource();
+        safetySource = new CancellationTokenSource();
+        safetySource.CancelAfter(5000);
+        //cancelToken = cancelSource.Token;
     }
 
 

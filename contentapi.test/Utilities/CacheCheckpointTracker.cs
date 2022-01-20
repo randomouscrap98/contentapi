@@ -14,16 +14,11 @@ public class CacheCheckpointTrackerTest : UnitTestBase
 {
     protected CacheCheckpointTracker<int> tracker;
     protected CacheCheckpointTrackerConfig config;
-    protected CancellationTokenSource cancelSource;
-    protected CancellationTokenSource safetySource;
 
     public CacheCheckpointTrackerTest()
     {
         config = new CacheCheckpointTrackerConfig();
         tracker = new CacheCheckpointTracker<int>(GetService<ILogger<CacheCheckpointTracker<int>>>(), config);
-        cancelSource = new CancellationTokenSource();
-        safetySource = new CancellationTokenSource();
-        safetySource.CancelAfter(5000);
     }
 
     [Fact]
