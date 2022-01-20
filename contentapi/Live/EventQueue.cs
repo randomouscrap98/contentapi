@@ -129,17 +129,53 @@ public class EventQueue : IEventQueue
         this.config = config;
     }
 
-    public async Task<object> AddEventAsync(EventData data)
+    public async Task<object> AddEventAsync(EventData evnt)
     {
         //First, need to lookup the data for the event to add it to our true cache. Also need to remove old values!
-        var cacheItem = await LookupEventDataAsync(data);
+        var cacheItem = await LookupEventDataAsync(evnt);
+        //var permissions = GetPermissionsFromEvent(evnt, cacheItem);
 
-
-
-        //Go figure out our permission linking
-        lock(permissionCacheLock)
+        //This is the ONLY place we're performing this permission calculation nonsense. Be VERY CAREFUL, this is
+        //quite the hack!
+        if(evnt.type == EventType.activity || evnt.type == EventType.comment)
         {
+            var currentPermissions = GetStandardContentPermissions(cacheItem.data ?? throw new InvalidOperationException("No cache result data to pull permissions from!"));
 
+            //Go figure out our permission linking
+            lock(permissionCacheLock)
+            {
+                //The permissions are brand new, just add an empty object
+                if(!permissionCache.ContainsKey(currentPermissions.Item1))
+                    permissionCache.Add(currentPermissions.Item1, new PermissionCacheData()); 
+
+                //We must modify the dictionary IN PLACE so we don't replace the reference! THIS IS CRITICAL TO MAKING THE PERMISSION UPDATE SYSTEM WORK!
+                var permData = permissionCache[currentPermissions.Item1];
+                permData.MaxLinkId = evnt.id;
+                permData.Permissions.Clear();
+            
+                //The very special modification in-place. Slightly slower, but saves a LOT of complexity and processing for permission updates!
+                foreach(var kv in currentPermissions.Item2)
+                    permData.Permissions.Add(kv.Key, kv.Value);
+
+                //This makes the event permissions reference the permissions WITHIN our tracked permission dictionary!
+                //This way, when OTHER events come in with new permissions for the same content, it will go through and
+                //update ALL prior events! Hopefully!
+                evnt.permissions = permData.Permissions;
+
+                //TODO: Add the old permission removal!
+            }
+        }
+        else if(evnt.type == EventType.user)
+        {
+            evnt.permissions = new Dictionary<long, string> { { 0, "R" }};
+        }
+        else if(evnt.type == EventType.uservariable || evnt.type == EventType.watch)
+        {
+            evnt.permissions = new Dictionary<long, string> { { evnt.userId, "R" }};
+        }
+        else
+        {
+            throw new InvalidOperationException($"Don't know how to compute permissions for event type {evnt.type}");
         }
 
         //Remove any cached items older than our timer, then add our cache item
@@ -150,11 +186,11 @@ public class EventQueue : IEventQueue
             foreach(var removeKey in removeKeys)
                 dataCache.Remove(removeKey.Key);
 
-            dataCache.Add(data.id, cacheItem);
+            dataCache.Add(evnt.id, cacheItem);
         }
 
         //THEN we can update the checkpoint, as that will wake up all the listeners
-        eventTracker.UpdateCheckpoint(MainCheckpointName, data);
+        eventTracker.UpdateCheckpoint(MainCheckpointName, evnt);
 
         return false;
     }
@@ -165,7 +201,7 @@ public class EventQueue : IEventQueue
     /// </summary>
     /// <param name="result"></param>
     /// <returns></returns>
-    public Dictionary<long, string> GetStandardContentPermissions(Dictionary<string, QueryResultSet> result)
+    public Tuple<long, Dictionary<long, string>> GetStandardContentPermissions(Dictionary<string, QueryResultSet> result)
     {
         var key = RequestType.content.ToString();
 
@@ -182,25 +218,17 @@ public class EventQueue : IEventQueue
             throw new InvalidOperationException($"Tried to retrieve content permissions from 'standard' result, but result from '{key}' had no permissions key '{permKey}'");
 
         //We can be "reasonably" sure that it's a dictionary
-        return (Dictionary<long, string>)content[permKey];
+        return Tuple.Create((long)content["id"], (Dictionary<long, string>)content[permKey]);
     }
 
-    /// <summary>
-    /// Get the permissions in the cache item based on the given event type.
-    /// </summary>
-    /// <param name="evnt"></param>
-    /// <param name="result"></param>
-    public Dictionary<long, string> GetPermissionsFromEvent(EventData evnt, EventCacheData result)
-    {
-        if(evnt.type == EventType.activity || evnt.type == EventType.comment)
-            return GetStandardContentPermissions(result.data ?? throw new InvalidOperationException("No cache result data to pull permissions from!"));
-        else if(evnt.type == EventType.user)
-            return new Dictionary<long, string> { { 0, "R" }};
-        else if(evnt.type == EventType.uservariable || evnt.type == EventType.watch)
-            return new Dictionary<long, string> { { evnt.userId, "R" }};
-        else
-            throw new InvalidOperationException($"Don't know how to compute permissions for event type {evnt.type}");
-    }
+    ///// <summary>
+    ///// Get the permissions in the cache item based on the given event type.
+    ///// </summary>
+    ///// <param name="evnt"></param>
+    ///// <param name="result"></param>
+    //public Dictionary<long, string> GetPermissionsFromEvent(EventData evnt, EventCacheData result)
+    //{
+    //}
 
 
     /// <summary>
@@ -275,20 +303,20 @@ public class EventQueue : IEventQueue
         return requests;
     }
 
-    public void AnnotateResults(Dictionary<string, QueryResultSet> result, EventData evnt)
-    {
-        //For all result sets in our (probably truecache item result), see if any of them require annotations.
-        //If so, annotate the "action" on each of the items. I think this is because some of these database
-        //results don't have a concept of an action, such as watch create/delete, etc.
-        foreach(var annotate in SimpleResultAnnotations)
-        {
-            if (result.ContainsKey(annotate))
-            {
-                foreach(var item in result[annotate])
-                    item.Add("action", evnt.action);
-            }
-        }
-    }
+    //public void AnnotateResults(Dictionary<string, QueryResultSet> result, EventData evnt)
+    //{
+    //    //For all result sets in our (probably truecache item result), see if any of them require annotations.
+    //    //If so, annotate the "action" on each of the items. I think this is because some of these database
+    //    //results don't have a concept of an action, such as watch create/delete, etc.
+    //    foreach(var annotate in SimpleResultAnnotations)
+    //    {
+    //        if (result.ContainsKey(annotate))
+    //        {
+    //            foreach(var item in result[annotate])
+    //                item.Add("action", evnt.action);
+    //        }
+    //    }
+    //}
 
     //public async Task<IEnumerable<EventCacheData>> LookupEventDataAsync(IEnumerable<EventData> events, IGenericSearch search = null)
     //{
@@ -309,20 +337,20 @@ public class EventQueue : IEventQueue
 
     public async Task<EventCacheData> LookupEventDataAsync(EventData evnt)
     {
-        var result = new EventCacheData();
+        //var result = new EventCacheData();
 
-        //All of these are basically: construct a search, get data, set permissions
         var requests = GetSearchRequestsForEvents(new List<EventData> { evnt });
         var search = searchProducer();
 
         var searchData = await search.SearchUnrestricted(requests);
-        result.data = searchData.data;
+        return new EventCacheData() { data = searchData.data };
+        //result.data = searchData.data;
 
         //And now, the thing we do no matter what: need to modify permissions and certain types of results
-        SetPermissionsFromEvent(evnt, result);
-        AnnotateResult(searchData.data, evnt);
+        //SetPermissionsFromEvent(evnt, result);
+        //AnnotateResult(searchData.data, evnt);
 
-        return result;
+        //return result;
     }
 
     public async Task<Dictionary<EventType, Dictionary<string, QueryResultSet>>> ListenAsync(UserView listener, int lastId = -1, CancellationToken? token = null)

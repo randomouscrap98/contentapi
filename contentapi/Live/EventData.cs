@@ -17,7 +17,7 @@ public class EventData
     public long refId {get;set;}                                    // 8
 
     //managed by the internal system.
-    public Dictionary<long, string>? permissions {get;set;} = null;
+    public Dictionary<long, string> permissions {get;set;} = new Dictionary<long, string>();
 
     public EventData() { }
 
