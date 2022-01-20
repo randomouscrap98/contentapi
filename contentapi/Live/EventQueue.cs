@@ -4,7 +4,6 @@ using contentapi.Search;
 using contentapi.Utilities;
 using contentapi.Views;
 using QueryResultSet = System.Collections.Generic.IEnumerable<System.Collections.Generic.IDictionary<string, object>>;
-//using ResultSetPackage = System.Collections.Generic.Dictionary<string, QueryResultSet>; //System.Collections.Generic.IEnumerable<System.Collections.Generic.IDictionary<string, object>>;
 
 namespace contentapi.Live;
 
@@ -74,26 +73,6 @@ namespace contentapi.Live;
   and so a listen reconnect has to go get that data for itself ANYWAY, regardless of how the data was 
   provided in the first place)
 */
-
-//Simple rename
-public class EventCacheData
-{
-    //Some tracking junk
-    public static int nextId = 0;
-    public int id {get;set;} = Interlocked.Increment(ref nextId);
-    public DateTime createDate = DateTime.UtcNow;
-
-    //The actual data
-    //public Dictionary<long, string> permissions {get;set;} = new Dictionary<long, string>();
-    public Dictionary<string, QueryResultSet>? data {get;set;}
-}
-//public class EventCacheData : AnnotatedCacheItem<Dictionary<string, QueryResultSet>> { }
-
-public class PermissionCacheData 
-{
-    public Dictionary<long, string> Permissions {get;set;} = new Dictionary<long, string>();
-    public int MaxLinkId {get;set;} = 0;
-}
 
 public class EventQueueConfig
 {
