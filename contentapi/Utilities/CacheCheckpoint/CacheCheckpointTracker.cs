@@ -83,6 +83,19 @@ public class CacheCheckpointTracker<T> : ICacheCheckpointTracker<T>
         }
     }
 
+    public int MinimumCacheCheckpoint(string checkpointName)
+    {
+        var thisCheckpoint = GetCheckpoint(checkpointName);
+
+        lock(thisCheckpoint.SignalLock)
+        {
+            if(thisCheckpoint.Cache.Count > 0)
+                return thisCheckpoint.Cache.Keys.Min();
+            else 
+                return -1;
+        }
+    }
+
     public async Task<CacheCheckpointResult<T>> WaitForCheckpoint(string checkpointName, int lastSeen, CancellationToken cancelToken)
     {
         var thisCheckpoint = GetCheckpoint(checkpointName);
@@ -91,8 +104,13 @@ public class CacheCheckpointTracker<T> : ICacheCheckpointTracker<T>
         lock(thisCheckpoint.SignalLock)
         {
             //The request is TOO OLD, it's beyond the end of the cache!
-            if(lastSeen > 0 && lastSeen < thisCheckpoint.Cache.Keys.Min())
-                throw new ExpiredCheckpointException($"Checkpoint {lastSeen} is too old! You will be missing cached data!");
+            if(lastSeen > 0)
+            {
+                if(thisCheckpoint.Cache.Count == 0)
+                    throw new InvalidOperationException($"Somehow, checkpoint {lastSeen} is valid, but there's no cache!");
+                else if(lastSeen < thisCheckpoint.Cache.Keys.Min())
+                    throw new ExpiredCheckpointException($"Checkpoint {lastSeen} is too old! You will be missing cached data!");
+            } 
 
             if(lastSeen > thisCheckpoint.Checkpoint)
                 throw new ArgumentException($"LastSeen checkpoint too high! {lastSeen} vs {thisCheckpoint.Checkpoint}. Did you send a request after a server restart?");

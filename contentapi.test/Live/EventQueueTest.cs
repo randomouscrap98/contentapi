@@ -18,6 +18,7 @@ public class EventQueueTest : UnitTestBase, IClassFixture<DbUnitTestSearchFixtur
     protected EventQueue queue;
     protected ICacheCheckpointTracker<EventData> tracker;
     protected IPermissionService permission;
+    protected EventQueueConfig config;
     //protected ConcurrentDictionary<int, AnnotatedCacheItem> trueCache;
 
     //The tests here are rather complicated; we can probably simplify them in the future, but for now,
@@ -30,8 +31,9 @@ public class EventQueueTest : UnitTestBase, IClassFixture<DbUnitTestSearchFixtur
         this.tracker = fixture.GetService<ICacheCheckpointTracker<EventData>>();
         this.searcher = fixture.GetService<IGenericSearch>();
         this.permission = fixture.GetService<IPermissionService>();
+        this.config = new EventQueueConfig();
         //this.trueCache = new ConcurrentDictionary<int, AnnotatedCacheItem>();
-        this.queue = new EventQueue(fixture.GetService<ILogger<EventQueue>>(), this.tracker, () => this.searcher, this.permission); //, this.trueCache);
+        this.queue = new EventQueue(fixture.GetService<ILogger<EventQueue>>(), this.config, this.tracker, () => this.searcher, this.permission); //, this.trueCache);
         writer = new DbWriter(fixture.GetService<ILogger<DbWriter>>(), this.searcher, 
             fixture.GetService<Db.ContentApiDbConnection>(), fixture.GetService<ITypeInfoService>(), this.mapper,
             fixture.GetService<Db.History.IHistoryConverter>(), this.permission, this.queue); 

@@ -16,6 +16,9 @@ public class EventData
     public EventType type {get;set;}                              // 8
     public long refId {get;set;}                                    // 8
 
+    //managed by the internal system.
+    public Dictionary<long, string>? permissions {get;set;} = null;
+
     public EventData() { }
 
     public EventData(long userId, UserAction action, EventType type, long refId)

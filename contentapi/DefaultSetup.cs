@@ -51,6 +51,7 @@ public static class DefaultSetup
         services.AddSingleton<HashServiceConfig>();
         services.AddSingleton<UserServiceConfig>();
         services.AddSingleton<CacheCheckpointTrackerConfig>();
+        services.AddSingleton<EventQueueConfig>();
     }
 
     public static TokenValidationParameters AddSecurity(IServiceCollection services, string secretKey)
