@@ -33,7 +33,7 @@ public class EventQueueTest : UnitTestBase, IClassFixture<DbUnitTestSearchFixtur
         this.permission = fixture.GetService<IPermissionService>();
         this.config = new EventQueueConfig();
         //this.trueCache = new ConcurrentDictionary<int, AnnotatedCacheItem>();
-        this.queue = new EventQueue(fixture.GetService<ILogger<EventQueue>>(), this.config, this.tracker, () => this.searcher, this.permission); //, this.trueCache);
+        this.queue = new EventQueue(fixture.GetService<ILogger<EventQueue>>(), this.config, this.tracker, () => this.searcher, this.permission, this.mapper);
         writer = new DbWriter(fixture.GetService<ILogger<DbWriter>>(), this.searcher, 
             fixture.GetService<Db.ContentApiDbConnection>(), fixture.GetService<ITypeInfoService>(), this.mapper,
             fixture.GetService<Db.History.IHistoryConverter>(), this.permission, this.queue); 

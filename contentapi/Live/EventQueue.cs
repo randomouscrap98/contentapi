@@ -1,4 +1,5 @@
 using System.Collections.Concurrent;
+using AutoMapper;
 using contentapi.Search;
 using contentapi.Utilities;
 using contentapi.Views;
@@ -97,6 +98,7 @@ public class PermissionCacheData
 public class EventQueueConfig
 {
     public TimeSpan DataCacheExpire {get;set;} = TimeSpan.FromSeconds(10);
+    public int MaxEventListen {get;set;} = 1000;
 }
 
 public class EventQueue : IEventQueue
@@ -111,6 +113,7 @@ public class EventQueue : IEventQueue
     protected ICacheCheckpointTracker<EventData> eventTracker; //THIS is the event queue!
     protected Func<IGenericSearch> searchProducer; //A search generator to ensure this queue can be any lifetime it wants (this is an anti-pattern maybe?)
     protected IPermissionService permissionService;
+    protected IMapper mapper;
     protected EventQueueConfig config;
 
     //The cache for the few (if any) fully-pulled data for live updates. This is NOT the event queue!
@@ -120,13 +123,14 @@ public class EventQueue : IEventQueue
     protected readonly object permissionCacheLock = new Object();
 
     public EventQueue(ILogger<EventQueue> logger, EventQueueConfig config, ICacheCheckpointTracker<EventData> tracker, Func<IGenericSearch> searchProducer, 
-        IPermissionService permissionService)
+        IPermissionService permissionService, IMapper mapper)
     {
         this.logger = logger;
         this.eventTracker = tracker;
         this.searchProducer = searchProducer;
         this.permissionService = permissionService; 
         this.config = config;
+        this.mapper = mapper;
     }
 
     public async Task<object> AddEventAsync(EventData evnt)
@@ -221,16 +225,6 @@ public class EventQueue : IEventQueue
         return Tuple.Create((long)content["id"], (Dictionary<long, string>)content[permKey]);
     }
 
-    ///// <summary>
-    ///// Get the permissions in the cache item based on the given event type.
-    ///// </summary>
-    ///// <param name="evnt"></param>
-    ///// <param name="result"></param>
-    //public Dictionary<long, string> GetPermissionsFromEvent(EventData evnt, EventCacheData result)
-    //{
-    //}
-
-
     /// <summary>
     /// Construct the searchrequest that will obtain the desired data for the given list of events. The events must ALL be the same type, otherwise a search
     /// request can't be constructed!
@@ -303,96 +297,76 @@ public class EventQueue : IEventQueue
         return requests;
     }
 
-    //public void AnnotateResults(Dictionary<string, QueryResultSet> result, EventData evnt)
-    //{
-    //    //For all result sets in our (probably truecache item result), see if any of them require annotations.
-    //    //If so, annotate the "action" on each of the items. I think this is because some of these database
-    //    //results don't have a concept of an action, such as watch create/delete, etc.
-    //    foreach(var annotate in SimpleResultAnnotations)
-    //    {
-    //        if (result.ContainsKey(annotate))
-    //        {
-    //            foreach(var item in result[annotate])
-    //                item.Add("action", evnt.action);
-    //        }
-    //    }
-    //}
-
-    //public async Task<IEnumerable<EventCacheData>> LookupEventDataAsync(IEnumerable<EventData> events, IGenericSearch search = null)
-    //{
-    //    search = search ?? searchProducer();
-
-    //    //All of these are basically: construct a search, get data, set permissions
-    //    var requests = GetSearchRequestsForEvents(events);
-
-    //    var searchData = await search.SearchUnrestricted(requests);
-    //    result.data = searchData.data;
-
-    //    //And now, the thing we do no matter what: need to modify permissions and certain types of results
-    //    SetPermissionsFromEvent(evnt, result);
-    //    AnnotateResult(searchData.data, evnt);
-
-    //    return result;
-    //}
-
     public async Task<EventCacheData> LookupEventDataAsync(EventData evnt)
     {
-        //var result = new EventCacheData();
-
         var requests = GetSearchRequestsForEvents(new List<EventData> { evnt });
         var search = searchProducer();
 
         var searchData = await search.SearchUnrestricted(requests);
         return new EventCacheData() { data = searchData.data };
-        //result.data = searchData.data;
-
-        //And now, the thing we do no matter what: need to modify permissions and certain types of results
-        //SetPermissionsFromEvent(evnt, result);
-        //AnnotateResult(searchData.data, evnt);
-
-        //return result;
     }
 
-    public async Task<Dictionary<EventType, Dictionary<string, QueryResultSet>>> ListenAsync(UserView listener, int lastId = -1, CancellationToken? token = null)
+    public async Task<LiveData> ListenAsync(UserView listener, int lastId = -1, CancellationToken? token = null)
     {
         //Use only ONE searcher for each listen call! Hopefully this isn't a problem!
         var search = searchProducer();
         var cancelToken = token ?? CancellationToken.None;
-        var result = new Dictionary<EventType, Dictionary<string, QueryResultSet>>();
+        var result = new LiveData() {
+            lastId = lastId
+        }; 
 
         //No tail recursion optimization, don't do recursive call to self! Easier to just do loop anyway!
         while(true)
         {
-            var checkpoint = await eventTracker.WaitForCheckpoint(MainCheckpointName, lastId, cancelToken);
-            var events = checkpoint.Data;
+            var checkpoint = await eventTracker.WaitForCheckpoint(MainCheckpointName, result.lastId, cancelToken);
 
-            var temp = new EventCacheData();
+            if(checkpoint.Data.Count == 0)
+                throw new InvalidOperationException("After waiting for checkpoint, received NO event data!");
+
+            //Always keep our "lastId" up to date!
+            result.lastId = checkpoint.Data.Max(x => x.id);
+
+            //Thanks to us caching permissions with the events, we can filter out the events we're not allowed to see immediately, saving us from
+            //weird situations where we get a data cache miss simply due to too many events going through the system that we're not even allowed to see.
+            var events = checkpoint.Data.Where(x => permissionService.CanUserStatic(listener, Db.UserAction.read, x.permissions)); 
+
+            if(events.Count() == 0)
+                continue;  //There is NOTHING to do for this run, because the event(s) in question don't pertain to us
+            else if(events.Count() > config.MaxEventListen)
+                events = events.OrderBy(x => x.id).Take(config.MaxEventListen); //Don't let the user get too many events all at once!
+
+            var optimalRoute = false;
+
+            //Go ahead and set up the return events, we know we'll return SOMETHING this loop, since there's a non-zero amount
+            result.events = events.Select(x => mapper.Map<EventDataView>(x)).ToList();
 
             //The "fast optimized" route. Hopefully, MOST live updates go through this.
-            if (events.Count == 1 && trueCache.TryGetValue(events.First().id, out temp))
+            if (events.Count() == 1)
             {
-                if (permissionService.CanUserStatic(listener, Db.UserAction.read, temp.permissions))
-                    result.Add(events.First().type, temp.data ?? throw new InvalidOperationException($"No data set for event cache item {events.First().id}"));
-                //var
-                //result.Where(x => permissionService.CanUserStatic(listener, Db.UserAction.read, x.permissions)).Select(x => x.data ?? throw new InvalidOperationException($"No data set for event cache item {x.id}")).ToList();
+                var optimalEvent = events.First();
+
+                lock(dataCacheLock)
+                {
+                    if(dataCache.ContainsKey(optimalEvent.id))
+                    {
+                        result.data.Add(optimalEvent.type, dataCache[optimalEvent.id].data ?? throw new InvalidOperationException($"No data set for event cache item {optimalEvent.id}"));
+                        optimalRoute = true;
+                    }
+                }
             }
-            //User missed some messages, or for some reason things just didn't line up. Do it the slow way
-            else
+
+            //Oh, we weren't able to be cool and optimal. Go look up stuff manually!
+            if(!optimalRoute)
             {
                 foreach(var type in events.Select(x => x.type).Distinct())
                 {
                     var requests = GetSearchRequestsForEvents(events.Where(x => x.type == type));
-                    var searchData = await search.Search(requests, listener.id); //This will do auto-permissions
-                    AnnotateResult(searchData.data, evnt);
-        result.data = searchData.data;
-
-        //And now, the thing we do no matter what: need to modify permissions and certain types of results
-        SetPermissionsFromEvent(evnt, result);
+                    var searchData = await search.SearchUnrestricted(requests); //SKIPPING PERMISSIONS! IS THIS OK??? We're relying on the permissions in the events being accurate!
+                    result.data.Add(type, searchData.data);
                 }
             }
 
-            if(result.Count > 0)
-                return result;
+            return result;
         }
     }
 }
