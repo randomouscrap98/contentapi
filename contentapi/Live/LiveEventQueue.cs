@@ -74,13 +74,13 @@ namespace contentapi.Live;
   provided in the first place)
 */
 
-public class EventQueueConfig
+public class LiveEventQueueConfig
 {
     public TimeSpan DataCacheExpire {get;set;} = TimeSpan.FromSeconds(10);
     public int MaxEventListen {get;set;} = 1000;
 }
 
-public class EventQueue : IEventQueue
+public class LiveEventQueue : ILiveEventQueue
 {
     public const string MainCheckpointName = "main";
     public static readonly List<string> SimpleResultAnnotations = new List<string> { 
@@ -88,12 +88,12 @@ public class EventQueue : IEventQueue
         RequestType.watch.ToString()
     };
 
-    protected ILogger<EventQueue> logger;
+    protected ILogger<LiveEventQueue> logger;
     protected ICacheCheckpointTracker<LiveEvent> eventTracker; //THIS is the event queue!
     protected Func<IGenericSearch> searchProducer; //A search generator to ensure this queue can be any lifetime it wants (this is an anti-pattern maybe?)
     protected IPermissionService permissionService;
     protected IMapper mapper;
-    protected EventQueueConfig config;
+    protected LiveEventQueueConfig config;
 
     //The cache for the few (if any) fully-pulled data for live updates. This is NOT the event queue!
     protected List<LiveEventCachedData> dataCache = new List<LiveEventCachedData>();
@@ -101,7 +101,7 @@ public class EventQueue : IEventQueue
     protected readonly object dataCacheLock = new Object();
     protected readonly object permissionCacheLock = new Object();
 
-    public EventQueue(ILogger<EventQueue> logger, EventQueueConfig config, ICacheCheckpointTracker<LiveEvent> tracker, Func<IGenericSearch> searchProducer, 
+    public LiveEventQueue(ILogger<LiveEventQueue> logger, LiveEventQueueConfig config, ICacheCheckpointTracker<LiveEvent> tracker, Func<IGenericSearch> searchProducer, 
         IPermissionService permissionService, IMapper mapper)
     {
         this.logger = logger;

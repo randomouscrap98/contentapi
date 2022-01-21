@@ -39,7 +39,7 @@ public static class DefaultSetup
         services.AddSingleton<IHashService, HashService>();
         services.AddSingleton<IUserService, UserService>();
         services.AddSingleton<IPermissionService, PermissionService>();
-        services.AddSingleton<IEventQueue, EventQueue>();
+        services.AddSingleton<ILiveEventQueue, LiveEventQueue>();
 
         //This NEEDS to stay transient because it holds onto a DB connection! We want those recycled!
         services.AddTransient<IGenericSearch, GenericSearcher>();
@@ -51,7 +51,7 @@ public static class DefaultSetup
         services.AddSingleton<HashServiceConfig>();
         services.AddSingleton<UserServiceConfig>();
         services.AddSingleton<CacheCheckpointTrackerConfig>();
-        services.AddSingleton<EventQueueConfig>();
+        services.AddSingleton<LiveEventQueueConfig>();
     }
 
     public static TokenValidationParameters AddSecurity(IServiceCollection services, string secretKey)

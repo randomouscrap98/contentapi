@@ -6,7 +6,7 @@ using contentapi.Views;
 
 namespace contentapi.test.Mock;
 
-public class FakeEventQueue : IEventQueue
+public class FakeEventQueue : ILiveEventQueue
 {
     public List<LiveEvent> Events = new List<LiveEvent>();
     public object ReturnData = false;

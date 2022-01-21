@@ -21,10 +21,10 @@ public class EventQueueTest : ViewUnitTestBase, IClassFixture<DbUnitTestSearchFi
     protected IGenericSearch searcher;
     protected DbUnitTestSearchFixture fixture;
     protected IMapper mapper;
-    protected EventQueue queue;
+    protected LiveEventQueue queue;
     protected ICacheCheckpointTracker<LiveEvent> tracker;
     protected IPermissionService permission;
-    protected EventQueueConfig config;
+    protected LiveEventQueueConfig config;
     protected CacheCheckpointTrackerConfig trackerConfig;
 
     //The tests here are rather complicated; we can probably simplify them in the future, but for now,
@@ -36,7 +36,7 @@ public class EventQueueTest : ViewUnitTestBase, IClassFixture<DbUnitTestSearchFi
         this.mapper = fixture.GetService<IMapper>();
         this.searcher = fixture.GetService<IGenericSearch>();
         this.permission = fixture.GetService<IPermissionService>();
-        this.config = new EventQueueConfig()
+        this.config = new LiveEventQueueConfig()
         {
             //Ensure nothing ever expires
             DataCacheExpire = System.TimeSpan.MaxValue
@@ -47,7 +47,7 @@ public class EventQueueTest : ViewUnitTestBase, IClassFixture<DbUnitTestSearchFi
         };
         //Note: WE HAVE TO create a new tracker every time! We don't want old data clogging this up!!
         this.tracker = new CacheCheckpointTracker<LiveEvent>(fixture.GetService<ILogger<CacheCheckpointTracker<LiveEvent>>>(), trackerConfig);
-        this.queue = new EventQueue(fixture.GetService<ILogger<EventQueue>>(), this.config, this.tracker, () => this.searcher, this.permission, this.mapper);
+        this.queue = new LiveEventQueue(fixture.GetService<ILogger<LiveEventQueue>>(), this.config, this.tracker, () => this.searcher, this.permission, this.mapper);
         writer = new DbWriter(fixture.GetService<ILogger<DbWriter>>(), this.searcher, 
             fixture.GetService<Db.ContentApiDbConnection>(), fixture.GetService<ITypeInfoService>(), this.mapper,
             fixture.GetService<Db.History.IHistoryConverter>(), this.permission, this.queue); 

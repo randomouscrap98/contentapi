@@ -21,11 +21,11 @@ public class DbWriter : IDbWriter
     protected IMapper mapper;
     protected IHistoryConverter historyConverter;
     protected IPermissionService permissionService;
-    protected IEventQueue eventQueue;
+    protected ILiveEventQueue eventQueue;
 
     public DbWriter(ILogger<DbWriter> logger, IGenericSearch searcher, ContentApiDbConnection connection,
         ITypeInfoService typeInfoService, IMapper mapper, IHistoryConverter historyConverter,
-        IPermissionService permissionService, IEventQueue eventQueue)
+        IPermissionService permissionService, ILiveEventQueue eventQueue)
     {
         this.logger = logger;
         this.searcher = searcher;
