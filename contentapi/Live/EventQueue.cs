@@ -283,7 +283,7 @@ public class EventQueue : IEventQueue
         var search = searchProducer();
 
         var searchData = await search.SearchUnrestricted(requests);
-        return new EventCacheData() { data = searchData.data };
+        return new EventCacheData() { evnt = evnt, data = searchData.data };
     }
 
     public async Task<CacheCheckpointResult<EventData>> ListenEventsAsync(int lastId = -1, CancellationToken? token = null)
@@ -346,7 +346,7 @@ public class EventQueue : IEventQueue
 
                 lock(dataCacheLock)
                 {
-                    var matching = dataCache.FirstOrDefault(x => x.id == optimalEvent.id);
+                    var matching = dataCache.FirstOrDefault(x => x.evnt.id == optimalEvent.id);
                     if(matching != null)
                     {
                         result.data.Add(optimalEvent.type, matching.data ?? throw new InvalidOperationException($"No data set for event cache item {optimalEvent.id}"));
@@ -355,7 +355,7 @@ public class EventQueue : IEventQueue
                     }
                     else
                     {
-                        throw new InvalidOperationException($"OPTIMAL EVENT BUT NO MATCHING: {optimalEvent.id} VS: {string.Join(",", dataCache.Select(x => x.id))}");
+                        throw new InvalidOperationException($"OPTIMAL EVENT BUT NO MATCHING: {optimalEvent.id} VS: {string.Join(",", dataCache.Select(x => x.evnt.id))}");
                     }
                     //else
                     //{
