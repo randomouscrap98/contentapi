@@ -1,3 +1,4 @@
+using System;
 using System.Collections.Concurrent;
 using System.Collections.Generic;
 using System.Linq;
@@ -96,15 +97,17 @@ public class EventQueueTest : ViewUnitTestBase, IClassFixture<DbUnitTestSearchFi
         var activities = searcher.ToStronglyTyped<ActivityView>(data["activity"]);
         var users = searcher.ToStronglyTyped<UserView>(data["user"]);
 
-        Assert.Single(contents);
-        Assert.Single(activities);
+        Assert.NotEmpty(contents);
+        Assert.NotEmpty(activities);
         Assert.NotEmpty(users); //don't know how many users there will be, depends on factors
 
+        #pragma warning disable xUnit2012 //I hate xunit
         Assert.True(users.Any(x => x.id == contents.First().createUserId), $"Couldn't find the create user for content {content.id} ({contents.First().createUserId})"); 
         Assert.True(users.Any(x => x.id == activity.userId), $"Couldn't find the activity user for activity {activity.id} ({activity.userId})"); 
-        Assert.Equal(content.id, contents.First().id); 
-        Assert.Equal(content.id, activities.First().contentId);
-        Assert.Equal(activity.id, activities.First().id);
+        Assert.True(contents.Any(x => x.id == content.id));
+        Assert.True(activities.Any(x => x.contentId == content.id));
+        Assert.True(activities.Any(x => x.id == activity.id));
+        #pragma warning restore xUnit2012 //I hate xunit
     }
 
     //First, without actually doing anything with the event part, ensure the core of the service works. Does
@@ -123,26 +126,6 @@ public class EventQueueTest : ViewUnitTestBase, IClassFixture<DbUnitTestSearchFi
             var result = await searcher.SearchUnrestricted(request);
 
             AssertSimpleActivityListenResult(result.data, content, a);
-            ////Now, make sure the result contains content, activity, and user results.
-            //Assert.True(result.data.ContainsKey("content"));
-            //Assert.True(result.data.ContainsKey("activity"));
-            //Assert.True(result.data.ContainsKey("user"));
-
-            ////The content, when requested, MUST have permissions!!
-            //Assert.True(result.data["content"].First().ContainsKey("permissions"));
-
-            //var content = searcher.ToStronglyTyped<ContentView>(result.data["content"]);
-            //var activity = searcher.ToStronglyTyped<ActivityView>(result.data["activity"]);
-            //var user = searcher.ToStronglyTyped<UserView>(result.data["user"]);
-
-            //Assert.Single(content);
-            //Assert.Single(activity);
-            //Assert.Single(user);
-
-            //Assert.Equal(1, user.First().id);
-            //Assert.Equal(1, content.First().id); //ALl activity should still point to content 1
-            //Assert.Equal(1, activity.First().contentId);
-            //Assert.Equal(a.id, activity.First().id);
         }
     }
 
@@ -247,7 +230,7 @@ public class EventQueueTest : ViewUnitTestBase, IClassFixture<DbUnitTestSearchFi
     }
 
     //Another simple full integration test, but ensuring that the expected operations happen when non-optimization happens 
-    //(reconnects)
+    //(reconnects). THIS IS AN EXCEPTIONALLY COMPLEX TEST, consider making some baseline work and moving some of these tests around.
     [Fact]
     public async Task FullCombo_OptimizedAndNot()
     {
@@ -292,5 +275,57 @@ public class EventQueueTest : ViewUnitTestBase, IClassFixture<DbUnitTestSearchFi
         Assert.Equal(userId, liveData2.events.First().userId);
 
         AssertSimpleActivityListenResult(liveData2.data[EventType.activity], writtenPage, activity.Last());
+
+        //OK but now if we try to read both, it should not be optimized 
+        liveData = await queue.ListenAsync(user, -1, safetySource.Token);
+        Assert.False(liveData.optimized);
+
+        //And now just make sure we have two events and all that
+        Assert.Equal(2, liveData.events.Count);
+        AssertSimpleActivityListenResult(liveData.data[EventType.activity], writtenPage, activity.First());
+        AssertSimpleActivityListenResult(liveData.data[EventType.activity], writtenPage, activity.Last());
+    }
+
+    //Ensure private pages don't alert listeners
+    [Fact]
+    public async Task FullCombo_Privacy()
+    {
+        //Force the cache to invalidate every time
+        config.DataCacheExpire = System.TimeSpan.Zero;
+
+        var userId = (int)UserVariations.Super;
+        var listenUserId = (int)UserVariations.Super + 1;
+
+        //Write content, get content.
+        var user = await searcher.GetById<UserView>(RequestType.user, userId);
+        var listenUser = await searcher.GetById<UserView>(RequestType.user, listenUserId);
+        var page = GetNewPageView();
+        page.permissions.Clear(); //NO PERMISSIONS, private except for 
+        var writtenPage = await writer.WriteAsync(page, userId); //this is NOT a super user
+
+        //Now if we wait for the new data from the beginning, we should get a collection with certain values in it...
+        var liveData = await queue.ListenAsync(user, -1, safetySource.Token);
+        var activity = (await GetActivityForContentAsync(writtenPage.id)).OrderBy(x => x.id);
+
+        //The user themselves should've been able to get it.
+        Assert.True(liveData.optimized);
+        AssertSimpleActivityListenResult(liveData.data[EventType.activity], writtenPage, activity.First());
+
+        //And if they ask again, it should still be there
+        liveData = await queue.ListenAsync(user, -1, safetySource.Token);
+        Assert.True(liveData.optimized);
+        AssertSimpleActivityListenResult(liveData.data[EventType.activity], writtenPage, activity.First());
+
+        //But then if other random user comes along, nope
+        cancelSource.CancelAfter(10);
+        try
+        {
+            liveData = await queue.ListenAsync(listenUser, -1, cancelSource.Token);
+            Assert.False(true, "EVENT PRIVACY: Other user got events from private room!");
+        }
+        catch(Exception ex)
+        {
+            Assert.True(ex is OperationCanceledException || ex is TaskCanceledException, "LISTEN TASK DID NOT GET CANCELLED WHEN ASKED!");
+        }
     }
 }
