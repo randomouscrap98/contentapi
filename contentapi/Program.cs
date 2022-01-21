@@ -104,6 +104,8 @@ app.UseCors(builder =>
     .WithExposedHeaders("*");
 });
 
+app.UseStaticFiles(builder.Configuration.GetValue<string>("StaticPath"));
+
 app.UseAuthentication();
 app.UseAuthorization();
 
