@@ -4,6 +4,7 @@ using System.Collections.Generic;
 using System.Linq;
 using System.Threading;
 using System.Threading.Tasks;
+using contentapi.test.Mock;
 using contentapi.Utilities;
 using Microsoft.Extensions.Logging;
 using Xunit;
@@ -13,12 +14,14 @@ namespace contentapi.test;
 public class CacheCheckpointTrackerTest : UnitTestBase
 {
     protected CacheCheckpointTracker<int> tracker;
+    protected CacheCheckpointTracker<SimpleLinkedCheckpointId> trackerIds;
     protected CacheCheckpointTrackerConfig config;
 
     public CacheCheckpointTrackerTest()
     {
         config = new CacheCheckpointTrackerConfig();
         tracker = new CacheCheckpointTracker<int>(GetService<ILogger<CacheCheckpointTracker<int>>>(), config);
+        trackerIds = new CacheCheckpointTracker<SimpleLinkedCheckpointId>(GetService<ILogger<CacheCheckpointTracker<SimpleLinkedCheckpointId>>>(), config);
     }
 
     [Fact]
@@ -168,5 +171,15 @@ public class CacheCheckpointTrackerTest : UnitTestBase
             //it just means the cache clearing system is working)
             var result = await tracker.WaitForCheckpoint("something", 1, safetySource.Token);
         });
+    }
+
+    [Fact]
+    public async Task WaitForCheckpoint_LinkedId()
+    {
+        var id = trackerIds.UpdateCheckpoint("simple", new SimpleLinkedCheckpointId());
+        var waiter = await trackerIds.WaitForCheckpoint("simple", 0, safetySource.Token);
+        Assert.Equal(id, waiter.LastId);
+        Assert.Single(waiter.Data);
+        Assert.Equal(id, waiter.Data.First().id);
     }
 }

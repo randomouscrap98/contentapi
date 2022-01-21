@@ -63,6 +63,9 @@ public class CacheCheckpointTracker<T> : ICacheCheckpointTracker<T>
                     thisCheckpoint.Cache.Remove(key);
             }
 
+            if(newValue is ILinkedCheckpointId)
+                ((ILinkedCheckpointId)newValue).id = newKey;
+
             thisCheckpoint.Cache.Add(newKey, new CacheData(newValue));
 
             //Signal all waiters. Whatever, they'll all complete I guess.

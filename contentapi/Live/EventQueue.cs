@@ -298,6 +298,18 @@ public class EventQueue : IEventQueue
         return checkpoint;
     }
 
+    /// <summary>
+    /// 
+    /// </summary>
+    /// <remarks>
+    /// Yes, this function requires a full UserView to listen. We need to know what groups and such the user
+    /// is in for listening; other functions might look this up automatically but because this is a high traffic
+    /// endpoint, we can't keep looking up the user for the caller.
+    /// </remarks
+    /// <param name="listener"></param>
+    /// <param name="lastId"></param>
+    /// <param name="token"></param>
+    /// <returns></returns>
     public async Task<LiveData> ListenAsync(UserView listener, int lastId = -1, CancellationToken? token = null)
     {
         //Use only ONE searcher for each listen call! Hopefully this isn't a problem!
@@ -310,7 +322,7 @@ public class EventQueue : IEventQueue
             var checkpoint = await ListenEventsAsync(result.lastId, token);
 
             //Always keep our "lastId" up to date!
-            result.lastId = checkpoint.Data.Max(x => x.id);
+            result.lastId = checkpoint.LastId; //Data.Max(x => x.id);
 
             //Thanks to us caching permissions with the events, we can filter out the events we're not allowed to see immediately, saving us from
             //weird situations where we get a data cache miss simply due to too many events going through the system that we're not even allowed to see.
