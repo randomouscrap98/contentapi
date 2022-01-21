@@ -3,7 +3,7 @@ using contentapi.Db;
 
 namespace contentapi.Live;
 
-public class EventDataView
+public class LiveEventView
 {
     public int id {get;set;}
     public DateTime date {get;set;}
@@ -12,13 +12,13 @@ public class EventDataView
     public EventType type {get;set;}
     public long refId {get;set;}
 
-    public EventDataView() { }
+    public LiveEventView() { }
 }
 
 public class EventDataViewProfile : Profile
 {
     public EventDataViewProfile()
     {
-        CreateMap<EventData, EventDataView>().ReverseMap();
+        CreateMap<LiveEvent, LiveEventView>().ReverseMap();
     }
 }

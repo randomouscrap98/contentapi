@@ -450,7 +450,7 @@ public class DbWriter : IDbWriter
             tsx.Commit();
 
             //Content events are reported as activity
-            await eventQueue.AddEventAsync(new EventData(work.requester.id, work.action, EventType.activity, activityId));
+            await eventQueue.AddEventAsync(new LiveEvent(work.requester.id, work.action, EventType.activity, activityId));
 
             logger.LogDebug(adminLog.text); //The admin log actually has the log text we want!
 
@@ -538,7 +538,7 @@ public class DbWriter : IDbWriter
 
             tsx.Commit();
 
-            await eventQueue.AddEventAsync(new EventData(work.requester.id, work.action, EventType.comment, work.view.id));
+            await eventQueue.AddEventAsync(new LiveEvent(work.requester.id, work.action, EventType.comment, work.view.id));
 
             logger.LogDebug($"User {work.requester.id} commented on {comment.contentId}"); //No admin log for comments, so have to construct the message ourselves
 

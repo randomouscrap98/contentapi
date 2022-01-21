@@ -22,7 +22,7 @@ public class EventQueueTest : ViewUnitTestBase, IClassFixture<DbUnitTestSearchFi
     protected DbUnitTestSearchFixture fixture;
     protected IMapper mapper;
     protected EventQueue queue;
-    protected ICacheCheckpointTracker<EventData> tracker;
+    protected ICacheCheckpointTracker<LiveEvent> tracker;
     protected IPermissionService permission;
     protected EventQueueConfig config;
     protected CacheCheckpointTrackerConfig trackerConfig;
@@ -46,7 +46,7 @@ public class EventQueueTest : ViewUnitTestBase, IClassFixture<DbUnitTestSearchFi
             CacheCleanFrequency = int.MaxValue
         };
         //Note: WE HAVE TO create a new tracker every time! We don't want old data clogging this up!!
-        this.tracker = new CacheCheckpointTracker<EventData>(fixture.GetService<ILogger<CacheCheckpointTracker<EventData>>>(), trackerConfig);
+        this.tracker = new CacheCheckpointTracker<LiveEvent>(fixture.GetService<ILogger<CacheCheckpointTracker<LiveEvent>>>(), trackerConfig);
         this.queue = new EventQueue(fixture.GetService<ILogger<EventQueue>>(), this.config, this.tracker, () => this.searcher, this.permission, this.mapper);
         writer = new DbWriter(fixture.GetService<ILogger<DbWriter>>(), this.searcher, 
             fixture.GetService<Db.ContentApiDbConnection>(), fixture.GetService<ITypeInfoService>(), this.mapper,
@@ -60,7 +60,7 @@ public class EventQueueTest : ViewUnitTestBase, IClassFixture<DbUnitTestSearchFi
     public void GetSearchRequestForEvents_RunsWithoutException()
     {
         //Can we at LEAST run it without error? There should be a user and content by id 1, and content 1 is created by user 1
-        var request = queue.GetSearchRequestsForEvents(new [] { new EventData(1, Db.UserAction.create, EventType.activity, 1) });
+        var request = queue.GetSearchRequestsForEvents(new [] { new LiveEvent(1, Db.UserAction.create, EventType.activity, 1) });
         Assert.NotNull(request);
         Assert.NotEmpty(request.requests);
         Assert.NotEmpty(request.values);
@@ -119,7 +119,7 @@ public class EventQueueTest : ViewUnitTestBase, IClassFixture<DbUnitTestSearchFi
         foreach(var a in activities)
         {
             //The event user shouldn't matter but just in case...
-            var request = queue.GetSearchRequestsForEvents(new[] { new EventData(a.userId, Db.UserAction.create, EventType.activity, a.id) });
+            var request = queue.GetSearchRequestsForEvents(new[] { new LiveEvent(a.userId, Db.UserAction.create, EventType.activity, a.id) });
             var result = await searcher.SearchUnrestricted(request);
 
             AssertSimpleActivityListenResult(result.data, content, a);
@@ -166,7 +166,7 @@ public class EventQueueTest : ViewUnitTestBase, IClassFixture<DbUnitTestSearchFi
         foreach(var c in comments)
         {
             //The event user shouldn't matter but just in case...
-            var request = queue.GetSearchRequestsForEvents(new[] { new EventData(c.createUserId, Db.UserAction.create, EventType.comment, c.id) });
+            var request = queue.GetSearchRequestsForEvents(new[] { new LiveEvent(c.createUserId, Db.UserAction.create, EventType.comment, c.id) });
             var result = await searcher.SearchUnrestricted(request);
 
             //Now, make sure the result contains content, comment, and user results.
@@ -199,7 +199,7 @@ public class EventQueueTest : ViewUnitTestBase, IClassFixture<DbUnitTestSearchFi
     {
         var activities = await GetActivityForContentAsync(1);
         var a = activities.First();
-        var evnt = new EventData(a.userId, Db.UserAction.create, EventType.activity, a.id);
+        var evnt = new LiveEvent(a.userId, Db.UserAction.create, EventType.activity, a.id);
         var result = await queue.AddEventAsync(evnt);
 
         var checkpoint = await queue.ListenEventsAsync(-1, safetySource.Token);

@@ -89,19 +89,19 @@ public class EventQueue : IEventQueue
     };
 
     protected ILogger<EventQueue> logger;
-    protected ICacheCheckpointTracker<EventData> eventTracker; //THIS is the event queue!
+    protected ICacheCheckpointTracker<LiveEvent> eventTracker; //THIS is the event queue!
     protected Func<IGenericSearch> searchProducer; //A search generator to ensure this queue can be any lifetime it wants (this is an anti-pattern maybe?)
     protected IPermissionService permissionService;
     protected IMapper mapper;
     protected EventQueueConfig config;
 
     //The cache for the few (if any) fully-pulled data for live updates. This is NOT the event queue!
-    protected List<EventCacheData> dataCache = new List<EventCacheData>();
+    protected List<LiveEventCachedData> dataCache = new List<LiveEventCachedData>();
     protected Dictionary<long, PermissionCacheData> permissionCache = new Dictionary<long, PermissionCacheData>();
     protected readonly object dataCacheLock = new Object();
     protected readonly object permissionCacheLock = new Object();
 
-    public EventQueue(ILogger<EventQueue> logger, EventQueueConfig config, ICacheCheckpointTracker<EventData> tracker, Func<IGenericSearch> searchProducer, 
+    public EventQueue(ILogger<EventQueue> logger, EventQueueConfig config, ICacheCheckpointTracker<LiveEvent> tracker, Func<IGenericSearch> searchProducer, 
         IPermissionService permissionService, IMapper mapper)
     {
         this.logger = logger;
@@ -112,7 +112,7 @@ public class EventQueue : IEventQueue
         this.mapper = mapper;
     }
 
-    public async Task<object> AddEventAsync(EventData evnt)
+    public async Task<object> AddEventAsync(LiveEvent evnt)
     {
         //First, need to lookup the data for the event to add it to our true cache. Also need to remove old values!
         var cacheItem = await LookupEventDataAsync(evnt);
@@ -211,7 +211,7 @@ public class EventQueue : IEventQueue
     /// </summary>
     /// <param name="events"></param>
     /// <returns></returns>
-    public SearchRequests GetSearchRequestsForEvents(IEnumerable<EventData> events)
+    public SearchRequests GetSearchRequestsForEvents(IEnumerable<LiveEvent> events)
     {
         if(events.Select(x => x.type).Distinct().Count() != 1)
             throw new InvalidOperationException($"GetSearchRequestForEvents called with more or less than one event type! Events: {events.Count()}");
@@ -277,16 +277,16 @@ public class EventQueue : IEventQueue
         return requests;
     }
 
-    public async Task<EventCacheData> LookupEventDataAsync(EventData evnt)
+    public async Task<LiveEventCachedData> LookupEventDataAsync(LiveEvent evnt)
     {
-        var requests = GetSearchRequestsForEvents(new List<EventData> { evnt });
+        var requests = GetSearchRequestsForEvents(new List<LiveEvent> { evnt });
         var search = searchProducer();
 
         var searchData = await search.SearchUnrestricted(requests);
-        return new EventCacheData() { evnt = evnt, data = searchData.data };
+        return new LiveEventCachedData() { evnt = evnt, data = searchData.data };
     }
 
-    public async Task<CacheCheckpointResult<EventData>> ListenEventsAsync(int lastId = -1, CancellationToken? token = null)
+    public async Task<CacheCheckpointResult<LiveEvent>> ListenEventsAsync(int lastId = -1, CancellationToken? token = null)
     {
         var cancelToken = token ?? CancellationToken.None;
         var checkpoint = await eventTracker.WaitForCheckpoint(MainCheckpointName, lastId, cancelToken);
@@ -339,7 +339,7 @@ public class EventQueue : IEventQueue
             var optimalRoute = false;
 
             //Go ahead and set up the return events, we know we'll return SOMETHING this loop, since there's a non-zero amount
-            result.events = events.Select(x => mapper.Map<EventDataView>(x)).ToList();
+            result.events = events.Select(x => mapper.Map<LiveEventView>(x)).ToList();
 
             //The "fast optimized" route. Hopefully, MOST live updates go through this.
             if (events.Count() == 1)

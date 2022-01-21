@@ -8,10 +8,10 @@ namespace contentapi.test.Mock;
 
 public class FakeEventQueue : IEventQueue
 {
-    public List<EventData> Events = new List<EventData>();
+    public List<LiveEvent> Events = new List<LiveEvent>();
     public object ReturnData = false;
 
-    public Task<object> AddEventAsync(EventData data)
+    public Task<object> AddEventAsync(LiveEvent data)
     {
         Events.Add(data);
         return Task.FromResult(ReturnData);

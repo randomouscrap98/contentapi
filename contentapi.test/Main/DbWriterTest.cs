@@ -50,7 +50,7 @@ public class DbWriterTest : ViewUnitTestBase, IClassFixture<DbUnitTestSearchFixt
             Assert.Equal(message, history.message);
     }
 
-    protected EventData AssertEventMatchesBase(long id, UserAction expected, long userId, EventType type)
+    protected LiveEvent AssertEventMatchesBase(long id, UserAction expected, long userId, EventType type)
     {
         //NOTE: only the real checkpoint tracker assigns ids, so these ids will be 0!
         var evs = events.Events.Where(x => x.refId == id && x.action == expected && x.type == type && x.userId == userId);
