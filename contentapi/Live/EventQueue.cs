@@ -96,7 +96,7 @@ public class EventQueue : IEventQueue
     protected EventQueueConfig config;
 
     //The cache for the few (if any) fully-pulled data for live updates. This is NOT the event queue!
-    protected Dictionary<int, EventCacheData> dataCache = new Dictionary<int, EventCacheData>();
+    protected List<EventCacheData> dataCache = new List<EventCacheData>();
     protected Dictionary<long, PermissionCacheData> permissionCache = new Dictionary<long, PermissionCacheData>();
     protected readonly object dataCacheLock = new Object();
     protected readonly object permissionCacheLock = new Object();
@@ -164,15 +164,16 @@ public class EventQueue : IEventQueue
         //Remove any cached items older than our timer, then add our cache item
         lock(dataCacheLock)
         {
-            var removeKeys = dataCache.Where(x => (DateTime.Now - x.Value.createDate) > config.DataCacheExpire);
+            dataCache.RemoveAll(x => (DateTime.Now - x.createDate) > config.DataCacheExpire);
+            dataCache.Add(cacheItem);
+            //var removeKeys = dataCache.Where(x => (DateTime.Now - x.Value.createDate) > config.DataCacheExpire);
 
-            foreach(var removeKey in removeKeys)
-                dataCache.Remove(removeKey.Key);
-
-            dataCache.Add(evnt.id, cacheItem);
+            //foreach(var removeKey in removeKeys)
+            //    dataCache.Remove(removeKey.Key);
         }
 
-        //THEN we can update the checkpoint, as that will wake up all the listeners
+        //THEN we can update the checkpoint, as that will wake up all the listeners. NOTE: sort of bad design; this has a side effect
+        //of assigning the event id, since the event is an ILinkedCheckpointId. There should be a better way of doing this!
         eventTracker.UpdateCheckpoint(MainCheckpointName, evnt);
 
         return false;
@@ -345,12 +346,21 @@ public class EventQueue : IEventQueue
 
                 lock(dataCacheLock)
                 {
-                    if(dataCache.ContainsKey(optimalEvent.id))
+                    var matching = dataCache.FirstOrDefault(x => x.id == optimalEvent.id);
+                    if(matching != null)
                     {
-                        result.data.Add(optimalEvent.type, dataCache[optimalEvent.id].data ?? throw new InvalidOperationException($"No data set for event cache item {optimalEvent.id}"));
+                        result.data.Add(optimalEvent.type, matching.data ?? throw new InvalidOperationException($"No data set for event cache item {optimalEvent.id}"));
                         result.optimized = true;
                         optimalRoute = true;
                     }
+                    else
+                    {
+                        throw new InvalidOperationException($"OPTIMAL EVENT BUT NO MATCHING: {optimalEvent.id} VS: {string.Join(",", dataCache.Select(x => x.id))}");
+                    }
+                    //else
+                    //{
+                    //    logger.LogWarning($"Single event requested, but it wasn't in the cache! Id: {optimalEvent.id}");
+                    //}
                 }
             }
 

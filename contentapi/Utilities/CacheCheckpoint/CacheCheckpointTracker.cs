@@ -63,6 +63,7 @@ public class CacheCheckpointTracker<T> : ICacheCheckpointTracker<T>
                     thisCheckpoint.Cache.Remove(key);
             }
 
+            //Special feature! If the value is an ILinkedCheckpointId, it will automatically set the id to match the checkpoint id
             if(newValue is ILinkedCheckpointId)
                 ((ILinkedCheckpointId)newValue).id = newKey;
 
