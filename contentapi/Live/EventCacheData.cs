@@ -4,9 +4,8 @@ namespace contentapi.Live;
 
 public class EventCacheData
 {
-    //Some tracking junk
-    //public static int nextId = 0;
-    //public int id {get;set;} = Interlocked.Increment(ref nextId);
+    //Because eventdata is a linkedcheckpointid, we must always defer to them for the true ID for any event.
+    //We cannot know the id at any point, and thus must rely on the event data for the id.
     public EventData evnt = new EventData();
     public DateTime createDate = DateTime.UtcNow;
 

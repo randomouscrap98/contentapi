@@ -333,6 +333,8 @@ public class EventQueue : IEventQueue
                 continue;  //There is NOTHING to do for this run, because the event(s) in question don't pertain to us
             else if(events.Count() > config.MaxEventListen)
                 events = events.OrderBy(x => x.id).Take(config.MaxEventListen); //Don't let the user get too many events all at once!
+            else if(events.Count(x => x.id == 0) > 0) //this adds to the computation but shouldn't take too long to compute...
+                throw new InvalidOperationException("SAFETY CHECK FAILED: events with zero ID discovered after listen!");
 
             var optimalRoute = false;
 
@@ -357,10 +359,6 @@ public class EventQueue : IEventQueue
                     {
                         throw new InvalidOperationException($"OPTIMAL EVENT BUT NO MATCHING: {optimalEvent.id} VS: {string.Join(",", dataCache.Select(x => x.evnt.id))}");
                     }
-                    //else
-                    //{
-                    //    logger.LogWarning($"Single event requested, but it wasn't in the cache! Id: {optimalEvent.id}");
-                    //}
                 }
             }
 
