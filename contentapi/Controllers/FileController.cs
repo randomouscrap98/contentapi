@@ -22,7 +22,7 @@ public class FileControllerConfig
    public int MinQuantize { get; set; } = 2;
    public double ResizeRepeatFactor {get;set;} = 0.8;
    public int HashChars {get;set;} = 5;
-   public int MacHashRetries {get;set;} = 50;
+   public int MaxHashRetries {get;set;} = 50;
    public string DefaultHash {get;set;} = "0";
 }
 
@@ -196,7 +196,7 @@ public class FileController : BaseController
                      break;
                   services.logger.LogWarning($"HASH COLLISION: {newView.hash}");
                   retries++;
-                  if (retries > config.MacHashRetries)
+                  if (retries > config.MaxHashRetries)
                       throw new InvalidOperationException("Ran out of hash retries! Maybe there's too many files on the system?");
                }
                var finalLocation = GetAndMakeUploadPath(newView.hash);

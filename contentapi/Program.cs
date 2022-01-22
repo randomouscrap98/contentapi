@@ -18,9 +18,20 @@ var builder = WebApplication.CreateBuilder(args);
 DefaultSetup.AddDefaultServices(builder.Services);
 DefaultSetup.AddConfigBinding<GenericSearcherConfig>(builder.Services, builder.Configuration);
 DefaultSetup.AddConfigBinding<UserServiceConfig>(builder.Services, builder.Configuration);
+DefaultSetup.AddConfigBinding<UserControllerConfig>(builder.Services, builder.Configuration);
 DefaultSetup.AddConfigBinding<FileControllerConfig>(builder.Services, builder.Configuration);
 DefaultSetup.AddConfigBinding<EmailConfig>(builder.Services, builder.Configuration);
 builder.Services.AddTransient<BaseControllerServices>();
+
+// Set up configurable services, as in stuff that users might want to turn off/etc
+var desiredEmailer = builder.Configuration.GetValue<string>("EmailSender");
+
+if(desiredEmailer == "null")
+    builder.Services.AddSingleton<IEmailService, NullEmailService>();
+else if(desiredEmailer == "default")
+    builder.Services.AddSingleton<IEmailService, EmailService>();
+else
+    throw new InvalidOperationException($"Unknown emailer type {desiredEmailer}");
 
 string secretKey = builder.Configuration.GetValue<string>("SecretKey"); //"pleasechangethis";
 var validationParameters = DefaultSetup.AddSecurity(builder.Services, secretKey);

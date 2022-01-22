@@ -1,19 +1,33 @@
 using contentapi.Main;
+using contentapi.Search;
 using contentapi.Security;
+using contentapi.Utilities;
 using contentapi.Views;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
 
 namespace contentapi.Controllers;
 
+public class UserControllerConfig 
+{
+    public bool BackdoorRegistration {get;set;}
+}
+
 public class UserController : BaseController
 {
     protected IUserService userService;
+    protected IGenericSearch searcher;
+    protected UserControllerConfig config;
+    protected IEmailService emailer;
 
-    public UserController(BaseControllerServices services, IUserService userService)
+    public UserController(BaseControllerServices services, IUserService userService,
+        UserControllerConfig config, IGenericSearch searcher, IEmailService emailer)
         : base(services)
     {
         this.userService = userService;
+        this.searcher = searcher;
+        this.emailer = emailer;
+        this.config = config;
     }
 
     public class UserCredentials
