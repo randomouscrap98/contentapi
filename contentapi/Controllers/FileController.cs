@@ -108,12 +108,12 @@ public class FileController : BaseController
       if(quantize >= 0 && (quantize < config.MinQuantize || quantize > config.MaxQuantize))
          return BadRequest($"Quantize must be between {config.MinQuantize} and {config.MaxQuantize}");
 
-      var testRequester = GetUserId();
+      var requester = GetUserIdStrict();
       
-      if(testRequester == null)
-        return Forbid("You must be logged in to upload files!");
+      //if(testRequester == null)
+      //  return Forbid("You must be logged in to upload files!");
       
-      var requester = testRequester.Value;
+      //var requester = testRequester.Value;
 
       return await MatchExceptions(async () =>
       {

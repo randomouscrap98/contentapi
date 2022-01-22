@@ -5,12 +5,35 @@
         <meta name="rating" content="general">
         <meta name="description" content="SBS default implementation">
         <script src="api.js"></script>
+        <script src="index.js"></script>
+        <link rel="stylesheet" href="index.css">
     </head>
     <body>
-        <h1>SBS Default Implementation</h1>
-        <p>
-            This will eventually be the default implementation and example for frontend usage for our API. 
-            It should be relatively usable...
-        </p>
+        <header>
+            <a href="?t=login">Login</a>
+            <a href="?t=user">User</a>
+            <a href="?t=page&pid=0">Pages</a>
+        </header>
+        <section id="main">
+            <h1>SBS Default Implementation</h1>
+            <p>
+                This will eventually be the default implementation and example for frontend usage for our API. 
+                It should be relatively usable...
+            </p>
+        </section>
+        <!-- For simplicity, all pages are defined directly inside index.html. They are loaded on page load based on
+             the t parameter in the URL -->
+        <template id="templates">
+            <div id="t_login">
+                <div data-errors class="errors"></div>
+                <form data-loginform onsubmit="return t_login_submit()">
+                    <label for="login-username">Username:</label>
+                    <input id="login-username" name="username">
+                    <label for="login-password">Password:</label>
+                    <input id="login-password" name="password">
+                    <input type="submit" value="Login">
+                </form>
+            </div>
+        </template>
     </body>
 </html>

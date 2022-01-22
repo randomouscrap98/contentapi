@@ -125,7 +125,7 @@ function Api(url, tokenGet)
             console.log("Data from API: ", d);
         },
         e => {
-            alert("No default error handler set for api!");
+            alert("No default error handler set for api! See console for error");
             console.log("Error from API: ", e);
         },
         d => {
@@ -280,6 +280,15 @@ Api.prototype.AboutToken = function(handler)
 Api.prototype.Search = function(request, handler)
 {
     this.Raw("request", request, handler);
+};
+
+// This is your go-to resource to see all the available search fields, types, and the 
+// format of all returned objects. NOTE: those objects are ALSO the format of the objects
+// you can write to the API, so please refer to this whenever you need more information
+// about anything!
+Api.prototype.AboutSearch = function(handler)
+{
+    this.Raw("request/about", null, handler);
 };
 
 // -- Some helper functions which don't necessarily directly connect to the API --

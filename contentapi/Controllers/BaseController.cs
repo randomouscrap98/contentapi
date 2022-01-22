@@ -34,6 +34,7 @@ public class BaseController : Controller
 
     protected long? GetUserId() => services.authService.GetUserId(User.Claims);
     protected bool IsUserLoggedIn() => GetUserId() != null;
+    protected long GetUserIdStrict() => services.authService.GetUserId(User.Claims) ?? throw new InvalidOperationException("User not logged in! Strict mode on: MUST be logged in for this call!");
 
     protected async Task<ActionResult<T>> MatchExceptions<T>(Func<Task<T>> perform)
     {

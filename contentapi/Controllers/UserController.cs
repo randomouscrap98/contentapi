@@ -49,6 +49,6 @@ public class UserController : BaseController
     [HttpPost("invalidateall")]
     public void InvalidateAll()
     {
-        userService.InvalidateAllTokens(GetUserId() ?? throw new InvalidOperationException("SOMEHOW YOU WEREN'T LOGGED IN???"));
+        userService.InvalidateAllTokens(GetUserIdStrict());
     }
 }
