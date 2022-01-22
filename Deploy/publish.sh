@@ -66,7 +66,7 @@ done
 # Remove undesired files from publish folder
 for rmfl in $removefiles
 do
-    rm -f "$lpfolder/${rmfl}"
+    rm -f "$lpfolder"/${rmfl}
 done
 
 # Now put the stuff on the server! A simple direct copy

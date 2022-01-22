@@ -48,7 +48,7 @@ function LoadPageInto(baseTemplate, destination, state)
 function LoadPageStandard(templateId, state)
 {
     var main = document.getElementById("main");
-    var baseTemplate = document.getElementById(`t_${templateId}`);
+    var baseTemplate = document.getElementById("templates").content.getElementById(`t_${templateId}`);
     LoadPageInto(baseTemplate, main, state);
 }
 
@@ -60,3 +60,9 @@ function User_OnLoad(template, state)
 }
 
 // -- Functions templates use directly --
+
+function t_login_submit(form)
+{
+    console.log("Trying to submit:", form);
+    return false;
+}

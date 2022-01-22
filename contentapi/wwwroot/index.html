@@ -10,15 +10,22 @@
     </head>
     <body>
         <header>
+            <a href="?">Home</a>
             <a href="?t=login">Login</a>
             <a href="?t=user">User</a>
             <a href="?t=page&pid=0">Pages</a>
         </header>
         <section id="main">
-            <h1>SBS Default Implementation</h1>
+            <h1>ContentApi Default Implementation</h1>
             <p>
-                This will eventually be the default implementation and example for frontend usage for our API. 
-                It should be relatively usable...
+                This <em>extremely rough around the edges</em> page is the example implementation for a frontend which consumes
+                contentapi. It has enough features to be functional, but nothing more. It has essentially NO error handling; this is
+                done on purpose so you can more easily see the functionality within the code. 
+            </p>
+            <p>
+                The heart of this implementation is <a href="api.js">api.js</a>, which you can also use for your own frontends. It
+                provides a simple javascript interface to the API, and includes some (hopefully helpful) notes about the usage and
+                parameters involved.
             </p>
         </section>
         <!-- For simplicity, all pages are defined directly inside index.html. They are loaded on page load based on
@@ -26,7 +33,7 @@
         <template id="templates">
             <div id="t_login">
                 <div data-errors class="errors"></div>
-                <form data-loginform onsubmit="return t_login_submit()">
+                <form data-loginform onsubmit="return t_login_submit(this)">
                     <label for="login-username">Username:</label>
                     <input id="login-username" name="username">
                     <label for="login-password">Password:</label>
