@@ -1,5 +1,6 @@
 using contentapi.Main;
 using contentapi.Security;
+using contentapi.Views;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
 
@@ -15,11 +16,15 @@ public class UserController : BaseController
         this.userService = userService;
     }
 
-    public class UserLogin
+    public class UserCredentials
     {
         public string username {get;set;} = "";
         public string email {get;set;} = "";
         public string password {get;set;} = "";
+    }
+
+    public class UserLogin : UserCredentials
+    {
         public int expireSeconds {get;set;} = 0;
     }
 
@@ -50,5 +55,16 @@ public class UserController : BaseController
     public void InvalidateAll()
     {
         userService.InvalidateAllTokens(GetUserIdStrict());
+    }
+
+    [HttpPost("register")]
+    public Task<ActionResult<UserView>> Register([FromBody]UserCredentials credentials)
+    {
+        //Like all controllers, we want ALL of the work possible to be inside a service, not the controller.
+        //A service which can be tested!
+        return MatchExceptions<UserView>(() =>
+        {
+            return userService.CreateNewUser(credentials.username, credentials.password, credentials.email);
+        });
     }
 }

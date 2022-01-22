@@ -124,7 +124,7 @@ public class UserService : IUserService
         return authTokenService.GetNewToken(uid, data, expireOverride ?? config.TokenExpireDefault);
     }
 
-    public async Task<string> CompleteRegistration(long userId, string registrationKey)
+    public async Task<string> GetRegistrationKeyAsync(long userId)
     {
         //Go get the registration key
         var userRegistration = (await searcher.QueryRawAsync(
@@ -134,7 +134,12 @@ public class UserService : IUserService
         if(userRegistration == null)
             throw new ArgumentException($"User {userId} not found!");
 
-        string realKey = (string)userRegistration["registrationKey"];
+        return (string)userRegistration["registrationKey"];
+    }
+
+    public async Task<string> CompleteRegistration(long userId, string registrationKey)
+    {
+        string realKey = await GetRegistrationKeyAsync(userId); 
 
         if(string.IsNullOrWhiteSpace(realKey))
             throw new RequestException($"User {userId} seems to already be registered!");

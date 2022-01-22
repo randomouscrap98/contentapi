@@ -3,6 +3,7 @@ using contentapi.Db;
 using contentapi.Main;
 using contentapi.Search;
 using contentapi.Setup;
+using contentapi.Utilities;
 using Microsoft.AspNetCore.Authentication.JwtBearer;
 using Microsoft.Data.Sqlite;
 using Microsoft.OpenApi.Models;
@@ -18,6 +19,7 @@ DefaultSetup.AddDefaultServices(builder.Services);
 DefaultSetup.AddConfigBinding<GenericSearcherConfig>(builder.Services, builder.Configuration);
 DefaultSetup.AddConfigBinding<UserServiceConfig>(builder.Services, builder.Configuration);
 DefaultSetup.AddConfigBinding<FileControllerConfig>(builder.Services, builder.Configuration);
+DefaultSetup.AddConfigBinding<EmailConfig>(builder.Services, builder.Configuration);
 builder.Services.AddTransient<BaseControllerServices>();
 
 string secretKey = builder.Configuration.GetValue<string>("SecretKey"); //"pleasechangethis";

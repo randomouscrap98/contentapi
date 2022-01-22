@@ -60,6 +60,17 @@ public class UserServiceTests : UnitTestBase, IClassFixture<DbUnitTestBase>
     }
 
     [Fact]
+    public async Task CreateNewUser_GetRegistration()
+    {
+        var user = await service.CreateNewUser("hello", "short", "email@email.com");
+        var registration = await service.GetRegistrationKeyAsync(user.id);
+        Assert.Equal(service.RegistrationLog[user.id], registration);
+        //Retrieving the registration shouldn't REGISTER them
+        var completedUser = await searcher.GetById<UserView>(RequestType.user, user.id);
+        Assert.False(completedUser.registered);
+    }
+
+    [Fact]
     public async Task CreateNewUser_Register()
     {
         var user = await service.CreateNewUser("hello", "short", "email@email.com");
