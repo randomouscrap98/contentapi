@@ -81,4 +81,44 @@ public class UserController : BaseController
             return userService.CreateNewUser(credentials.username, credentials.password, credentials.email);
         });
     }
+
+    [HttpPost("sendregistrationcode")]
+    public Task<ActionResult<bool>> SendRegistrationCode([FromBody]string email)
+    {
+        return MatchExceptions(async () =>
+        {
+            //Make sure the email exists or whatever
+            var users = await searcher.GetByField<UserView>(RequestType.user, "email", email);
+
+            if(users.Count != 1)
+                throw new ArgumentException("Email not found!");
+            
+            var user = users.First();
+
+            if(!user.registered)
+                throw new ArgumentException("User associated with email already registered!");
+
+            var registrationCode = await userService.GetRegistrationKeyAsync(user.id);
+
+            //TODO: language? Configuration? I don't know
+            await emailer.SendEmailAsync(new EmailMessage(email, "Registration instructions",
+                $"Your registration code for '{Request.Host}' is:\n\n{registrationCode}"));
+
+            return true;
+        });
+    }
+
+    [HttpGet("getregistrationcode/{id}")]
+    public Task<ActionResult<string>> GetRegistrationCode([FromRoute]long userId)
+    {
+        return MatchExceptions(async () =>
+        {
+            if(!config.BackdoorRegistration)
+                throw new ForbiddenException("This is a debug endpoint that has been deactivated!");
+
+            var registrationCode = await userService.GetRegistrationKeyAsync(userId);
+
+            return registrationCode;
+        });
+    }
 }
