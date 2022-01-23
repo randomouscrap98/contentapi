@@ -53,6 +53,14 @@ function LoginParameter(username, password, email, expireSeconds)
     this.expireSeconds = expireSeconds; //Without this, some default value is chosen
 }
 
+// This one, you need all parameters
+function RegisterParameter(username, email, password)
+{
+    this.username = username;
+    this.email = email;
+    this.password = password;
+}
+
 // The main configuration object for ALL searches. Send this directly to the "Search" endpoint. 
 // This should be a direct reflection of "SearchRequests" within the API C# code.
 function RequestParameter(values, requests)
@@ -262,6 +270,51 @@ Api.prototype.Login = function(loginData, handler)
     this.Raw("user/login", loginData, handler);
 };
 
+// registerData is "RegisterParameter"
+Api.prototype.Register = function(registerData, handler)
+{
+    this.Raw("user/register", registerData, handler);
+};
+
+// email is literally just the email string
+Api.prototype.SendRegistrationEmail = function(email, handler)
+{
+    this.Raw("user/sendregistrationcode", email, handler);
+};
+
+// To register, you actually need to call two endpoints, as the standard registration
+// endpoint JUST reserves an account. It does not send the registration email. Call 
+// this function to do both. Result passed to handler is user data, which is taken
+// from the first call (register). NOTE: This function REQUIRES you pass in a handler!
+Api.prototype.RegisterAndEmail = function(registerData, handler)
+{
+    var originalSuccess = handler.success;
+    var me = this;
+    var originalResult = null;
+
+    //After first success, call second endpoint with their original success handler
+    handler.success = d =>
+    {
+        //Only the register call (the first one) returns the user data, which you
+        //probably want.
+        originalResult = d;
+        handler.success = dd => {
+            originalSuccess(originalResult);
+        };
+        me.SendRegistrationEmail(registerData.email, handler);
+    };
+
+    this.Register(registerData, handler);
+}
+
+// This is one of those endpoints that requires two bits of data. Most just require
+// some kind of object, but this one is a bit off. The return from this is actually 
+// a login token, so you don't have to login after registration.
+Api.prototype.ConfirmRegistration = function(userId, code, handler)
+{
+    this.Raw(`user/confirmregistration/${userId}`, code, handler);
+};
+
 Api.prototype.About = function(handler)
 {
     this.Raw("status", null, handler);
@@ -326,6 +379,18 @@ Api.prototype.Search_BasicContentDisplay = function(id, latestComments, handler)
         new RequestSearchParameter("comment", "*", "contentId = @pageid", "id_desc", latestComments),
         new RequestSearchParameter("user", "*", "id in @comment.createUserId or id in @page.createUserId or id in @module.createUserId or id in @file.createUserId or id in @subpages.createUserId"),
     ]);
+
+    this.Search(search, handler);
+};
+
+// Note: this could still return an empty list with "success", it's up to you to handle 
+// if the list is empty
+Api.prototype.Search_UserId = function(id, handler)
+{
+    var search = new RequestParameter(
+        { userId : id }, 
+        [ new RequestSearchParameter("user", "*", "id = @userId") ]
+    );
 
     this.Search(search, handler);
 };

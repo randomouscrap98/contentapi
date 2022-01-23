@@ -51,7 +51,7 @@ function LoadTemplate(id, state, templates)
     //If a cloning function function is found, run it. The cloning function will probably set up
     //specific page values or whatever. 
     if(template.hasAttribute("data-onload"))
-        window[template.getAttribute("data-onclone")](template, state);
+        window[template.getAttribute("data-onload")](template, state);
     
     return template;
 }
@@ -66,12 +66,48 @@ function LoadPage(id, state, destination)
     destination.appendChild(template);
 }
 
+// Display the given data inside the given table element
+function MakeTable(data, table)
+{
+    for(var p in data)
+    {
+        var row = document.createElement("tr");
+        var name = document.createElement("td");
+        var value = document.createElement("td");
+        name.textContent = p;
+        value.textContent = data[p];
+        row.appendChild(name);
+        row.append(value);
+        table.appendChild(row);
+    }
+}
+
 
 // -- The individual page setup functions --
 
-function User_OnLoad(template, state)
+function confirmregister_onload(template, state)
 {
+    var userId = template.getElementById("confirmregister-id");
+    userId.value = state.userId;
+}
 
+function user_onload(template, state)
+{
+    var table = template.getElementById("user-table");
+
+    api.AboutToken(new ApiHandler(d =>
+    {
+        api.Search_UserId(d.userId, dd =>
+        {
+            if(dd.result.user.length == 0)
+            {
+                alert("No user data found!");
+                return;
+            }
+
+            MakeTable(dd.result.user[0], table);
+        });
+    }));
 }
 
 
@@ -88,4 +124,36 @@ function t_login_submit(form)
     }));
 
     return false;
+}
+
+function t_register_submit(form)
+{
+    var username = document.getElementById("register-username").value;
+    var email = document.getElementById("register-email").value;
+    var password = document.getElementById("register-password").value;
+
+    api.RegisterAndEmail(new RegisterParameter(username, email, password), new ApiHandler(d => {
+        location.href = `?t=confirmregistration&userId=${d.result.id}`;
+    }));
+
+    return false;
+}
+
+function t_confirmregister_submit(form)
+{
+    var userId = document.getElementById("confirmregister-id").value;
+    var code = document.getElementById("confirmregister-code").value;
+
+    api.ConfirmRegistration(userId, code, new ApiHandler(d => {
+        SetToken(d.result); //This endpoint returns a user token as well, like login!
+        location.href = `?t=user`;
+    }));
+
+    return false;
+}
+
+function t_user_logout()
+{
+    SetToken(null);
+    location.href = "?"; //Home page maybe?
 }

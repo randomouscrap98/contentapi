@@ -2,6 +2,19 @@ body {
     font-family: monospace;
 }
 
+label, input {
+    display: block;
+}
+
 .error {
     color: red;
+}
+
+.success {
+    color: green;
+}
+
+.describe tr td:first-of-type {
+    font-weight: bold;
+    text-align: right;
 }

@@ -109,6 +109,15 @@ public class UserController : BaseController
         });
     }
 
+    [HttpPost("confirmregistration/{id}")]
+    public Task<ActionResult<string>> ConfirmRegistration([FromRoute]long id, [FromBody]string code)
+    {
+        return MatchExceptions(() =>
+        {
+            return userService.CompleteRegistration(id, code);
+        });
+    }
+
     [HttpGet("getregistrationcode/{id}")]
     public Task<ActionResult<string>> GetRegistrationCode([FromRoute]long id)
     {

@@ -12,6 +12,7 @@
         <header>
             <a href="?">Home</a>
             <a href="?t=login">Login</a>
+            <a href="?t=register">Register</a>
             <a href="?t=user">User</a>
             <a href="?t=page&pid=0">Pages</a>
         </header>
@@ -34,11 +35,34 @@
             <div id="t_login">
                 <form data-loginform onsubmit="return t_login_submit(this)">
                     <label for="login-username">Username:</label>
-                    <input id="login-username" name="username">
+                    <input id="login-username" name="username" required="">
                     <label for="login-password">Password:</label>
-                    <input id="login-password" name="password" type="password">
+                    <input id="login-password" name="password" type="password" required="">
                     <input type="submit" value="Login">
                 </form>
+            </div>
+            <div id="t_register">
+                <form data-registerform onsubmit="return t_register_submit(this)">
+                    <label for="register-username">Username:</label>
+                    <input id="register-username" name="username" required="">
+                    <label for="register-email">Email:</label>
+                    <input id="register-email" name="email" type="email" required="">
+                    <label for="register-password">Password:</label>
+                    <input id="register-password" name="password" type="password" required="">
+                    <input type="submit" value="Register">
+                </form>
+            </div>
+            <div id="t_confirmregister" data-onload="confirmregister_onload">
+                <form data-confirmregisterform onsubmit="return t_confirmregister_submit(this)">
+                    <label for="confirmregister-code">Registration code (look for email):</label>
+                    <input id="confirmregister-code" name="code" required="">
+                    <input id="confirmregister-id" type="hidden" name="id" value="">
+                    <input type="submit" value="Confirm">
+                </form>
+            </div>
+            <div id="t_user" data-onload="user_onload">
+                <table class="describe" id="user-table"></table>
+                <button onclick="t_user_logout()">Logout</button>
             </div>
         </template>
     </body>
