@@ -42,8 +42,10 @@ function StateToUrl(state)
             params.set(k, state[k]);
     }
 
-    return params;
+    return "?" + params.toString();
 }
+
+function Copy(object) { return JSON.parse(JSON.stringify(object)); }
 
 // -- Getters and setters for stateful (cross page load) stuff --
 
@@ -145,6 +147,24 @@ function page_onload(template, state)
     var title = template.querySelector("#page-title");
     var subpagesElement = template.querySelector("#page-subpages");
     var commentsElement = template.querySelector("#page-comments");
+    var spUpElement = template.querySelector("#page-subpageup");
+    var spDownElement = template.querySelector("#page-subpagedown");
+    var cpUpElement = template.querySelector("#page-commentup");
+    var cpDownElement = template.querySelector("#page-commentdown");
+
+    var spUpState = Copy(state); spUpState.sp++;
+    var spDownState = Copy(state); spDownState.sp--;
+    var cpUpState = Copy(state); cpUpState.cp++;
+    var cpDownState = Copy(state); cpDownState.cp--;
+
+    if(spDownState.sp >= 0)
+        spDownElement.href = StateToUrl(spDownState);
+    if(cpDownState.cp >= 0)
+        cpDownElement.href = StateToUrl(cpDownState);
+    
+    spUpElement.href = StateToUrl(spUpState);
+    cpUpElement.href = StateToUrl(cpUpState);
+
 
     api.Search_BasicPageDisplay(state.pid, SUBPAGESPERPAGE, state.sp, COMMENTSPERPAGE, state.cp, new ApiHandler(d =>
     {
@@ -204,10 +224,18 @@ function comment_onload(template, state)
     var comment = template.querySelector("[data-comment]");
     var time = template.querySelector("[data-time]");
 
-    avatar.src = api.GetFileUrl(state.createUser.avatar, new FileModifyParameter(25, true));
-    username.textContent = state.createUser.username;
+    if(state.createUser)
+    {
+        avatar.src = api.GetFileUrl(state.createUser.avatar, new FileModifyParameter(25, true));
+        username.textContent = state.createUser.username;
+    }
+    else
+    {
+        username.textContent = "???";
+    }
     username.title = state.createUserId;
     comment.textContent = state.text;
+    comment.title = state.id;
     time.textContent = state.createDate;
 }
 

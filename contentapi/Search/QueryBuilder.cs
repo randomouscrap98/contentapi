@@ -48,6 +48,7 @@ public class QueryBuilder : IQueryBuilder
         { "valuelike", new MacroDescription("vv", "ValueLike", CONTENTREQUESTTYPES) },
         { "onlyparents", new MacroDescription("", "OnlyParents", CONTENTREQUESTTYPES) },
         { "basichistory", new MacroDescription("", "BasicHistory", new List<RequestType> { RequestType.activity }) },
+        { "notdeleted", new MacroDescription("", "NotDeletedMacro", new List<RequestType> { RequestType.content, RequestType.file, RequestType.page, RequestType.module, RequestType.comment }) }, 
         { "notnull", new MacroDescription("f", "NotNullMacro", Enum.GetValues<RequestType>().ToList()) },
         { "null", new MacroDescription("f", "NullMacro", Enum.GetValues<RequestType>().ToList()) },
         { "usertype", new MacroDescription("i", "UserTypeMacro", new List<RequestType> { RequestType.user }) },
@@ -170,6 +171,7 @@ public class QueryBuilder : IQueryBuilder
     public string NotNullMacro(SearchRequestPlus request, string field) { return $"{field} IS NOT NULL"; }
     public string NullMacro(SearchRequestPlus request, string field) { return $"{field} IS NULL"; }
     public string UserTypeMacro(SearchRequestPlus request, string type) { return EnumMacroSearch<UserType>(type); }
+    public string NotDeletedMacro(SearchRequestPlus request) { return "deleted = 0"; }
 
     //NOTE: Even though these might say "0" references, they're all used by the macro system!
     //For now, this is JUST read limit!!

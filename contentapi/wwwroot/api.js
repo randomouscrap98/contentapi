@@ -375,7 +375,7 @@ Api.prototype.Search_BasicPageDisplay = function(id, subpagesPerPage, subpagePag
         new RequestSearchParameter("page", "*", "id = @pageid"),
         //Subpages: we want most fields, but not SOME big/expensive fields. Hence ~
         new RequestSearchParameter("page", "~permissions,values,keywords,votes", "parentId = @pageid", "type,name", subpagesPerPage, subpagesPerPage * subpagePage, "subpages"),
-        new RequestSearchParameter("comment", "*", "contentId = @pageid", "id_desc", commentsPerPage, commentsPerPage * commentPage),
+        new RequestSearchParameter("comment", "*", "contentId = @pageid and !notdeleted()", "id_desc", commentsPerPage, commentsPerPage * commentPage),
         new RequestSearchParameter("user", "*", "id in @comment.createUserId or id in @page.createUserId or id in @subpages.createUserId"),
     ]);
 
