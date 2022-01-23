@@ -108,7 +108,7 @@ function RequestSearchParameter(type, fields, query, order, limit, skip, name)
 //The API object, which you instantiate and use as appropriate
 function Api(url, tokenGet)
 {
-    this.url = url || "../api/";    //Access the current API by default. MUST END IN SLASH!
+    this.url = url || "../";    //Access the current API by default. MUST END IN SLASH!
     this._next_request_id = 1;  //Internal: the ID to stamp the next request with. 
 
     //The user token to be used by any call in this API instance. It must be a function in order to be lenient about how 
@@ -221,7 +221,7 @@ Api.prototype.Raw = function(path, postData, handler, modifyRequest, parseData)
             //for users of the API to know exactly how to handle errors. This API interface for frontends SHOULD, someday,
             //automatically parse all these things for the users and give them easily digestible messages with a normalized
             //format, with extra data if they want to dig deeper.
-            error.message = JSON.parse(request.responseText); 
+            error.message = request.responseText;
             error.status_code = request.status;
             me.HandleError(handler, error);
         }

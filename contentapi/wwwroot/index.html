@@ -32,12 +32,11 @@
              the t parameter in the URL -->
         <template id="templates">
             <div id="t_login">
-                <div data-errors class="errors"></div>
                 <form data-loginform onsubmit="return t_login_submit(this)">
                     <label for="login-username">Username:</label>
                     <input id="login-username" name="username">
                     <label for="login-password">Password:</label>
-                    <input id="login-password" name="password">
+                    <input id="login-password" name="password" type="password">
                     <input type="submit" value="Login">
                 </form>
             </div>

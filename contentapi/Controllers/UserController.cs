@@ -11,6 +11,7 @@ namespace contentapi.Controllers;
 public class UserControllerConfig 
 {
     public bool BackdoorRegistration {get;set;}
+    public bool BackdoorEmailLog {get;set;}
 }
 
 public class UserController : BaseController
@@ -109,16 +110,29 @@ public class UserController : BaseController
     }
 
     [HttpGet("getregistrationcode/{id}")]
-    public Task<ActionResult<string>> GetRegistrationCode([FromRoute]long userId)
+    public Task<ActionResult<string>> GetRegistrationCode([FromRoute]long id)
     {
         return MatchExceptions(async () =>
         {
             if(!config.BackdoorRegistration)
                 throw new ForbiddenException("This is a debug endpoint that has been deactivated!");
 
-            var registrationCode = await userService.GetRegistrationKeyAsync(userId);
+            var registrationCode = await userService.GetRegistrationKeyAsync(id);
 
             return registrationCode;
+        });
+    }
+
+    [HttpGet("emaillog")]
+    public Task<ActionResult<List<EmailLog>>> GetEmailLog()
+    {
+        return MatchExceptions(() =>
+        {
+            if(!config.BackdoorEmailLog)
+                throw new ForbiddenException("This is a debug endpoint that has been deactivated!");
+            
+            return Task.FromResult((emailer as NullEmailService ?? 
+                throw new InvalidOperationException("The emailer is not set up for logging! This endpoint is only for the null email service")).Log);
         });
     }
 }
