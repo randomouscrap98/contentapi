@@ -6,6 +6,9 @@ var api;
 
 const SUBPAGESPERPAGE = 100;
 const COMMENTSPERPAGE = 100;
+const USERSPERPAGE = 100;
+const FILESPERPAGE = 100;
+const TINYAVATAR = 25;
 
 //NOTE: although this is set up to use templates and dynamic loading as an example, this is NOT
 //SPA. It does not attempt to intercept URLS and do all the fanciness required for that.
@@ -31,6 +34,16 @@ window.onload = function()
     }
 };
 
+
+// -- Getters and setters for stateful (cross page load) stuff --
+
+const TOKENKEY = "contentapi_defimpl_userkey";
+function GetToken() { return localStorage.getItem(TOKENKEY); }
+function SetToken(token) { localStorage.setItem(TOKENKEY, token); }
+
+
+// -- General utilities (for this page) --
+
 //Convert "page state" to a url. This frontend is very basic!
 function StateToUrl(state)
 {
@@ -45,13 +58,8 @@ function StateToUrl(state)
     return "?" + params.toString();
 }
 
+//Make a "deep copy" of the given object (sort of)
 function Copy(object) { return JSON.parse(JSON.stringify(object)); }
-
-// -- Getters and setters for stateful (cross page load) stuff --
-
-const TOKENKEY = "contentapi_defimpl_userkey";
-function GetToken() { return localStorage.getItem(TOKENKEY); }
-function SetToken(token) { localStorage.setItem(TOKENKEY, token); }
 
 
 // -- Some basic templating functions --
@@ -100,6 +108,27 @@ function MakeTable(data, table)
     }
 }
 
+//Place a url into the given link with the given state modified. Does NOT modify the 
+//actual state given, that's the point of this function!
+function LinkState(link, state, modify)
+{
+    var newState = Copy(state);
+    modify(newState);
+    link.href = StateToUrl(newState);
+}
+
+//Set up pagination, with the given page up and page down elements
+function SetupPagination(linkUp, linkDown, state, field)
+{
+    //Fix state immediately, it's fine.
+    state[field] = Math.max(0, state[field] || 0);
+
+    if(state[field] > 0)
+        LinkState(linkDown, state, x => x[field]--);
+
+    LinkState(linkUp, state, x => x[field]++);
+}
+
 
 // -- The individual page setup functions --
 
@@ -117,7 +146,7 @@ function user_onload(template, state)
 
     api.AboutToken(new ApiHandler(d =>
     {
-        api.Search_UserId(d.result.userId, new ApiHandler(dd =>
+        api.Search_ById("user", d.result.userId, new ApiHandler(dd =>
         {
             //So the data from the api is in "result", but results from the "request"
             //endpoint are complicated and contain additional information about the request,
@@ -137,34 +166,16 @@ function user_onload(template, state)
 
 function page_onload(template, state)
 {
-    //Fix up the pages just in case?
-    state.sp = Math.max(0, state.sp || 0);
-    state.cp = Math.max(0, state.cp || 0);
     state.pid = state.pid || 0;
+
+    SetupPagination(template.querySelector("#page-subpageup"), template.querySelector("#page-subpagedown"), state, "sp");
+    SetupPagination(template.querySelector("#page-commentup"), template.querySelector("#page-commentdown"), state, "cp");
 
     var table = template.querySelector("#page-table");
     var content = template.querySelector("#page-content");
     var title = template.querySelector("#page-title");
     var subpagesElement = template.querySelector("#page-subpages");
     var commentsElement = template.querySelector("#page-comments");
-    var spUpElement = template.querySelector("#page-subpageup");
-    var spDownElement = template.querySelector("#page-subpagedown");
-    var cpUpElement = template.querySelector("#page-commentup");
-    var cpDownElement = template.querySelector("#page-commentdown");
-
-    var spUpState = Copy(state); spUpState.sp++;
-    var spDownState = Copy(state); spDownState.sp--;
-    var cpUpState = Copy(state); cpUpState.cp++;
-    var cpDownState = Copy(state); cpDownState.cp--;
-
-    if(spDownState.sp >= 0)
-        spDownElement.href = StateToUrl(spDownState);
-    if(cpDownState.cp >= 0)
-        cpDownElement.href = StateToUrl(cpDownState);
-    
-    spUpElement.href = StateToUrl(spUpState);
-    cpUpElement.href = StateToUrl(cpUpState);
-
 
     api.Search_BasicPageDisplay(state.pid, SUBPAGESPERPAGE, state.sp, COMMENTSPERPAGE, state.cp, new ApiHandler(d =>
     {
@@ -205,6 +216,37 @@ function page_onload(template, state)
     }));
 }
 
+function users_onload(template, state)
+{
+    SetupPagination(template.querySelector("#users-usersup"), template.querySelector("#users-usersdown"), state, "up");
+
+    var usersElement = template.querySelector("#users-users");
+
+    api.Search_AllByType("user", "*", "username", USERSPERPAGE, state.up, new ApiHandler(d =>
+    {
+        d.result.data.user.forEach(x => {
+            var user = LoadTemplate("user_item", x);
+            usersElement.appendChild(user);
+        });
+    }));
+}
+
+function files_onload(template, state)
+{
+    //NOTE: reversed down and up pages because files are inverse
+    SetupPagination(template.querySelector("#files-filesdown"), template.querySelector("#files-filesup"), state, "fp");
+
+    var filesElement = template.querySelector("#files-files");
+
+    api.Search_AllByType("file", "*", "id_desc", FILESPERPAGE, state.fp, new ApiHandler(d =>
+    {
+        d.result.data.file.forEach(x => {
+            var file = LoadTemplate("file_item", x);
+            filesElement.appendChild(file);
+        });
+    }));
+}
+
 // -- Loaders, but not for pages, just for little templates--
 
 function subpage_item_onload(template, state)
@@ -226,7 +268,7 @@ function comment_onload(template, state)
 
     if(state.createUser)
     {
-        avatar.src = api.GetFileUrl(state.createUser.avatar, new FileModifyParameter(25, true));
+        avatar.src = api.GetFileUrl(state.createUser.avatar, new FileModifyParameter(TINYAVATAR, true));
         username.textContent = state.createUser.username;
     }
     else
@@ -237,6 +279,38 @@ function comment_onload(template, state)
     comment.textContent = state.text;
     comment.title = state.id;
     time.textContent = state.createDate;
+}
+
+function user_item_onload(template, state)
+{
+    var avatar = template.querySelector("[data-avatar]");
+    var username = template.querySelector("[data-username]");
+    var time = template.querySelector("[data-time]");
+    var sup = template.querySelector("[data-super]");
+
+    avatar.src = api.GetFileUrl(state.avatar, new FileModifyParameter(TINYAVATAR, true));
+    username.textContent = state.username;
+    username.title = state.id;
+    time.textContent = state.createDate;
+
+    if(!state.super)
+        sup.style.display = "none";
+}
+
+function file_item_onload(template, state)
+{
+    var file = template.querySelector("[data-file]");
+    var name = template.querySelector("[data-name]");
+    var time = template.querySelector("[data-time]");
+    var private = template.querySelector("[data-private]");
+
+    file.src = api.GetFileUrl(state.hash, new FileModifyParameter(50));
+    file.title = `${state.mimetype} : ${state.quantization}`;
+    name.textContent = `[${state.id}]: ${state.name}`;
+    time.textContent = state.createDate;
+
+    if(state.permissions[0] && state.permissions[0].indexOf("R") >= 0)
+        private.style.display = "none";
 }
 
 

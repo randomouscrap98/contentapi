@@ -15,6 +15,8 @@
             <a href="?t=register">Register</a>
             <a href="?t=user">User</a>
             <a href="?t=page&pid=0">Pages</a>
+            <a href="?t=users">Users</a>
+            <a href="?t=files">Files</a>
         </header>
         <section id="main">
             <h1>ContentApi Default Implementation</h1>
@@ -71,14 +73,30 @@
                 <table class="describe" id="page-table"></table>
                 <h3>Subpages:</h3>
                 <div id="page-subpages"></div>
-                <div id="page-subpages-nav" class="nav"></div>
-                <a href="#" id="page-subpageup">Next Subpages</a>
-                <a href="#" id="page-subpagedown">Previous Subpages</a>
+                <div id="page-subpages-nav" class="nav">
+                    <a href="#" id="page-subpageup">Next Subpages</a>
+                    <a href="#" id="page-subpagedown">Previous Subpages</a>
+                </div>
                 <h3>Comments:</h3>
                 <div id="page-comments"></div>
-                <div id="page-comments-nav" class="nav"></div>
-                <a href="#" id="page-commentup">Older Comments</a>
-                <a href="#" id="page-commentdown">Newer Comments</a>
+                <div id="page-comments-nav" class="nav">
+                    <a href="#" id="page-commentup">Older Comments</a>
+                    <a href="#" id="page-commentdown">Newer Comments</a>
+                </div>
+            </div>
+            <div id="t_users" data-onload="users_onload">
+                <div id="users-users"></div>
+                <div id="users-nav" class="nav">
+                    <a href="#" id="users-usersup">Next Users</a>
+                    <a href="#" id="users-usersdown">Previous Users</a>
+                </div>
+            </div>
+            <div id="t_files" data-onload="files_onload">
+                <div id="files-files"></div>
+                <div id="files-nav" class="nav">
+                    <a href="#" id="files-filesup">Next Files</a>
+                    <a href="#" id="files-filesdown">Previous Files</a>
+                </div>
             </div>
             <!-- The rest of this stuff are sort of "subtemplates", in that they are not the main page -->
             <div id="subpage_item" data-onload="subpage_item_onload">
@@ -90,6 +108,18 @@
                 <span data-username class="important"></span>
                 <span data-comment></span>
                 <time data-time class="annotation"></time>
+            </div>
+            <div id="user_item" data-onload="user_item_onload">
+                <img data-avatar>
+                <span data-username class="important"></span>
+                <time data-time class="annotation"></time>
+                <span data-super>⭐</span>
+            </div>
+            <div id="file_item" data-onload="file_item_onload">
+                <img data-file>
+                <span data-name class="important"></span>
+                <time data-time class="annotation"></time>
+                <span data-private>🔒</span>
             </div>
         </template>
     </body>

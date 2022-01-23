@@ -365,6 +365,26 @@ Api.prototype.AboutSearch = function(handler)
 // NOTE: You do NOT need to directly use these, especially if they don't fit your needs. 
 // You can simply use them as a starting grounds for your own custom constructed searches if you want
 
+// Note: this could still return an empty list with "success", it's up to you to handle 
+// if the list is empty
+Api.prototype.Search_ById = function(type, id, handler)
+{
+    var search = new RequestParameter(
+        { id : id }, 
+        [ new RequestSearchParameter(type, "*", "id = @id") ]
+    );
+
+    this.Search(search, handler);
+};
+
+Api.prototype.Search_AllByType = function(type, fields, order, perPage, page, handler)
+{
+    var search = new RequestParameter({ }, 
+        [ new RequestSearchParameter(type, fields || "*", "", order, perPage, page * perPage) ]
+    );
+
+    this.Search(search, handler);
+};
 // Retrieve a single page, along with its subpages in a special list, and all users associated with everything.
 // Expects pagination, since this is just an example. NOTE: this is ONLY for pages!
 Api.prototype.Search_BasicPageDisplay = function(id, subpagesPerPage, subpagePage, commentsPerPage, commentPage, handler)
@@ -391,17 +411,6 @@ Api.prototype.Search_BasicPageDisplay = function(id, subpagesPerPage, subpagePag
         //searching for a non-existent page takes nearly no time.
         //new RequestSearchParameter("user", "*", "id in @comment.createUserId or id in @page.createUserId or id in @module.createUserId or id in @file.createUserId or id in @subpages.createUserId"),
 
-// Note: this could still return an empty list with "success", it's up to you to handle 
-// if the list is empty
-Api.prototype.Search_UserId = function(id, handler)
-{
-    var search = new RequestParameter(
-        { userId : id }, 
-        [ new RequestSearchParameter("user", "*", "id = @userId") ]
-    );
-
-    this.Search(search, handler);
-};
 
 // -- Some helper functions which don't necessarily directly connect to the API --
 
