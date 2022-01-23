@@ -24,6 +24,7 @@ public class FileControllerConfig
    public int HashChars {get;set;} = 5;
    public int MaxHashRetries {get;set;} = 50;
    public string DefaultHash {get;set;} = "0";
+   public string? DefaultImageFallback {get;set;} = null;
 }
 
 public class FileController : BaseController
@@ -329,8 +330,24 @@ public class FileController : BaseController
 
       if (hash == config.DefaultHash)
       {
-         if (System.IO.File.Exists(GetAndMakeUploadPath(hash)))
-            fileData = new FileView() { id = 0, mimetype = "image/png" };
+         var defaultFile = GetAndMakeUploadPath(hash); //The baseline file, no modifications
+         bool exists = false;
+
+         //Make sure we're not hitting the filesystem too often; only check for existence once, even though
+         //we may be writing the file using some default fallback
+         if(System.IO.File.Exists(defaultFile))
+         {
+            exists = true;
+         }
+         else if (!string.IsNullOrWhiteSpace(config.DefaultImageFallback))
+         {
+            services.logger.LogInformation($"Creating default image {hash} from base64 string given in config");
+            await System.IO.File.WriteAllBytesAsync(defaultFile, Convert.FromBase64String(config.DefaultImageFallback)); //System.Text.Encoding);
+            exists = true;
+         }
+            
+         if(exists)
+            fileData = new FileView() { id = 0, mimetype = "image/png", hash = hash };
       }
       else
       {

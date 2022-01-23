@@ -67,6 +67,13 @@ function ConfirmRegistrationParameter(email, key)
     this.key = key;
 }
 
+function FileModifyParameter(size, crop, freeze)
+{
+    this.size = size;
+    this.crop = crop;
+    this.freeze = freeze;
+}
+
 // The main configuration object for ALL searches. Send this directly to the "Search" endpoint. 
 // This should be a direct reflection of "SearchRequests" within the API C# code.
 function RequestParameter(values, requests)
@@ -348,15 +355,6 @@ Api.prototype.AboutSearch = function(handler)
     this.Raw("request/about", null, handler);
 };
 
-// -- Some helper functions which don't necessarily directly connect to the API --
-
-// Return the URL for a file based on its public hash. This accepts just the hash
-// because that is what's used for file links.
-Api.prototype.GetFileUrl = function(hash)
-{
-    return encodeURI(this.url + `file/raw/${hash}`);
-};
-
 // -- Some simple, common use cases for accessing the search endpoint. --
 // NOTE: You do NOT need to directly use these, especially if they don't fit your needs. 
 // You can simply use them as a starting grounds for your own custom constructed searches if you want
@@ -397,4 +395,28 @@ Api.prototype.Search_UserId = function(id, handler)
     );
 
     this.Search(search, handler);
+};
+
+// -- Some helper functions which don't necessarily directly connect to the API --
+
+// Return the URL for a file based on its public hash. This accepts just the hash
+// because that is what's used for file links. "modify" is FileModifyParameter
+Api.prototype.GetFileUrl = function(hash, modify)
+{
+    var params = new URLSearchParams();
+
+    for(var k in modify)
+    {
+        if(modify.hasOwnProperty(k) && modify[k])
+            params.set(k, modify[k]);
+    }
+
+    var paramString = params.toString();
+
+    var url = this.url + `file/raw/${hash}`;
+
+    if(paramString.length)
+        url += "?" + paramString;
+
+    return encodeURI(url);
 };

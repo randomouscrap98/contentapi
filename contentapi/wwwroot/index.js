@@ -95,6 +95,7 @@ function confirmregister_onload(template, state)
 function user_onload(template, state)
 {
     var table = template.querySelector("#user-table");
+    var avatar = template.querySelector("#user-avatar");
 
     api.AboutToken(new ApiHandler(d =>
     {
@@ -110,6 +111,7 @@ function user_onload(template, state)
                 return;
             }
 
+            avatar.src = api.GetFileUrl(dd.result.data.user[0].avatar, new FileModifyParameter(50));
             MakeTable(dd.result.data.user[0], table);
         }));
     }));
