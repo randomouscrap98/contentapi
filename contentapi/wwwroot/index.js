@@ -32,7 +32,7 @@ window.onload = function()
 // -- Getters and setters for stateful (cross page load) stuff --
 
 const TOKENKEY = "contentapi_defimpl_userkey";
-function GetToken() { localStorage.getItem(TOKENKEY); }
+function GetToken() { return localStorage.getItem(TOKENKEY); }
 function SetToken(token) { localStorage.setItem(TOKENKEY, token); }
 
 
@@ -87,26 +87,31 @@ function MakeTable(data, table)
 
 function confirmregister_onload(template, state)
 {
-    var userEmail = template.getElementById("confirmregister-email");
+    //It's not in the page yet, so need to use queryselector
+    var userEmail = template.querySelector("#confirmregister-email");
     userEmail.value = state.email;
 }
 
 function user_onload(template, state)
 {
-    var table = template.getElementById("user-table");
+    var table = template.querySelector("#user-table");
 
     api.AboutToken(new ApiHandler(d =>
     {
-        api.Search_UserId(d.userId, dd =>
+        api.Search_UserId(d.result.userId, new ApiHandler(dd =>
         {
-            if(dd.result.user.length == 0)
+            //So the data from the api is in "result", but results from the "request"
+            //endpoint are complicated and contain additional information about the request,
+            //so you have to look into "data", and because request can get ANY data from the 
+            //database you want, you have to go into "user" because that's what you asked for.
+            if(dd.result.data.user.length == 0)
             {
                 alert("No user data found!");
                 return;
             }
 
-            MakeTable(dd.result.user[0], table);
-        });
+            MakeTable(dd.result.data.user[0], table);
+        }));
     }));
 }
 
@@ -133,7 +138,7 @@ function t_register_submit(form)
     var password = document.getElementById("register-password").value;
 
     api.RegisterAndEmail(new RegisterParameter(username, email, password), new ApiHandler(d => {
-        location.href = `?t=confirmregistration&email=${email}`;
+        location.href = `?t=confirmregister&email=${email}`;
     }));
 
     return false;

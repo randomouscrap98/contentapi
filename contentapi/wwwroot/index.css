@@ -16,5 +16,10 @@ label, input {
 
 .describe tr td:first-of-type {
     font-weight: bold;
-    text-align: right;
+    padding-right: 0.5em;
+    /*text-align: right;*/
+}
+
+.describe tr td:first-of-type::after {
+    content: ":";
 }
