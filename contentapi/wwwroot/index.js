@@ -87,8 +87,8 @@ function MakeTable(data, table)
 
 function confirmregister_onload(template, state)
 {
-    var userId = template.getElementById("confirmregister-id");
-    userId.value = state.userId;
+    var userEmail = template.getElementById("confirmregister-email");
+    userEmail.value = state.email;
 }
 
 function user_onload(template, state)
@@ -133,7 +133,7 @@ function t_register_submit(form)
     var password = document.getElementById("register-password").value;
 
     api.RegisterAndEmail(new RegisterParameter(username, email, password), new ApiHandler(d => {
-        location.href = `?t=confirmregistration&userId=${d.result.id}`;
+        location.href = `?t=confirmregistration&email=${email}`;
     }));
 
     return false;
@@ -141,10 +141,10 @@ function t_register_submit(form)
 
 function t_confirmregister_submit(form)
 {
-    var userId = document.getElementById("confirmregister-id").value;
-    var code = document.getElementById("confirmregister-code").value;
+    var email = document.getElementById("confirmregister-email").value;
+    var key = document.getElementById("confirmregister-key").value;
 
-    api.ConfirmRegistration(userId, code, new ApiHandler(d => {
+    api.ConfirmRegistration(new ConfirmRegistrationParameter(email, key), new ApiHandler(d => {
         SetToken(d.result); //This endpoint returns a user token as well, like login!
         location.href = `?t=user`;
     }));

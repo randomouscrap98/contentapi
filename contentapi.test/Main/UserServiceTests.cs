@@ -71,6 +71,25 @@ public class UserServiceTests : UnitTestBase, IClassFixture<DbUnitTestBase>
     }
 
     [Fact]
+    public async Task CreateNewUser_GetUserIdFromEmail()
+    {
+        var user = await service.CreateNewUser("hello", "short", "email@email.com");
+        var id = await service.GetUserIdFromEmailAsync("email@email.com");
+        Assert.Equal(user.id, id);
+    }
+
+    [Fact]
+    public async Task CreateNewUser_GetUserIdFromEmail_Fail()
+    {
+        var user = await service.CreateNewUser("hello", "short", "email@email.com");
+
+        await Assert.ThrowsAnyAsync<ArgumentException>(async () =>
+        {
+            var id = await service.GetUserIdFromEmailAsync("notemail@email.com");
+        });
+    }
+
+    [Fact]
     public async Task CreateNewUser_Register()
     {
         var user = await service.CreateNewUser("hello", "short", "email@email.com");

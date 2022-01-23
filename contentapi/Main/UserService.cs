@@ -124,6 +124,18 @@ public class UserService : IUserService
         return authTokenService.GetNewToken(uid, data, expireOverride ?? config.TokenExpireDefault);
     }
 
+    public async Task<long> GetUserIdFromEmailAsync(string email)
+    {
+        var user = (await searcher.QueryRawAsync(
+            $"select id from {searcher.GetDatabaseForType<UserView>()} where email = @email",
+            new Dictionary<string, object> { { "email", email}})).FirstOrDefault();
+        
+        if(user == null)
+            throw new ArgumentException("Email not found!");
+        
+        return (long)user["id"];
+    }
+
     public async Task<string> GetRegistrationKeyAsync(long userId)
     {
         //Go get the registration key

@@ -17,16 +17,16 @@ public class UserControllerConfig
 public class UserController : BaseController
 {
     protected IUserService userService;
-    protected IGenericSearch searcher;
+    //protected IGenericSearch searcher;
     protected UserControllerConfig config;
     protected IEmailService emailer;
 
     public UserController(BaseControllerServices services, IUserService userService,
-        UserControllerConfig config, IGenericSearch searcher, IEmailService emailer)
+        UserControllerConfig config, /*IGenericSearch searcher,*/ IEmailService emailer)
         : base(services)
     {
         this.userService = userService;
-        this.searcher = searcher;
+        //this.searcher = searcher;
         this.emailer = emailer;
         this.config = config;
     }
@@ -41,6 +41,12 @@ public class UserController : BaseController
     public class UserLogin : UserCredentials
     {
         public int expireSeconds {get;set;} = 0;
+    }
+
+    public class ConfirmRegistrationData 
+    {
+        public string email {get;set;} = "";
+        public string key {get;set;} = "";
     }
 
     [HttpPost("login")]
@@ -88,18 +94,11 @@ public class UserController : BaseController
     {
         return MatchExceptions(async () =>
         {
-            //Make sure the email exists or whatever
-            var users = await searcher.GetByField<UserView>(RequestType.user, "email", email);
+            var userId = await userService.GetUserIdFromEmailAsync(email);
+            var registrationCode = await userService.GetRegistrationKeyAsync(userId);
 
-            if(users.Count != 1)
-                throw new ArgumentException("Email not found!");
-            
-            var user = users.First();
-
-            if(!user.registered)
-                throw new ArgumentException("User associated with email already registered!");
-
-            var registrationCode = await userService.GetRegistrationKeyAsync(user.id);
+            if(string.IsNullOrWhiteSpace(registrationCode))
+                throw new RequestException("Couldn't find registration code for this email! Probably already registered!");
 
             //TODO: language? Configuration? I don't know
             await emailer.SendEmailAsync(new EmailMessage(email, "Registration instructions",
@@ -109,12 +108,13 @@ public class UserController : BaseController
         });
     }
 
-    [HttpPost("confirmregistration/{id}")]
-    public Task<ActionResult<string>> ConfirmRegistration([FromRoute]long id, [FromBody]string code)
+    [HttpPost("confirmregistration")]
+    public Task<ActionResult<string>> ConfirmRegistration([FromBody]ConfirmRegistrationData confirmation)
     {
-        return MatchExceptions(() =>
+        return MatchExceptions(async () =>
         {
-            return userService.CompleteRegistration(id, code);
+            var userId = await userService.GetUserIdFromEmailAsync(confirmation.email);
+            return await userService.CompleteRegistration(userId, confirmation.key);
         });
     }
 

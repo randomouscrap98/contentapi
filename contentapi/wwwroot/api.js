@@ -61,6 +61,12 @@ function RegisterParameter(username, email, password)
     this.password = password;
 }
 
+function ConfirmRegistrationParameter(email, key)
+{
+    this.email = email;
+    this.key = key;
+}
+
 // The main configuration object for ALL searches. Send this directly to the "Search" endpoint. 
 // This should be a direct reflection of "SearchRequests" within the API C# code.
 function RequestParameter(values, requests)
@@ -307,12 +313,10 @@ Api.prototype.RegisterAndEmail = function(registerData, handler)
     this.Register(registerData, handler);
 }
 
-// This is one of those endpoints that requires two bits of data. Most just require
-// some kind of object, but this one is a bit off. The return from this is actually 
-// a login token, so you don't have to login after registration.
-Api.prototype.ConfirmRegistration = function(userId, code, handler)
+// confirmData should be a ConfirmRegistrationParameter
+Api.prototype.ConfirmRegistration = function(confirmData, handler)
 {
-    this.Raw(`user/confirmregistration/${userId}`, code, handler);
+    this.Raw(`user/confirmregistration`, confirmData, handler);
 };
 
 Api.prototype.About = function(handler)
