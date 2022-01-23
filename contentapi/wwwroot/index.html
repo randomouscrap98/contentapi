@@ -65,6 +65,32 @@
                 <table class="describe" id="user-table"></table>
                 <button onclick="t_user_logout()">Logout</button>
             </div>
+            <div id="t_page" data-onload="page_onload">
+                <h2 id="page-title"></h2>
+                <div id="page-content" title="This is raw markup"></div>
+                <table class="describe" id="page-table"></table>
+                <h3>Subpages:</h3>
+                <div id="page-subpages"></div>
+                <div id="page-subpages-nav"></div>
+                <!--<button onclick="t_page_change_subpage(1)">Next Subpages</button>
+                <button onclick="t_page_change_subpage(-1)">Previous Subpages</button>-->
+                <h3>Comments:</h3>
+                <div id="page-comments"></div>
+                <div id="page-comments-nav"></div>
+                <!--<button onclick="t_page_change_comments(1)">Older Comments</button>
+                <button onclick="t_page_change_comments(-1)">Newer Comments</button>-->
+            </div>
+            <!-- The rest of this stuff are sort of "subtemplates", in that they are not the main page -->
+            <div id="subpage_item" data-onload="subpage_item_onload">
+                <a data-title></a>
+                <span data-type></span>
+            </div>
+            <div id="comment" data-onload="comment_onload">
+                <img data-avatar>
+                <span data-username class="important"></span>
+                <span data-comment></span>
+                <time data-time class="annotation"></time>
+            </div>
         </template>
     </body>
 </html>

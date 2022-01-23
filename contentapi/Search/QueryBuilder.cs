@@ -480,23 +480,38 @@ public class QueryBuilder : IQueryBuilder
     {
         if(!string.IsNullOrEmpty(r.order))
         {
-            var order = r.order;
-            var descending = false;
+            var orders = r.order.Split(",".ToCharArray(), StringSplitOptions.RemoveEmptyEntries);
 
-            if(r.order.EndsWith(DescendingAppend))
+            //Can't parameterize the column... inserting directly; scary. Also, immediately adding the order by even
+            //though we don't know what we're doing yet... eehhh should be fine?
+            queryStr.Append("ORDER BY ");
+            //queryStr.Append($"ORDER BY {order} ");
+            //var order = r.order;
+
+            for(int i = 0; i < orders.Length; i++)
             {
-                descending = true;
-                order = r.order.Substring(0, r.order.Length - DescendingAppend.Length);
+                var order = orders[i];
+                var descending = false;
+
+                if (r.order.EndsWith(DescendingAppend))
+                {
+                    descending = true;
+                    order = r.order.Substring(0, r.order.Length - DescendingAppend.Length);
+                }
+
+                if (!r.typeInfo.queryableFields.Contains(order))
+                    throw new ArgumentException($"Unknown order field {order} for request {r.name}");
+                
+                queryStr.Append(order);
+
+                if (descending)
+                    queryStr.Append(" DESC ");
+                
+                if(i < orders.Length - 1)
+                    queryStr.Append(", ");
+                else
+                    queryStr.Append(" ");
             }
-
-            if(!r.typeInfo.queryableFields.Contains(order))
-                throw new ArgumentException($"Unknown order field {order} for request {r.name}");
-
-            //Can't parameterize the column... inserting directly; scary
-            queryStr.Append($"ORDER BY {order} ");
-
-            if(descending)
-                queryStr.Append("DESC ");
         }
 
         //ALWAYS need limit if you're doing offset, just easier to include it. -1 is magic

@@ -23,3 +23,12 @@ label, input {
 .describe tr td:first-of-type::after {
     content: ":";
 }
+
+.important {
+    font-weight: bold;;
+}
+
+.annotation {
+    font-size: 0.8em;
+    color: gray;
+}

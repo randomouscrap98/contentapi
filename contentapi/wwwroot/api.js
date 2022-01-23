@@ -153,6 +153,12 @@ function Api(url, tokenGet)
             console.debug(`api[${d.id}]: '${d.request.responseURL}' ${d.request.status} - ${d.request.responseText.length} bytes`);
         }
     );
+
+    //The list of fields in ANY type of object that usually links to a user (not exhaustive, probably)
+    this.userAutolinks = {
+        createUserId: "createUser",
+        editUserId: "editUser"
+    };
 }
 
 //Find the error handler function within the handler field, if it exists. This is because the error handler
@@ -360,12 +366,22 @@ Api.prototype.AboutSearch = function(handler)
 // You can simply use them as a starting grounds for your own custom constructed searches if you want
 
 // Retrieve a single page, along with its subpages in a special list, and all users associated with everything.
-// Also retrieve the last N comments (as given)
-Api.prototype.Search_BasicContentDisplay = function(id, latestComments, handler)
+// Expects pagination, since this is just an example. NOTE: this is ONLY for pages!
+Api.prototype.Search_BasicPageDisplay = function(id, subpagesPerPage, subpagePage, commentsPerPage, commentPage, handler)
 {
     var search = new RequestParameter({
         pageid : id
     }, [
+        new RequestSearchParameter("page", "*", "id = @pageid"),
+        //Subpages: we want most fields, but not SOME big/expensive fields. Hence ~
+        new RequestSearchParameter("page", "~permissions,values,keywords,votes", "parentId = @pageid", "type,name", subpagesPerPage, subpagesPerPage * subpagePage, "subpages"),
+        new RequestSearchParameter("comment", "*", "contentId = @pageid", "id_desc", commentsPerPage, commentsPerPage * commentPage),
+        new RequestSearchParameter("user", "*", "id in @comment.createUserId or id in @page.createUserId or id in @subpages.createUserId"),
+    ]);
+
+    this.Search(search, handler);
+};
+
         //Some funny quirks in the API (that are a result of user requests): ALL content is "content" now, 
         //including pages, files, modules, etc. But searching against the bare minimum "content" means
         //you get only the fields that are common to all content types. This is a LOT of fields, but not 
@@ -373,17 +389,7 @@ Api.prototype.Search_BasicContentDisplay = function(id, latestComments, handler)
         //get ALL data, we must (currently) just ask for all types. This may be fixed in the future with
         //a further specialized request type, but for now this is what we have. It is NOT inefficient, 
         //searching for a non-existent page takes nearly no time.
-        new RequestSearchParameter("page", "*", "id = @pageid"),
-        new RequestSearchParameter("module", "*", "id = @pageid"),
-        new RequestSearchParameter("file", "*", "id = @pageid"),
-        //Subpages: we want most fields, but not SOME big/expensive fields. Hence ~
-        new RequestSearchParameter("content", "~permissions,values,keywords,votes", "parentId = @pageid", "", -1, 0, "subpages"),
-        new RequestSearchParameter("comment", "*", "contentId = @pageid", "id_desc", latestComments),
-        new RequestSearchParameter("user", "*", "id in @comment.createUserId or id in @page.createUserId or id in @module.createUserId or id in @file.createUserId or id in @subpages.createUserId"),
-    ]);
-
-    this.Search(search, handler);
-};
+        //new RequestSearchParameter("user", "*", "id in @comment.createUserId or id in @page.createUserId or id in @module.createUserId or id in @file.createUserId or id in @subpages.createUserId"),
 
 // Note: this could still return an empty list with "success", it's up to you to handle 
 // if the list is empty
@@ -419,4 +425,33 @@ Api.prototype.GetFileUrl = function(hash, modify)
         url += "?" + paramString;
 
     return encodeURI(url);
+};
+
+// Return a dictionary where each key is the id from the given dataset
+Api.prototype.KeyById = function(data, idField)
+{
+    idField = idField || "id";
+    var result = {};
+    data.forEach(x => { result[x[idField]] = x; });
+    return result;
+};
+
+// Automatically link users to the given dataset. Tries to find normal fields like "createUserId",
+// and adds an additional field "createUser" which is the full user data from the provided userlist.
+// WARN: THIS MODIFIES THE DATASET IN-PLACE!
+Api.prototype.AutoLinkUsers = function(data, userlist)
+{
+    var me = this;
+    var users = this.KeyById(userlist);
+    data.forEach(x =>
+    {
+        for(var k in me.userAutolinks)
+        {
+            var link = x[k];
+
+            //Link the found user to the field specified as the value in the userAutoLinks field
+            if(link && users[link])
+                x[me.userAutolinks[k]] = users[link];
+        }
+    });
 };

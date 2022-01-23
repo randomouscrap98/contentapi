@@ -4,6 +4,9 @@
 
 var api;
 
+const SUBPAGESPERPAGE = 100;
+const COMMENTSPERPAGE = 100;
+
 //NOTE: although this is set up to use templates and dynamic loading as an example, this is NOT
 //SPA. It does not attempt to intercept URLS and do all the fanciness required for that.
 window.onload = function()
@@ -28,6 +31,19 @@ window.onload = function()
     }
 };
 
+//Convert "page state" to a url. This frontend is very basic!
+function StateToUrl(state)
+{
+    var params = new URLSearchParams();
+
+    for(var k in state)
+    {
+        if(state.hasOwnProperty(k) && state[k])
+            params.set(k, state[k]);
+    }
+
+    return params;
+}
 
 // -- Getters and setters for stateful (cross page load) stuff --
 
@@ -115,6 +131,84 @@ function user_onload(template, state)
             MakeTable(dd.result.data.user[0], table);
         }));
     }));
+}
+
+function page_onload(template, state)
+{
+    //Fix up the pages just in case?
+    state.sp = Math.max(0, state.sp || 0);
+    state.cp = Math.max(0, state.cp || 0);
+    state.pid = state.pid || 0;
+
+    var table = template.querySelector("#page-table");
+    var content = template.querySelector("#page-content");
+    var title = template.querySelector("#page-title");
+    var subpagesElement = template.querySelector("#page-subpages");
+    var commentsElement = template.querySelector("#page-comments");
+
+    api.Search_BasicPageDisplay(state.pid, SUBPAGESPERPAGE, state.sp, COMMENTSPERPAGE, state.cp, new ApiHandler(d =>
+    {
+        if(d.result.data.page.length == 0)
+        {
+            if(state.pid == 0)
+                title.textContent = "Root parent (not a page)";
+            else
+                title.textContent = "Unknown page / root";
+        }
+        else
+        {
+            var page = d.result.data.page[0];
+            title.textContent = page.name;
+            content.textContent = page.content;
+            delete page.name;
+            delete page.content;
+            page.votes = JSON.stringify(page.votes);
+            page.values = JSON.stringify(page.values);
+            page.keywords = JSON.stringify(page.keywords);
+            page.permissions = JSON.stringify(page.permissions);
+            MakeTable(page, table);
+        }
+
+        //Waste a few cycles linking some stuff together!
+        api.AutoLinkUsers(d.result.data.subpages, d.result.data.user);
+        api.AutoLinkUsers(d.result.data.comment, d.result.data.user);
+
+        d.result.data.subpages.forEach(x => {
+            var subpage = LoadTemplate("subpage_item", x);
+            subpagesElement.appendChild(subpage);
+        });
+
+        d.result.data.comment.forEach(x => {
+            var comment = LoadTemplate("comment", x);
+            commentsElement.appendChild(comment);
+        });
+    }));
+}
+
+// -- Loaders, but not for pages, just for little templates--
+
+function subpage_item_onload(template, state)
+{
+    //Set up the subpage item on load
+    var type = template.querySelector("[data-type]");
+    var title = template.querySelector("[data-title]");
+    type.textContent = state.type;
+    title.href = "?t=page&pid=" + state.id;
+    title.textContent = state.name;
+}
+
+function comment_onload(template, state)
+{
+    var avatar = template.querySelector("[data-avatar]");
+    var username = template.querySelector("[data-username]");
+    var comment = template.querySelector("[data-comment]");
+    var time = template.querySelector("[data-time]");
+
+    avatar.src = api.GetFileUrl(state.createUser.avatar, new FileModifyParameter(25, true));
+    username.textContent = state.createUser.username;
+    username.title = state.createUserId;
+    comment.textContent = state.text;
+    time.textContent = state.createDate;
 }
 
 
