@@ -506,6 +506,9 @@ public class QueryBuilder : IQueryBuilder
                 
                 queryStr.Append(order);
 
+                if(r.typeInfo.fieldTypes[order] == typeof(string))
+                    queryStr.Append(" COLLATE NOCASE ");
+
                 if (descending)
                     queryStr.Append(" DESC ");
                 

@@ -6,8 +6,7 @@ var api;
 
 const SUBPAGESPERPAGE = 100;
 const COMMENTSPERPAGE = 100;
-const USERSPERPAGE = 100;
-const FILESPERPAGE = 100;
+const SEARCHRESULTSPERPAGE = 100;
 const TINYAVATAR = 25;
 
 //NOTE: although this is set up to use templates and dynamic loading as an example, this is NOT
@@ -108,6 +107,18 @@ function MakeTable(data, table)
     }
 }
 
+// Using the given list, fill the given datalist element
+function FillOptions(list, datalist)
+{
+    datalist.innerHTML = "";
+    list.forEach(x =>
+    {
+        var option = document.createElement("option");
+        option.textContent = x;
+        datalist.appendChild(option);
+    });
+}
+
 //Place a url into the given link with the given state modified. Does NOT modify the 
 //actual state given, that's the point of this function!
 function LinkState(link, state, modify)
@@ -205,66 +216,111 @@ function page_onload(template, state)
         api.AutoLinkUsers(d.result.data.comment, d.result.data.user);
 
         d.result.data.subpages.forEach(x => {
-            var subpage = LoadTemplate("subpage_item", x);
+            var subpage = LoadTemplate("page_item", x);
             subpagesElement.appendChild(subpage);
         });
 
         d.result.data.comment.forEach(x => {
-            var comment = LoadTemplate("comment", x);
+            var comment = LoadTemplate("comment_item", x);
             commentsElement.appendChild(comment);
         });
     }));
 }
 
-function users_onload(template, state)
+function search_onload(template, state)
 {
-    SetupPagination(template.querySelector("#users-usersup"), template.querySelector("#users-usersdown"), state, "up");
+    SetupPagination(template.querySelector("#search-up"), template.querySelector("#search-down"), state, "sp");
 
-    var usersElement = template.querySelector("#users-users");
+    //Do some initial set up. Fill in some of the fields and such
+    var searchtext = template.querySelector("#search-text")
+    var searchtype = template.querySelector("#search-type")
+    var searchfield = template.querySelector("#search-field");
+    var searchsort = template.querySelector("#search-sort");
 
-    api.Search_AllByType("user", "*", "username", USERSPERPAGE, state.up, new ApiHandler(d =>
+    var resultElement = template.querySelector("#search-results");
+    var aboutElement = template.querySelector("#search-about");
+
+    searchtext.value = state.search || "";
+    searchtype.value = state.type || "page";
+
+    //Also, go out and get the "about" information so we can fill in the datalist elements for options
+    api.AboutSearch(new ApiHandler(d => 
     {
-        d.result.data.user.forEach(x => {
-            var user = LoadTemplate("user_item", x);
-            usersElement.appendChild(user);
-        });
+        //Assume the format is known, and the data will be fine.
+        var resetOptions = function()
+        {
+            console.log(searchtype.value, d);
+            FillOptions(d.result.details.types[searchtype.value].searchfields, searchfield);
+            var sortOptions = [];
+            d.result.details.types[searchtype.value].getfields.forEach(x =>
+            {
+                sortOptions.push(x);
+                sortOptions.push(x + "_desc");
+            });
+            FillOptions(sortOptions, searchsort);
+        };
+        searchtype.oninput = resetOptions;
+        resetOptions();
+
+        //Now that the options have been reset based on the search criteria, reset the junk
+        searchfield.value = state.field || "";
+        searchsort.value = state.sort || "";
     }));
-}
 
-function files_onload(template, state)
-{
-    //NOTE: reversed down and up pages because files are inverse
-    SetupPagination(template.querySelector("#files-filesdown"), template.querySelector("#files-filesup"), state, "fp");
-
-    var filesElement = template.querySelector("#files-files");
-
-    api.Search_AllByType("file", "*", "id_desc", FILESPERPAGE, state.fp, new ApiHandler(d =>
+    //If a type was at least given, we can perform a search (probably). remember, this onload function is both for loading
+    //the search page state AND performing the search, since oldschool forms just submit the data to the same page.
+    if(state.type)
     {
-        d.result.data.file.forEach(x => {
-            var file = LoadTemplate("file_item", x);
-            filesElement.appendChild(file);
-        });
-    }));
+        //This is how you'd set up your own search
+        var values = {};
+        var query = "";
+
+        if(state.search)
+        {
+            values.search = `%${state.search}%`;
+            query = `${state.field} LIKE @search`;
+        }
+
+        var search = new RequestParameter(values, [ 
+            new RequestSearchParameter(state.type, "*", query, state.sort, SEARCHRESULTSPERPAGE, state.sp * SEARCHRESULTSPERPAGE, "main"),
+            new RequestSearchParameter("user", "*", "id in @main.createUserId", "")
+        ]);
+
+        api.Search(search, new ApiHandler(d =>
+        {
+            api.AutoLinkUsers(d.result.data.main, d.result.data.user);
+
+            d.result.data.main.forEach(x => {
+                var item = LoadTemplate(`${state.type}_item`, x);
+                resultElement.appendChild(item);
+            });
+
+            aboutElement.textContent = `Search took ${d.result.totalTime} ms`;
+        }));
+    }
 }
 
 // -- Loaders, but not for pages, just for little templates--
 
-function subpage_item_onload(template, state)
+function page_item_onload(template, state)
 {
     //Set up the subpage item on load
     var type = template.querySelector("[data-type]");
     var title = template.querySelector("[data-title]");
+    var time = template.querySelector("[data-time]");
     type.textContent = state.type;
     title.href = "?t=page&pid=" + state.id;
     title.textContent = state.name;
+    time.textContent = state.createDate;
 }
 
-function comment_onload(template, state)
+function comment_item_onload(template, state)
 {
     var avatar = template.querySelector("[data-avatar]");
     var username = template.querySelector("[data-username]");
     var comment = template.querySelector("[data-comment]");
     var time = template.querySelector("[data-time]");
+    var contentid = template.querySelector("[data-contentid]");
 
     if(state.createUser)
     {
@@ -279,6 +335,7 @@ function comment_onload(template, state)
     comment.textContent = state.text;
     comment.title = state.id;
     time.textContent = state.createDate;
+    contentid.textContent = `(${state.contentId})`;
 }
 
 function user_item_onload(template, state)

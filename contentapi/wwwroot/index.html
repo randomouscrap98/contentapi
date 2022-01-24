@@ -15,8 +15,7 @@
             <a href="?t=register">Register</a>
             <a href="?t=user">User</a>
             <a href="?t=page&pid=0">Pages</a>
-            <a href="?t=users">Users</a>
-            <a href="?t=files">Files</a>
+            <a href="?t=search">Search</a>
         </header>
         <section id="main">
             <h1>ContentApi Default Implementation</h1>
@@ -72,42 +71,59 @@
                 <div id="page-content" title="This is raw markup"></div>
                 <table class="describe" id="page-table"></table>
                 <h3>Subpages:</h3>
-                <div id="page-subpages"></div>
+                <div id="page-subpages" class="results"></div>
                 <div id="page-subpages-nav" class="nav">
                     <a href="#" id="page-subpageup">Next Subpages</a>
                     <a href="#" id="page-subpagedown">Previous Subpages</a>
                 </div>
                 <h3>Comments:</h3>
-                <div id="page-comments"></div>
+                <div id="page-comments" class="results"></div>
                 <div id="page-comments-nav" class="nav">
                     <a href="#" id="page-commentup">Older Comments</a>
                     <a href="#" id="page-commentdown">Newer Comments</a>
                 </div>
             </div>
-            <div id="t_users" data-onload="users_onload">
-                <div id="users-users"></div>
-                <div id="users-nav" class="nav">
-                    <a href="#" id="users-usersup">Next Users</a>
-                    <a href="#" id="users-usersdown">Previous Users</a>
+            <div id="t_search" data-onload="search_onload">
+                <form id="search-form"> <!-- onsubmit="return t_search_submit(this)">-->
+                    <input name="t" type="hidden" value="search">
+                    <label for="search-type">Type:</label>
+                    <!-- NORMALLY, we'd want to just pull these from the "about", but I have only a few options I want available anyway -->
+                    <select id="search-type" name="type">
+                        <option>page</option>
+                        <option>file</option>
+                        <option>user</option>
+                        <option>comment</option>
+                    </select>
+                    <label for="search-text">Search:</label>
+                    <input id="search-text" name="search">
+                    <label for="search-field">Field:</label>
+                    <!--<input id="search-field" list="search-field-options" name="field" required="">-->
+                    <select id="search-field" name="field"></select>
+                    <label for="search-sort">Sort:</label>
+                    <!--<input id="search-sort" list="search-sort-options" name="sort">
+                    <datalist id="search-sort-options"></datalist>-->
+                    <select id="search-sort" name="sort"></select>
+                    <input type="submit" value="Search">
+                </form>
+                <div id="search-about" class="annotation"></div>
+                <div id="search-results" class="results"></div>
+                <div id="search-results-nav" class="nav">
+                    <a href="#" id="search-up">Next results</a>
+                    <a href="#" id="search-down">Previous results</a>
                 </div>
             </div>
-            <div id="t_files" data-onload="files_onload">
-                <div id="files-files"></div>
-                <div id="files-nav" class="nav">
-                    <a href="#" id="files-filesup">Next Files</a>
-                    <a href="#" id="files-filesdown">Previous Files</a>
-                </div>
-            </div>
-            <!-- The rest of this stuff are sort of "subtemplates", in that they are not the main page -->
-            <div id="subpage_item" data-onload="subpage_item_onload">
+            <!-- The rest of this stuff are sort of "subtemplates", like little repeated items used within the page -->
+            <div id="page_item" data-onload="page_item_onload">
                 <a data-title></a>
                 <span data-type></span>
+                <time data-time class="annotation"></time>
             </div>
-            <div id="comment" data-onload="comment_onload">
+            <div id="comment_item" data-onload="comment_item_onload">
                 <img data-avatar>
                 <span data-username class="important"></span>
                 <span data-comment></span>
                 <time data-time class="annotation"></time>
+                <span data-contentid class="annotation"></span>
             </div>
             <div id="user_item" data-onload="user_item_onload">
                 <img data-avatar>

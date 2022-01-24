@@ -6,13 +6,12 @@ label, input {
     display: block;
 }
 
-.error {
-    color: red;
+header {
+    margin-bottom: 0.5em;
 }
 
-.success {
-    color: green;
-}
+.error { color: red; }
+.success { color: green; }
 
 .describe tr td:first-of-type {
     font-weight: bold;
@@ -24,9 +23,7 @@ label, input {
     content: ":";
 }
 
-.important {
-    font-weight: bold;;
-}
+.important { font-weight: bold;; }
 
 .annotation {
     font-size: 0.8em;
@@ -35,4 +32,8 @@ label, input {
 
 .nav {
     margin: 0.5em 0;
+}
+
+.results {
+    margin: 0.5em 0.25em;
 }

@@ -385,6 +385,7 @@ Api.prototype.Search_AllByType = function(type, fields, order, perPage, page, ha
 
     this.Search(search, handler);
 };
+
 // Retrieve a single page, along with its subpages in a special list, and all users associated with everything.
 // Expects pagination, since this is just an example. NOTE: this is ONLY for pages!
 Api.prototype.Search_BasicPageDisplay = function(id, subpagesPerPage, subpagePage, commentsPerPage, commentPage, handler)
