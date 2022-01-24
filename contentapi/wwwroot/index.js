@@ -281,14 +281,21 @@ function search_onload(template, state)
             query = `${state.field} LIKE @search`;
         }
 
-        var search = new RequestParameter(values, [ 
+        var requests = [
             new RequestSearchParameter(state.type, "*", query, state.sort, SEARCHRESULTSPERPAGE, state.sp * SEARCHRESULTSPERPAGE, "main"),
-            new RequestSearchParameter("user", "*", "id in @main.createUserId", "")
-        ]);
+        ];
+
+        //Can't link users to themselves... not really
+        if(state.type != "user")
+            requests.push(new RequestSearchParameter("user", "*", "id in @main.createUserId", ""));
+
+        var search = new RequestParameter(values, requests);
 
         api.Search(search, new ApiHandler(d =>
         {
-            api.AutoLinkUsers(d.result.data.main, d.result.data.user);
+            //If we DID ask for the users, link them
+            if(d.result.data.user)
+                api.AutoLinkUsers(d.result.data.main, d.result.data.user);
 
             d.result.data.main.forEach(x => {
                 var item = LoadTemplate(`${state.type}_item`, x);
@@ -357,12 +364,14 @@ function user_item_onload(template, state)
 function file_item_onload(template, state)
 {
     var file = template.querySelector("[data-file]");
+    var filelink = template.querySelector("[data-filelink]");
     var name = template.querySelector("[data-name]");
     var time = template.querySelector("[data-time]");
     var private = template.querySelector("[data-private]");
 
     file.src = api.GetFileUrl(state.hash, new FileModifyParameter(50));
     file.title = `${state.mimetype} : ${state.quantization}`;
+    filelink.href = api.GetFileUrl(state.hash);
     name.textContent = `[${state.id}]: ${state.name}`;
     time.textContent = state.createDate;
 
