@@ -1,14 +1,13 @@
-using contentapi.Search;
 
-namespace contentapi.Utilities;
+namespace contentapi.Search;
 
-public class TypeInfo
+public class DbTypeInfo
 {
     /// <summary>
     /// The type that produced this typeinfo
     /// </summary>
     /// <returns></returns>
-    public Type type {get;set;} = typeof(TypeInfo);
+    public Type type {get;set;} = typeof(DbTypeInfo);
     public Dictionary<string, System.Reflection.PropertyInfo> properties {get;set;} = new Dictionary<string, System.Reflection.PropertyInfo>();
 
     /// <summary>

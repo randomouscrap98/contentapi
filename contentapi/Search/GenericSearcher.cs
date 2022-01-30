@@ -26,13 +26,13 @@ public class GenericSearcher : IGenericSearch
     protected ILogger logger;
     protected IDbConnection dbcon;
     protected IPermissionService permissionService;
-    protected ITypeInfoService typeService;
+    protected IDbTypeInfoService typeService;
     protected GenericSearcherConfig config;
     protected IMapper mapper;
     protected IQueryBuilder queryBuilder;
 
     public GenericSearcher(ILogger<GenericSearcher> logger, ContentApiDbConnection connection,
-        ITypeInfoService typeInfoService, GenericSearcherConfig config, IMapper mapper,
+        IDbTypeInfoService typeInfoService, GenericSearcherConfig config, IMapper mapper,
         IQueryBuilder queryBuilder, IPermissionService permissionService)
     {
         this.logger = logger;

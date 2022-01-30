@@ -6,11 +6,11 @@ namespace contentapi.test;
 
 public class CachedTypeInfoServiceTest : UnitTestBase
 {
-    protected CachedTypeInfoService service;
+    protected CacheDbTypeInfoService service;
 
     public CachedTypeInfoServiceTest()
     {
-        service = GetService<CachedTypeInfoService>();//new CachedTypeInfoService();
+        service = GetService<CacheDbTypeInfoService>();//new CachedTypeInfoService();
     }
 
     public class TestView

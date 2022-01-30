@@ -17,14 +17,14 @@ public class DbWriter : IDbWriter
     protected ILogger logger;
     protected IGenericSearch searcher;
     protected IDbConnection dbcon;
-    protected ITypeInfoService typeInfoService;
+    protected IDbTypeInfoService typeInfoService;
     protected IMapper mapper;
     protected IHistoryConverter historyConverter;
     protected IPermissionService permissionService;
     protected ILiveEventQueue eventQueue;
 
     public DbWriter(ILogger<DbWriter> logger, IGenericSearch searcher, ContentApiDbConnection connection,
-        ITypeInfoService typeInfoService, IMapper mapper, IHistoryConverter historyConverter,
+        IDbTypeInfoService typeInfoService, IMapper mapper, IHistoryConverter historyConverter,
         IPermissionService permissionService, ILiveEventQueue eventQueue)
     {
         this.logger = logger;
@@ -213,7 +213,7 @@ public class DbWriter : IDbWriter
     /// <param name="view"></param>
     /// <param name="dbModel"></param>
     /// <returns>Fields that were NOT mapped</returns>
-    public List<string> MapSimpleViewFields(TypeInfo tinfo, object view, object dbModel)
+    public List<string> MapSimpleViewFields(DbTypeInfo tinfo, object view, object dbModel)
     {
         //This can happen if our view type has no associated table
         if(tinfo.tableTypeProperties.Count == 0)

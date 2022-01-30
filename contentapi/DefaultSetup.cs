@@ -30,7 +30,7 @@ public static class DefaultSetup
         services.AddSingleton(p => new Func<IGenericSearch>(() => p.GetService<IGenericSearch>() ?? throw new InvalidOperationException("Couldn't create IGenericSearch somehow!")));
 
         services.AddSingleton<IRuntimeInformation>(new MyRuntimeInformation(DateTime.Now));
-        services.AddSingleton<ITypeInfoService, CachedTypeInfoService>();
+        services.AddSingleton<IDbTypeInfoService, CacheDbTypeInfoService>();
         services.AddSingleton<IQueryBuilder, QueryBuilder>();
         services.AddSingleton<ISearchQueryParser, SearchQueryParser>();
         services.AddSingleton(typeof(IAuthTokenService<>), typeof(JwtAuthTokenService<>));

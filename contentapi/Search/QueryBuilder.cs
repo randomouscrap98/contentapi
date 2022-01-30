@@ -12,7 +12,7 @@ namespace contentapi.Search;
 public class QueryBuilder : IQueryBuilder
 {
     protected ILogger logger;
-    protected ITypeInfoService typeService;
+    protected IDbTypeInfoService typeService;
     protected ISearchQueryParser parser;
     protected IMapper mapper;
     protected IPermissionService permissionService;
@@ -67,7 +67,7 @@ public class QueryBuilder : IQueryBuilder
     protected List<Type> ViewTypes;
     protected Dictionary<RequestType, Type> StandardViewRequests;
 
-    public QueryBuilder(ILogger<QueryBuilder> logger, ITypeInfoService typeInfoService, 
+    public QueryBuilder(ILogger<QueryBuilder> logger, IDbTypeInfoService typeInfoService, 
         IMapper mapper, ISearchQueryParser parser, IPermissionService permissionService)
     {
         this.logger = logger;

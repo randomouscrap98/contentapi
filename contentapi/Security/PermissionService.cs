@@ -1,4 +1,5 @@
 using contentapi.Db;
+using contentapi.Search;
 using contentapi.Utilities;
 using contentapi.Views;
 
@@ -7,9 +8,9 @@ namespace contentapi;
 public class PermissionService : IPermissionService
 {
     protected ILogger logger;
-    protected ITypeInfoService typeInfoService;
+    protected IDbTypeInfoService typeInfoService;
 
-    public PermissionService (ILogger<PermissionService> logger, ITypeInfoService typeInfoService)
+    public PermissionService (ILogger<PermissionService> logger, IDbTypeInfoService typeInfoService)
     {
         this.typeInfoService = typeInfoService;
         this.logger = logger;

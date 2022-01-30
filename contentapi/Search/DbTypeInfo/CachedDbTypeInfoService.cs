@@ -1,31 +1,30 @@
 using System.Reflection;
-using contentapi.Search;
 
-namespace contentapi.Utilities;
+namespace contentapi.Search;
 
-public class CachedTypeInfoService : ITypeInfoService
+public class CacheDbTypeInfoService : IDbTypeInfoService
 {
     protected readonly object cacheLock = new Object();
-    protected Dictionary<Type, TypeInfo> cachedTypes = new Dictionary<Type, TypeInfo>();
+    protected Dictionary<Type, DbTypeInfo> cachedTypes = new Dictionary<Type, DbTypeInfo>();
     protected ILogger logger;
 
-    public CachedTypeInfoService(ILogger<CachedTypeInfoService> logger)
+    public CacheDbTypeInfoService(ILogger<CacheDbTypeInfoService> logger)
     {
         this.logger = logger;
     }
 
-    public TypeInfo GetTypeInfo<T>()
+    public DbTypeInfo GetTypeInfo<T>()
     {
         return GetTypeInfo(typeof(T));
     }
 
-    public TypeInfo GetTypeInfo(Type t)
+    public DbTypeInfo GetTypeInfo(Type t)
     {
         lock(cacheLock)
         {
             if(!cachedTypes.ContainsKey(t))
             {
-                var result = new TypeInfo() { 
+                var result = new Search.DbTypeInfo() { 
                     type = t,
                     properties = t.GetProperties().ToDictionary(x => x.Name, x => x)
                 };

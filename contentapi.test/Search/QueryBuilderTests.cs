@@ -16,14 +16,14 @@ namespace contentapi.test;
 public class QueryBuilderTests : UnitTestBase
 {
     protected QueryBuilder service;
-    protected ITypeInfoService typeInfoService;
+    protected IDbTypeInfoService typeInfoService;
 
     public QueryBuilderTests()
     {
         service = new QueryBuilder(GetService<ILogger<QueryBuilder>>(), 
-            GetService<ITypeInfoService>(), GetService<IMapper>(), GetService<ISearchQueryParser>(),
+            GetService<IDbTypeInfoService>(), GetService<IMapper>(), GetService<ISearchQueryParser>(),
             GetService<IPermissionService>());
-        typeInfoService = GetService<ITypeInfoService>();
+        typeInfoService = GetService<IDbTypeInfoService>();
     }
 
     [Fact]
