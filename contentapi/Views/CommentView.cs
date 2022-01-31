@@ -27,6 +27,8 @@ public class CommentView : IIdView
     [Multiline]
     public string text {get;set;} = "";
 
+    public string? metadata {get;set;}
+
     [Searchable]
     [WriteRule(WriteRuleType.DefaultValue, WriteRuleType.AutoDate)]
     public DateTime? editDate {get;set;}

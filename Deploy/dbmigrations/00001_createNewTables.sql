@@ -178,6 +178,7 @@ create table if not exists comments(
     createDate text not null,
     receiveUserId int not null default 0, -- sometimes comments can be directly linked to a recipient
     `text` text not null,
+    metadata text,
     editUserId int default null,
     editDate text default null,
     module text default null,

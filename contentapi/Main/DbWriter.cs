@@ -248,16 +248,14 @@ public class DbWriter : IDbWriter
     public List<string> MapSimpleViewFields<T>(DbWorkUnit<T> work, object dbModel) where T : class, IIdView, new()
     {
         //This can happen if our view type has no associated table
-        if(work.typeInfo.modelType == null) //tableTypeProperties.Count == 0)
+        if(work.typeInfo.modelType == null) 
             throw new InvalidOperationException($"Typeinfo for type {work.typeInfo.type} doesn't appear to have an associated db model!");
     
         //Assume all properties will be mapped
-        //var dbModelProperties = new List<string>(tinfo.fields.Where(x => x.Value.matchedModelProperty != null).Select(x => x.Value.matchedModelProperty?.Name ?? throw new InvalidOperationException("Checked for null in matchedModelProperty but still got null???"))); 
-        var unmapped = new List<string>(); //work.typeInfo.modelProperties.Keys);
-
+        var unmapped = new List<string>(); 
 
         //We want to get as many fields as possible. If there are some we can't map, that's ok.
-        foreach(var dbModelProp in work.typeInfo.modelProperties) //tinfo.tableTypeProperties)
+        foreach(var dbModelProp in work.typeInfo.modelProperties) 
         {
             //Simply go find the field definition where the real database column is the same as the model property. 
             var remap = work.typeInfo.fields.FirstOrDefault(x => x.Value.realDbColumn == dbModelProp.Key);
@@ -307,7 +305,7 @@ public class DbWriter : IDbWriter
             else
             {
                 //Set the dbmodel property value to be the view's property. Type matching is NOT checked, please be careful!
-                dbModelProp.Value.SetValue(dbModel, remap.Value.rawProperty?.GetValue(work.view)); // tinfo.properties[viewField].GetValue(view));
+                dbModelProp.Value.SetValue(dbModel, remap.Value.rawProperty?.GetValue(work.view)); 
             }
         }
 
@@ -600,7 +598,14 @@ public class DbWriter : IDbWriter
             //Note: when deleting, don't want to write ANY extra data, regardless of what's there!
             if(work.action != UserAction.delete)
             {
-                //Need to insert the group relations
+                //Need to insert the group relations. We've already verified the groups, AND removed the old relations.
+                await dbcon.InsertAsync(work.view.groups.Select(x => new UserRelation()
+                {
+                    type = UserRelationType.inGroup,
+                    userId = work.view.id,
+                    relatedId = x,
+                    createDate = DateTime.UtcNow
+                }), tsx);
 
                 //These insert entire lists.
                 //await dbcon.InsertAsync(snapshot.values, tsx);
