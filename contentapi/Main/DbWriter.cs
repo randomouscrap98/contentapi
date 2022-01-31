@@ -249,6 +249,15 @@ public class DbWriter : IDbWriter
             {
                 dbModelProp.Value.SetValue(dbModel, work.requester.id);
             }
+            else if(remap.Value.onInsert == WriteRuleType.Increment && work.action == UserAction.create ||
+                    remap.Value.onUpdate == WriteRuleType.Increment && work.action == UserAction.update)
+            {
+                if(remap.Value.fieldType != typeof(int))
+                    throw new InvalidOperationException($"API ERROR: tried to auto-increment non-integer field {remap.Key} (type: {remap.Value.fieldType})");
+
+                int original = (int)(remap.Value.rawProperty?.GetValue(work.existing) ?? throw new InvalidOperationException("Integer field was somehow null!!"));
+                dbModelProp.Value.SetValue(dbModel, original + 1);
+            }
             else if(remap.Value.onInsert == WriteRuleType.DefaultValue && work.action == UserAction.create ||
                     remap.Value.onUpdate == WriteRuleType.DefaultValue && work.action == UserAction.update)
             {

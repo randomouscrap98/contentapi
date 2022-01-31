@@ -46,7 +46,9 @@ public enum WriteRuleType
     Preserve,
     AutoUserId,
     AutoDate,
-    DefaultValue
+    DefaultValue,
+    ReadOnly,
+    Increment
 }
 
 [System.AttributeUsage(System.AttributeTargets.Property)]

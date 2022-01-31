@@ -7,7 +7,7 @@ namespace contentapi.Views;
 public class CommentView : IIdView
 {
     [Searchable]
-    [WriteRule(WriteRuleType.None)] //The first parameter is for inserts, and the default write rule for updates (2nd param) is preserve, so...
+    //[WriteRule(WriteRuleType.None)] //The first parameter is for inserts, and the default write rule for updates (2nd param) is preserve, so...
     public long id {get;set;}
 
     [Searchable]

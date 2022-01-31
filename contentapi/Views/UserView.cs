@@ -19,9 +19,11 @@ public class UserView : IIdView
     public string? special {get;set;}
 
     [Searchable]
+    [WriteRule(WriteRuleType.None)]
     public UserType type {get;set;}
 
     [Searchable]
+    [WriteRule(WriteRuleType.AutoDate)]
     public DateTime createDate {get;set;}
 
     [Searchable]
