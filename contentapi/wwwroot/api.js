@@ -465,3 +465,25 @@ Api.prototype.AutoLinkUsers = function(data, userlist)
         }
     });
 };
+
+// Given one of the type descriptions from the "details" resultset of "AboutSearch", returns
+// all the fields which can be used in a query (the SQL-like query field of requests)
+Api.prototype.GetQueryableFields = function(typeDescriptor)
+{
+    var result = [];
+
+    for(var k in typeDescriptor)
+    {
+        if(typeDescriptor[k].queryable)
+            result.push(k);
+    }
+
+    return result;
+};
+
+// Given one of the type descriptions from the "details" resultset of "AboutSearch", returns
+// all the fields which can be retrieved in the "fields" list of a request
+Api.prototype.GetRequestableFields = function(typeDescriptor)
+{
+    return Object.keys(typeDescriptor);
+};

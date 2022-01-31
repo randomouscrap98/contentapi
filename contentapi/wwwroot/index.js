@@ -250,9 +250,9 @@ function search_onload(template, state)
         var resetOptions = function()
         {
             console.log(searchtype.value, d);
-            FillOptions(d.result.details.types[searchtype.value].searchfields, searchfield);
+            FillOptions(api.GetQueryableFields(d.result.details.types[searchtype.value]), searchfield);
             var sortOptions = [];
-            d.result.details.types[searchtype.value].getfields.forEach(x =>
+            api.GetRequestableFields(d.result.details.types[searchtype.value]).forEach(x =>
             {
                 sortOptions.push(x);
                 sortOptions.push(x + "_desc");
