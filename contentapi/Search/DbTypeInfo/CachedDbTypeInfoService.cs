@@ -28,11 +28,6 @@ public class CacheDbTypeInfoService : IDbTypeInfoService
                 var searchattr = typeof(SearchableAttribute);
                 var ffattr = typeof(FromFieldAttribute);
                 var exattr = typeof(ExpensiveAttribute);
-                //var irattr = typeof(InsertRuleAttribute);
-                //var urattr = typeof(UpdateRuleAttribute);
-                //var autodattr = typeof(AutoDateAttribute);
-                //var autouattr = typeof(AutoUserIdAttribute);
-                //var pouattr = typeof(PreserveOnUpdateAttribute);
 
                 var result = new Search.DbTypeInfo() { 
                     type = t,
@@ -48,50 +43,22 @@ public class CacheDbTypeInfoService : IDbTypeInfoService
                 foreach(var pk in allProperties)
                 {
                     var computed = Attribute.IsDefined(pk.Value, compattr);
-                    var writeRule = pk.Value.GetCustomAttribute<WriteRuleAttribute>(); //?.Rule ?? WriteRuleType.None,
+                    var writeRule = pk.Value.GetCustomAttribute<WriteRuleAttribute>(); 
 
                     var fieldInfo = new DbFieldInfo()
                     {
                         rawProperty = pk.Value,
-                        //matchedModelProperty = dbModelProperties.ContainsKey(pk.Key) ? dbModelProperties[pk.Key] : null,
                         queryable = Attribute.IsDefined(pk.Value, searchattr),
-                        onInsert = writeRule?.InsertRule ?? WriteRuleType.None, //pk.Value.GetCustomAttribute<InsertRuleAttribute>()?.Rule ?? WriteRuleType.None,
-                        onUpdate = writeRule?.UpdateRule ?? WriteRuleType.None, //pk.Value.GetCustomAttribute<UpdateRuleAttribute>()?.Rule ?? WriteRuleType.None,
-                        //preserveOnUpdate = Attribute.IsDefined(pk.Value, pouattr),
+                        onInsert = writeRule?.InsertRule ?? WriteRuleType.None, 
+                        onUpdate = writeRule?.UpdateRule ?? WriteRuleType.None, 
                         computed = computed,
                         realDbColumn = Attribute.IsDefined(pk.Value, ffattr) ? pk.Value.GetCustomAttribute<FromFieldAttribute>()?.Field : computed ? null : pk.Key, //The real db column IS the field name simply by default, unless it's computed
                         expensive = Attribute.IsDefined(pk.Value, exattr) ? pk.Value.GetCustomAttribute<ExpensiveAttribute>()?.PotentialCost 
                             ?? throw new InvalidOperationException("NO EXPENSIVE ATTRIBUTE FOUND ON ATTRIBUTE THAT SAID IT HAD ONE") : -1 
                     };
 
-                    //if(Attribute.IsDefined(pk.Value, autodattr))
-                    //{
-                    //    var autodate = pk.Value.GetCustomAttribute<AutoDateAttribute>() ?? throw new InvalidOperationException("NO AUTODATE ATTRIBUTE FOUND ON ATTRIBUTE THAT SAID IT HAD IT");
-                    //    fieldInfo.autoDateOnInsert = autodate.OnInsert;
-                    //    fieldInfo.autoDateOnUpdate = autodate.OnUpdate;
-                    //}
-
-                    //if(Attribute.IsDefined(pk.Value, autouattr))
-                    //{
-                    //    var autouser = pk.Value.GetCustomAttribute<AutoUserIdAttribute>() ?? throw new InvalidOperationException("NO AUTOUSER ATTRIBUTE FOUND ON ATTRIBUTE THAT SAID IT HAD IT");
-                    //    fieldInfo.autoDateOnInsert = autouser.OnInsert;
-                    //    fieldInfo.autoDateOnUpdate = autouser.OnUpdate;
-                    //}
-
                     result.fields.Add(pk.Key, fieldInfo);
                 }
-
-                //var props = result.properties.Values.Where(x => !Attribute.IsDefined(x, compattr));
-
-                //All of these could be null, and that's ok! If it's a complex type,
-                //we kind of expect it to be null
-
-
-                //result.queryableFields = props.Select(x => x.Name).ToList();
-                //result.searchableFields = props.Where(x => Attribute.IsDefined(x, searchattr)).Select(x => x.Name).ToList();
-                //result.fieldTypes = props.ToDictionary(k => k.Name, v => v.PropertyType);
-                //result.fieldRemap = props.Where(x => Attribute.IsDefined(x, ffattr)).ToDictionary(k => k.Name, v => v.GetCustomAttribute<FromFieldAttribute>()?.Field ?? 
-                //    throw new InvalidOperationException("NO FROMFIELD ATTRIBUTE FOUND ON ATTRIBUTE THAT SAID IT HAD ONE"));
 
                 logger.LogInformation($"Added type {t.Name} to cached type service");
                 cachedTypes.Add(t, result);

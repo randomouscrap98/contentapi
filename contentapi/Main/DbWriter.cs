@@ -206,6 +206,12 @@ public class DbWriter : IDbWriter
         return await searcher.GetById<T>(requestType, id);
     }
 
+    //public bool IsWriteRuleSet(WriteRuleType type, DbFieldInfo fieldInfo, UserAction currentAction)
+    //{
+    //    return fieldInfo.onInsert == type && currentAction == UserAction.create ||
+    //           fieldInfo.onUpdate == type && currentAction == UserAction.update;
+    //}
+
     /// <summary>
     /// Use TypeInfo given to translate as much as possible, including auto-generated data or preserved data. As such, we need the actual work item //all standard mapped fields from view to model.
     /// </summary>
@@ -223,11 +229,17 @@ public class DbWriter : IDbWriter
         //var dbModelProperties = new List<string>(tinfo.fields.Where(x => x.Value.matchedModelProperty != null).Select(x => x.Value.matchedModelProperty?.Name ?? throw new InvalidOperationException("Checked for null in matchedModelProperty but still got null???"))); 
         var unmapped = new List<string>(); //work.typeInfo.modelProperties.Keys);
 
+
         //We want to get as many fields as possible. If there are some we can't map, that's ok.
         foreach(var dbModelProp in work.typeInfo.modelProperties) //tinfo.tableTypeProperties)
         {
             //Simply go find the field definition where the real database column is the same as the model property. 
             var remap = work.typeInfo.fields.FirstOrDefault(x => x.Value.realDbColumn == dbModelProp.Key);
+
+            var isWriteRuleSet = new Func<WriteRuleType, bool>(t => 
+                remap.Value.onInsert == t && work.action == UserAction.create ||
+                remap.Value.onUpdate == t && work.action == UserAction.update
+            );
 
             //Nothing was found for this model property, that's not good!
             if(string.IsNullOrWhiteSpace(remap.Key))
@@ -239,18 +251,18 @@ public class DbWriter : IDbWriter
             //OK, there's a lot going on with model properties. Basically, attributes allow us to automatically set fields on
             //models for insert and update, which we check for below. If none of the special checks work, we default to 
             //allowing whatever the user set.
-            if(remap.Value.onInsert == WriteRuleType.AutoDate && work.action == UserAction.create ||
-               remap.Value.onUpdate == WriteRuleType.AutoDate && work.action == UserAction.update)
+            if(isWriteRuleSet(WriteRuleType.AutoDate)) //, remap.Value, remap.Value.onInsert == WriteRuleType.AutoDate && work.action == UserAction.create ||
+               //remap.Value.onUpdate == WriteRuleType.AutoDate && work.action == UserAction.update)
             {
                 dbModelProp.Value.SetValue(dbModel, DateTime.UtcNow);
             }
-            else if(remap.Value.onInsert == WriteRuleType.AutoUserId && work.action == UserAction.create ||
-                    remap.Value.onUpdate == WriteRuleType.AutoUserId && work.action == UserAction.update)
+            else if(isWriteRuleSet(WriteRuleType.AutoUserId)) //remap.Value.onInsert == WriteRuleType.AutoUserId && work.action == UserAction.create ||
+                    //remap.Value.onUpdate == WriteRuleType.AutoUserId && work.action == UserAction.update)
             {
                 dbModelProp.Value.SetValue(dbModel, work.requester.id);
             }
-            else if(remap.Value.onInsert == WriteRuleType.Increment && work.action == UserAction.create ||
-                    remap.Value.onUpdate == WriteRuleType.Increment && work.action == UserAction.update)
+            else if(isWriteRuleSet(WriteRuleType.Increment)) //remap.Value.onInsert == WriteRuleType.Increment && work.action == UserAction.create ||
+                    //remap.Value.onUpdate == WriteRuleType.Increment && work.action == UserAction.update)
             {
                 if(remap.Value.fieldType != typeof(int))
                     throw new InvalidOperationException($"API ERROR: tried to auto-increment non-integer field {remap.Key} (type: {remap.Value.fieldType})");
@@ -258,16 +270,16 @@ public class DbWriter : IDbWriter
                 int original = (int)(remap.Value.rawProperty?.GetValue(work.existing) ?? throw new InvalidOperationException("Integer field was somehow null!!"));
                 dbModelProp.Value.SetValue(dbModel, original + 1);
             }
-            else if(remap.Value.onInsert == WriteRuleType.DefaultValue && work.action == UserAction.create ||
-                    remap.Value.onUpdate == WriteRuleType.DefaultValue && work.action == UserAction.update)
+            else if(isWriteRuleSet(WriteRuleType.DefaultValue)) //remap.Value.onInsert == WriteRuleType.DefaultValue && work.action == UserAction.create ||
+                    //remap.Value.onUpdate == WriteRuleType.DefaultValue && work.action == UserAction.update)
             {
                 if(remap.Value.fieldType.IsValueType)
                     dbModelProp.Value.SetValue(dbModel, Activator.CreateInstance(remap.Value.fieldType));
                 else
                     dbModelProp.Value.SetValue(dbModel, null);
             }
-            else if(remap.Value.onInsert == WriteRuleType.Preserve && work.action == UserAction.create ||
-                    remap.Value.onUpdate == WriteRuleType.Preserve && work.action == UserAction.update)
+            else if(isWriteRuleSet(WriteRuleType.Preserve)) //remap.Value.onInsert == WriteRuleType.Preserve && work.action == UserAction.create ||
+                    //remap.Value.onUpdate == WriteRuleType.Preserve && work.action == UserAction.update)
             {
                 dbModelProp.Value.SetValue(dbModel, remap.Value.rawProperty?.GetValue(work.existing));
             }

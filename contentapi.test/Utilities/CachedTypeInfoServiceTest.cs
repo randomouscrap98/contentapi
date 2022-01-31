@@ -50,8 +50,8 @@ public class CachedTypeInfoServiceTest : UnitTestBase
 
     protected void AssertDefaults(DbTypeInfo typeInfo, string name)
     {
-        Assert.False(typeInfo.fields[name].onInsert == WriteRuleType.None);
-        Assert.False(typeInfo.fields[name].onUpdate == WriteRuleType.None);
+        Assert.Equal(WriteRuleType.None, typeInfo.fields[name].onInsert);
+        Assert.Equal(WriteRuleType.None, typeInfo.fields[name].onUpdate);
     }
 
     [Fact]

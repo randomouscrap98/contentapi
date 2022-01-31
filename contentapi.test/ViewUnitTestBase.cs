@@ -38,19 +38,25 @@ public class ViewUnitTestBase : UnitTestBase
     }
 
     /// <summary>
-    /// WARN: THIS MODIFIES THE ORIGINAL CONTENT'S PERMISSIONS!
+    /// Make sure the permissions match, or that they look as expected (for instance, the create user has ALL perms)
     /// </summary>
     /// <param name="original"></param>
     /// <param name="result"></param>
     protected void AssertPermissionsNormal(ContentView original, ContentView result)
     {
-        original.permissions[original.createUserId] = "CRUD";
+        //Want to make sure 
+        //original.permissions[original.createUserId] = "CRUD";
 
         Assert.Equal(original.permissions.Count, result.permissions.Count);
         foreach(var perm in original.permissions)
         {
             Assert.True(result.permissions.ContainsKey(perm.Key), "Permission from original not found in result!");
-            Assert.Equal(perm.Value, result.permissions[perm.Key]);
+
+            //We can trust the createUserId at this point... or at least, we hope
+            if(perm.Key == result.createUserId)
+                Assert.Equal("CRUD", result.permissions[perm.Key]);
+            else
+                Assert.Equal(perm.Value, result.permissions[perm.Key]);
         }
     }
 
