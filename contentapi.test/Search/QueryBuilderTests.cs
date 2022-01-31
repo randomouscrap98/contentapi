@@ -97,4 +97,13 @@ public class QueryBuilderTests : UnitTestBase
             }, new Dictionary<string, object>());
         });
     }
+
+    [Fact]
+    public void GetAboutSearch_SomethingReturned()
+    {
+        var result = service.GetAboutSearch();
+        Assert.NotEmpty(result.macros);
+        Assert.NotEmpty(result.types);
+        Assert.NotEmpty(result.objects);
+    }
 }

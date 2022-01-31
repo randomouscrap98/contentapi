@@ -594,10 +594,6 @@ public class QueryBuilder : IQueryBuilder
             {
                 var typeInfo = typeService.GetTypeInfo(StandardViewRequests[type]);
                 result.types.Add(type.ToString(), typeInfo.fields.ToDictionary(x => x.Key, y => mapper.Map<AboutSearchField>(y.Value)));
-                //new {
-                //    getfields = typeInfo.queryableFields,
-                //    searchfields = typeInfo.searchableFields
-                //});
 
                 result.objects.Add(type.ToString(), Activator.CreateInstance(StandardViewRequests[type]) ??
                     throw new InvalidOperationException($"Couldn't create type {type} for display!"));

@@ -42,6 +42,8 @@ public class AboutSearchFieldProfile : Profile
     public AboutSearchFieldProfile()
     {
         this.CreateMap<DbFieldInfo, AboutSearchField>()
-            .ForMember(dest => dest.type, opt => opt.MapFrom(src => src.fieldType.Name));
+            .ForMember(dest => dest.type, opt => opt.MapFrom(src => src.fieldType.Name))
+            .ForMember(dest => dest.writableOnInsert, opt => opt.MapFrom(src => src.onInsert == WriteRuleType.None))
+            .ForMember(dest => dest.writableOnUpdate, opt => opt.MapFrom(src => src.onUpdate == WriteRuleType.None));
     }
 }

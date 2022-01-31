@@ -14,13 +14,6 @@ public class DbFieldInfo
     public PropertyInfo? rawProperty {get;set;}
 
     /// <summary>
-    /// If this field matches directly with a db model property (which directly represents the database table), THAT field's
-    /// property info is stored here.
-    /// </summary>
-    /// <value></value>
-    //public PropertyInfo? matchedModelProperty {get;set;}
-
-    /// <summary>
     /// These are fields which can be used in the "query" part of a request, ie queried against
     /// </summary>
     /// <value></value>
@@ -34,25 +27,6 @@ public class DbFieldInfo
 
     public WriteRuleType onInsert {get;set;}
     public WriteRuleType onUpdate {get;set;}
-
-    //public bool autoDateOnInsert {get;set;} = false;
-    //public bool autoDateOnUpdate {get;set;} = false;
-    //public bool autoUserOnInsert {get;set;} = false;
-    //public bool autoUserOnUpdate {get;set;} = false;
-
-    //public bool preserveOnUpdate {get;set;} = false;
-
-    ///// <summary>
-    ///// Whether the field can be written on insert
-    ///// </summary>
-    ///// <value></value>
-    //public bool writableOnInsert {get;set;} = true;
-
-    ///// <summary>
-    ///// Whether the field can be written on update
-    ///// </summary>
-    ///// <value></value>
-    //public bool writableOnUpdate {get;set;} = false;
 
     /// <summary>
     /// If this is null or empty, there is "no" backing database conversion at all! For safety, we define complex fields with a dbcolumn of ""
@@ -72,9 +46,4 @@ public class DbFieldInfo
     /// </summary>
     /// <returns></returns>
     public Type fieldType => rawProperty?.PropertyType ?? throw new InvalidOperationException("No type for db field somehow??");
-
-    /// <summary>
-    /// A shortcut to the type info of the matching db model field, stored inside matchedModelProperty
-    /// </summary>
-    //public Type? matchedModelType => matchedModelProperty?.PropertyType;
 }
