@@ -482,7 +482,7 @@ public class QueryBuilder : IQueryBuilder
     /// <param name="r"></param>
     public void AddStandardSelect(StringBuilder queryStr, SearchRequestPlus r)
     {
-        var fieldSelect = r.requestFields.Select(x => StandardFieldRemap(x, r)).Where(x => !string.IsNullOrEmpty(x)).ToList();
+        var fieldSelect = r.requestFields.Where(x => !r.typeInfo.fields[x].computed).Select(x => StandardFieldRemap(x, r)).ToList();
 
         queryStr.Append("SELECT ");
         queryStr.Append(string.Join(",", fieldSelect));

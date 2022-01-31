@@ -32,12 +32,15 @@ public class DbFieldInfo
     /// </summary>
     public bool computed {get;set;} = false;
 
-    public bool autoDateOnInsert {get;set;} = false;
-    public bool autoDateOnUpdate {get;set;} = false;
-    public bool autoUserOnInsert {get;set;} = false;
-    public bool autoUserOnUpdate {get;set;} = false;
+    public WriteRuleType onInsert {get;set;}
+    public WriteRuleType onUpdate {get;set;}
 
-    public bool preserveOnUpdate {get;set;} = false;
+    //public bool autoDateOnInsert {get;set;} = false;
+    //public bool autoDateOnUpdate {get;set;} = false;
+    //public bool autoUserOnInsert {get;set;} = false;
+    //public bool autoUserOnUpdate {get;set;} = false;
+
+    //public bool preserveOnUpdate {get;set;} = false;
 
     ///// <summary>
     ///// Whether the field can be written on insert

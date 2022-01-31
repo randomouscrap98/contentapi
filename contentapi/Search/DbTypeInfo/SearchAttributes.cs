@@ -40,28 +40,54 @@ public class SearchableAttribute : System.Attribute
 //    public ReadOnlyAttribute(bool onInsert = true, bool onUpdate = true) { this.OnInsert = onInsert; this.OnUpdate = onUpdate; }  
 //}  
 
-[System.AttributeUsage(System.AttributeTargets.Property)]
-public class PreserveOnUpdateAttribute : System.Attribute  
-{  
-    public PreserveOnUpdateAttribute() {  }  
-}  
-
-
-[System.AttributeUsage(System.AttributeTargets.Property)]
-public class AutoDateAttribute : System.Attribute  
-{  
-    public bool OnInsert {get;}
-    public bool OnUpdate{get;}
-    public AutoDateAttribute(bool onInsert = true, bool onUpdate = true) { this.OnInsert = onInsert; this.OnUpdate = onUpdate; }  
-}  
+public enum WriteRuleType
+{
+    None = 0,
+    Preserve,
+    AutoUserId,
+    AutoDate,
+    DefaultValue
+}
 
 [System.AttributeUsage(System.AttributeTargets.Property)]
-public class AutoUserIdAttribute : System.Attribute  
+public class WriteRuleAttribute : System.Attribute  
 {  
-    public bool OnInsert {get;}
-    public bool OnUpdate{get;}
-    public AutoUserIdAttribute(bool onInsert = true, bool onUpdate = true) { this.OnInsert = onInsert; this.OnUpdate = onUpdate; }  
+    //public Db.UserAction Action {get;}
+    public WriteRuleType InsertRule {get;}
+    public WriteRuleType UpdateRule {get;}
+    public WriteRuleAttribute(WriteRuleType insertRule, WriteRuleType updateRule = WriteRuleType.Preserve) { this.InsertRule = insertRule; this.UpdateRule = updateRule; }  
 }  
+
+//[System.AttributeUsage(System.AttributeTargets.Property)]
+//public class UpdateRuleAttribute : System.Attribute  
+//{  
+//    //public Db.UserAction Action {get;}
+//    public WriteRuleType Rule {get;}
+//    public UpdateRuleAttribute( WriteRuleType rule) { this.Rule = rule; }  
+//}  
+
+//[System.AttributeUsage(System.AttributeTargets.Property)]
+//public class PreserveOnUpdateAttribute : System.Attribute  
+//{  
+//    public PreserveOnUpdateAttribute() {  }  
+//}  
+//
+//
+//[System.AttributeUsage(System.AttributeTargets.Property)]
+//public class AutoDateAttribute : System.Attribute  
+//{  
+//    public bool OnInsert {get;}
+//    public bool OnUpdate{get;}
+//    public AutoDateAttribute(bool onInsert = true, bool onUpdate = true) { this.OnInsert = onInsert; this.OnUpdate = onUpdate; }  
+//}  
+//
+//[System.AttributeUsage(System.AttributeTargets.Property)]
+//public class AutoUserIdAttribute : System.Attribute  
+//{  
+//    public bool OnInsert {get;}
+//    public bool OnUpdate{get;}
+//    public AutoUserIdAttribute(bool onInsert = true, bool onUpdate = true) { this.OnInsert = onInsert; this.OnUpdate = onUpdate; }  
+//}  
 
 [System.AttributeUsage(System.AttributeTargets.Property)]
 public class ExpensiveAttribute : System.Attribute

@@ -207,37 +207,65 @@ public class DbWriter : IDbWriter
     }
 
     /// <summary>
-    /// Use TypeInfo given to translate all standard mapped fields from view to model.
+    /// Use TypeInfo given to translate as much as possible, including auto-generated data or preserved data. As such, we need the actual work item //all standard mapped fields from view to model.
     /// </summary>
     /// <param name="tinfo"></param>
     /// <param name="view"></param>
     /// <param name="dbModel"></param>
     /// <returns>Fields that were NOT mapped</returns>
-    public List<string> MapSimpleViewFields(DbTypeInfo tinfo, object view, object dbModel)
+    public List<string> MapSimpleViewFields<T>(DbWorkUnit<T> work, object dbModel) where T : class, IIdView, new()
     {
         //This can happen if our view type has no associated table
-        if(tinfo.modelType == null) //tableTypeProperties.Count == 0)
-            throw new InvalidOperationException($"Typeinfo for type {tinfo.type} doesn't appear to have an associated db model!");
+        if(work.typeInfo.modelType == null) //tableTypeProperties.Count == 0)
+            throw new InvalidOperationException($"Typeinfo for type {work.typeInfo.type} doesn't appear to have an associated db model!");
     
-        //Assume no properties will be mapped
+        //Assume all properties will be mapped
         //var dbModelProperties = new List<string>(tinfo.fields.Where(x => x.Value.matchedModelProperty != null).Select(x => x.Value.matchedModelProperty?.Name ?? throw new InvalidOperationException("Checked for null in matchedModelProperty but still got null???"))); 
-        var unmapped = new List<string>(tinfo.modelProperties.Keys);
+        var unmapped = new List<string>(); //work.typeInfo.modelProperties.Keys);
 
         //We want to get as many fields as possible. If there are some we can't map, that's ok.
-        foreach(var dbModelProp in tinfo.modelProperties) //tinfo.tableTypeProperties)
+        foreach(var dbModelProp in work.typeInfo.modelProperties) //tinfo.tableTypeProperties)
         {
             //Simply go find the field definition where the real database column is the same as the model property. 
-            var remap = tinfo.fields.FirstOrDefault(x => x.Value.realDbColumn == dbModelProp.Key);
+            var remap = work.typeInfo.fields.FirstOrDefault(x => x.Value.realDbColumn == dbModelProp.Key);
 
-            //Field remaps are greatly simplified now: we can trust what's in the field mapping as long as:
-            //- it exists
-            //- it's non-empty (* automatic, since searching by matching realDbColumn)
-            //- it's not marked readonly
-            if(!string.IsNullOrWhiteSpace(remap.Key) && !remap.Value.readOnly)
+            //Nothing was found for this model property, that's not good!
+            if(string.IsNullOrWhiteSpace(remap.Key))
+            {
+                unmapped.Add(dbModelProp.Key);
+                continue;
+            }
+
+            //OK, there's a lot going on with model properties. Basically, attributes allow us to automatically set fields on
+            //models for insert and update, which we check for below. If none of the special checks work, we default to 
+            //allowing whatever the user set.
+            if(remap.Value.onInsert == WriteRuleType.AutoDate && work.action == UserAction.create ||
+               remap.Value.onUpdate == WriteRuleType.AutoDate && work.action == UserAction.update)
+            {
+                dbModelProp.Value.SetValue(dbModel, DateTime.UtcNow);
+            }
+            else if(remap.Value.onInsert == WriteRuleType.AutoUserId && work.action == UserAction.create ||
+                    remap.Value.onUpdate == WriteRuleType.AutoUserId && work.action == UserAction.update)
+            {
+                dbModelProp.Value.SetValue(dbModel, work.requester.id);
+            }
+            else if(remap.Value.onInsert == WriteRuleType.DefaultValue && work.action == UserAction.create ||
+                    remap.Value.onUpdate == WriteRuleType.DefaultValue && work.action == UserAction.update)
+            {
+                if(remap.Value.fieldType.IsValueType)
+                    dbModelProp.Value.SetValue(dbModel, Activator.CreateInstance(remap.Value.fieldType));
+                else
+                    dbModelProp.Value.SetValue(dbModel, null);
+            }
+            else if(remap.Value.onInsert == WriteRuleType.Preserve && work.action == UserAction.create ||
+                    remap.Value.onUpdate == WriteRuleType.Preserve && work.action == UserAction.update)
+            {
+                dbModelProp.Value.SetValue(dbModel, remap.Value.rawProperty?.GetValue(work.existing));
+            }
+            else
             {
                 //Set the dbmodel property value to be the view's property. Type matching is NOT checked, please be careful!
-                dbModelProp.Value.SetValue(dbModel, remap.Value.rawProperty?.GetValue(view)); // tinfo.properties[viewField].GetValue(view));
-                unmapped.Remove(dbModelProp.Key);
+                dbModelProp.Value.SetValue(dbModel, remap.Value.rawProperty?.GetValue(work.view)); // tinfo.properties[viewField].GetValue(view));
             }
 
             //if(tinfo.fields)
@@ -352,29 +380,29 @@ public class DbWriter : IDbWriter
             if(work.view.deleted)
                 throw new RequestException("Don't delete content by setting the deleted flag!");
 
-            if (work.action == UserAction.update)
-            {
-                var existing = work.existing ?? throw new InvalidOperationException("Update specified, but no existing view looked up in database for snapshot!");
-                work.view.createUserId = existing.createUserId;
-                work.view.createDate = existing.createDate;
+            //if (work.action == UserAction.update)
+            //{
+            //    var existing = work.existing ?? throw new InvalidOperationException("Update specified, but no existing view looked up in database for snapshot!");
+            //    work.view.createUserId = existing.createUserId;
+            //    work.view.createDate = existing.createDate;
 
-                //Many file fields CAN'T BE CHANGED!
-                if (work.view is FileView)
-                {
-                    var file = work.view as FileView ?? throw new InvalidOperationException("Couldn't cast FileView to FileView???");
-                    var existingFile = work.existing as FileView ?? throw new InvalidOperationException("Couldn't cast FileView to FileView???");
-                    file.quantization = existingFile.quantization;
-                    file.hash = existingFile.hash;
-                }
-            }
-            else if (work.action == UserAction.create)
-            {
-                work.view.createDate = DateTime.UtcNow; // REMEMBER TO USE UTCNOW EVERYWHERE!
-                work.view.createUserId = work.requester.id;
+            //    //Many file fields CAN'T BE CHANGED!
+            //    if (work.view is FileView)
+            //    {
+            //        var file = work.view as FileView ?? throw new InvalidOperationException("Couldn't cast FileView to FileView???");
+            //        var existingFile = work.existing as FileView ?? throw new InvalidOperationException("Couldn't cast FileView to FileView???");
+            //        file.quantization = existingFile.quantization;
+            //        file.hash = existingFile.hash;
+            //    }
+            //}
+            //else if (work.action == UserAction.create)
+            //{
+            //    work.view.createDate = DateTime.UtcNow; // REMEMBER TO USE UTCNOW EVERYWHERE!
+            //    work.view.createUserId = work.requester.id;
 
-                //Note: for file create, we just "trust" the values given to us for the fileview, because we don't technically
-                //know what the quantization is, for example.
-            }
+            //    //Note: for file create, we just "trust" the values given to us for the fileview, because we don't technically
+            //    //know what the quantization is, for example.
+            //}
         }
     }
 
@@ -402,7 +430,7 @@ public class DbWriter : IDbWriter
         await ValidatePermissionFormat(work.view.permissions);
 
         var content = new Db.Content();
-        var unmapped = MapSimpleViewFields(work.typeInfo, work.view, content);
+        var unmapped = MapSimpleViewFields(work, content); //.typeInfo, work.view, content);
 
         if(unmapped.Count > 0)
             logger.LogWarning($"Fields '{string.Join(",", unmapped)}' not mapped in content!");
@@ -492,25 +520,25 @@ public class DbWriter : IDbWriter
             if(work.view.deleted)
                 throw new RequestException("Don't delete content by setting the deleted flag!");
 
-            if(work.action == UserAction.update)
-            {
-                var existing = work.existing ?? throw new InvalidOperationException("Update specified, but no existing view looked up in database for snapshot!");
-                work.view.createUserId = existing.createUserId;
-                work.view.createDate = existing.createDate;
-                work.view.editDate = DateTime.UtcNow;
-                work.view.editUserId = work.requester.id;
+            //if(work.action == UserAction.update)
+            //{
+            //    var existing = work.existing ?? throw new InvalidOperationException("Update specified, but no existing view looked up in database for snapshot!");
+            //    work.view.createUserId = existing.createUserId;
+            //    work.view.createDate = existing.createDate;
+            //    work.view.editDate = DateTime.UtcNow;
+            //    work.view.editUserId = work.requester.id;
 
-                //We don't want users to be allowed to change contentId right now, and we want them to KNOW they're doing something wrong
-                if(work.view.contentId != existing.contentId)
-                    throw new RequestException($"Can't move comments between pages just yet! Original: {existing.contentId}, new: {work.view.contentId}, for comment {work.view.id}");
-            }
-            else if(work.action == UserAction.create)
-            {
-                work.view.createDate = DateTime.UtcNow; // REMEMBER TO USE UTCNOW EVERYWHERE!
-                work.view.createUserId = work.requester.id;
-                work.view.editDate = null;
-                work.view.editUserId = 0;
-            }
+            //    //We don't want users to be allowed to change contentId right now, and we want them to KNOW they're doing something wrong
+            //    if(work.view.contentId != existing.contentId)
+            //        throw new RequestException($"Can't move comments between pages just yet! Original: {existing.contentId}, new: {work.view.contentId}, for comment {work.view.id}");
+            //}
+            //else if(work.action == UserAction.create)
+            //{
+            //    work.view.createDate = DateTime.UtcNow; // REMEMBER TO USE UTCNOW EVERYWHERE!
+            //    work.view.createUserId = work.requester.id;
+            //    work.view.editDate = null;
+            //    work.view.editUserId = 0;
+            //}
         }
     }
 
@@ -522,7 +550,8 @@ public class DbWriter : IDbWriter
         TweakCommentView(work);
 
         var comment = new Db.Comment();
-        var unmapped = MapSimpleViewFields(work.typeInfo, work.view, comment);
+        var unmapped = MapSimpleViewFields(work, comment); //.typeInfo, work.view, comment);
+        //var unmapped = //MapSimpleViewFields(work.typeInfo, work.view, comment);
 
         if(unmapped.Count > 0)
             logger.LogWarning($"Fields '{string.Join(",", unmapped)}' not mapped in comment!");

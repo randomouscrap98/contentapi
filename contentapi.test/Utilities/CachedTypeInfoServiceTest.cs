@@ -28,20 +28,11 @@ public class CachedTypeInfoServiceTest : UnitTestBase
         [FromField("otherField")]
         public string? remappedField {get;set;}
 
-        [AutoDate]
-        public DateTime autoDateField {get;set;}
+        [WriteRule(WriteRuleType.AutoDate)]
+        public DateTime createDateField {get;set;}
 
-        [AutoDate(false)]
-        public DateTime autoDateUpdateField {get;set;}
-
-        [AutoUserId]
-        public long autoUserField {get;set;}
-
-        [AutoUserId(false)]
-        public long autoUserUpdateField {get;set;}
-
-        [PreserveOnUpdate]
-        public long preserveField {get;set;}
+        [WriteRule(WriteRuleType.DefaultValue, WriteRuleType.AutoUserId)]
+        public DateTime editUserField {get;set;}
     }
 
     [Fact] 
@@ -59,11 +50,8 @@ public class CachedTypeInfoServiceTest : UnitTestBase
 
     protected void AssertDefaults(DbTypeInfo typeInfo, string name)
     {
-        Assert.False(typeInfo.fields[name].autoDateOnInsert);
-        Assert.False(typeInfo.fields[name].autoDateOnUpdate);
-        Assert.False(typeInfo.fields[name].autoUserOnInsert);
-        Assert.False(typeInfo.fields[name].autoUserOnUpdate);
-        Assert.False(typeInfo.fields[name].preserveOnUpdate);
+        Assert.False(typeInfo.fields[name].onInsert == WriteRuleType.None);
+        Assert.False(typeInfo.fields[name].onUpdate == WriteRuleType.None);
     }
 
     [Fact]
@@ -101,37 +89,20 @@ public class CachedTypeInfoServiceTest : UnitTestBase
     }
 
     [Fact]
-    public void GetTypeInfoAutoDate()
+    public void GetTypeInfoCreateDate()
     {
         var typeInfo = service.GetTypeInfo<TestView>();
-        Assert.True(typeInfo.fields["autoDateField"].autoDateOnInsert);
-        Assert.True(typeInfo.fields["autoDateField"].autoDateOnUpdate);
+        Assert.Equal(WriteRuleType.AutoDate, typeInfo.fields["createDateField"].onInsert);
+        Assert.Equal(WriteRuleType.Preserve, typeInfo.fields["createDateField"].onUpdate);
     }
 
     [Fact]
-    public void GetTypeInfoAutoDateUpdate()
+    public void GetTypeInfoEditUserId()
     {
         var typeInfo = service.GetTypeInfo<TestView>();
-        Assert.False(typeInfo.fields["autoDateUpdateField"].autoDateOnInsert);
-        Assert.True(typeInfo.fields["autoDateUpdateField"].autoDateOnUpdate);
+        Assert.Equal(WriteRuleType.DefaultValue, typeInfo.fields["editUserField"].onInsert);
+        Assert.Equal(WriteRuleType.AutoUserId, typeInfo.fields["editUserField"].onUpdate);
     }
-
-    [Fact]
-    public void GetTypeInfoAutoUserId()
-    {
-        var typeInfo = service.GetTypeInfo<TestView>();
-        Assert.True(typeInfo.fields["autoUserField"].autoDateOnInsert);
-        Assert.True(typeInfo.fields["autoUserField"].autoDateOnUpdate);
-    }
-
-    [Fact]
-    public void GetTypeInfoAutoUserIdUpdate()
-    {
-        var typeInfo = service.GetTypeInfo<TestView>();
-        Assert.False(typeInfo.fields["autoUserUpdateField"].autoDateOnInsert);
-        Assert.True(typeInfo.fields["autoUserUpdateField"].autoDateOnUpdate);
-    }
-
 
     [Fact]
     public void GetTypeInfoFromField()
