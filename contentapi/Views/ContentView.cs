@@ -12,6 +12,7 @@ public class ContentView : IIdView
     public long id { get; set; }
 
     [Searchable]
+    [WriteRule(WriteRuleType.DefaultValue, WriteRuleType.ReadOnly)]
     public bool deleted { get; set; }
 
     [Searchable]

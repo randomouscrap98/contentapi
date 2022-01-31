@@ -35,5 +35,6 @@ public class CommentView : IIdView
     public long? editUserId {get;set;}
 
     [Searchable]
+    [WriteRule(WriteRuleType.DefaultValue, WriteRuleType.ReadOnly)]
     public bool deleted {get;set;}
 }

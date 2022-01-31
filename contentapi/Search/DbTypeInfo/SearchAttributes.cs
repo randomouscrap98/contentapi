@@ -39,6 +39,12 @@ public enum WriteRuleType
     AutoUserId,
     AutoDate,
     DefaultValue,
+    /// <summary>
+    /// Note on readonly: it's used mostly for fields tracked internally, and isn't STRICTLY required, but makes things easier for everyone.
+    /// For instance, fields that have no database backing are by default unwritable, so readonly is technically useless on those fields, but
+    /// it's a good indicator to use when a field is tracked with the system rather than users, just not with one of the other attributes. 
+    /// It's a "catch all"; these fields are readonly only to the USER
+    /// </summary>
     ReadOnly,
     Increment
 }

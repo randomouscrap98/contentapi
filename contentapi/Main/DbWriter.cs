@@ -460,6 +460,8 @@ public class DbWriter : IDbWriter
         //content is special and some fields are inaccessible in the base view form.
         if(work.action == UserAction.delete)
         {
+            //This needs to be here instead of tweak because the views have different fields all mapped to content.
+            //Content is special, as usual
             content.createUserId = 0;
             content.content = "";
             content.name = "";
