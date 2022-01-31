@@ -28,7 +28,9 @@ public class CacheDbTypeInfoService : IDbTypeInfoService
                 var searchattr = typeof(SearchableAttribute);
                 var ffattr = typeof(FromFieldAttribute);
                 var exattr = typeof(ExpensiveAttribute);
-                var roattr = typeof(ReadOnlyAttribute);
+                var autodattr = typeof(AutoDateAttribute);
+                var autouattr = typeof(AutoUserIdAttribute);
+                var pouattr = typeof(PreserveOnUpdateAttribute);
 
                 var result = new Search.DbTypeInfo() { 
                     type = t,
@@ -45,17 +47,33 @@ public class CacheDbTypeInfoService : IDbTypeInfoService
                 {
                     var computed = Attribute.IsDefined(pk.Value, compattr);
 
-                    result.fields.Add(pk.Key, new DbFieldInfo()
+                    var fieldInfo = new DbFieldInfo()
                     {
                         rawProperty = pk.Value,
                         //matchedModelProperty = dbModelProperties.ContainsKey(pk.Key) ? dbModelProperties[pk.Key] : null,
                         queryable = Attribute.IsDefined(pk.Value, searchattr),
-                        readOnly = Attribute.IsDefined(pk.Value, roattr),
+                        preserveOnUpdate = Attribute.IsDefined(pk.Value, pouattr),
                         computed = computed,
                         realDbColumn = Attribute.IsDefined(pk.Value, ffattr) ? pk.Value.GetCustomAttribute<FromFieldAttribute>()?.Field : computed ? null : pk.Key, //The real db column IS the field name simply by default, unless it's computed
                         expensive = Attribute.IsDefined(pk.Value, exattr) ? pk.Value.GetCustomAttribute<ExpensiveAttribute>()?.PotentialCost 
                             ?? throw new InvalidOperationException("NO EXPENSIVE ATTRIBUTE FOUND ON ATTRIBUTE THAT SAID IT HAD ONE") : -1 
-                    });
+                    };
+
+                    if(Attribute.IsDefined(pk.Value, autodattr))
+                    {
+                        var autodate = pk.Value.GetCustomAttribute<AutoDateAttribute>() ?? throw new InvalidOperationException("NO AUTODATE ATTRIBUTE FOUND ON ATTRIBUTE THAT SAID IT HAD IT");
+                        fieldInfo.autoDateOnInsert = autodate.OnInsert;
+                        fieldInfo.autoDateOnUpdate = autodate.OnUpdate;
+                    }
+
+                    if(Attribute.IsDefined(pk.Value, autouattr))
+                    {
+                        var autouser = pk.Value.GetCustomAttribute<AutoUserIdAttribute>() ?? throw new InvalidOperationException("NO AUTOUSER ATTRIBUTE FOUND ON ATTRIBUTE THAT SAID IT HAD IT");
+                        fieldInfo.autoDateOnInsert = autouser.OnInsert;
+                        fieldInfo.autoDateOnUpdate = autouser.OnUpdate;
+                    }
+
+                    result.fields.Add(pk.Key, fieldInfo);
                 }
 
                 //var props = result.properties.Values.Where(x => !Attribute.IsDefined(x, compattr));

@@ -22,6 +22,18 @@ public class AboutSearchField
     /// <value></value>
     public int expensive {get;set;} = -1;
 
+    /// <summary>
+    /// Whether the field can be written on insert
+    /// </summary>
+    /// <value></value>
+    public bool writableOnInsert {get;set;} = true;
+
+    /// <summary>
+    /// Whether the field can be written on update
+    /// </summary>
+    /// <value></value>
+    public bool writableOnUpdate {get;set;} = false;
+
     public string type {get;set;} = "unknown";
 }
 

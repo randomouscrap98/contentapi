@@ -32,10 +32,35 @@ public class SearchableAttribute : System.Attribute
     public SearchableAttribute() {  }  
 }  
 
+//[System.AttributeUsage(System.AttributeTargets.Property)]
+//public class ReadOnlyAttribute : System.Attribute  
+//{  
+//    public bool OnInsert {get;}
+//    public bool OnUpdate{get;}
+//    public ReadOnlyAttribute(bool onInsert = true, bool onUpdate = true) { this.OnInsert = onInsert; this.OnUpdate = onUpdate; }  
+//}  
+
 [System.AttributeUsage(System.AttributeTargets.Property)]
-public class ReadOnlyAttribute : System.Attribute  
+public class PreserveOnUpdateAttribute : System.Attribute  
 {  
-    public ReadOnlyAttribute() {  }  
+    public PreserveOnUpdateAttribute() {  }  
+}  
+
+
+[System.AttributeUsage(System.AttributeTargets.Property)]
+public class AutoDateAttribute : System.Attribute  
+{  
+    public bool OnInsert {get;}
+    public bool OnUpdate{get;}
+    public AutoDateAttribute(bool onInsert = true, bool onUpdate = true) { this.OnInsert = onInsert; this.OnUpdate = onUpdate; }  
+}  
+
+[System.AttributeUsage(System.AttributeTargets.Property)]
+public class AutoUserIdAttribute : System.Attribute  
+{  
+    public bool OnInsert {get;}
+    public bool OnUpdate{get;}
+    public AutoUserIdAttribute(bool onInsert = true, bool onUpdate = true) { this.OnInsert = onInsert; this.OnUpdate = onUpdate; }  
 }  
 
 [System.AttributeUsage(System.AttributeTargets.Property)]

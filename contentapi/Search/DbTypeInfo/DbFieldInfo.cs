@@ -32,11 +32,24 @@ public class DbFieldInfo
     /// </summary>
     public bool computed {get;set;} = false;
 
-    /// <summary>
-    /// Whether the field can only be read; most of the time this is FALSE
-    /// </summary>
-    /// <value></value>
-    public bool readOnly {get;set;} = false;
+    public bool autoDateOnInsert {get;set;} = false;
+    public bool autoDateOnUpdate {get;set;} = false;
+    public bool autoUserOnInsert {get;set;} = false;
+    public bool autoUserOnUpdate {get;set;} = false;
+
+    public bool preserveOnUpdate {get;set;} = false;
+
+    ///// <summary>
+    ///// Whether the field can be written on insert
+    ///// </summary>
+    ///// <value></value>
+    //public bool writableOnInsert {get;set;} = true;
+
+    ///// <summary>
+    ///// Whether the field can be written on update
+    ///// </summary>
+    ///// <value></value>
+    //public bool writableOnUpdate {get;set;} = false;
 
     /// <summary>
     /// If this is null or empty, there is "no" backing database conversion at all! For safety, we define complex fields with a dbcolumn of ""

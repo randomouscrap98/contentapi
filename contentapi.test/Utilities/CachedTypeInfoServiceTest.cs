@@ -1,3 +1,4 @@
+using System;
 using System.Collections.Generic;
 using System.Linq;
 using contentapi.Search;
@@ -27,8 +28,20 @@ public class CachedTypeInfoServiceTest : UnitTestBase
         [FromField("otherField")]
         public string? remappedField {get;set;}
 
-        [ReadOnly]
-        public List<string> readonlyField {get;set;} = new List<string>();
+        [AutoDate]
+        public DateTime autoDateField {get;set;}
+
+        [AutoDate(false)]
+        public DateTime autoDateUpdateField {get;set;}
+
+        [AutoUserId]
+        public long autoUserField {get;set;}
+
+        [AutoUserId(false)]
+        public long autoUserUpdateField {get;set;}
+
+        [PreserveOnUpdate]
+        public long preserveField {get;set;}
     }
 
     [Fact] 
@@ -44,13 +57,22 @@ public class CachedTypeInfoServiceTest : UnitTestBase
     protected IEnumerable<string> QueryableFields(DbTypeInfo info) => 
         info.fields.Where(x => x.Value.queryable).Select(x => x.Key);
 
+    protected void AssertDefaults(DbTypeInfo typeInfo, string name)
+    {
+        Assert.False(typeInfo.fields[name].autoDateOnInsert);
+        Assert.False(typeInfo.fields[name].autoDateOnUpdate);
+        Assert.False(typeInfo.fields[name].autoUserOnInsert);
+        Assert.False(typeInfo.fields[name].autoUserOnUpdate);
+        Assert.False(typeInfo.fields[name].preserveOnUpdate);
+    }
+
     [Fact]
     public void GetTypeInfoQueryable()
     {
         var typeInfo = service.GetTypeInfo<TestView>();
         Assert.Contains("queryableFieldLong", RetrievableFields(typeInfo));
         Assert.DoesNotContain("queryableFieldLong", QueryableFields(typeInfo)); //.searchableFields);
-        Assert.False(typeInfo.fields["queryableFieldLong"].readOnly);
+        AssertDefaults(typeInfo, "queryableFieldLong");
     }
 
     [Fact]
@@ -59,7 +81,9 @@ public class CachedTypeInfoServiceTest : UnitTestBase
         var typeInfo = service.GetTypeInfo<TestView>();
         Assert.Contains("searchableFieldString", RetrievableFields(typeInfo));
         Assert.Contains("searchableFieldString", QueryableFields(typeInfo));
-        Assert.False(typeInfo.fields["searchableFieldString"].readOnly);
+        AssertDefaults(typeInfo, "searchableFieldString");
+        //Assert.True(typeInfo.fields["searchableFieldString"].writableOnInsert);
+        //Assert.True(typeInfo.fields["searchableFieldString"].writableOnUpdate);
     }
 
     [Fact]
@@ -69,16 +93,45 @@ public class CachedTypeInfoServiceTest : UnitTestBase
         Assert.DoesNotContain("computedField", RetrievableFields(typeInfo));
         Assert.DoesNotContain("computedField", QueryableFields(typeInfo));
 
-        //For NOW, computed does not immediately imply readonly
-        Assert.False(typeInfo.fields["computedField"].readOnly);
+        //For NOW, computed does not immediately imply anything else
+        AssertDefaults(typeInfo, "computedField");
+
+        //Assert.True(typeInfo.fields["computedField"].writableOnInsert);
+        //Assert.True(typeInfo.fields["computedField"].writableOnUpdate);
     }
 
     [Fact]
-    public void GetTypeInfoReadonly()
+    public void GetTypeInfoAutoDate()
     {
         var typeInfo = service.GetTypeInfo<TestView>();
-        Assert.True(typeInfo.fields["readonlyField"].readOnly);
+        Assert.True(typeInfo.fields["autoDateField"].autoDateOnInsert);
+        Assert.True(typeInfo.fields["autoDateField"].autoDateOnUpdate);
     }
+
+    [Fact]
+    public void GetTypeInfoAutoDateUpdate()
+    {
+        var typeInfo = service.GetTypeInfo<TestView>();
+        Assert.False(typeInfo.fields["autoDateUpdateField"].autoDateOnInsert);
+        Assert.True(typeInfo.fields["autoDateUpdateField"].autoDateOnUpdate);
+    }
+
+    [Fact]
+    public void GetTypeInfoAutoUserId()
+    {
+        var typeInfo = service.GetTypeInfo<TestView>();
+        Assert.True(typeInfo.fields["autoUserField"].autoDateOnInsert);
+        Assert.True(typeInfo.fields["autoUserField"].autoDateOnUpdate);
+    }
+
+    [Fact]
+    public void GetTypeInfoAutoUserIdUpdate()
+    {
+        var typeInfo = service.GetTypeInfo<TestView>();
+        Assert.False(typeInfo.fields["autoUserUpdateField"].autoDateOnInsert);
+        Assert.True(typeInfo.fields["autoUserUpdateField"].autoDateOnUpdate);
+    }
+
 
     [Fact]
     public void GetTypeInfoFromField()
