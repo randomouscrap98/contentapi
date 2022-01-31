@@ -30,13 +30,13 @@ public class UserView : IIdView
     public bool super {get;set;}
 
     [Searchable]
-    [FromField("")] //Not a field you can select
+    //[FromField("")] //Not a field you can select
     [WriteRule(WriteRuleType.DefaultValue, WriteRuleType.Preserve)]
     public bool registered {get;set;}
 
-    [FromField("")]
+    //[FromField("")]
     [Computed]
     [Expensive(2)]
-    [WriteRule(WriteRuleType.ReadOnly, WriteRuleType.ReadOnly)]
+    //[WriteRule(WriteRuleType.ReadOnly, WriteRuleType.ReadOnly)]
     public List<long> groups {get;set;} = new List<long>();
 }

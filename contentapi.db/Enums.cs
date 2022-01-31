@@ -42,7 +42,8 @@ namespace contentapi.Db
         groupRemove = 2,
         contentCreate = 3,
         contentUpdate = 4,
-        contentDelete = 5
+        contentDelete = 5,
+        usernameChange = 6
     }
 
     public enum VoteType : long

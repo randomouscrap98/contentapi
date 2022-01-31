@@ -342,13 +342,16 @@ public class DbWriterTest : ViewUnitTestBase, IClassFixture<DbUnitTestSearchFixt
     {
         if(allowed)
         {
+            var originalContent = await searcher.GetById<ContentView>(RequestType.content, contentId);
             var result = await writer.DeleteAsync<ContentView>(contentId, uid);
             //Even after deletion, the lastRevisionId should be set!
             await AssertHistoryMatchesAsync(result, UserAction.delete);
             AssertContentEventMatches(result, uid, UserAction.delete);
             //Remember, we can generally trust what the functions return because they should be EXACTLY from the database!
             //Testing to see if the ones from the database are exactly the same as those returned can be a different test
-            Assert.True(string.IsNullOrWhiteSpace(result.name), "Name was not cleared!");
+            //Assert.True(string.IsNullOrWhiteSpace(result.name), "Name was not cleared!");
+            //NOTE: Used to test if name was cleared, now we just ensure the name isn't the same as what it was before
+            Assert.NotEqual(originalContent.name, result.name);
             Assert.Empty(result.keywords);
             Assert.Empty(result.values);
             Assert.Empty(result.permissions);
@@ -479,7 +482,9 @@ public class DbWriterTest : ViewUnitTestBase, IClassFixture<DbUnitTestSearchFixt
             AssertCommentEventMatches(written, poster, UserAction.create);
             AssertCommentEventMatches(result, editor, UserAction.delete);
             Assert.True(result.deleted);
-            Assert.True(string.IsNullOrEmpty(result.text));
+            //Assert.True(string.IsNullOrEmpty(result.text));
+            //Note: USED to check for empty comment content, now just make sure it's not what it was before
+            Assert.NotEqual(comment.text, result.text);
             Assert.True(result.id > 0);
         }
         else

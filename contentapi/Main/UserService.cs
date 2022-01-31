@@ -47,7 +47,7 @@ public class UserService : IUserService
 
     public const string BasicRequestName = "userservicesearch";
 
-    public async Task CheckValidUsernameAsync(string username)
+    public async Task CheckValidUsernameAsync(string username, long existingUserId = 0)
     {
         if(string.IsNullOrWhiteSpace(username))
             throw new ArgumentException("Username can't be null or whitespace only!");

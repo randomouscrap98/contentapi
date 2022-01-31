@@ -77,7 +77,8 @@ public class DbWriter : IDbWriter
     }
 
     /// <summary>
-    /// Throws "ForbiddenException" for any kind of permission error that could arise for a modification given
+    /// Throws "ForbiddenException" for any kind of permission error that could arise for a modification given. ALSO perform other
+    /// validation in here!
     /// </summary>
     /// <typeparam name="T"></typeparam>
     public async Task ValidateUserPermissionForAction<T>(T view, T? existing, UserView requester, UserAction action) where T : class, IIdView, new()
@@ -108,6 +109,12 @@ public class DbWriter : IDbWriter
                 if(!(await CanUserAsync(requester, action, cView.id)))
                     throw new ForbiddenException($"User {requester.id} can't '{action}' content {cView.id}!");
             }
+
+            //Now for general validation
+            await ValidatePermissionFormat(cView.permissions);
+
+            if(cView.deleted)
+                throw new RequestException("Don't delete content by setting the deleted flag!");
         }
         else if(view is CommentView)
         {
@@ -132,6 +139,33 @@ public class DbWriter : IDbWriter
                 //Can't post in invalid locations! So we check ANY contentId passed in, even if it's invalid
                 if(!(await CanUserAsync(requester, action, cView.contentId)))
                     throw new ForbiddenException($"User {requester.id} can't '{action}' comments in content {cView.contentId}!");
+            }
+
+            if(cView.deleted)
+                throw new RequestException("Don't delete comments by setting the deleted flag!");
+        }
+        else if(view is UserView)
+        {
+            var uView = (view as UserView)!;
+            var exView = existing as UserView;
+            
+            //NOTE: adding groups to groups is supported but does not do what users expect it to do: you cannot create nested groups!
+            await ValidateGroups(uView.groups);
+
+            //Users aren't created here except by supers? This might change sometime
+            if(action == UserAction.create)
+            {
+                if(!requester.super)
+                    throw new RequestException("You can't create users or groups through this endpoint unless you're a super user!");
+            }
+
+            if(action == UserAction.update)
+            {
+                if(requester.id != uView.id && !requester.super)
+                    throw new RequestException("You cannot modify users other than yourself unless you're a super user!");
+
+                if(uView.super != exView?.super && !requester.super)
+                    throw new RequestException("You cannot modify the super state unless you're a super user!");
             }
         }
         else 
@@ -185,17 +219,15 @@ public class DbWriter : IDbWriter
         //Ok at this point, we know everything is good to go, there shouldn't be ANY MORE checks required past here!
         if(view is ContentView)
         {
-            id = await DatabaseWork_Content(new DbWorkUnit<ContentView>(
-                view as ContentView ?? throw new InvalidOperationException("Somehow, ContentView couldn't be cast to ContentView??"), 
-                requester, typeInfo, action, existing as ContentView, message));
-
+            id = await DatabaseWork_Content(new DbWorkUnit<ContentView>((view as ContentView)!, requester, typeInfo, action, existing as ContentView, message));
         }
         else if(view is CommentView)
         {
-            id = await DatabaseWork_Comments(new DbWorkUnit<CommentView>(
-                view as CommentView ?? throw new InvalidOperationException("Somehow, CommentView couldn't be cast to CommentView??"), 
-                requester, typeInfo, action, existing as CommentView, message));
-
+            id = await DatabaseWork_Comments(new DbWorkUnit<CommentView>((view as CommentView)!, requester, typeInfo, action, existing as CommentView, message));
+        }
+        else if (view is UserView)
+        {
+            id = await DatabaseWork_User(new DbWorkUnit<UserView>((view as UserView)!, requester, typeInfo, action, existing as UserView, message));
         }
         else
         {
@@ -283,18 +315,31 @@ public class DbWriter : IDbWriter
     }
 
     /// <summary>
+    /// Delete stuff of the given type associated with the given anything. WARNING: THIS WORKS FOR COMMENTS, VOTES, WATCHES, ETC!!
+    /// </summary>
+    /// <param name="id"></param>
+    /// <param name="tsx"></param>
+    /// <typeparam name="T"></typeparam>
+    /// <returns></returns>
+    public async Task DeleteAssociatedType<T>(long id, IDbTransaction tsx, string field, string type)
+    {
+        var tinfo = typeInfoService.GetTypeInfo<T>();
+        var parameters = new { id = id };
+        var deleteCount = await dbcon.ExecuteAsync($"delete from {tinfo.modelTable} where {field} = @id", parameters, tsx);
+        logger.LogInformation($"Deleting {deleteCount} {typeof(T).Name} from {type} {id}");
+    }
+
+
+    /// <summary>
     /// Delete stuff of the given type associated with the given content. WARNING: THIS WORKS FOR COMMENTS, VOTES, WATCHES, ETC!!
     /// </summary>
     /// <param name="id"></param>
     /// <param name="tsx"></param>
     /// <typeparam name="T"></typeparam>
     /// <returns></returns>
-    public async Task DeleteContentAssociatedType<T>(long id, IDbTransaction tsx)
+    public Task DeleteContentAssociatedType<T>(long id, IDbTransaction tsx)
     {
-        var tinfo = typeInfoService.GetTypeInfo<T>();
-        var parameters = new { id = id };
-        var deleteCount = await dbcon.ExecuteAsync($"delete from {tinfo.modelTable} where contentId = @id", parameters, tsx);
-        logger.LogInformation($"Deleting {deleteCount} {typeof(T).Name} from content {id}");
+        return DeleteAssociatedType<T>(id, tsx, "contentId", "content");
     }
 
     /// <summary>
@@ -339,29 +384,8 @@ public class DbWriter : IDbWriter
     }
 
     /// <summary>
-    /// Modify the view given by the user IN PLACE to nudge the data into something more appropriate for storage.
-    /// This mostly means making sure historic fields aren't overwritten, or that new content is stamped with the date, etc.
-    /// </summary>
-    /// <param name="work"></param>
-    public void TweakContentView(DbWorkUnit<ContentView> work)
-    {
-        if(work.action == UserAction.delete)
-        {
-            work.view.keywords.Clear();
-            work.view.values.Clear();
-            work.view.permissions.Clear();
-        }
-        else if(work.action != UserAction.read)
-        {
-            work.view.permissions[work.requester.id] = "CRUD"; //FORCE permissions to include full access for creator all the time
-
-            if(work.view.deleted)
-                throw new RequestException("Don't delete content by setting the deleted flag!");
-        }
-    }
-
-    /// <summary>
     /// This function handles any database modification for the given view, from inserts to updates to deletes.
+    /// NOTE: these work functions should NOT perform validation! That's all done beforehand!
     /// </summary>
     /// <param name="view"></param>
     /// <param name="requester"></param>
@@ -378,10 +402,7 @@ public class DbWriter : IDbWriter
         if((work.action == UserAction.create || work.action == UserAction.update) && work.typeInfo.type == typeof(ContentView))
             throw new InvalidOperationException("You cannot write the raw type ContentView! It doesn't have enough information!");
 
-        //Fix view so the data is more appropriate (don't let users have full free reign over important fields!)
-        TweakContentView(work);
-
-        await ValidatePermissionFormat(work.view.permissions);
+        //NOTE: other validation is performed in the generic, early validation
 
         var content = new Db.Content();
         var unmapped = MapSimpleViewFields(work, content); //.typeInfo, work.view, content);
@@ -393,11 +414,16 @@ public class DbWriter : IDbWriter
         //content is special and some fields are inaccessible in the base view form.
         if(work.action == UserAction.delete)
         {
+            //These are special and will be handled later anyway
+            work.view.keywords.Clear();
+            work.view.values.Clear();
+            work.view.permissions.Clear();
+
             //This needs to be here instead of tweak because the views have different fields all mapped to content.
             //Content is special, as usual
             content.createUserId = 0;
             content.content = "";
-            content.name = "";
+            content.name = "deleted_content";
             content.deleted = true;
             content.extra1 = null;
             //Don't give out any information
@@ -406,6 +432,7 @@ public class DbWriter : IDbWriter
         }
         else
         {
+            work.view.permissions[work.requester.id] = "CRUD"; //FORCE permissions to include full access for creator all the time
             content.internalType = InternalContentTypeFromView(work.view);
         }
 
@@ -424,7 +451,7 @@ public class DbWriter : IDbWriter
             }
             else 
             {
-                throw new InvalidOperationException($"Can't perform action {work.action} in WriteContent!");
+                throw new InvalidOperationException($"Can't perform action {work.action} in DatabaseWork_Content!");
             }
             
             //Now that we have a content and got the ID for it, we can produce the snapshot used for history writing
@@ -460,31 +487,12 @@ public class DbWriter : IDbWriter
         }
     }
     
-    public void TweakCommentView(DbWorkUnit<CommentView> work)
-    {
-        if(work.action == UserAction.delete)
-        {
-            work.view.text = "";
-            work.view.createUserId = 0;
-            work.view.editUserId = 0;
-            work.view.createUserId = 0;
-            work.view.contentId = 0;
-            work.view.deleted = true;
-        }
-        else if(work.action != UserAction.read)
-        {
-            if(work.view.deleted)
-                throw new RequestException("Don't delete content by setting the deleted flag!");
-        }
-    }
-
     public async Task<long> DatabaseWork_Comments(DbWorkUnit<CommentView> work)
     {
         if(!work.typeInfo.type.IsAssignableTo(typeof(CommentView)))
             throw new InvalidOperationException($"TypeInfo given in DatabaseWork was for type '{work.typeInfo.type}', not '{typeof(CommentView)}'");
 
-        TweakCommentView(work);
-
+        //NOTE: As usual, validation is performed outside this function!
         var comment = new Db.Comment();
         var unmapped = MapSimpleViewFields(work, comment); 
 
@@ -498,6 +506,15 @@ public class DbWriter : IDbWriter
         //Append the history to the comment if we're modifying the comment instead of inserting a new one!
         if(work.action == UserAction.update || work.action == UserAction.delete)
         {
+            if(work.action == UserAction.delete)
+            {
+                comment.text = "deleted_comment";
+                comment.createUserId = 0;
+                comment.editUserId = 0;
+                comment.contentId = 0;
+                comment.deleted = true;
+            }
+
             historyConverter.AddCommentHistory(new CommentSnapshot {
                 userId = work.requester.id,
                 editDate = DateTime.UtcNow,
@@ -528,8 +545,123 @@ public class DbWriter : IDbWriter
         }
     }
 
+    /// <summary>
+    /// This function handles any database modification for the given view, from inserts to updates to deletes.
+    /// </summary>
+    /// <param name="view"></param>
+    /// <param name="requester"></param>
+    /// <param name="typeInfo"></param>
+    /// <param name="action"></param>
+    /// <returns></returns>
+    public async Task<long> DatabaseWork_User(DbWorkUnit<UserView> work)
+    {
+        //Some basic sanity checks
+        if(!work.typeInfo.type.IsAssignableTo(typeof(UserView)))
+            throw new InvalidOperationException($"TypeInfo given in DatabaseWork was for type '{work.typeInfo.type}', not '{typeof(UserView)}'");
+
+        var user = new Db.User();
+        var unmapped = MapSimpleViewFields(work, user);
+
+        if(unmapped.Count > 0)
+            logger.LogWarning($"Fields '{string.Join(",", unmapped)}' not mapped in user!");
+
+        if(work.action == UserAction.delete)
+        {
+            //These groups are added later anyway, don't worry about it being after map
+            work.view.groups.Clear();
+            user.username = "deleted_user";
+            user.password = "";
+            user.registrationKey = "";
+            user.salt = "";
+            user.email = "";
+            user.special = "";
+            user.hidelist = "";
+            user.super = false;
+        }
+
+        //Always need an ID to link to, so we actually need to create the content first and get the ID.
+        using(var tsx = dbcon.BeginTransaction())
+        {
+            if(work.action == UserAction.create)
+            {
+                work.view.id = await dbcon.InsertAsync(user, tsx);
+            }
+            else if(work.action == UserAction.update || work.action == UserAction.delete)
+            {
+                //Remove the old associated values
+                await DeleteAssociatedType<UserRelation>(user.id, tsx, "userId", "user"); //For now, just remove where the user is directly referenced. We MIGHT need the relatedId, but what if that's content??
+                await dbcon.UpdateAsync(user, tsx);
+            }
+            else 
+            {
+                throw new InvalidOperationException($"Can't perform action {work.action} in DatabaseWork_User!");
+            }
+            
+            //Note: when deleting, don't want to write ANY extra data, regardless of what's there!
+            if(work.action != UserAction.delete)
+            {
+                //Need to insert the group relations
+
+                //These insert entire lists.
+                //await dbcon.InsertAsync(snapshot.values, tsx);
+                //await dbcon.InsertAsync(snapshot.permissions, tsx);
+                //await dbcon.InsertAsync(snapshot.keywords, tsx);
+            }
+
+            //Write admin log only for specific circumstances, don't need to track everything users do
+            if(work.action == UserAction.update && work.view.username != work.existing?.username)
+            {
+                await dbcon.InsertAsync(new AdminLog() {
+                    type = AdminLogType.usernameChange,
+                    createDate = DateTime.UtcNow,
+                    initiator = work.requester.id,
+                    target = work.view.id,
+                    text = $"User {work.requester.id}({work.requester.username}) changed username for {work.existing?.username} to '{work.view.username}'"
+                }, tsx);
+            }
+
+            tsx.Commit();
+
+            //User events are reported for the purpose of tracking 
+            await eventQueue.AddEventAsync(new LiveEvent(work.requester.id, work.action, EventType.user, work.view.id));
+
+            logger.LogDebug($"User {work.requester.id}({work.requester.username}) did action '{work.action}' on user {work.view.id}"); 
+
+            //NOTE: this is the newly computed id, we place it inside the view for safekeeping 
+            return work.view.id;
+        }
+    }
+
+    public async Task ValidateGroups(List<long> groups)
+    {
+        //Nothing to check
+        if(groups.Count == 0)
+            return;
+
+        if(groups.Distinct().Count() != groups.Count)
+            throw new ArgumentException("Duplicate groups found in user group list");
+
+        //Just go lookup the groups
+        var utinfo = typeInfoService.GetTypeInfo<UserView>();
+        var foundGroups = await searcher.QueryRawAsync($"select id from {utinfo.modelTable} where id in @ids and type = @type", new Dictionary<string, object> {
+            { "ids", groups },
+            { "type", UserType.group }
+        });
+        var foundGroupIds = foundGroups.Select(x => x["id"]);
+
+        foreach(var id in groups)
+        {
+            if (!foundGroupIds.Contains(id))
+                throw new ArgumentException($"Group {id} in user group set not found in database! Note: only groups can be added, not users!");
+        }
+    }
+
     public async Task ValidatePermissionFormat(Dictionary<long, string> permissions)
     {
+        //Nothing to check
+        if(permissions.Count == 0)
+            return;
+
         if(permissions.Keys.Distinct().Count() != permissions.Keys.Count())
             throw new ArgumentException("Duplicate user(s) in permissions set!");
 
