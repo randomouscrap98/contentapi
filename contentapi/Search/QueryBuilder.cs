@@ -338,7 +338,7 @@ public class QueryBuilder : IQueryBuilder
             if(StandardComplexFields.ContainsKey((request.requestType, field)))
                 throw new ArgumentException($"Field '{field}' is a complex field for type '{request.type}' and must be included in the requested fieldlist ({request.name})");
             else if(string.IsNullOrWhiteSpace(request.typeInfo.fields[field].realDbColumn))
-                throw new ArgumentException($"Field '{field}' in type '{request.type}' doesn't map to any database data and does not have a complex field definition, which means it is misconfigured in the API. ({request.name})");
+                throw new InvalidOperationException($"Field '{field}' in type '{request.type}' doesn't map to any database data and does not have a complex field definition, which means it is misconfigured in the API. ({request.name})");
             else //If we get to here, we have a renamed field that was NOT requested in the fieldlist, so we need to give the REAL database name for the parse
                 return request.typeInfo.fields[field].realDbColumn ?? throw new InvalidOperationException("Somehow, realDbColumn was null even after a null check!");
         }

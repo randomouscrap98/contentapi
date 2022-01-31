@@ -70,22 +70,17 @@ public class CachedTypeInfoServiceTest : UnitTestBase
         Assert.Contains("searchableFieldString", RetrievableFields(typeInfo));
         Assert.Contains("searchableFieldString", QueryableFields(typeInfo));
         AssertDefaults(typeInfo, "searchableFieldString");
-        //Assert.True(typeInfo.fields["searchableFieldString"].writableOnInsert);
-        //Assert.True(typeInfo.fields["searchableFieldString"].writableOnUpdate);
     }
 
     [Fact]
     public void GetTypeInfoComputed()
     {
         var typeInfo = service.GetTypeInfo<TestView>();
-        Assert.DoesNotContain("computedField", RetrievableFields(typeInfo));
+        Assert.Contains("computedField", RetrievableFields(typeInfo));
         Assert.DoesNotContain("computedField", QueryableFields(typeInfo));
 
         //For NOW, computed does not immediately imply anything else
         AssertDefaults(typeInfo, "computedField");
-
-        //Assert.True(typeInfo.fields["computedField"].writableOnInsert);
-        //Assert.True(typeInfo.fields["computedField"].writableOnUpdate);
     }
 
     [Fact]
@@ -108,8 +103,6 @@ public class CachedTypeInfoServiceTest : UnitTestBase
     public void GetTypeInfoFromField()
     {
         var typeInfo = service.GetTypeInfo<TestView>();
-        //Assert.Single(typeInfo.fieldRemap.Keys);
-        //Assert.Contains("remappedField", typeInfo.fieldRemap.Keys);
         Assert.Equal("otherField", typeInfo.fields["remappedField"].realDbColumn); //["remappedField"]);
     }
 
@@ -117,8 +110,6 @@ public class CachedTypeInfoServiceTest : UnitTestBase
     public void GetTypeInfoFromField_Default()
     {
         var typeInfo = service.GetTypeInfo<TestView>();
-        //Assert.Single(typeInfo.fieldRemap.Keys);
-        //Assert.Contains("remappedField", typeInfo.fieldRemap.Keys);
         Assert.Equal("searchableFieldString", typeInfo.fields["searchableFieldString"].realDbColumn); //["remappedField"]);
     }
 
@@ -127,8 +118,5 @@ public class CachedTypeInfoServiceTest : UnitTestBase
     {
         var typeInfo = service.GetTypeInfo<Db.ContentPermission>();
         Assert.Equal("content_permissions", typeInfo.modelTable); //Ofc, if you change the database name, change this here too
-        //Assert.Single(typeInfo.fieldRemap.Keys);
-        //Assert.Contains("remappedField", typeInfo.fieldRemap.Keys);
-        //Assert.Equal("otherField", typeInfo.fieldRemap["remappedField"]);
     }
 }

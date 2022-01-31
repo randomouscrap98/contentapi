@@ -649,18 +649,44 @@ public class GenericSearchDbTests : UnitTestBase, IClassFixture<DbUnitTestSearch
     }
 
     [Fact]
-    public async Task GenericSearch_Search_RemappedField_FailGracefully()
+    public async Task GenericSearch_Search_RemappedField_NotIncluded_SimpleAllowed()
     {
         var search = new SearchRequests();
-        search.values.Add("hash", "one");
+        search.values.Add("hash", "four");
         search.requests.Add(new SearchRequest()
         {
-            name = "nocomplex",
             type = "file",
-            fields = "id", //Only querying id, but asking for hash, which needs to be included
+            fields = "id", 
             query = "hash = @hash"
         });
 
+        //This should still work, even though there's no hash included in the fields. The query system is smart enough to figure it out, even though it's
+        //a remapped field.
+        var result = await service.SearchUnrestricted(search);
+
+        //This only works when the file type is 3. Dumb tests
+        Assert.Equal(3, (int)InternalContentType.file);
+
+        Assert.NotEmpty(result.data["file"]);
+        Assert.Equal("4", result.data["file"].First()["id"].ToString());
+        //await Assert.ThrowsAnyAsync<ArgumentException>(async () => {
+        //    var result = await service.SearchUnrestricted(search);
+        //});
+    }
+
+    [Fact]
+    public async Task GenericSearch_Search_RemappedField_FailGracefully()
+    {
+        var search = new SearchRequests();
+        search.values.Add("revid", 1);
+        search.requests.Add(new SearchRequest()
+        {
+            type = "page",
+            fields = "id", 
+            query = "lastRevisionId > @revid"
+        });
+
+        //This fails because the field in question is complex and thus is required to be included
         await Assert.ThrowsAnyAsync<ArgumentException>(async () => {
             var result = await service.SearchUnrestricted(search);
         });
