@@ -18,6 +18,7 @@ using contentapi.Views;
 using System.Collections.Generic;
 using contentapi.Services;
 using contentapi.Db.History;
+using Newtonsoft.Json;
 
 namespace contentapi.Controllers
 {
@@ -436,6 +437,43 @@ namespace contentapi.Controllers
                     foreach (var cmnt in cmnts)
                     {
                         var ncmnt = mapper.Map<Db.Comment_Convert>(cmnt);
+                        //Convert metadata into separate field
+
+                        try
+                        {
+                            //string metadata = null;
+                            var lines = ncmnt.text.Split("\n".ToCharArray());
+                            dynamic meta = JsonConvert.DeserializeObject(lines[0]);
+                            //var meta = (IDictionary<string, object>)JsonConvert.DeserializeObject(lines[0]);
+
+                            if(meta != null)
+                            {
+                                ncmnt.metadata = lines[0];
+
+                                //WE ASSUME that if there are multiple lines, it's the new format
+                                if(lines.Length > 1)
+                                    ncmnt.text = ncmnt.text.Substring(lines[0].Length + 1); // +1 to skip newline
+                                else //if((meta as IDictionary<string, object>).ContainsKey("t"))
+                                    ncmnt.text = (string)meta.t;
+                                //else
+                                //    ncmnt.text = "";
+                                
+                                //Log($"Metadata set [{ncmnt.id}]: '{ncmnt.metadata}', text: '{ncmnt.text}'");
+                            }
+                            else
+                            {
+                                Log($"Meta parsed to null [{ncmnt.id}]? Lines[0]: '{lines[0]}', text: '{ncmnt.text}'");
+                            }
+                        }
+                        catch
+                        {
+                            Log($"Old comment format assumed [{ncmnt.id}], no metadata: {ncmnt.text}");
+                        }
+                        //finally
+                        //{
+                        //    ncmnt.metadata = metadata;
+                        //}
+
                         //User dapper to store?
                         cmids.Add(await newdb.InsertAsync(ncmnt));
                         if(cmids.Count >= 1000)

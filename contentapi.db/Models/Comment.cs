@@ -13,6 +13,7 @@ namespace contentapi.Db
         public DateTime createDate { get; set; }
         public long receiveUserId { get; set; }
         public string text { get; set; } = "";
+        public string metadata {get;set;} = null; //nullable in new
         public DateTime? editDate { get; set; }
         public long? editUserId { get; set; }
 
