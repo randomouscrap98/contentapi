@@ -29,5 +29,6 @@ public class UserVariableView : IIdView
     [WriteRule(WriteRuleType.None)] //Preserve is automatically set for update btw
     public string key {get;set;} = "";
 
+    [Multiline]
     public string value {get;set;} = "";
 }

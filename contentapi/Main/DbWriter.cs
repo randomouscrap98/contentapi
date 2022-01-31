@@ -206,12 +206,6 @@ public class DbWriter : IDbWriter
         return await searcher.GetById<T>(requestType, id);
     }
 
-    //public bool IsWriteRuleSet(WriteRuleType type, DbFieldInfo fieldInfo, UserAction currentAction)
-    //{
-    //    return fieldInfo.onInsert == type && currentAction == UserAction.create ||
-    //           fieldInfo.onUpdate == type && currentAction == UserAction.update;
-    //}
-
     /// <summary>
     /// Use TypeInfo given to translate as much as possible, including auto-generated data or preserved data. As such, we need the actual work item //all standard mapped fields from view to model.
     /// </summary>
@@ -251,18 +245,15 @@ public class DbWriter : IDbWriter
             //OK, there's a lot going on with model properties. Basically, attributes allow us to automatically set fields on
             //models for insert and update, which we check for below. If none of the special checks work, we default to 
             //allowing whatever the user set.
-            if(isWriteRuleSet(WriteRuleType.AutoDate)) //, remap.Value, remap.Value.onInsert == WriteRuleType.AutoDate && work.action == UserAction.create ||
-               //remap.Value.onUpdate == WriteRuleType.AutoDate && work.action == UserAction.update)
+            if(isWriteRuleSet(WriteRuleType.AutoDate)) 
             {
                 dbModelProp.Value.SetValue(dbModel, DateTime.UtcNow);
             }
-            else if(isWriteRuleSet(WriteRuleType.AutoUserId)) //remap.Value.onInsert == WriteRuleType.AutoUserId && work.action == UserAction.create ||
-                    //remap.Value.onUpdate == WriteRuleType.AutoUserId && work.action == UserAction.update)
+            else if(isWriteRuleSet(WriteRuleType.AutoUserId)) 
             {
                 dbModelProp.Value.SetValue(dbModel, work.requester.id);
             }
-            else if(isWriteRuleSet(WriteRuleType.Increment)) //remap.Value.onInsert == WriteRuleType.Increment && work.action == UserAction.create ||
-                    //remap.Value.onUpdate == WriteRuleType.Increment && work.action == UserAction.update)
+            else if(isWriteRuleSet(WriteRuleType.Increment)) 
             {
                 if(remap.Value.fieldType != typeof(int))
                     throw new InvalidOperationException($"API ERROR: tried to auto-increment non-integer field {remap.Key} (type: {remap.Value.fieldType})");
@@ -270,16 +261,14 @@ public class DbWriter : IDbWriter
                 int original = (int)(remap.Value.rawProperty?.GetValue(work.existing) ?? throw new InvalidOperationException("Integer field was somehow null!!"));
                 dbModelProp.Value.SetValue(dbModel, original + 1);
             }
-            else if(isWriteRuleSet(WriteRuleType.DefaultValue)) //remap.Value.onInsert == WriteRuleType.DefaultValue && work.action == UserAction.create ||
-                    //remap.Value.onUpdate == WriteRuleType.DefaultValue && work.action == UserAction.update)
+            else if(isWriteRuleSet(WriteRuleType.DefaultValue)) 
             {
                 if(remap.Value.fieldType.IsValueType)
                     dbModelProp.Value.SetValue(dbModel, Activator.CreateInstance(remap.Value.fieldType));
                 else
                     dbModelProp.Value.SetValue(dbModel, null);
             }
-            else if(isWriteRuleSet(WriteRuleType.Preserve)) //remap.Value.onInsert == WriteRuleType.Preserve && work.action == UserAction.create ||
-                    //remap.Value.onUpdate == WriteRuleType.Preserve && work.action == UserAction.update)
+            else if(isWriteRuleSet(WriteRuleType.Preserve)) 
             {
                 dbModelProp.Value.SetValue(dbModel, remap.Value.rawProperty?.GetValue(work.existing));
             }
@@ -288,37 +277,6 @@ public class DbWriter : IDbWriter
                 //Set the dbmodel property value to be the view's property. Type matching is NOT checked, please be careful!
                 dbModelProp.Value.SetValue(dbModel, remap.Value.rawProperty?.GetValue(work.view)); // tinfo.properties[viewField].GetValue(view));
             }
-
-            //if(tinfo.fields)
-
-            ////These are ALWAYS dead ends: empty field remaps that have the same name as us are complicated....
-            //if(tinfo.fieldRemap.ContainsKey(dbModelProp.Key) && string.IsNullOrWhiteSpace(tinfo.fieldRemap[dbModelProp.Key]))
-            //    continue;
-
-            ////The viewfield we might use
-            //var viewField = "";
-
-            ////FieldRemap maps view properties to db, but we want where OUR property is in the value
-            //var remap = tinfo.fieldRemap.FirstOrDefault(x => x.Value == dbModelProp.Key);
-
-            ////It's a field remap, might work that way... always trust this over the defaults
-            //if(!string.IsNullOrWhiteSpace(remap.Key))
-            //    viewField = remap.Key;
-            ////Oh it's a queryable field, that works too. In that case, it's the same exact name
-            //else if(tinfo.queryableFields.Contains(dbModelProp.Key))
-            //    viewField = dbModelProp.Key;
-
-            ////Only do the reassign if we found a viewField
-            //if(!string.IsNullOrWhiteSpace(viewField))
-            //{
-            //    //Oh but somehow the view type doesn't have the field we thought it did? this shouldn't happen!
-            //    if (!tinfo.properties.ContainsKey(viewField))
-            //        throw new InvalidOperationException($"Somehow, the typeinfo for {tinfo.type} didn't include a property for mapped field {viewField}");
-
-            //    //Set the dbmodel property value to be the view's property. Type matching is NOT checked, please be careful!
-            //    dbModelProp.Value.SetValue(dbModel, tinfo.properties[viewField].GetValue(view));
-            //    unmapped.Remove(dbModelProp.Key);
-            //}
         }
 
         return unmapped;
@@ -378,7 +336,6 @@ public class DbWriter : IDbWriter
             return  InternalContentType.module;
         else
             return InternalContentType.none;
-            //throw new InvalidOperationException($"Don't know how to write type {view.GetType()}!");
     }
 
     /// <summary>
@@ -400,30 +357,6 @@ public class DbWriter : IDbWriter
 
             if(work.view.deleted)
                 throw new RequestException("Don't delete content by setting the deleted flag!");
-
-            //if (work.action == UserAction.update)
-            //{
-            //    var existing = work.existing ?? throw new InvalidOperationException("Update specified, but no existing view looked up in database for snapshot!");
-            //    work.view.createUserId = existing.createUserId;
-            //    work.view.createDate = existing.createDate;
-
-            //    //Many file fields CAN'T BE CHANGED!
-            //    if (work.view is FileView)
-            //    {
-            //        var file = work.view as FileView ?? throw new InvalidOperationException("Couldn't cast FileView to FileView???");
-            //        var existingFile = work.existing as FileView ?? throw new InvalidOperationException("Couldn't cast FileView to FileView???");
-            //        file.quantization = existingFile.quantization;
-            //        file.hash = existingFile.hash;
-            //    }
-            //}
-            //else if (work.action == UserAction.create)
-            //{
-            //    work.view.createDate = DateTime.UtcNow; // REMEMBER TO USE UTCNOW EVERYWHERE!
-            //    work.view.createUserId = work.requester.id;
-
-            //    //Note: for file create, we just "trust" the values given to us for the fileview, because we don't technically
-            //    //know what the quantization is, for example.
-            //}
         }
     }
 
@@ -542,26 +475,6 @@ public class DbWriter : IDbWriter
         {
             if(work.view.deleted)
                 throw new RequestException("Don't delete content by setting the deleted flag!");
-
-            //if(work.action == UserAction.update)
-            //{
-            //    var existing = work.existing ?? throw new InvalidOperationException("Update specified, but no existing view looked up in database for snapshot!");
-            //    work.view.createUserId = existing.createUserId;
-            //    work.view.createDate = existing.createDate;
-            //    work.view.editDate = DateTime.UtcNow;
-            //    work.view.editUserId = work.requester.id;
-
-            //    //We don't want users to be allowed to change contentId right now, and we want them to KNOW they're doing something wrong
-            //    if(work.view.contentId != existing.contentId)
-            //        throw new RequestException($"Can't move comments between pages just yet! Original: {existing.contentId}, new: {work.view.contentId}, for comment {work.view.id}");
-            //}
-            //else if(work.action == UserAction.create)
-            //{
-            //    work.view.createDate = DateTime.UtcNow; // REMEMBER TO USE UTCNOW EVERYWHERE!
-            //    work.view.createUserId = work.requester.id;
-            //    work.view.editDate = null;
-            //    work.view.editUserId = 0;
-            //}
         }
     }
 
@@ -573,8 +486,7 @@ public class DbWriter : IDbWriter
         TweakCommentView(work);
 
         var comment = new Db.Comment();
-        var unmapped = MapSimpleViewFields(work, comment); //.typeInfo, work.view, comment);
-        //var unmapped = //MapSimpleViewFields(work.typeInfo, work.view, comment);
+        var unmapped = MapSimpleViewFields(work, comment); 
 
         if(unmapped.Count > 0)
             logger.LogWarning($"Fields '{string.Join(",", unmapped)}' not mapped in comment!");

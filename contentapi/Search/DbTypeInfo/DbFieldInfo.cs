@@ -25,6 +25,8 @@ public class DbFieldInfo
     /// </summary>
     public bool computed {get;set;} = false;
 
+    public bool multiline {get;set;} = false;
+
     public WriteRuleType onInsert {get;set;}
     public WriteRuleType onUpdate {get;set;}
 

@@ -28,6 +28,7 @@ public class CacheDbTypeInfoService : IDbTypeInfoService
                 var searchattr = typeof(SearchableAttribute);
                 var ffattr = typeof(FromFieldAttribute);
                 var exattr = typeof(ExpensiveAttribute);
+                var mlattr = typeof(MultilineAttribute);
 
                 var result = new Search.DbTypeInfo() { 
                     type = t,
@@ -49,6 +50,7 @@ public class CacheDbTypeInfoService : IDbTypeInfoService
                     {
                         rawProperty = pk.Value,
                         queryable = Attribute.IsDefined(pk.Value, searchattr),
+                        multiline = Attribute.IsDefined(pk.Value, mlattr),
                         onInsert = writeRule?.InsertRule ?? WriteRuleType.None, 
                         onUpdate = writeRule?.UpdateRule ?? WriteRuleType.None, 
                         computed = computed,

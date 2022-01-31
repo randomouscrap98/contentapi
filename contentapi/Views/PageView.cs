@@ -11,5 +11,6 @@ public class PageView : ContentView
     [FromField("publicType")]
     public string type { get; set; } = "";
 
+    [Multiline]
     public string content { get; set; } = "";
 }

@@ -32,6 +32,12 @@ public class SearchableAttribute : System.Attribute
     public SearchableAttribute() {  }  
 }  
 
+[System.AttributeUsage(System.AttributeTargets.Property)]
+public class MultilineAttribute : System.Attribute  
+{  
+    public MultilineAttribute() {  }  
+}  
+
 public enum WriteRuleType
 {
     None = 0,

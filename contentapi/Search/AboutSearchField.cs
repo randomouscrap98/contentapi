@@ -36,6 +36,8 @@ public class AboutSearchField
     /// <value></value>
     public bool writableOnUpdate {get;set;} = false;
 
+    public bool multiline {get;set;} = false;
+
     public bool nullable {get;set;} = false;
 
     public string type {get;set;} = "unknown";
@@ -63,7 +65,7 @@ public class AboutSearchFieldProfile : Profile
         if(t == typeof(bool))
             return "bool";
         if(t.IsEnum)
-            return "string(enum)";
+            return $"string({string.Join("|", Enum.GetNames(t))})";
 
         return "unknown";
     }
@@ -118,11 +120,6 @@ public class AboutSearchFieldProfile : Profile
         return false;
     }
 
-    //public bool IsNullable(Type t)
-    //{
-    //    return Nullable.GetUnderlyingType(t) != null || t == typeof(string?); //!src.fieldType.IsValueType || Activator.CreateInstance(src.fieldType) == null));
-    //}
-
     public AboutSearchFieldProfile()
     {
         this.CreateMap<DbFieldInfo, AboutSearchField>()
@@ -130,6 +127,5 @@ public class AboutSearchFieldProfile : Profile
             .ForMember(dest => dest.writableOnInsert, opt => opt.MapFrom(src => src.onInsert == WriteRuleType.None))
             .ForMember(dest => dest.writableOnUpdate, opt => opt.MapFrom(src => src.onUpdate == WriteRuleType.None))
             .ForMember(dest => dest.nullable, opt => opt.MapFrom(src => IsNullable(src.rawProperty!)));
-            //Nullable.GetUnderlyingType(src.fieldType) != null || src.fieldType == ));//!src.fieldType.IsValueType || Activator.CreateInstance(src.fieldType) == null));
     }
 }

@@ -24,6 +24,7 @@ public class CommentView : IIdView
     public DateTime createDate {get;set;}
 
     [Searchable] //Maybe a super bad idea
+    [Multiline]
     public string text {get;set;} = "";
 
     [Searchable]

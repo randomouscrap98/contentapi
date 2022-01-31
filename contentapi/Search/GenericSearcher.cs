@@ -114,11 +114,11 @@ public class GenericSearcher : IGenericSearch
                 var voteinfo = typeService.GetTypeInfo<Db.ContentVote>();
                 var votes = await dbcon.QueryAsync($"select {cidkey}, vote, count(*) as count from {voteinfo.modelTable} where {cidkey} in @ids group by {cidkey}, vote",
                     new { ids = ids });
-                var displayVotes = Enum.GetValues<VoteType>().Where(x => x != VoteType.none).Select(x => x.ToString());
+                var displayVotes = Enum.GetValues<VoteType>().Where(x => x != VoteType.none); //.Select(x => x.ToString());
 
                 foreach(var c in result)
                 {
-                    var cvotes = votes.Where(x => x.contentId.Equals(c["id"])).ToDictionary(x => ((VoteType)x.vote).ToString(), y => y.count);
+                    var cvotes = votes.Where(x => x.contentId.Equals(c["id"])).ToDictionary(x => (VoteType)x.vote, y => y.count);
                     foreach(var v in displayVotes)
                     {
                         if(!cvotes.ContainsKey(v))

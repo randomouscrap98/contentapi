@@ -53,7 +53,7 @@ public class ContentView : IIdView
     [Computed]
     [Expensive(2)]
     [WriteRule(WriteRuleType.ReadOnly, WriteRuleType.ReadOnly)]
-    public Dictionary<string, int> votes {get;set;} = new Dictionary<string, int>();
+    public Dictionary<VoteType, int> votes {get;set;} = new Dictionary<VoteType, int>();
 
 
     [Searchable]

@@ -33,6 +33,9 @@ public class CachedTypeInfoServiceTest : UnitTestBase
 
         [WriteRule(WriteRuleType.DefaultValue, WriteRuleType.AutoUserId)]
         public DateTime editUserField {get;set;}
+
+        [Multiline]
+        public string multilineField {get;set;} = "wow\nyeah";
     }
 
     [Fact] 
@@ -52,6 +55,7 @@ public class CachedTypeInfoServiceTest : UnitTestBase
     {
         Assert.Equal(WriteRuleType.None, typeInfo.fields[name].onInsert);
         Assert.Equal(WriteRuleType.None, typeInfo.fields[name].onUpdate);
+        Assert.False(typeInfo.fields[name].multiline);
     }
 
     [Fact]
@@ -104,6 +108,13 @@ public class CachedTypeInfoServiceTest : UnitTestBase
     {
         var typeInfo = service.GetTypeInfo<TestView>();
         Assert.Equal("otherField", typeInfo.fields["remappedField"].realDbColumn); //["remappedField"]);
+    }
+
+    [Fact]
+    public void GetTypeInfoMultiline()
+    {
+        var typeInfo = service.GetTypeInfo<TestView>();
+        Assert.True(typeInfo.fields["multilineField"].multiline); //["remappedField"]);
     }
 
     [Fact] //Ensures fields with no FromField attribute default to their actual field name
