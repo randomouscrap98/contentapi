@@ -31,8 +31,10 @@ public class UserView : IIdView
 
     [Searchable]
     [FromField("")] //Not a field you can select
+    [WriteRule(WriteRuleType.DefaultValue, WriteRuleType.Preserve)]
     public bool registered {get;set;}
 
     [FromField("")]
+    [Computed]
     public List<long> groups {get;set;} = new List<long>();
 }
