@@ -36,5 +36,6 @@ public class UserView : IIdView
 
     [FromField("")]
     [Computed]
+    [Expensive(2)]
     public List<long> groups {get;set;} = new List<long>();
 }

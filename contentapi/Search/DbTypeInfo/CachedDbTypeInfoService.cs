@@ -53,8 +53,7 @@ public class CacheDbTypeInfoService : IDbTypeInfoService
                         onUpdate = writeRule?.UpdateRule ?? WriteRuleType.None, 
                         computed = computed,
                         realDbColumn = Attribute.IsDefined(pk.Value, ffattr) ? pk.Value.GetCustomAttribute<FromFieldAttribute>()?.Field : computed ? null : pk.Key, //The real db column IS the field name simply by default, unless it's computed
-                        expensive = Attribute.IsDefined(pk.Value, exattr) ? pk.Value.GetCustomAttribute<ExpensiveAttribute>()?.PotentialCost 
-                            ?? throw new InvalidOperationException("NO EXPENSIVE ATTRIBUTE FOUND ON ATTRIBUTE THAT SAID IT HAD ONE") : -1 
+                        expensive = pk.Value.GetCustomAttribute<ExpensiveAttribute>()?.PotentialCost ?? 0
                     };
 
                     result.fields.Add(pk.Key, fieldInfo);
