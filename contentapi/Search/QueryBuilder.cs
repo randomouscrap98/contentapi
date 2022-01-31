@@ -121,7 +121,7 @@ public class QueryBuilder : IQueryBuilder
         var typeInfo = typeService.GetTypeInfo<ContentKeyword>();
         return $@"{MainAlias}.id in 
             (select {nameof(ContentKeyword.contentId)} 
-             from {typeInfo.table} 
+             from {typeInfo.modelTable} 
              where {nameof(ContentKeyword.value)} like {value}
             )";
     }
@@ -131,7 +131,7 @@ public class QueryBuilder : IQueryBuilder
         var typeInfo = typeService.GetTypeInfo<ContentValue>();
         return $@"{MainAlias}.id in 
             (select {nameof(ContentValue.contentId)} 
-             from {typeInfo.table} 
+             from {typeInfo.modelTable} 
              where {nameof(ContentValue.key)} like {key} 
                and {nameof(ContentValue.value)} like {value}
             )";
@@ -142,7 +142,7 @@ public class QueryBuilder : IQueryBuilder
         var typeInfo = typeService.GetTypeInfo<Content>();
         return $@"{MainAlias}.id in 
             (select {nameof(Content.parentId)} 
-             from {typeInfo.table} 
+             from {typeInfo.modelTable} 
              group by {nameof(Content.parentId)}
             )";
     }
@@ -152,7 +152,7 @@ public class QueryBuilder : IQueryBuilder
         var typeInfo = typeService.GetTypeInfo<Content>();
         return $@"{MainAlias}.contentId in 
             (select {nameof(Content.id)} 
-             from {typeInfo.table} 
+             from {typeInfo.modelTable} 
              where internalType = {(int)InternalContentType.page}
              and deleted = 0
             )";
@@ -163,7 +163,7 @@ public class QueryBuilder : IQueryBuilder
         var typeInfo = typeService.GetTypeInfo<UserRelation>();
         return $@"{MainAlias}.id in 
             (select {nameof(Db.UserRelation.userId)} 
-             from {typeInfo.table} 
+             from {typeInfo.modelTable} 
              where {nameof(Db.UserRelation.relatedId)} = {group}
             )";
     }
@@ -184,7 +184,7 @@ public class QueryBuilder : IQueryBuilder
         //additional values are things like 0 or their groups, and groups can't create content
         return $@"({MainAlias}.{idField} in 
             (select {nameof(ContentPermission.contentId)} 
-             from {typeInfo.table} 
+             from {typeInfo.modelTable} 
              where {nameof(ContentPermission.userId)} in {requesters}
                and `{checkCol}` = 1
             ))"; //NOTE: DO NOT CHECK CREATE USER! ALL PERMISSIONS ARE NOW IN THE TABLE! NOTHING IMPLIED!
@@ -238,6 +238,18 @@ public class QueryBuilder : IQueryBuilder
         return reqplus;
     }
 
+    //public bool IsSimpleField(string fieldName, SearchRequestPlus r, out string realFieldname)
+    //{
+    //    realFieldname = "";
+
+    //    var result = !StandardComplexFields.ContainsKey((r.requestType, fieldName)) && !string.IsNullOrWhiteSpace(r.typeInfo.fields[fieldName].realDbColumn);
+
+    //    if(result)
+    //        realFieldname = r.typeInfo.fields[fieldName].realDbColumn ?? throw new InvalidOperationException("Somehow, got null db column even though we checked for null!");
+    //    
+    //    return result;
+    //}
+
     /// <summary>
     /// Return the field selector for the given field. For instance, it might be a 
     /// simple "username", or it might be "(registered IS NULL) AS registered" etc.
@@ -255,20 +267,14 @@ public class QueryBuilder : IQueryBuilder
         {
             return StandardComplexFields[(r.requestType, fieldName)];
         }
-        else if (r.typeInfo.fieldRemap.ContainsKey(fieldName))
+        else //Otherwise, just use what is defined by the type info
         {
-            //Can't return a blank "as" for a null field remap. Null/empty remaps are
-            //fields which you're allowed to query for, but which should not be output in
-            //the selector (hence the field mapped to "nothing")
-            if(string.IsNullOrWhiteSpace(r.typeInfo.fieldRemap[fieldName]))
-                return "";
+            var c = r.typeInfo.fields[fieldName].realDbColumn;
+
+            if(string.IsNullOrWhiteSpace(c))
+                throw new InvalidOperationException($"Can't remap field '{fieldName}': no complex field mapping defined in the query builder AND no real db column defined on the field! Computed: {r.typeInfo.fields[fieldName].computed}");
             else
-                return $"{r.typeInfo.fieldRemap[fieldName]} AS {fieldName}";
-        }
-        //Just a basic fieldname replacement
-        else
-        {
-            return fieldName;
+                return $"{c} AS {fieldName}";
         }
     }
 
@@ -286,14 +292,15 @@ public class QueryBuilder : IQueryBuilder
 
         //Redo fieldlist if they asked for special formats
         if (r.fields == "*")
-            fields = new List<string>(r.typeInfo.queryableFields);
+            fields = new List<string>(r.typeInfo.fields.Keys);
         
         if (inverted)
-            fields = r.typeInfo.queryableFields.Except(fields).ToList();
+            fields = r.typeInfo.fields.Keys.Except(fields).ToList();
         
-        //Check for bad fields
+        //Check for bad fields. NOTE: this means we can guarantee that future checks against the typeinfo are safe... or can we?
+        //What about parsing fields from the query string?
         foreach (var field in fields)
-            if (!r.typeInfo.queryableFields.Contains(field))
+            if (!r.typeInfo.fields.ContainsKey(field))
                 throw new ArgumentException($"Unknown field {field} in request {r.name}");
         
         return fields;
@@ -308,18 +315,32 @@ public class QueryBuilder : IQueryBuilder
         return baseQuery; 
     }
 
+    /// <summary>
+    /// Returns the field as it should be named inside a query. Most of the time, this is the name from the view and nothing else
+    /// </summary>
+    /// <param name="field"></param>
+    /// <param name="request"></param>
+    /// <returns></returns>
     public string ParseField(string field, SearchRequestPlus request)
     {
-        if(!request.typeInfo.searchableFields.Contains(field))
-            throw new ArgumentException($"Field '{field}' not searchable yet in type '{request.type}'({request.name})!");
+        if(!request.typeInfo.fields.ContainsKey(field))
+            throw new ArgumentException($"Field '{field}' not found in type '{request.type}'({request.name})!");
 
-        //Oops, this is a dangerous field, we can't just use it without requesting it because
-        //it's COMPUTED
-        if(StandardComplexFields.ContainsKey((request.requestType, field)) || 
-            request.typeInfo.fieldRemap.ContainsKey(field))
+        if(!request.typeInfo.fields[field].queryable)
+            throw new ArgumentException($"Field '{field}' not searchable in type '{request.type}'({request.name})!");
+
+        //I don't know what to do about computed fields just yet, so they'll just pass through... we'll see how that works out
+        //(there don't appear to be ANY computed fields just yet)
+
+        //Oops, sometimes a field might not be part of the request but we're querying against it. This requires special things
+        if(!request.requestFields.Contains(field))
         {
-            if(!request.requestFields.Contains(field))
-                throw new ArgumentException($"Field '{field}' is a computed field for type '{request.type}' and must be included in the retrieved fieldlist ({request.name})");
+            if(StandardComplexFields.ContainsKey((request.requestType, field)))
+                throw new ArgumentException($"Field '{field}' is a complex field for type '{request.type}' and must be included in the requested fieldlist ({request.name})");
+            else if(string.IsNullOrWhiteSpace(request.typeInfo.fields[field].realDbColumn))
+                throw new ArgumentException($"Field '{field}' in type '{request.type}' doesn't map to any database data and does not have a complex field definition, which means it is misconfigured in the API. ({request.name})");
+            else //If we get to here, we have a renamed field that was NOT requested in the fieldlist, so we need to give the REAL database name for the parse
+                return request.typeInfo.fields[field].realDbColumn ?? throw new InvalidOperationException("Somehow, realDbColumn was null even after a null check!");
         }
 
         return field;
@@ -466,7 +487,7 @@ public class QueryBuilder : IQueryBuilder
         queryStr.Append("SELECT ");
         queryStr.Append(string.Join(",", fieldSelect));
         queryStr.Append(" FROM ");
-        queryStr.Append(r.typeInfo.table ?? throw new InvalidOperationException($"Standard select {r.type} doesn't map to database table in request {r.name}!"));
+        queryStr.Append(r.typeInfo.modelTable ?? throw new InvalidOperationException($"Standard select {r.type} doesn't map to database table in request {r.name}!"));
         queryStr.Append($" AS {MainAlias} ");
     }
 
@@ -501,12 +522,12 @@ public class QueryBuilder : IQueryBuilder
                     order = r.order.Substring(0, r.order.Length - DescendingAppend.Length);
                 }
 
-                if (!r.typeInfo.queryableFields.Contains(order))
+                if (!r.typeInfo.fields.ContainsKey(order)) //queryableFields.Contains(order))
                     throw new ArgumentException($"Unknown order field {order} for request {r.name}");
                 
                 queryStr.Append(order);
 
-                if(r.typeInfo.fieldTypes[order] == typeof(string))
+                if(r.typeInfo.fields[order].fieldType == typeof(string))
                     queryStr.Append(" COLLATE NOCASE ");
 
                 if (descending)
@@ -572,10 +593,11 @@ public class QueryBuilder : IQueryBuilder
             if(StandardViewRequests.ContainsKey(type))
             {
                 var typeInfo = typeService.GetTypeInfo(StandardViewRequests[type]);
-                result.types.Add(type.ToString(), new {
-                    getfields = typeInfo.queryableFields,
-                    searchfields = typeInfo.searchableFields
-                });
+                result.types.Add(type.ToString(), typeInfo.fields.ToDictionary(x => x.Key, y => mapper.Map<AboutSearchField>(y.Value)));
+                //new {
+                //    getfields = typeInfo.queryableFields,
+                //    searchfields = typeInfo.searchableFields
+                //});
 
                 result.objects.Add(type.ToString(), Activator.CreateInstance(StandardViewRequests[type]) ??
                     throw new InvalidOperationException($"Couldn't create type {type} for display!"));

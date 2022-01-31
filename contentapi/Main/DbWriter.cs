@@ -216,43 +216,60 @@ public class DbWriter : IDbWriter
     public List<string> MapSimpleViewFields(DbTypeInfo tinfo, object view, object dbModel)
     {
         //This can happen if our view type has no associated table
-        if(tinfo.tableTypeProperties.Count == 0)
-            throw new InvalidOperationException($"Typeinfo for type {tinfo.type}, table type {tinfo.tableType} didn't compute table type properties!");
+        if(tinfo.modelType == null) //tableTypeProperties.Count == 0)
+            throw new InvalidOperationException($"Typeinfo for type {tinfo.type} doesn't appear to have an associated db model!");
     
         //Assume no properties will be mapped
-        var unmapped = new List<string>(tinfo.tableTypeProperties.Keys);
+        //var dbModelProperties = new List<string>(tinfo.fields.Where(x => x.Value.matchedModelProperty != null).Select(x => x.Value.matchedModelProperty?.Name ?? throw new InvalidOperationException("Checked for null in matchedModelProperty but still got null???"))); 
+        var unmapped = new List<string>(tinfo.modelProperties.Keys);
 
         //We want to get as many fields as possible. If there are some we can't map, that's ok.
-        foreach(var dbModelProp in tinfo.tableTypeProperties)
+        foreach(var dbModelProp in tinfo.modelProperties) //tinfo.tableTypeProperties)
         {
-            //These are ALWAYS dead ends: empty field remaps that have the same name as us are complicated....
-            if(tinfo.fieldRemap.ContainsKey(dbModelProp.Key) && string.IsNullOrWhiteSpace(tinfo.fieldRemap[dbModelProp.Key]))
-                continue;
+            //Simply go find the field definition where the real database column is the same as the model property. 
+            var remap = tinfo.fields.FirstOrDefault(x => x.Value.realDbColumn == dbModelProp.Key);
 
-            //The viewfield we might use
-            var viewField = "";
-
-            //FieldRemap maps view properties to db, but we want where OUR property is in the value
-            var remap = tinfo.fieldRemap.FirstOrDefault(x => x.Value == dbModelProp.Key);
-
-            //It's a field remap, might work that way... always trust this over the defaults
-            if(!string.IsNullOrWhiteSpace(remap.Key))
-                viewField = remap.Key;
-            //Oh it's a queryable field, that works too. In that case, it's the same exact name
-            else if(tinfo.queryableFields.Contains(dbModelProp.Key))
-                viewField = dbModelProp.Key;
-
-            //Only do the reassign if we found a viewField
-            if(!string.IsNullOrWhiteSpace(viewField))
+            //Field remaps are greatly simplified now: we can trust what's in the field mapping as long as:
+            //- it exists
+            //- it's non-empty (* automatic, since searching by matching realDbColumn)
+            //- it's not marked readonly
+            if(!string.IsNullOrWhiteSpace(remap.Key) && !remap.Value.readOnly)
             {
-                //Oh but somehow the view type doesn't have the field we thought it did? this shouldn't happen!
-                if (!tinfo.properties.ContainsKey(viewField))
-                    throw new InvalidOperationException($"Somehow, the typeinfo for {tinfo.type} didn't include a property for mapped field {viewField}");
-
                 //Set the dbmodel property value to be the view's property. Type matching is NOT checked, please be careful!
-                dbModelProp.Value.SetValue(dbModel, tinfo.properties[viewField].GetValue(view));
+                dbModelProp.Value.SetValue(dbModel, remap.Value.rawProperty?.GetValue(view)); // tinfo.properties[viewField].GetValue(view));
                 unmapped.Remove(dbModelProp.Key);
             }
+
+            //if(tinfo.fields)
+
+            ////These are ALWAYS dead ends: empty field remaps that have the same name as us are complicated....
+            //if(tinfo.fieldRemap.ContainsKey(dbModelProp.Key) && string.IsNullOrWhiteSpace(tinfo.fieldRemap[dbModelProp.Key]))
+            //    continue;
+
+            ////The viewfield we might use
+            //var viewField = "";
+
+            ////FieldRemap maps view properties to db, but we want where OUR property is in the value
+            //var remap = tinfo.fieldRemap.FirstOrDefault(x => x.Value == dbModelProp.Key);
+
+            ////It's a field remap, might work that way... always trust this over the defaults
+            //if(!string.IsNullOrWhiteSpace(remap.Key))
+            //    viewField = remap.Key;
+            ////Oh it's a queryable field, that works too. In that case, it's the same exact name
+            //else if(tinfo.queryableFields.Contains(dbModelProp.Key))
+            //    viewField = dbModelProp.Key;
+
+            ////Only do the reassign if we found a viewField
+            //if(!string.IsNullOrWhiteSpace(viewField))
+            //{
+            //    //Oh but somehow the view type doesn't have the field we thought it did? this shouldn't happen!
+            //    if (!tinfo.properties.ContainsKey(viewField))
+            //        throw new InvalidOperationException($"Somehow, the typeinfo for {tinfo.type} didn't include a property for mapped field {viewField}");
+
+            //    //Set the dbmodel property value to be the view's property. Type matching is NOT checked, please be careful!
+            //    dbModelProp.Value.SetValue(dbModel, tinfo.properties[viewField].GetValue(view));
+            //    unmapped.Remove(dbModelProp.Key);
+            //}
         }
 
         return unmapped;
@@ -269,7 +286,7 @@ public class DbWriter : IDbWriter
     {
         var tinfo = typeInfoService.GetTypeInfo<T>();
         var parameters = new { id = id };
-        var deleteCount = await dbcon.ExecuteAsync($"delete from {tinfo.table} where contentId = @id", parameters, tsx);
+        var deleteCount = await dbcon.ExecuteAsync($"delete from {tinfo.modelTable} where contentId = @id", parameters, tsx);
         logger.LogInformation($"Deleting {deleteCount} {typeof(T).Name} from content {id}");
     }
 
@@ -554,7 +571,7 @@ public class DbWriter : IDbWriter
 
         //Look up all users, DON'T NEED all fields
         var utinfo = typeInfoService.GetTypeInfo<UserView>();
-        var foundUsers = await searcher.QueryRawAsync($"select id from {utinfo.table} where id in @ids", new Dictionary<string, object> { { "ids",  permissions.Keys } });
+        var foundUsers = await searcher.QueryRawAsync($"select id from {utinfo.modelTable} where id in @ids", new Dictionary<string, object> { { "ids",  permissions.Keys } });
         var foundUserIds = foundUsers.Select(x => x["id"]);
 
         //Do the per-permission check now!
@@ -627,7 +644,7 @@ public class DbWriter : IDbWriter
         //C is the amount of users defined in the content permission set, and N is the total amount
         //of pages. So if we had oh I don't know, 2 billion pages, it might take like 40 iterations.
         return (await dbcon.ExecuteScalarAsync<int>(@$"select count(*)
-             from {typeInfo.table} 
+             from {typeInfo.modelTable} 
              where {nameof(ContentPermission.contentId)} = @contentId
                and {nameof(ContentPermission.userId)} in @requesters 
                and `{checkCol}` = 1

@@ -33,6 +33,12 @@ public class SearchableAttribute : System.Attribute
 }  
 
 [System.AttributeUsage(System.AttributeTargets.Property)]
+public class ReadOnlyAttribute : System.Attribute  
+{  
+    public ReadOnlyAttribute() {  }  
+}  
+
+[System.AttributeUsage(System.AttributeTargets.Property)]
 public class ExpensiveAttribute : System.Attribute
 {
     public int PotentialCost {get;}

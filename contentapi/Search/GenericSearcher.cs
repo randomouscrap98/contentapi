@@ -65,7 +65,7 @@ public class GenericSearcher : IGenericSearch
             if(r.requestFields.Contains(groupskey))
             {
                 var keyinfo = typeService.GetTypeInfo<Db.UserRelation>();
-                var groups = await QueryAsyncCast($"select {ridkey},{uidkey} from {keyinfo.table} where {typekey} = @type and {uidkey} in @ids",
+                var groups = await QueryAsyncCast($"select {ridkey},{uidkey} from {keyinfo.modelTable} where {typekey} = @type and {uidkey} in @ids",
                     new { ids = GetIds(result), type = (int)UserRelationType.inGroup }); 
 
                 foreach(var u in result)
@@ -85,7 +85,7 @@ public class GenericSearcher : IGenericSearch
             if(r.requestFields.Contains(keykey))
             {
                 var keyinfo = typeService.GetTypeInfo<Db.ContentKeyword>();
-                var keywords = await QueryAsyncCast($"select {cidkey},value from {keyinfo.table} where {cidkey} in @ids",
+                var keywords = await QueryAsyncCast($"select {cidkey},value from {keyinfo.modelTable} where {cidkey} in @ids",
                     new { ids = ids });
 
                 foreach(var c in result)
@@ -94,7 +94,7 @@ public class GenericSearcher : IGenericSearch
             if(r.requestFields.Contains(valkey))
             {
                 var valinfo = typeService.GetTypeInfo<Db.ContentValue>();
-                var values = await QueryAsyncCast($"select {cidkey},key,value from {valinfo.table} where {cidkey} in @ids",
+                var values = await QueryAsyncCast($"select {cidkey},key,value from {valinfo.modelTable} where {cidkey} in @ids",
                     new { ids = ids });
 
                 foreach(var c in result)
@@ -103,7 +103,7 @@ public class GenericSearcher : IGenericSearch
             if(r.requestFields.Contains(permkey))
             {
                 var perminfo = typeService.GetTypeInfo<Db.ContentPermission>();
-                var permissions = await dbcon.QueryAsync($"select * from {perminfo.table} where {cidkey} in @ids",
+                var permissions = await dbcon.QueryAsync($"select * from {perminfo.modelTable} where {cidkey} in @ids",
                     new { ids = ids });
 
                 foreach(var c in result)
@@ -112,7 +112,7 @@ public class GenericSearcher : IGenericSearch
             if(r.requestFields.Contains(votekey))
             {
                 var voteinfo = typeService.GetTypeInfo<Db.ContentVote>();
-                var votes = await dbcon.QueryAsync($"select {cidkey}, vote, count(*) as count from {voteinfo.table} where {cidkey} in @ids group by {cidkey}, vote",
+                var votes = await dbcon.QueryAsync($"select {cidkey}, vote, count(*) as count from {voteinfo.modelTable} where {cidkey} in @ids group by {cidkey}, vote",
                     new { ids = ids });
                 var displayVotes = Enum.GetValues<VoteType>().Where(x => x != VoteType.none).Select(x => x.ToString());
 
@@ -139,7 +139,7 @@ public class GenericSearcher : IGenericSearch
     public string GetDatabaseForType<T>()
     {
         var typeinfo = typeService.GetTypeInfo<T>();
-        return typeinfo.table ?? throw new InvalidOperationException($"No database for type {typeof(T).Name}");
+        return typeinfo.modelTable ?? throw new InvalidOperationException($"No database for type {typeof(T).Name}");
     }    
 
     //The simple method for performing a SINGLE request as given. The database accesses are timed...

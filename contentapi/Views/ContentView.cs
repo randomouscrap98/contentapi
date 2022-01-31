@@ -29,11 +29,11 @@ public class ContentView : IIdView
     public long parentId { get; set; }
 
 
-    [FromField("")]
+    [FromField("")] //NOTE: This is not strictly required, but it's for safety: we want to avoid the default that says every field maps to a database column
     public Dictionary<long, string> permissions {get;set;} = new Dictionary<long, string>();
 
     //NOTE: values will have some content-specific things!
-    [FromField("")] //Empty field means something special, their field can be included but is not mapped to any particular field in the database
+    [FromField("")]
     public Dictionary<string, string> values {get;set;} = new Dictionary<string, string>();
 
     //Although these are NOT searchable with a standard search system, they do at least have 
@@ -55,7 +55,7 @@ public class ContentView : IIdView
     public long lastCommentId {get;set;}
 
     [Searchable]
-    [FromField("")]
+    [FromField("")] 
     public int commentCount {get;set;}
 
     [Searchable]

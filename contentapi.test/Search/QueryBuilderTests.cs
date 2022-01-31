@@ -40,7 +40,7 @@ public class QueryBuilderTests : UnitTestBase
         Assert.Equal("user", result.type);
         Assert.Equal(RequestType.user, result.requestType);
         Assert.NotNull(result.typeInfo);
-        Assert.Equal("users", result.typeInfo.table);
+        Assert.Equal("users", result.typeInfo.modelTable);
         Assert.NotEmpty(result.requestFields);
     }
 
@@ -65,7 +65,7 @@ public class QueryBuilderTests : UnitTestBase
         };
 
         var fields = service.ComputeRealFields(req);
-        Assert.True(new HashSet<string>(req.typeInfo.queryableFields).SetEquals(fields), "Star didn't generate all queryable fields in ComputeRealFields!");
+        Assert.True(new HashSet<string>(req.typeInfo.fields.Keys).SetEquals(fields), "Star didn't generate all queryable fields in ComputeRealFields!");
     }
 
     [Fact]
@@ -77,7 +77,7 @@ public class QueryBuilderTests : UnitTestBase
         };
 
         var fields = service.ComputeRealFields(req);
-        var realSet = req.typeInfo.queryableFields.Except(new[] {"id","username"});
+        var realSet = req.typeInfo.fields.Keys.Except(new[] {"id","username"});
         Assert.True(new HashSet<string>(realSet).SetEquals(fields), "Inverted didn't generate correct set in ComputeRealFields!");
     }
 
