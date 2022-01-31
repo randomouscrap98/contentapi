@@ -14,7 +14,7 @@ public class AboutSearchField
     /// Whether this particular field is even pulled from the database or done within the api itself. It is RARE for
     /// a field to be computed...
     /// </summary>
-    public bool computed {get;set;} = false;
+    //public bool computed {get;set;} = false;
 
     /// <summary>
     /// An estimated rating for how expensive this field is to pull. For additional clarity, fields which can't be pulled will have this set to -1

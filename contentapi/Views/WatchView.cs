@@ -15,7 +15,7 @@ public class WatchView : IIdView
     public long contentId { get; set; }
 
     [Searchable]
-    [WriteRule(WriteRuleType.None)]
+    [WriteRule(WriteRuleType.AutoUserId)] //Needs to be the user that sent the watchId
     public long userId { get; set; }
 
     [Searchable]

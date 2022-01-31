@@ -24,6 +24,7 @@ public class ContentView : IIdView
     public DateTime createDate { get; set; }
 
     [Searchable]
+    [WriteRule(WriteRuleType.ReadOnly, WriteRuleType.ReadOnly)]  //This is set by the system, the user has no control over it.
     public InternalContentType internalType {get;set;}
 
     [Searchable]
