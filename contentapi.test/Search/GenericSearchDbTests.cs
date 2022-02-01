@@ -31,6 +31,7 @@ public class GenericSearchDbTests : UnitTestBase, IClassFixture<DbUnitTestSearch
             fixture.GetService<IMapper>(), fixture.GetService<IQueryBuilder>(), 
             fixture.GetService<IPermissionService>());
         //dbcon = conWrap.Connection;
+        //fixture.ResetDatabase();
     }
 
     [Fact]

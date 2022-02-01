@@ -56,21 +56,26 @@ public class DbWriterTest : ViewUnitTestBase, IClassFixture<DbUnitTestSearchFixt
         var evs = events.Events.Where(x => x.refId == id && x.action == expected && x.type == type && x.userId == userId);
         Assert.NotNull(evs);
         Assert.Single(evs);
+        AssertDateClose(evs.First().date);
         return evs.First();
     }
+
     protected void AssertContentEventMatches(ContentView content, long userId, UserAction expected)
     {
         //Ensure the events are reported correctly.
         //REMEMBER: we're looking for an ACTIVITY event, so the id is the revision id!
         var ev = AssertEventMatchesBase(content.lastRevisionId, expected, userId, EventType.activity);
-        AssertDateClose(ev.date);
     }
 
     protected void AssertCommentEventMatches(CommentView comment, long userId, UserAction expected)
     {
         //Ensure the events are reported correctly
         var ev = AssertEventMatchesBase(comment.id, expected, userId, EventType.comment);
-        AssertDateClose(ev.date);
+    }
+
+    protected void AssertUserEventMatches(UserView user, long userId, UserAction expected)
+    {
+        var ev = AssertEventMatchesBase(user.id, expected, userId, EventType.user);
     }
 
 
@@ -529,6 +534,35 @@ public class DbWriterTest : ViewUnitTestBase, IClassFixture<DbUnitTestSearchFixt
         {
             await writer.WriteAsync(original, uid);
         });
+    }
+
+    [Theory]
+    [InlineData((int)UserVariations.Super, (int)UserVariations.Super, true)]
+    [InlineData((int)UserVariations.Super, 1 + (int)UserVariations.Super, true)] //this is still NOT super
+    [InlineData((int)UserVariations.Super, 2 + (int)UserVariations.Super, false)] //this is still NOT super
+    public async Task WriteAsync_BasicUser(long userId, long writerId, bool allowed) //long uid, long parentId, bool allowed)
+    {
+        var user = await searcher.GetById<UserView>(RequestType.user, userId);
+
+        //Modify fields we're allowed to modify
+        user.username = "somethingNEW";
+        user.avatar = "heck"; //TODO: there's no checks on avatar yet!
+        user.special = "somethingSTUPID";
+
+        if(allowed)
+        {
+            var result = await writer.WriteAsync(user, writerId);
+            StandardUserEqualityCheck(user, result, writerId);
+            AssertUserEventMatches(result, writerId, UserAction.update);
+            //AssertCommentEventMatches(result, uid, UserAction.create);
+        }
+        else
+        {
+            await Assert.ThrowsAnyAsync<ForbiddenException>(async () =>
+            {
+                await writer.WriteAsync(user, writerId);
+            });
+        }
     }
 
     [Theory]

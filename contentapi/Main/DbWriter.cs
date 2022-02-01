@@ -150,22 +150,25 @@ public class DbWriter : IDbWriter
             var exView = existing as UserView;
             
             //NOTE: adding groups to groups is supported but does not do what users expect it to do: you cannot create nested groups!
-            await ValidateGroups(uView.groups);
+            await ValidateGroups(uView.groups, requester);
 
             //Users aren't created here except by supers? This might change sometime
             if(action == UserAction.create)
             {
                 if(!requester.super)
-                    throw new RequestException("You can't create users or groups through this endpoint unless you're a super user!");
+                    throw new ForbiddenException("You can't create users or groups through this endpoint unless you're a super user!");
             }
 
             if(action == UserAction.update)
             {
                 if(requester.id != uView.id && !requester.super)
-                    throw new RequestException("You cannot modify users other than yourself unless you're a super user!");
+                    throw new ForbiddenException("You cannot modify users other than yourself unless you're a super user!");
 
                 if(uView.super != exView?.super && !requester.super)
-                    throw new RequestException("You cannot modify the super state unless you're a super user!");
+                    throw new ForbiddenException("You cannot modify the super state unless you're a super user!");
+
+                //if(!uView.groups.OrderBy(x => x).SequenceEqual() && !requester.super)
+                //    throw new ForbiddenException("You cannot modify your own groups unless you're a super user!");
             }
         }
         else 
@@ -211,6 +214,7 @@ public class DbWriter : IDbWriter
         //ALSO we specifically ask to throw on deleted content, because we don't want ANYBODY to be touching that stuff
         //through this interface. Deletes require a special restore!
         T? existing = view.id == 0 ? null : await searcher.GetById<T>(requestType, view.id, true);
+        //object? existingRaw = view.id == 0 ? null : await searcher.QueryRawAsync($"select * from {typeInfo.}")
 
         //It's more important to throw a NotFound exception than the permission exception, it keeps things more consistent, so
         //keep this call down here.
@@ -563,6 +567,7 @@ public class DbWriter : IDbWriter
         if(unmapped.Count > 0)
             logger.LogWarning($"Fields '{string.Join(",", unmapped)}' not mapped in user!");
 
+
         if(work.action == UserAction.delete)
         {
             //These groups are added later anyway, don't worry about it being after map
@@ -575,6 +580,17 @@ public class DbWriter : IDbWriter
             user.special = "";
             user.hidelist = "";
             user.super = false;
+        }
+        else if(work.action == UserAction.update)
+        {
+            //Users are special: we have to go get the original so we can preserve some of the fields. We can be pretty sure a lookup by id will work because
+            //we've had so much validation before we get here.
+            var original = searcher.ToStronglyTyped<User>(await searcher.QueryRawAsync($"select * from {work.typeInfo.modelTable} where id = @id", new Dictionary<string, object> {{"id", work.view.id}})).First();
+            user.registrationKey = original.registrationKey;
+            user.hidelist = original.hidelist;
+            user.password = original.password;
+            user.salt = original.salt;
+            user.editDate = DateTime.UtcNow;
         }
 
         //Always need an ID to link to, so we actually need to create the content first and get the ID.
@@ -606,11 +622,6 @@ public class DbWriter : IDbWriter
                     relatedId = x,
                     createDate = DateTime.UtcNow
                 }), tsx);
-
-                //These insert entire lists.
-                //await dbcon.InsertAsync(snapshot.values, tsx);
-                //await dbcon.InsertAsync(snapshot.permissions, tsx);
-                //await dbcon.InsertAsync(snapshot.keywords, tsx);
             }
 
             //Write admin log only for specific circumstances, don't need to track everything users do
@@ -637,7 +648,7 @@ public class DbWriter : IDbWriter
         }
     }
 
-    public async Task ValidateGroups(List<long> groups)
+    public async Task ValidateGroups(List<long> groups, UserView requester)
     {
         //Nothing to check
         if(groups.Count == 0)
@@ -648,16 +659,20 @@ public class DbWriter : IDbWriter
 
         //Just go lookup the groups
         var utinfo = typeInfoService.GetTypeInfo<UserView>();
-        var foundGroups = await searcher.QueryRawAsync($"select id from {utinfo.modelTable} where id in @ids and type = @type", new Dictionary<string, object> {
+        var foundGroups = await searcher.QueryRawAsync($"select id,super from {utinfo.modelTable} where id in @ids and type = @type", new Dictionary<string, object> {
             { "ids", groups },
             { "type", UserType.group }
         });
-        var foundGroupIds = foundGroups.Select(x => x["id"]);
+        //var foundGroupIds = foundGroups.Select(x => x["id"]);
 
         foreach(var id in groups)
         {
-            if (!foundGroupIds.Contains(id))
+            var fg = foundGroups.FirstOrDefault(x => id.Equals(x["id"]));
+
+            if(fg == null)
                 throw new ArgumentException($"Group {id} in user group set not found in database! Note: only groups can be added, not users!");
+            else if((long)fg["super"] > 0 && !requester.super)
+                throw new ForbiddenException($"You can't put yourself in restricted group {id}!");
         }
     }
 

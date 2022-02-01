@@ -73,6 +73,19 @@ public class ViewUnitTestBase : UnitTestBase
         AssertPermissionsNormal(original, result);
     }
 
+    protected void StandardUserEqualityCheck(UserView original, UserView result, long uid)
+    {
+        Assert.True(result.id > 0, "ID was not assigned to returned view!");
+        Assert.Equal(original.username, result.username);
+        Assert.Equal(original.special, result.special);
+        Assert.Equal(original.createDate, result.createDate);
+        Assert.Equal(original.id, result.id);
+        Assert.Equal(original.avatar, result.avatar);
+        Assert.Equal(original.registered, result.registered);
+        Assert.Equal(original.super, result.super);
+        Assert.True(original.groups.OrderBy(x => x).SequenceEqual(result.groups.OrderBy(x => x)), $"Groups not the same in user {result.id}!");
+    }
+
     protected void StandardCommentEqualityCheck(CommentView original, CommentView result, long uid)
     {
         AssertDateClose(result.createDate);
