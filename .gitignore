@@ -39,7 +39,7 @@ msbuild.wrn
 #mystuff
 ignore/
 contentapi.hardtests
-contentapi/*content.db
+contentapi/*.db
 contentapi/LanguageFiles
 mytemp
 secrets.json
