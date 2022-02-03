@@ -31,6 +31,7 @@ public class QueryBuilder : IQueryBuilder
     //These fields are too difficult to modify with the attributes, so we do it in code here
     protected readonly Dictionary<(RequestType, string),string> StandardComplexFields = new Dictionary<(RequestType, string), string> {
         { (RequestType.user, "registered"), $"(registrationKey IS NULL) as registered" },
+        { (RequestType.user, "deleted"), $"(salt = '') as deleted" },
     };
 
     //Some searches can easily be modified afterwards with constants, put that here.

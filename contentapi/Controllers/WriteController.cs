@@ -23,6 +23,7 @@ namespace contentapi.Controllers;
 //    }
 //}
 
+[Authorize()]
 public class WriteController : BaseController
 {
     protected IDbWriter writer;
@@ -37,41 +38,51 @@ public class WriteController : BaseController
         //this.queryBuilder = queryBuilder;
     }
 
-    [Authorize()]
     [HttpPost("comment")]
-    public Task<ActionResult<CommentView>> WriteCommentAsync([FromBody]CommentView comment)
-    {
-        return MatchExceptions(async () => {
-            return await writer.WriteAsync(comment, GetUserIdStrict()); //message used for activity and such
-        });
-    }
+    public Task<ActionResult<CommentView>> WriteCommentAsync([FromBody]CommentView comment) =>
+        MatchExceptions(async () => await writer.WriteAsync(comment, GetUserIdStrict())); //message used for activity and such
 
-    [Authorize()]
     [HttpPost("page")]
-    public Task<ActionResult<PageView>> WritePageAsync([FromBody]PageView page, [FromQuery]string? activityMessage)
-    {
-        return MatchExceptions(async () => {
-            return await writer.WriteAsync(page, GetUserIdStrict(), activityMessage); //message used for activity and such
-        });
-    }
+    public Task<ActionResult<PageView>> WritePageAsync([FromBody]PageView page, [FromQuery]string? activityMessage) =>
+        MatchExceptions(async () => await writer.WriteAsync(page, GetUserIdStrict(), activityMessage)); //message used for activity and such
 
-    [Authorize()]
     [HttpPost("file")]
-    public Task<ActionResult<FileView>> WriteFileAsync([FromBody]FileView file, [FromQuery]string? activityMessage)
-    {
-        return MatchExceptions(async () => {
-            return await writer.WriteAsync(file, GetUserIdStrict(), activityMessage); //message used for activity and such
-        });
-    }
+    public Task<ActionResult<FileView>> WriteFileAsync([FromBody]FileView file, [FromQuery]string? activityMessage) =>
+        MatchExceptions(async () => await writer.WriteAsync(file, GetUserIdStrict(), activityMessage)); //message used for activity and such
 
-    [Authorize()]
     [HttpPost("module")]
-    public Task<ActionResult<ModuleView>> WriteModuleAsync([FromBody]ModuleView module, [FromQuery]string? activityMessage)
-    {
-        return MatchExceptions(async () => {
-            return await writer.WriteAsync(module, GetUserIdStrict(), activityMessage); //message used for activity and such
-        });
-    }
+    public Task<ActionResult<ModuleView>> WriteModuleAsync([FromBody]ModuleView module, [FromQuery]string? activityMessage) =>
+        MatchExceptions(async () => await writer.WriteAsync(module, GetUserIdStrict(), activityMessage)); //message used for activity and such
+
+
+    //This is SLIGHTLY special in that user writes are mostly for self updates... but might be used for new groups as well? You also
+    //can't update PRIVATE data through this endpoint
+    [HttpPost("user")]
+    public Task<ActionResult<UserView>> WriteUserAsync([FromBody]UserView user) =>
+        MatchExceptions(async () => await writer.WriteAsync(user, GetUserIdStrict())); //message used for activity and such
+
+
+    [HttpPost("comment/delete/{id}")]
+    public Task<ActionResult<CommentView>> DeleteCommentAsync([FromRoute]long id) =>
+        MatchExceptions(async () => await writer.DeleteAsync<CommentView>(id, GetUserIdStrict())); //message used for activity and such
+
+    [HttpPost("page/delete/{id}")]
+    public Task<ActionResult<PageView>> DeletePageAsync([FromRoute]long id, [FromQuery]string? activityMessage) =>
+        MatchExceptions(async () => await writer.DeleteAsync<PageView>(id, GetUserIdStrict(), activityMessage)); //message used for activity and such
+
+    [HttpPost("file/delete/{id}")]
+    public Task<ActionResult<FileView>> DeleteFileAsync([FromRoute]long id, [FromQuery]string? activityMessage) =>
+        MatchExceptions(async () => await writer.DeleteAsync<FileView>(id, GetUserIdStrict(), activityMessage)); //message used for activity and such
+
+    [HttpPost("module/delete/{id}")]
+    public Task<ActionResult<ModuleView>> DeleteModuleAsync([FromRoute]long id, [FromQuery]string? activityMessage) =>
+        MatchExceptions(async () => await writer.DeleteAsync<ModuleView>(id, GetUserIdStrict(), activityMessage)); //message used for activity and such
+
+
+    //Again slightly special since deleting users is GENERALLY um... not what we want to do?
+    [HttpPost("user/delete/{id}")]
+    public Task<ActionResult<UserView>> DeleteUserAsync([FromRoute]long id) =>
+        MatchExceptions(async () => await writer.DeleteAsync<UserView>(id, GetUserIdStrict())); //message used for activity and such
 
     //[HttpPost()]
     //public Task<ActionResult<RequestResponse>> RequestAsync([FromBody]SearchRequests search)

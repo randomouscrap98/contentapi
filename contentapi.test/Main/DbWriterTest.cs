@@ -566,6 +566,40 @@ public class DbWriterTest : ViewUnitTestBase, IClassFixture<DbUnitTestSearchFixt
     }
 
     [Theory]
+    [InlineData((int)UserVariations.Super, (int)UserVariations.Super, false)] //Users can't delete themselves
+    [InlineData((int)UserVariations.Super, 1+ (int)UserVariations.Super, true)] //Supers can delete them though
+    [InlineData(1 + (int)UserVariations.Super, 1 + (int)UserVariations.Super, true)] //Supers can delete themselves? Maybe...
+    [InlineData(1 + (int)UserVariations.Super, (int)UserVariations.Super, false)] //Users can't delete other users
+    public async Task WriteAsync_BasicUserDelete(long userId, long deleterId, bool allowed)
+    {
+        //var comment = GetNewCommentView(1 + (int)ContentVariations.AccessByAll);
+        //var written = await writer.WriteAsync(comment, poster);
+        //StandardCommentEqualityCheck(comment, written, poster);
+        var user = await searcher.GetById<UserView>(RequestType.user, userId, true);
+
+        Assert.False(user.deleted);
+
+        //Now try to delete it!
+        if(allowed)
+        {
+            var result = await writer.DeleteAsync<UserView>(userId, deleterId);
+            Assert.Empty(result.special);
+            Assert.Empty(result.avatar);
+            Assert.False(result.super); //Regardless of if they WERE super in the past, no information left!!
+            Assert.NotEqual(user.username, result.username); //Obscure the username SOMEHOW
+            Assert.True(result.deleted);
+            Assert.True(result.id > 0);
+        }
+        else
+        {
+            await Assert.ThrowsAnyAsync<ForbiddenException>(async () =>
+            {
+                await writer.DeleteAsync<UserView>(userId, deleterId);
+            });
+        }
+    }
+
+    [Theory]
     [InlineData(1, "CRUD", true)]
     [InlineData(0, "CR", true)]
     [InlineData(2, "ud", true)]

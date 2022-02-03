@@ -170,6 +170,12 @@ public class DbWriter : IDbWriter
                 //if(!uView.groups.OrderBy(x => x).SequenceEqual() && !requester.super)
                 //    throw new ForbiddenException("You cannot modify your own groups unless you're a super user!");
             }
+
+            if(action == UserAction.delete)
+            {
+                if(!requester.super)
+                    throw new ForbiddenException("Only super users can delete users!");
+            }
         }
         else 
         {
@@ -572,6 +578,7 @@ public class DbWriter : IDbWriter
         {
             //These groups are added later anyway, don't worry about it being after map
             work.view.groups.Clear();
+            user.avatar = "";               //This might need special attention!
             user.username = "deleted_user";
             user.password = "";
             user.registrationKey = "";

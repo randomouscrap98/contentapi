@@ -172,9 +172,13 @@ public class UserService : IUserService
     {
         //First, find the user they're even talking about. 
 
+        //TODO: Consider making a special user view specifically for working with real user data, so we don't have to keep doing raw database
+        //stuff when it comes to private user data. For instance, you have to check if "salt" is non-empty here, but that's very dependent on
+        //how we mark if users are deleted or not. We ASSUME we don't want the salt (or the password) kept on deletion, BUT...
+
         //Next, get the LEGITIMATE data from the database
         var userSecrets = (await searcher.QueryRawAsync(
-            $"select id, password, salt, registrationKey from {searcher.GetDatabaseForType<UserView>()} where {fieldname} = @user",
+            $"select id, password, salt, registrationKey from {searcher.GetDatabaseForType<UserView>()} where {fieldname} = @user and salt <> ''",
             new Dictionary<string, object> { { "user", value }})).FirstOrDefault();
 
         if(userSecrets == null)

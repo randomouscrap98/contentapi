@@ -31,10 +31,13 @@ public class UserView : IIdView
 
     [Searchable]
     //WARN: computed REMOVES this field from the query builder!
-    //[Computed]
-    //[FromField("")] //Not a field you can select
     [WriteRule(WriteRuleType.DefaultValue, WriteRuleType.ReadOnly)]
     public bool registered {get;set;}
+
+    [Searchable]
+    //WARN: computed REMOVES this field from the query builder!
+    [WriteRule(WriteRuleType.DefaultValue, WriteRuleType.ReadOnly)]
+    public bool deleted {get;set;}
 
     //[FromField("")]
     [Computed]
