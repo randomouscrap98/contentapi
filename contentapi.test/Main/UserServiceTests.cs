@@ -126,6 +126,7 @@ public class UserServiceTests : UnitTestBase, IClassFixture<DbUnitTestBase>
         var token = await service.CompleteRegistration(user.id, service.RegistrationLog[user.id]);
         var loginToken = await service.LoginUsernameAsync("hello", "short");
         Assert.False(string.IsNullOrWhiteSpace(token));
+        Assert.False(string.IsNullOrWhiteSpace(loginToken));
     }
 
     [Fact]
@@ -135,6 +136,7 @@ public class UserServiceTests : UnitTestBase, IClassFixture<DbUnitTestBase>
         var token = await service.CompleteRegistration(user.id, service.RegistrationLog[user.id]);
         var loginToken = await service.LoginEmailAsync("email@email.com", "short");
         Assert.False(string.IsNullOrWhiteSpace(token));
+        Assert.False(string.IsNullOrWhiteSpace(loginToken));
     }
 
     [Fact]

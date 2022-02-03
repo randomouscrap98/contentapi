@@ -579,7 +579,7 @@ public class DbWriter : IDbWriter
             //These groups are added later anyway, don't worry about it being after map
             work.view.groups.Clear();
             user.avatar = "";               //This might need special attention!
-            user.username = "deleted_user";
+            user.username = $"deleted_user_{work.view.id}"; //Want all usernames to be unique probably...
             user.password = "";
             user.registrationKey = "";
             user.salt = "";
