@@ -183,7 +183,7 @@ public class UserService : IUserService
         return GetNewTokenForUser(userId);
    }
 
-    protected async Task<string> LoginGeneric(string fieldname, string value, string password, TimeSpan? expireOverride)
+    protected async Task<string> LoginGeneric(string fieldname, object value, string password, TimeSpan? expireOverride)
     {
         //First, find the user they're even talking about. 
 
@@ -215,14 +215,20 @@ public class UserService : IUserService
         return LoginGeneric("email", email, password, expireOverride);
     }
 
-    public void InvalidateAllTokens(long userId)
-    {
-        authTokenService.InvalidateAllTokens(userId);
-    }
-
     public Task<string> LoginUsernameAsync(string username, string password, TimeSpan? expireOverride = null)
     {
         return LoginGeneric("username", username, password, expireOverride);
+    }
+
+    public async Task VerifyPasswordAsync(long userId, string password)
+    {
+        //The login will tell us all the exceptions we need to know
+        await LoginGeneric("id", userId, password, null);
+    }
+
+    public void InvalidateAllTokens(long userId)
+    {
+        authTokenService.InvalidateAllTokens(userId);
     }
 
     public async Task<UserGetPrivateData> GetPrivateData(long userId)

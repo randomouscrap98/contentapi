@@ -144,4 +144,29 @@ public class UserController : BaseController
                 throw new InvalidOperationException("The emailer is not set up for logging! This endpoint is only for the null email service")).Log);
         });
     }
+
+    [Authorize()]
+    [HttpGet("privatedata")]
+    public Task<ActionResult<UserGetPrivateData>> GetPrivateData()
+    {
+        return MatchExceptions(() => userService.GetPrivateData(GetUserIdStrict()));
+    }
+
+    public class UserSetPrivateDataProtected : UserSetPrivateData
+    {
+        public string currentPassword {get;set;} = "";
+    }
+
+    [Authorize()]
+    [HttpPost("privatedata")]
+    public Task<ActionResult<bool>> SetPrivateData([FromBody]UserSetPrivateDataProtected data)
+    {
+        return MatchExceptions(async () => 
+        {
+            var userId = GetUserIdStrict();
+            await userService.VerifyPasswordAsync(userId, data.currentPassword); //have to make sure the password given is accurate
+            await userService.SetPrivateData(userId, data);
+            return true;
+        });
+    }
 }

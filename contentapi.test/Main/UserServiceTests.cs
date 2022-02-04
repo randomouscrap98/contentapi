@@ -142,6 +142,16 @@ public class UserServiceTests : UnitTestBase, IClassFixture<DbUnitTestBase>
     }
 
     [Fact]
+    public async Task CreateNewUser_VerifyPassword()
+    {
+        var user = await service.CreateNewUser("hello", "short", "email@email.com");
+        var token = await service.CompleteRegistration(user.id, service.RegistrationLog[user.id]);
+        await service.VerifyPasswordAsync(user.id, "short");
+
+        await Assert.ThrowsAnyAsync<Exception>(() => service.VerifyPasswordAsync(user.id, "shorts"));
+    }
+
+    [Fact]
     public async Task CreateNewUser_Login_BadPassword()
     {
         var user = await service.CreateNewUser("hello", "short", "email@email.com");
