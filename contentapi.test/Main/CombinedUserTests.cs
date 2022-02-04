@@ -71,6 +71,9 @@ public class CombinedUserTests : ViewUnitTestBase, IClassFixture<DbUnitTestSearc
         var updateResult = await writer.WriteAsync(user, user.id);
         loginToken = await service.LoginUsernameAsync("hello", Password);
         Assert.False(string.IsNullOrWhiteSpace(loginToken)); //login should still work even though they changed something about them
+        //You should also still be able to login with your email
+        loginToken = await service.LoginEmailAsync("email@email.com", Password);
+        Assert.False(string.IsNullOrWhiteSpace(loginToken)); //login should still work even though they changed something about them
     }
 
     [Fact] //WARN: This may eventually STOP working if username changes... well, change

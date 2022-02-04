@@ -181,4 +181,71 @@ public class UserServiceTests : UnitTestBase, IClassFixture<DbUnitTestBase>
             var user = await service.CreateNewUser(username, password, "email@email.com");
         });
     }
+
+    [Fact]
+    public async Task GetPrivateData()
+    {
+        //Assume this goes OK
+        var user = await service.CreateNewUser("hello", "short", "email@email.com");
+        var token = await service.CompleteRegistration(user.id, service.RegistrationLog[user.id]);
+
+        //Now go get the email and hidelist. Hidelist should just be an empty array
+        var privateData = await service.GetPrivateData(user.id);
+
+        Assert.Equal("email@email.com", privateData.email);
+        Assert.NotNull(privateData.hideList);
+        Assert.Empty(privateData.hideList);
+    }
+
+    //Set some data
+    [Theory]
+    [InlineData("newemail@junk.com", true)]
+    [InlineData("email@email.com", false)]
+    [InlineData("", false)]
+    public async Task SetPrivateData_Email(string email, bool success)
+    {
+        //Assume this goes OK
+        var user = await service.CreateNewUser("hello", "short", "email@email.com");
+        var token = await service.CompleteRegistration(user.id, service.RegistrationLog[user.id]);
+
+        //Now go update the email
+        var setData = new Func<Task>(() => service.SetPrivateData(user.id, new UserSetPrivateData() { email = email }));
+
+        if(success)
+        {
+            await setData();
+            var loginToken = await service.LoginEmailAsync(email, "short");
+            Assert.False(string.IsNullOrWhiteSpace(loginToken));
+        }
+        else
+        {
+            await Assert.ThrowsAnyAsync<ArgumentException>(setData);
+        }
+    }
+
+    [Theory]
+    [InlineData("fine", true)]
+    [InlineData("alsofine", true)]
+    [InlineData("NO", false)]
+    [InlineData("", false)]
+    public async Task SetPrivateData_Password(string password, bool success)
+    {
+        //Assume this goes OK
+        var user = await service.CreateNewUser("hello", "short", "email@email.com");
+        var token = await service.CompleteRegistration(user.id, service.RegistrationLog[user.id]);
+
+        //Now go update the password
+        var setData = new Func<Task>(() => service.SetPrivateData(user.id, new UserSetPrivateData() { password = password }));
+
+        if(success)
+        {
+            await setData();
+            var loginToken = await service.LoginUsernameAsync("hello", password);
+            Assert.False(string.IsNullOrWhiteSpace(loginToken));
+        }
+        else
+        {
+            await Assert.ThrowsAnyAsync<ArgumentException>(setData);
+        }
+    }
 }

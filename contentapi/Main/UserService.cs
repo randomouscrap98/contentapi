@@ -63,6 +63,17 @@ public class UserService : IUserService
             throw new ArgumentException($"Username '{username}' already taken!");
     }
 
+    public async Task CheckValidEmailAsync(string email)
+    {
+        if(string.IsNullOrWhiteSpace(email))
+            throw new ArgumentException("Must provide email to create new user!");
+
+        var existing = await dbcon.ExecuteScalarAsync<int>($"select count(*) from {searcher.GetDatabaseForType<UserView>()} where email = @user", new { user = email });
+
+        if(existing > 0)
+            throw new ArgumentException($"Duplicate email in system: '{email}'");
+    }
+
     public void CheckValidPassword(string password)
     {
         if(string.IsNullOrWhiteSpace(password))
@@ -73,30 +84,34 @@ public class UserService : IUserService
             throw new ArgumentException($"Password too long! Must be at most {config.MaxPasswordLength} characters");
     }
 
+    /// <summary>
+    /// Item1 is salt, Item2 is password, both are ready to be stored in a user
+    /// </summary>
+    /// <param name="password"></param>
+    /// <returns></returns>
+    public Tuple<string,string> GenerateNewPasswordData(string password)
+    {
+        var salt = hashService.GetSalt();
+        return Tuple.Create(Convert.ToBase64String(salt), Convert.ToBase64String(hashService.GetHash(password, salt)));
+    }
+
     public async Task<UserView> CreateNewUser(string username, string password, string email)
     {
         await CheckValidUsernameAsync(username);
+        await CheckValidEmailAsync(email);
         CheckValidPassword(password);
-
-        if(string.IsNullOrWhiteSpace(email))
-            throw new ArgumentException("Must provide email to create new user!");
-
-        var existing = await dbcon.ExecuteScalarAsync<int>($"select count(*) from {searcher.GetDatabaseForType<UserView>()} where email = @user", new { user = email });
-        if(existing > 0)
-            throw new ArgumentException($"Duplicate email in system: '{email}'");
-        
-        var salt = hashService.GetSalt();
 
         var user = new Db.User {
             username = username,
             email = email,
-            salt = Convert.ToBase64String(salt),
             createDate = DateTime.UtcNow,
             registrationKey = Guid.NewGuid().ToString(),
             type = UserType.user
         };
 
-        user.password = Convert.ToBase64String(hashService.GetHash(password, salt));
+        var passwordData = GenerateNewPasswordData(password);
+        user.salt = passwordData.Item1;
+        user.password = passwordData.Item2;
 
         long id;
 
@@ -208,5 +223,59 @@ public class UserService : IUserService
     public Task<string> LoginUsernameAsync(string username, string password, TimeSpan? expireOverride = null)
     {
         return LoginGeneric("username", username, password, expireOverride);
+    }
+
+    public async Task<UserGetPrivateData> GetPrivateData(long userId)
+    {
+        var result = new UserGetPrivateData();
+        var queryResult = await searcher.QueryRawAsync($"select * from {searcher.GetDatabaseForType<UserView>()} where id = @id", 
+            new Dictionary<string, object>() { { "id", userId }});
+        var castResult = searcher.ToStronglyTyped<User>(queryResult);
+
+        if(castResult.Count != 1)
+            throw new ArgumentException($"Couldn't find user {userId}");
+        
+        //This could also be done with an auto-mapper but
+        result.email = castResult.First().email;
+        result.hideList = castResult.First().hideListParsed;
+
+        return result;
+    }
+
+    public async Task SetPrivateData(long userId, UserSetPrivateData data)
+    {
+        var sets = new Dictionary<string,string>();
+
+        //Go find the data to add
+        if(data.password != null)
+        {
+            CheckValidPassword(data.password);
+            var pwdata = GenerateNewPasswordData(data.password);
+            sets.Add("salt", pwdata.Item1);
+            sets.Add("password", pwdata.Item2);
+        }
+
+        if(data.email != null)
+        {
+            await CheckValidEmailAsync(data.email);
+            sets.Add("email", data.email);
+        }
+
+        if(data.hideList != null) //TODO: maybe move the parsing/generation code for hidelists out of the user data object
+            sets.Add("hidelist", User.HideListToString(data.hideList));
+
+        //They didn't appear to add any data!
+        if(sets.Count == 0)
+            throw new ArgumentException($"No private data sent for user {userId}!");
+        
+        var parameters = new Dictionary<string, object> {{ "id" , userId }};
+
+        foreach(var kp in sets)
+            parameters.Add(kp.Key, kp.Value);
+
+        var count = await dbcon.ExecuteAsync($"update users set {string.Join(",", sets.Select(x => $"{x.Key} = @{x.Key}"))} where id = @id", parameters);
+
+        if(count != 1)
+            throw new ArgumentException($"Couldn't find user {userId}");
     }
 }

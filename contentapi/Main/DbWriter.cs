@@ -598,6 +598,7 @@ public class DbWriter : IDbWriter
             user.password = original.password;
             user.salt = original.salt;
             user.editDate = DateTime.UtcNow;
+            user.email = original.email;
         }
 
         //Always need an ID to link to, so we actually need to create the content first and get the ID.

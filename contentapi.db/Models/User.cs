@@ -26,11 +26,15 @@ namespace contentapi.Db
         [Write(false)]
         public List<long> hideListParsed
         {
-            get
-            {
-                if (hidelist == null) return new List<long>();
-                return hidelist.Split(",".ToCharArray(), StringSplitOptions.RemoveEmptyEntries).Select(x => long.Parse(x.Trim())).ToList();
-            }
+            get { return StringToHideList(hidelist); }
+        }
+
+        //Why are these in here? Eh... it doesn't matter much I guess.
+        public static string HideListToString(List<long> hidelist) => string.Join(",", hidelist);
+        public static List<long> StringToHideList(string hidelist)
+        {
+            if (hidelist == null) return new List<long>();
+            return hidelist.Split(",".ToCharArray(), StringSplitOptions.RemoveEmptyEntries).Select(x => long.Parse(x.Trim())).ToList();
         }
     }
 
