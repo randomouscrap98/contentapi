@@ -1,4 +1,6 @@
 using System;
+using System.Collections.Generic;
+using System.Linq;
 using System.Threading.Tasks;
 using AutoMapper;
 using contentapi.Main;
@@ -117,5 +119,35 @@ public class CombinedUserTests : ViewUnitTestBase, IClassFixture<DbUnitTestSearc
 
         Assert.False(string.IsNullOrWhiteSpace(token));
         Assert.False(string.IsNullOrWhiteSpace(loginToken));
+    }
+
+    [Fact]
+    public async Task UpdatedUserUnmodifiedPrivates()
+    {
+        //Assume this worked
+        var user = await service.CreateNewUser("hello", Password, "email@email.com");
+        var token = await service.CompleteRegistration(user.id, await service.GetRegistrationKeyAsync(user.id));
+
+        //With no hidelist, try to modify other data
+        user.special = "seomthingNEWW";
+        var updateResult = await writer.WriteAsync(user, user.id);
+
+        //Then get the user's private data. it should all be fine.
+        var privateData = await service.GetPrivateData(user.id);
+        Assert.Equal("email@email.com", privateData.email);
+        Assert.Empty(privateData.hideList);
+
+        //Now set the hidelist
+        var newHidelist = new List<long> {5, 10} ;
+        await service.SetPrivateData(user.id, new UserSetPrivateData() { hideList = newHidelist });
+
+        //And then update the user AGAIN
+        user.special = "amazing";
+        updateResult = await writer.WriteAsync(user, user.id);
+
+        //Finally, make sure the private data is fine.
+        privateData = await service.GetPrivateData(user.id);
+        Assert.Equal("email@email.com", privateData.email);
+        Assert.True(newHidelist.SequenceEqual(privateData.hideList!));
     }
 }
