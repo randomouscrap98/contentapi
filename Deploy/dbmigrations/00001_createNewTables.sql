@@ -8,6 +8,7 @@ create table if not exists users (
     -- also need to mark supers, they're pulled from a file for some reason.
     -- maybe change that?
     super int not null default 0,
+    deleted int not null default 0,
     type int not null default 0,  --The type of user, can specify that it's a group
     editDate text,
     -- user view also has ban object, represents current ban

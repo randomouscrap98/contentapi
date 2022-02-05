@@ -116,7 +116,8 @@ public class DbUnitTestSearchFixture : DbUnitTestBase, IDisposable
                     //We don't have to test all the user stuff about this, so only the important fields
                     var group = new Db.User() {
                         username = $"group_{i}",
-                        type = Db.UserType.group
+                        type = Db.UserType.group,
+                        super = (i & (int)UserVariations.Super) > 0 //This may not actually set the group to super FYI...
                     };
 
                     users.Add(group);

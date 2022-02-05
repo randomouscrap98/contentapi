@@ -31,7 +31,7 @@ public class QueryBuilder : IQueryBuilder
     //These fields are too difficult to modify with the attributes, so we do it in code here
     protected readonly Dictionary<(RequestType, string),string> StandardComplexFields = new Dictionary<(RequestType, string), string> {
         { (RequestType.user, "registered"), $"(registrationKey IS NULL) as registered" },
-        { (RequestType.user, "deleted"), $"(salt = '') as deleted" },
+        //{ (RequestType.user, "deleted"), $"(salt = '') as deleted" }, // We USED to do it like this!
     };
 
     //Some searches can easily be modified afterwards with constants, put that here.
@@ -274,6 +274,8 @@ public class QueryBuilder : IQueryBuilder
 
             if(string.IsNullOrWhiteSpace(c))
                 throw new InvalidOperationException($"Can't remap field '{fieldName}': no complex field mapping defined in the query builder AND no real db column defined on the field! Computed: {r.typeInfo.fields[fieldName].computed}");
+            else if (c == fieldName)
+                return c;
             else
                 return $"{c} AS {fieldName}";
         }

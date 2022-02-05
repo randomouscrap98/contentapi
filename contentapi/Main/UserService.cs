@@ -193,7 +193,7 @@ public class UserService : IUserService
 
         //Next, get the LEGITIMATE data from the database
         var userSecrets = (await searcher.QueryRawAsync(
-            $"select id, password, salt, registrationKey from {searcher.GetDatabaseForType<UserView>()} where {fieldname} = @user and salt <> ''",
+            $"select id, password, salt, registrationKey from {searcher.GetDatabaseForType<UserView>()} where {fieldname} = @user and deleted=0",
             new Dictionary<string, object> { { "user", value }})).FirstOrDefault();
 
         if(userSecrets == null)

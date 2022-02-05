@@ -537,10 +537,12 @@ public class DbWriterTest : ViewUnitTestBase, IClassFixture<DbUnitTestSearchFixt
     }
 
     [Theory]
-    [InlineData((int)UserVariations.Super, (int)UserVariations.Super, true)]
-    [InlineData((int)UserVariations.Super, 1 + (int)UserVariations.Super, true)] //this is still NOT super
-    [InlineData((int)UserVariations.Super, 2 + (int)UserVariations.Super, false)] //this is still NOT super
-    public async Task WriteAsync_BasicUser(long userId, long writerId, bool allowed) //long uid, long parentId, bool allowed)
+    [InlineData((int)UserVariations.Super, (int)UserVariations.Super, true)]        //Can users update themselves? yes
+    [InlineData((int)UserVariations.Super + 1, (int)UserVariations.Super, true)]    //Can supers update other users? yes
+    [InlineData((int)UserVariations.Super + 2, (int)UserVariations.Super, false)]   //Non-supers can't update other users
+    [InlineData((int)UserVariations.Super, 1 + (int)UserVariations.Registered * 2, false)]        //WARN: A HACK! Only works if Registered is the last user variation! This ensures users can't update groups
+    [InlineData((int)UserVariations.Super + 1, 1 + (int)UserVariations.Registered * 2, true)]     //Supers can update groups
+    public async Task WriteAsync_BasicUpdateUserAndGroup(long writerId, long userId, bool allowed)
     {
         var user = await searcher.GetById<UserView>(RequestType.user, userId);
 

@@ -164,6 +164,7 @@ public class DbWriter : IDbWriter
 
             if(action == UserAction.update)
             {
+                //This luckily encompasses groups too, so nobody but supers can edit groups too
                 if(requester.id != uView.id && !requester.super)
                     throw new ForbiddenException("You cannot modify users other than yourself unless you're a super user!");
 
@@ -179,6 +180,9 @@ public class DbWriter : IDbWriter
                 if(!requester.super)
                     throw new ForbiddenException("Only super users can delete users!");
             }
+
+            if(uView.deleted)
+                throw new RequestException("Don't delete users by setting the deleted flag!");
         }
         else 
         {
@@ -590,6 +594,7 @@ public class DbWriter : IDbWriter
             user.special = "";
             user.hidelist = "";
             user.super = false;
+            user.deleted = true;
         }
         else if(work.action == UserAction.update)
         {
