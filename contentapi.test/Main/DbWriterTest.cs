@@ -566,6 +566,80 @@ public class DbWriterTest : ViewUnitTestBase, IClassFixture<DbUnitTestSearchFixt
     }
 
     [Theory]
+    [InlineData((int)UserVariations.Super, (int)UserVariations.Super, true, false)]     //Non-supers can't do anything with the super field, regardless of who they're doing it to
+    [InlineData((int)UserVariations.Super, (int)UserVariations.Super, false, true)]     //BUT, setting super to false when it's already false won't be noticed anyway...
+    [InlineData((int)UserVariations.Super, (int)UserVariations.Super + 1, true, false)]  
+    [InlineData((int)UserVariations.Super, (int)UserVariations.Super + 1, false, false)] 
+    [InlineData((int)UserVariations.Super + 1, (int)UserVariations.Super, true, true)]     //supers can do anything with the super field, regardless of who they're doing it to
+    [InlineData((int)UserVariations.Super + 1, (int)UserVariations.Super, false, true)] 
+    [InlineData((int)UserVariations.Super + 1, (int)UserVariations.Super + 1, true, true)]  
+    [InlineData((int)UserVariations.Super + 1, (int)UserVariations.Super + 1, false, true)] 
+    public async Task WriteAsync_SettingSuper(long writerId, long userId, bool super, bool allowed)
+    {
+        var user = await searcher.GetById<UserView>(RequestType.user, userId);
+
+        //Modify fields we're allowed to modify
+        user.super = super;
+
+        if(allowed)
+        {
+            var result = await writer.WriteAsync(user, writerId);
+            StandardUserEqualityCheck(user, result, writerId);
+            AssertUserEventMatches(result, writerId, UserAction.update);
+            Assert.Equal(super, result.super);
+        }
+        else
+        {
+            await Assert.ThrowsAnyAsync<ForbiddenException>(async () =>
+            {
+                await writer.WriteAsync(user, writerId);
+            });
+        }
+    }
+
+    [Theory]
+    [InlineData((int)UserVariations.Super, UserType.user, false, false)]        //Nobody can create users
+    [InlineData((int)UserVariations.Super, UserType.user, true, false)]         
+    [InlineData((int)UserVariations.Super + 1, UserType.user, false, false)]    
+    [InlineData((int)UserVariations.Super + 1, UserType.user, true, false)]    
+    [InlineData((int)UserVariations.Super, UserType.group, false, false)]        //Users can't create groups (for now)
+    [InlineData((int)UserVariations.Super, UserType.group, true, false)]         
+    [InlineData((int)UserVariations.Super + 1, UserType.group, false, true)]     //Supers can create groups (regardless of super)
+    [InlineData((int)UserVariations.Super + 1, UserType.group, true, true)]     
+    public async Task WriteAsync_NewUser_Gamut(long creatorId, UserType type, bool super, bool allowed) //long uid, long parentId, bool allowed)
+    {
+        //I think this is all you really need... maybe
+        var user = new UserView()
+        {
+            username = "whatever_dude",
+            type = type,
+            super = super
+        };
+
+        if(allowed)
+        {
+            var result = await writer.WriteAsync(user, creatorId);
+            AssertDateClose(result.createDate);
+            Assert.Equal(user.username, result.username);
+            Assert.Equal(user.type, result.type);
+            Assert.Equal(user.super, result.super);
+
+            //"Users" created through this endpoint should maaaybe be registered. This also ensures that, even if there are weird bugs,
+            //these users probably can't login
+            Assert.False(user.registered, $"New user {result.username} is somehow immediately registered!"); 
+            
+            AssertUserEventMatches(result, creatorId, UserAction.create);
+        }
+        else
+        {
+            await Assert.ThrowsAnyAsync<ForbiddenException>(async () =>
+            {
+                await writer.WriteAsync(user, creatorId);
+            });
+        }
+    }
+
+    [Theory]
     [InlineData((int)UserVariations.Super, (int)UserVariations.Super, false)] //Users can't delete themselves
     [InlineData((int)UserVariations.Super, 1+ (int)UserVariations.Super, true)] //Supers can delete them though
     [InlineData(1 + (int)UserVariations.Super, 1 + (int)UserVariations.Super, true)] //Supers can delete themselves? Maybe...

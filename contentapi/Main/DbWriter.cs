@@ -155,6 +155,9 @@ public class DbWriter : IDbWriter
             //Users aren't created here except by supers? This might change sometime
             if(action == UserAction.create)
             {
+                if(uView.type == UserType.user)
+                    throw new ForbiddenException("Nobody can create users outside of registration!");
+
                 if(!requester.super)
                     throw new ForbiddenException("You can't create users or groups through this endpoint unless you're a super user!");
             }
