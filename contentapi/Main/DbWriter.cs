@@ -581,6 +581,12 @@ public class DbWriter : IDbWriter
             logger.LogWarning($"Fields '{string.Join(",", unmapped)}' not mapped in user!");
 
 
+        if(work.action == UserAction.create)
+        {
+            //Ensure they can NEVER register, even if the user service somehow fails to catch it!
+            user.registrationKey = $"INVALID_{Guid.NewGuid()}";
+        }
+
         if(work.action == UserAction.delete)
         {
             //These groups are added later anyway, don't worry about it being after map
@@ -588,7 +594,7 @@ public class DbWriter : IDbWriter
             user.avatar = "";               //This might need special attention!
             user.username = $"deleted_user_{work.view.id}"; //Want all usernames to be unique probably...
             user.password = "";
-            user.registrationKey = "";
+            user.registrationKey = $"INVALID_{Guid.NewGuid()}";
             user.salt = "";
             user.email = "";
             user.special = "";

@@ -276,4 +276,5 @@ public class UserServiceTests : UnitTestBase, IClassFixture<DbUnitTestBase>
 
         Assert.True(newHidelist.SequenceEqual(privateData.hideList!));
     }
+
 }

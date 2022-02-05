@@ -5,6 +5,7 @@ using System.Threading.Tasks;
 using AutoMapper;
 using contentapi.Main;
 using contentapi.Search;
+using contentapi.Utilities;
 using contentapi.Views;
 using Xunit;
 
@@ -149,5 +150,30 @@ public class CombinedUserTests : ViewUnitTestBase, IClassFixture<DbUnitTestSearc
         privateData = await service.GetPrivateData(user.id);
         Assert.Equal("email@email.com", privateData.email);
         Assert.True(newHidelist.SequenceEqual(privateData.hideList!));
+    }
+
+    [Theory]
+    [InlineData((int)UserVariations.Super + 1, false)]
+    [InlineData((int)UserVariations.Super + 1, true)]
+    public async Task NoGroupLogin(long writerId, bool super)
+    {
+        //Go add a group real quick
+        var group = new UserView()
+        {
+            username = "whatever_dude",
+            type = Db.UserType.group,
+            super = super
+        };
+
+        var result = await writer.WriteAsync(group, writerId);
+        Assert.Equal(group.username, result.username);
+
+        //Make sure NONE OF THESE succeed
+
+        //Should be some kind of forbidden exception for clarity: groups can't login
+        await Assert.ThrowsAnyAsync<ForbiddenException>(() => service.LoginUsernameAsync(result.username, ""));
+        await Assert.ThrowsAnyAsync<ForbiddenException>(() => service.VerifyPasswordAsync(result.id, ""));
+        await Assert.ThrowsAnyAsync<ForbiddenException>(() => service.LoginUsernameAsync(result.username, "abc"));
+        await Assert.ThrowsAnyAsync<ForbiddenException>(() => service.VerifyPasswordAsync(result.id, "abc"));
     }
 }

@@ -83,6 +83,15 @@ public class UserService : IUserService
         if(password.Length > config.MaxPasswordLength)
             throw new ArgumentException($"Password too long! Must be at most {config.MaxPasswordLength} characters");
     }
+    
+    public void CheckValidUser(IDictionary<string, object> result)
+    {
+        if(!result.ContainsKey("type"))
+            throw new InvalidOperationException("Tried to check for valid user without retrieving type!");
+
+        if((long)result["type"] != (long)UserType.user)
+            throw new ForbiddenException("Can only perform user session actions with real users!");
+    }
 
     /// <summary>
     /// Item1 is salt, Item2 is password, both are ready to be stored in a user
@@ -155,11 +164,13 @@ public class UserService : IUserService
     {
         //Go get the registration key
         var userRegistration = (await searcher.QueryRawAsync(
-            $"select id, registrationKey from {searcher.GetDatabaseForType<UserView>()} where id = @user",
+            $"select id, registrationKey, type from {searcher.GetDatabaseForType<UserView>()} where id = @user",
             new Dictionary<string, object> { { "user", userId}})).FirstOrDefault();
 
         if(userRegistration == null)
             throw new ArgumentException($"User {userId} not found!");
+
+        CheckValidUser(userRegistration);
 
         return (string)userRegistration["registrationKey"];
     }
@@ -193,13 +204,16 @@ public class UserService : IUserService
 
         //Next, get the LEGITIMATE data from the database
         var userSecrets = (await searcher.QueryRawAsync(
-            $"select id, password, salt, registrationKey from {searcher.GetDatabaseForType<UserView>()} where {fieldname} = @user and deleted=0",
+            $"select id, password, salt, registrationKey, type from {searcher.GetDatabaseForType<UserView>()} where {fieldname} = @user and deleted=0",
             new Dictionary<string, object> { { "user", value }})).FirstOrDefault();
 
         if(userSecrets == null)
             throw new ArgumentException("User not found!");
+
+        CheckValidUser(userSecrets);
         
-        if(!string.IsNullOrWhiteSpace((string)userSecrets["registrationKey"]))
+        //So for registration, it's SPECIFICALLY null which makes you registered! This is IMPORTANT!
+        if(userSecrets["registrationKey"] != null)
             throw new ForbiddenException("User not registered! Can't log in!");
 
         //Finally, compare hashes and if good, send out the token
@@ -240,6 +254,8 @@ public class UserService : IUserService
 
         if(castResult.Count != 1)
             throw new ArgumentException($"Couldn't find user {userId}");
+
+        //WARN: this technically lets you get private data for groups!
         
         //This could also be done with an auto-mapper but
         result.email = castResult.First().email;
@@ -278,6 +294,8 @@ public class UserService : IUserService
 
         foreach(var kp in sets)
             parameters.Add(kp.Key, kp.Value);
+        
+        //WARN: this technically lets you set private data for groups!
 
         var count = await dbcon.ExecuteAsync($"update users set {string.Join(",", sets.Select(x => $"{x.Key} = @{x.Key}"))} where id = @id", parameters);
 
