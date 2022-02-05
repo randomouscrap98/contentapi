@@ -641,6 +641,18 @@ public class DbWriterTest : ViewUnitTestBase, IClassFixture<DbUnitTestSearchFixt
         }
     }
 
+    private Task<UserView> MakeQuickGroup(bool super)
+    {
+        var baseGroup = new UserView()
+        {
+            username = "test_group",
+            type = UserType.group,
+            super = super
+        };
+
+        return writer.WriteAsync(baseGroup, (int)UserVariations.Super + 1);
+    }
+
     [Theory]
     [InlineData((int)UserVariations.Super, (int)UserVariations.Super, false, true)]
     [InlineData((int)UserVariations.Super, (int)UserVariations.Super, true, false)]
@@ -652,15 +664,7 @@ public class DbWriterTest : ViewUnitTestBase, IClassFixture<DbUnitTestSearchFixt
     [InlineData((int)UserVariations.Super + 1, (int)UserVariations.Super + 2, true, true)]
     public async Task WriteAsync_AddGroup_Gamut(long updaterId, long userId, bool groupSuper, bool allowed)
     {
-        //Quickly create a simple group. This HAS to be done by the user
-        var baseGroup = new UserView()
-        {
-            username = "test_group",
-            type = UserType.group,
-            super = groupSuper
-        };
-
-        var group = await writer.WriteAsync(baseGroup, (int)UserVariations.Super + 1);
+        var group = await MakeQuickGroup(groupSuper);
 
         //go lookup the user to recieve the group
         var user = await searcher.GetById<UserView>(RequestType.user, userId, true);
@@ -682,6 +686,31 @@ public class DbWriterTest : ViewUnitTestBase, IClassFixture<DbUnitTestSearchFixt
         {
             await Assert.ThrowsAnyAsync<ForbiddenException>(addGroup);
         }
+    }
+
+    [Fact]
+    public async Task WriteAsync_GroupValidate_Fail()
+    {
+        //Quickly create a simple group. This HAS to be done by the super user
+        var group = await MakeQuickGroup(false);
+
+        //go lookup the user to recieve the group
+        var user = await searcher.GetById<UserView>(RequestType.user, (int)UserVariations.Super, true);
+
+        //We know that the group exists AND that it's the last group AND that groups probably work already.
+        //Se we can purposefully break it
+        user.groups.Add(group.id + 1);
+
+        //This should not let us write it, because the group is bad
+        await Assert.ThrowsAnyAsync<ArgumentException>(() => writer.WriteAsync(user, user.id));
+
+        //But then just for fun, add the real group. This will verify that our earlier failure was most likely genuine
+        user.groups.Clear();
+        user.groups.Add(group.id);
+
+        var result = await writer.WriteAsync(user, user.id);
+        Assert.Contains(group.id, result.groups);
+        StandardUserEqualityCheck(user, result, user.id); //Some sanity checks, should work
     }
 
     [Theory]
