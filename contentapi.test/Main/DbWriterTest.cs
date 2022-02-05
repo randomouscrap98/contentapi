@@ -642,6 +642,49 @@ public class DbWriterTest : ViewUnitTestBase, IClassFixture<DbUnitTestSearchFixt
     }
 
     [Theory]
+    [InlineData((int)UserVariations.Super, (int)UserVariations.Super, false, true)]
+    [InlineData((int)UserVariations.Super, (int)UserVariations.Super, true, false)]
+    [InlineData((int)UserVariations.Super, (int)UserVariations.Super + 2, false, false)]
+    [InlineData((int)UserVariations.Super, (int)UserVariations.Super + 2, true, false)]
+    [InlineData((int)UserVariations.Super + 1, (int)UserVariations.Super + 1, false, true)]
+    [InlineData((int)UserVariations.Super + 1, (int)UserVariations.Super + 1, true, true)]
+    [InlineData((int)UserVariations.Super + 1, (int)UserVariations.Super + 2, false, true)]
+    [InlineData((int)UserVariations.Super + 1, (int)UserVariations.Super + 2, true, true)]
+    public async Task WriteAsync_AddGroup_Gamut(long updaterId, long userId, bool groupSuper, bool allowed)
+    {
+        //Quickly create a simple group. This HAS to be done by the user
+        var baseGroup = new UserView()
+        {
+            username = "test_group",
+            type = UserType.group,
+            super = groupSuper
+        };
+
+        var group = await writer.WriteAsync(baseGroup, (int)UserVariations.Super + 1);
+
+        //go lookup the user to recieve the group
+        var user = await searcher.GetById<UserView>(RequestType.user, userId, true);
+
+        //Set it now
+        user.groups.Add(group.id);
+
+        //The function which does the update
+        var addGroup = new Func<Task<UserView>>(() => writer.WriteAsync(user, updaterId));
+
+        //Now, try to add this group to the given user BY the given user.
+        if(allowed)
+        {
+            var result = await addGroup();
+            Assert.Contains(group.id, result.groups);
+            StandardUserEqualityCheck(user, result, userId); //Some sanity checks, should work
+        }
+        else
+        {
+            await Assert.ThrowsAnyAsync<ForbiddenException>(addGroup);
+        }
+    }
+
+    [Theory]
     [InlineData((int)UserVariations.Super, (int)UserVariations.Super, false)] //Users can't delete themselves
     [InlineData((int)UserVariations.Super, 1+ (int)UserVariations.Super, true)] //Supers can delete them though
     [InlineData(1 + (int)UserVariations.Super, 1 + (int)UserVariations.Super, true)] //Supers can delete themselves? Maybe...

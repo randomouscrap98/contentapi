@@ -586,8 +586,7 @@ public class DbWriter : IDbWriter
             //Ensure they can NEVER register, even if the user service somehow fails to catch it!
             user.registrationKey = $"INVALID_{Guid.NewGuid()}";
         }
-
-        if(work.action == UserAction.delete)
+        else if(work.action == UserAction.delete)
         {
             //These groups are added later anyway, don't worry about it being after map
             work.view.groups.Clear();
