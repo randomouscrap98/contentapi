@@ -4,31 +4,27 @@ using contentapi.Search;
 
 namespace contentapi.Views;
 
-[FromTable(typeof(Db.AdminLog))]
-[ForRequest(RequestType.adminlog)]
+//[FromTable(typeof(Db.AdminLog))]
+//[ForRequest(RequestType.adminlog)]
+[ResultFor(RequestType.adminlog)]
+[SelectFrom("admin_log")]
 public class AdminLogView : IIdView
 {
-    [Searchable]
-    [WriteRule(WriteRuleType.ReadOnly)] //The update doesn't matter for admin log, you can leave it preserve since logs CAN'T be edited or indeed generated manually by users
+    [FieldSelect]
     public long id {get;set;}
 
-    [Searchable]
-    [WriteRule(WriteRuleType.ReadOnly)]
+    [FieldSelect]
     public AdminLogType type {get;set;}
 
-    [Searchable]
-    [WriteRule(WriteRuleType.ReadOnly)]
+    [FieldSelect]
     public string? text {get;set;}
 
-    [Searchable]
-    [WriteRule(WriteRuleType.ReadOnly)]
+    [FieldSelect]
     public DateTime createDate {get;set;}
 
-    [Searchable]
-    [WriteRule(WriteRuleType.ReadOnly)]
+    [FieldSelect]
     public long initiator {get;set;}
 
-    [Searchable]
-    [WriteRule(WriteRuleType.ReadOnly)]
+    [FieldSelect]
     public long target {get;set;}
 }

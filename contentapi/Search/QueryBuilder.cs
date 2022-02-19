@@ -239,18 +239,6 @@ public class QueryBuilder : IQueryBuilder
         return reqplus;
     }
 
-    //public bool IsSimpleField(string fieldName, SearchRequestPlus r, out string realFieldname)
-    //{
-    //    realFieldname = "";
-
-    //    var result = !StandardComplexFields.ContainsKey((r.requestType, fieldName)) && !string.IsNullOrWhiteSpace(r.typeInfo.fields[fieldName].realDbColumn);
-
-    //    if(result)
-    //        realFieldname = r.typeInfo.fields[fieldName].realDbColumn ?? throw new InvalidOperationException("Somehow, got null db column even though we checked for null!");
-    //    
-    //    return result;
-    //}
-
     /// <summary>
     /// Return the field selector for the given field. For instance, it might be a 
     /// simple "username", or it might be "(registered IS NULL) AS registered" etc.
@@ -281,6 +269,11 @@ public class QueryBuilder : IQueryBuilder
         }
     }
 
+    /// <summary>
+    /// Compute the VIEW fields (named output, not db columns) which were requested in the given SearchRequestPlus
+    /// </summary>
+    /// <param name="r"></param>
+    /// <returns></returns>
     public List<string> ComputeRealFields(SearchRequestPlus r)
     {
         bool inverted = false;
@@ -332,8 +325,7 @@ public class QueryBuilder : IQueryBuilder
         if(!request.typeInfo.fields[field].queryable)
             throw new ArgumentException($"Field '{field}' not searchable in type '{request.type}'({request.name})!");
 
-        //I don't know what to do about computed fields just yet, so they'll just pass through... we'll see how that works out
-        //(there don't appear to be ANY computed fields just yet)
+        //Note: computed fields do NOT run through the query builder!
 
         //Oops, sometimes a field might not be part of the request but we're querying against it. This requires special things
         if(!request.requestFields.Contains(field))

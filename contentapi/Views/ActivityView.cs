@@ -3,33 +3,27 @@ using contentapi.Search;
 
 namespace contentapi.Views;
 
-[FromTable(typeof(Db.ContentHistory))]
-[ForRequest(RequestType.activity)]
+//[FromTable(typeof(Db.ContentHistory))]
+//[ForRequest(RequestType.activity)]
+[ResultFor(RequestType.activity)]
+[SelectFrom("content_history")]
 public class ActivityView : IIdView
 {
-    [Searchable]
-    [WriteRule(WriteRuleType.ReadOnly)] //The update doesn't matter for activity, you can leave it preserve since activity CAN'T be edited or indeed generated manually by users
+    [FieldSelect]
     public long id { get; set; }
 
-    [Searchable]
-    [WriteRule(WriteRuleType.ReadOnly)]
+    [FieldSelect]
     public long contentId { get; set; }
 
-    [Searchable]
-    [FromField("createUserId")]
-    [WriteRule(WriteRuleType.ReadOnly)]
+    [FieldSelect("createUserId")]
     public long userId { get; set; }
 
-    [Searchable]
-    [FromField("createDate")]
-    [WriteRule(WriteRuleType.ReadOnly)]
+    [FieldSelect("createDate")]
     public DateTime date { get; set; }
 
-    [Searchable]
-    [WriteRule(WriteRuleType.ReadOnly)]
+    [FieldSelect]
     public string? message {get;set;}
 
-    [Searchable]
-    [WriteRule(WriteRuleType.ReadOnly)]
+    [FieldSelect]
     public UserAction action {get;set;}
 }

@@ -124,8 +124,8 @@ public class AboutSearchFieldProfile : Profile
     {
         this.CreateMap<DbFieldInfo, AboutSearchField>()
             .ForMember(dest => dest.type, opt => opt.MapFrom(src => TypeToAboutType(src.fieldType)))
-            .ForMember(dest => dest.writableOnInsert, opt => opt.MapFrom(src => src.onInsert == WriteRuleType.None))
-            .ForMember(dest => dest.writableOnUpdate, opt => opt.MapFrom(src => src.onUpdate == WriteRuleType.None))
+            .ForMember(dest => dest.writableOnInsert, opt => opt.MapFrom(src => src.onInsert == WriteRule.User))
+            .ForMember(dest => dest.writableOnUpdate, opt => opt.MapFrom(src => src.onUpdate == WriteRule.User))
             .ForMember(dest => dest.nullable, opt => opt.MapFrom(src => IsNullable(src.rawProperty!)));
     }
 }
