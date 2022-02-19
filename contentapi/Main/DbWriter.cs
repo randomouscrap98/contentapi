@@ -17,14 +17,14 @@ public class DbWriter : IDbWriter
     protected ILogger logger;
     protected IGenericSearch searcher;
     protected IDbConnection dbcon;
-    protected IDbTypeInfoService typeInfoService;
+    protected IViewTypeInfoService typeInfoService;
     protected IMapper mapper;
     protected IHistoryConverter historyConverter;
     protected IPermissionService permissionService;
     protected ILiveEventQueue eventQueue;
 
     public DbWriter(ILogger<DbWriter> logger, IGenericSearch searcher, ContentApiDbConnection connection,
-        IDbTypeInfoService typeInfoService, IMapper mapper, IHistoryConverter historyConverter,
+        IViewTypeInfoService typeInfoService, IMapper mapper, IHistoryConverter historyConverter,
         IPermissionService permissionService, ILiveEventQueue eventQueue)
     {
         this.logger = logger;
@@ -256,17 +256,16 @@ public class DbWriter : IDbWriter
     }
 
     /// <summary>
-    /// Use TypeInfo given to translate as much as possible, including auto-generated data or preserved data. As such, we need the actual work item //all standard mapped fields from view to model.
+    /// Use work unit given to translate as much as possible, including auto-generated data or preserved data. As such, we need the actual work item //all standard mapped fields from view to model.
     /// </summary>
-    /// <param name="tinfo"></param>
-    /// <param name="view"></param>
+    /// <param name="work"></param>
     /// <param name="dbModel"></param>
     /// <returns>Fields that were NOT mapped</returns>
     public List<string> MapSimpleViewFields<T>(DbWorkUnit<T> work, object dbModel) where T : class, IIdView, new()
     {
         //This can happen if our view type has no associated table
-        if(work.typeInfo.modelType == null) 
-            throw new InvalidOperationException($"Typeinfo for type {work.typeInfo.type} doesn't appear to have an associated db model!");
+        //if(work.typeInfo.modelType == null) 
+        //    throw new InvalidOperationException($"Typeinfo for type {work.typeInfo.type} doesn't appear to have an associated db model!");
     
         //Assume all properties will be mapped
         var unmapped = new List<string>(); 
@@ -277,7 +276,7 @@ public class DbWriter : IDbWriter
             //Simply go find the field definition where the real database column is the same as the model property. 
             var remap = work.typeInfo.fields.FirstOrDefault(x => x.Value.realDbColumn == dbModelProp.Key);
 
-            var isWriteRuleSet = new Func<WriteRuleType, bool>(t => 
+            var isWriteRuleSet = new Func<WriteRule, bool>(t => 
                 remap.Value.onInsert == t && work.action == UserAction.create ||
                 remap.Value.onUpdate == t && work.action == UserAction.update
             );
@@ -292,32 +291,37 @@ public class DbWriter : IDbWriter
             //OK, there's a lot going on with model properties. Basically, attributes allow us to automatically set fields on
             //models for insert and update, which we check for below. If none of the special checks work, we default to 
             //allowing whatever the user set.
-            if(isWriteRuleSet(WriteRuleType.AutoDate)) 
+            if(isWriteRuleSet(WriteRule.AutoDate)) 
             {
                 dbModelProp.Value.SetValue(dbModel, DateTime.UtcNow);
             }
-            else if(isWriteRuleSet(WriteRuleType.AutoUserId)) 
+            else if(isWriteRuleSet(WriteRule.AutoUserId)) 
             {
                 dbModelProp.Value.SetValue(dbModel, work.requester.id);
             }
-            else if(isWriteRuleSet(WriteRuleType.Increment)) 
+            else if(isWriteRuleSet(WriteRule.Increment)) 
             {
                 if(remap.Value.fieldType != typeof(int))
                     throw new InvalidOperationException($"API ERROR: tried to auto-increment non-integer field {remap.Key} (type: {remap.Value.fieldType})");
 
-                int original = (int)(remap.Value.rawProperty?.GetValue(work.existing) ?? throw new InvalidOperationException("Integer field was somehow null!!"));
+                int original = (int)(remap.Value.rawProperty?.GetValue(work.existing) ?? 0;
+                //throw new InvalidOperationException("Integer field was somehow null!!"));
                 dbModelProp.Value.SetValue(dbModel, original + 1);
             }
-            else if(isWriteRuleSet(WriteRuleType.DefaultValue)) 
+            else if(isWriteRuleSet(WriteRule.Preserve)) 
             {
-                if(remap.Value.fieldType.IsValueType)
-                    dbModelProp.Value.SetValue(dbModel, Activator.CreateInstance(remap.Value.fieldType));
+                //Preserve for create means default value. This might change if it's confusing
+                if(work.action == UserAction.create)
+                {
+                    if (remap.Value.fieldType.IsValueType)
+                        dbModelProp.Value.SetValue(dbModel, Activator.CreateInstance(remap.Value.fieldType));
+                    else
+                        dbModelProp.Value.SetValue(dbModel, null);
+                }
                 else
-                    dbModelProp.Value.SetValue(dbModel, null);
-            }
-            else if(isWriteRuleSet(WriteRuleType.Preserve)) 
-            {
-                dbModelProp.Value.SetValue(dbModel, remap.Value.rawProperty?.GetValue(work.existing));
+                {
+                    dbModelProp.Value.SetValue(dbModel, remap.Value.rawProperty?.GetValue(work.existing));
+                }
             }
             else
             {
@@ -338,7 +342,7 @@ public class DbWriter : IDbWriter
     /// <returns></returns>
     public async Task DeleteAssociatedType<T>(long id, IDbTransaction tsx, string field, string type)
     {
-        var tinfo = typeInfoService.GetTypeInfo<T>();
+        //var tinfo = typeInfoService.GetTypeInfo<T>();
         var parameters = new { id = id };
         var deleteCount = await dbcon.ExecuteAsync($"delete from {tinfo.modelTable} where {field} = @id", parameters, tsx);
         logger.LogInformation($"Deleting {deleteCount} {typeof(T).Name} from {type} {id}");
@@ -605,7 +609,7 @@ public class DbWriter : IDbWriter
         {
             //Users are special: we have to go get the original so we can preserve some of the fields. We can be pretty sure a lookup by id will work because
             //we've had so much validation before we get here.
-            var original = searcher.ToStronglyTyped<User>(await searcher.QueryRawAsync($"select * from {work.typeInfo.modelTable} where id = @id", new Dictionary<string, object> {{"id", work.view.id}})).First();
+            var original = searcher.ToStronglyTyped<User>(await searcher.QueryRawAsync($"select * from users where id = @id", new Dictionary<string, object> {{"id", work.view.id}})).First();
             user.registrationKey = original.registrationKey;
             user.hidelist = original.hidelist;
             user.password = original.password;
@@ -680,7 +684,7 @@ public class DbWriter : IDbWriter
 
         //Just go lookup the groups
         var utinfo = typeInfoService.GetTypeInfo<UserView>();
-        var foundGroups = await searcher.QueryRawAsync($"select id,super from {utinfo.modelTable} where id in @ids and type = @type", new Dictionary<string, object> {
+        var foundGroups = await searcher.QueryRawAsync($"select id,super from users where id in @ids and type = @type", new Dictionary<string, object> {
             { "ids", groups },
             { "type", UserType.group }
         });
@@ -708,7 +712,7 @@ public class DbWriter : IDbWriter
 
         //Look up all users, DON'T NEED all fields
         var utinfo = typeInfoService.GetTypeInfo<UserView>();
-        var foundUsers = await searcher.QueryRawAsync($"select id from {utinfo.modelTable} where id in @ids", new Dictionary<string, object> { { "ids",  permissions.Keys } });
+        var foundUsers = await searcher.QueryRawAsync($"select id from users where id in @ids", new Dictionary<string, object> { { "ids",  permissions.Keys } });
         var foundUserIds = foundUsers.Select(x => x["id"]);
 
         //Do the per-permission check now!
@@ -781,7 +785,7 @@ public class DbWriter : IDbWriter
         //C is the amount of users defined in the content permission set, and N is the total amount
         //of pages. So if we had oh I don't know, 2 billion pages, it might take like 40 iterations.
         return (await dbcon.ExecuteScalarAsync<int>(@$"select count(*)
-             from {typeInfo.modelTable} 
+             from content_permissions
              where {nameof(ContentPermission.contentId)} = @contentId
                and {nameof(ContentPermission.userId)} in @requesters 
                and `{checkCol}` = 1

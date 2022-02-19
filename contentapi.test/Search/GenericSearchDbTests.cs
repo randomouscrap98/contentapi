@@ -27,7 +27,7 @@ public class GenericSearchDbTests : UnitTestBase, IClassFixture<DbUnitTestSearch
         this.fixture = fixture;
         var conWrap = fixture.GetService<ContentApiDbConnection>();
         service = new GenericSearcher(fixture.GetService<ILogger<GenericSearcher>>(), 
-            conWrap, fixture.GetService<IDbTypeInfoService>(), fixture.GetService<GenericSearcherConfig>(),
+            conWrap, fixture.GetService<IViewTypeInfoService>(), fixture.GetService<GenericSearcherConfig>(),
             fixture.GetService<IMapper>(), fixture.GetService<IQueryBuilder>(), 
             fixture.GetService<IPermissionService>());
         //dbcon = conWrap.Connection;

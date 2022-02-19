@@ -7,7 +7,7 @@ namespace contentapi.Search;
 public class SearchRequestPlus : SearchRequest
 {
     public RequestType requestType {get;set;}
-    public DbTypeInfo typeInfo {get;set;} = new DbTypeInfo();
+    public ViewTypeInfo typeInfo {get;set;} = new ViewTypeInfo();
     public List<string> requestFields {get;set;} = new List<string>();
     public Guid requestId = Guid.NewGuid();
     public string UniqueRequestKey(string field)

@@ -122,7 +122,7 @@ public class AboutSearchFieldProfile : Profile
 
     public AboutSearchFieldProfile()
     {
-        this.CreateMap<DbFieldInfo, AboutSearchField>()
+        this.CreateMap<ViewFieldInfo, AboutSearchField>()
             .ForMember(dest => dest.type, opt => opt.MapFrom(src => TypeToAboutType(src.fieldType)))
             .ForMember(dest => dest.writableOnInsert, opt => opt.MapFrom(src => src.onInsert == WriteRule.User))
             .ForMember(dest => dest.writableOnUpdate, opt => opt.MapFrom(src => src.onUpdate == WriteRule.User))

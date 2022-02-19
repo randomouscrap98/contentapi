@@ -8,11 +8,11 @@ namespace contentapi.test;
 
 public class CachedTypeInfoServiceTest : UnitTestBase
 {
-    protected CacheDbTypeInfoService service;
+    protected ViewTypeInfoService_Cached service;
 
     public CachedTypeInfoServiceTest()
     {
-        service = GetService<CacheDbTypeInfoService>();//new CachedTypeInfoService();
+        service = GetService<ViewTypeInfoService_Cached>();//new CachedTypeInfoService();
     }
 
     [ResultFor(RequestType.file)]
@@ -54,10 +54,10 @@ public class CachedTypeInfoServiceTest : UnitTestBase
         Assert.Equal(typeof(TestView), typeInfo.type);
     }
 
-    protected IEnumerable<string> RetrievableFields(DbTypeInfo info) => info.fields.Keys;
+    protected IEnumerable<string> RetrievableFields(ViewTypeInfo info) => info.fields.Keys;
     //Where(x => x.Value.retrievable).Select(x => x.Key);
 
-    protected IEnumerable<string> QueryableFields(DbTypeInfo info) => 
+    protected IEnumerable<string> QueryableFields(ViewTypeInfo info) => 
         info.fields.Where(x => x.Value.queryable).Select(x => x.Key);
 
     ////Our new defaults are: unwritable, but queryable

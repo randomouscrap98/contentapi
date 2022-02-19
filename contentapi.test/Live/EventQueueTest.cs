@@ -50,7 +50,7 @@ public class EventQueueTest : ViewUnitTestBase, IClassFixture<DbUnitTestSearchFi
         this.tracker = new CacheCheckpointTracker<LiveEvent>(fixture.GetService<ILogger<CacheCheckpointTracker<LiveEvent>>>(), trackerConfig);
         this.queue = new LiveEventQueue(fixture.GetService<ILogger<LiveEventQueue>>(), this.config, this.tracker, () => this.searcher, this.permission, this.mapper);
         writer = new DbWriter(fixture.GetService<ILogger<DbWriter>>(), this.searcher, 
-            fixture.GetService<Db.ContentApiDbConnection>(), fixture.GetService<IDbTypeInfoService>(), this.mapper,
+            fixture.GetService<Db.ContentApiDbConnection>(), fixture.GetService<IViewTypeInfoService>(), this.mapper,
             fixture.GetService<Db.History.IHistoryConverter>(), this.permission, this.queue); 
 
         //Reset it for every test

@@ -5,7 +5,7 @@ namespace contentapi.Search;
 /// <summary>
 /// Our INTERNAL data object that describes a field for a db (or db view) type. NOT what the users get when they ask about the api!
 /// </summary>
-public class DbFieldInfo
+public class ViewFieldInfo
 {
     /// <summary>
     /// The literal, unchanged property info given by reflection for the field (property)

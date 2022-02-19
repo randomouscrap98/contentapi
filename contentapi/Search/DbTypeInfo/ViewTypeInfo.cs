@@ -1,13 +1,13 @@
 
 namespace contentapi.Search;
 
-public class DbTypeInfo
+public class ViewTypeInfo
 {
     /// <summary>
     /// The type that produced this typeinfo
     /// </summary>
     /// <returns></returns>
-    public Type type {get;set;} = typeof(DbTypeInfo);
+    public Type type {get;set;} = typeof(ViewTypeInfo);
 
     /// <summary>
     /// Note: ANY field defined here is technically "retrievable" in the fields list, as any view is meant to be consumed by a user
@@ -15,7 +15,7 @@ public class DbTypeInfo
     /// <typeparam name="string"></typeparam>
     /// <typeparam name="DbFieldInfo"></typeparam>
     /// <returns></returns>
-    public Dictionary<string, DbFieldInfo> fields {get;set;} = new Dictionary<string, DbFieldInfo>();
+    public Dictionary<string, ViewFieldInfo> fields {get;set;} = new Dictionary<string, ViewFieldInfo>();
 
     //These don't necessarily map to direct database things, even though they MOSTLY do
     public RequestType? requestType {get;set;}

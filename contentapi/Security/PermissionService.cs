@@ -8,9 +8,9 @@ namespace contentapi;
 public class PermissionService : IPermissionService
 {
     protected ILogger logger;
-    protected IDbTypeInfoService typeInfoService;
+    protected IViewTypeInfoService typeInfoService;
 
-    public PermissionService (ILogger<PermissionService> logger, IDbTypeInfoService typeInfoService)
+    public PermissionService (ILogger<PermissionService> logger, IViewTypeInfoService typeInfoService)
     {
         this.typeInfoService = typeInfoService;
         this.logger = logger;

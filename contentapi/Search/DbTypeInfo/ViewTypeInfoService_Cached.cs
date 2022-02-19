@@ -2,23 +2,23 @@ using System.Reflection;
 
 namespace contentapi.Search;
 
-public class CacheDbTypeInfoService : IDbTypeInfoService
+public class ViewTypeInfoService_Cached : IViewTypeInfoService
 {
     protected readonly object cacheLock = new Object();
-    protected Dictionary<Type, DbTypeInfo> cachedTypes = new Dictionary<Type, DbTypeInfo>();
+    protected Dictionary<Type, ViewTypeInfo> cachedTypes = new Dictionary<Type, ViewTypeInfo>();
     protected ILogger logger;
 
-    public CacheDbTypeInfoService(ILogger<CacheDbTypeInfoService> logger)
+    public ViewTypeInfoService_Cached(ILogger<ViewTypeInfoService_Cached> logger)
     {
         this.logger = logger;
     }
 
-    public DbTypeInfo GetTypeInfo<T>()
+    public ViewTypeInfo GetTypeInfo<T>()
     {
         return GetTypeInfo(typeof(T));
     }
 
-    public DbTypeInfo GetTypeInfo(Type t)
+    public ViewTypeInfo GetTypeInfo(Type t)
     {
         lock(cacheLock)
         {
@@ -31,7 +31,7 @@ public class CacheDbTypeInfoService : IDbTypeInfoService
                 //var exattr = typeof(ExpensiveAttribute);
                 //var mlattr = typeof(MultilineAttribute);
 
-                var result = new Search.DbTypeInfo() { 
+                var result = new Search.ViewTypeInfo() { 
                     type = t,
                     selectFromSql = t.GetCustomAttribute<SelectFromAttribute>()?.SelectFrom_Sql ?? "",
                     whereSql = t.GetCustomAttribute<WhereAttribute>()?.Where_Sql ?? "",
@@ -51,7 +51,7 @@ public class CacheDbTypeInfoService : IDbTypeInfoService
                     var writeRule = pk.Value.GetCustomAttribute<WritableAttribute>(); 
                     var fieldSelect = pk.Value.GetCustomAttribute<FieldSelectAttribute>()?.SelectField_Sql;
 
-                    var fieldInfo = new DbFieldInfo()
+                    var fieldInfo = new ViewFieldInfo()
                     {
                         rawProperty = pk.Value,
                         queryable = !Attribute.IsDefined(pk.Value, typeof(NoQueryAttribute)),

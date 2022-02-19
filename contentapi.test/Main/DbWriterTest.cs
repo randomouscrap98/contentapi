@@ -30,7 +30,7 @@ public class DbWriterTest : ViewUnitTestBase, IClassFixture<DbUnitTestSearchFixt
         this.mapper = fixture.GetService<IMapper>();
         this.events= new FakeEventQueue();
         writer = new DbWriter(fixture.GetService<ILogger<DbWriter>>(), fixture.GetService<IGenericSearch>(),
-            fixture.GetService<Db.ContentApiDbConnection>(), fixture.GetService<IDbTypeInfoService>(), fixture.GetService<IMapper>(),
+            fixture.GetService<Db.ContentApiDbConnection>(), fixture.GetService<IViewTypeInfoService>(), fixture.GetService<IMapper>(),
             fixture.GetService<Db.History.IHistoryConverter>(), fixture.GetService<IPermissionService>(),
             events); 
         searcher = fixture.GetService<IGenericSearch>();
