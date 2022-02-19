@@ -49,7 +49,7 @@ public class UserView : IIdView
     //[Searchable]
     //WARN: computed REMOVES this field from the query builder!
     //[WriteRule(WriteRuleType.DefaultValue, WriteRuleType.ReadOnly)]
-    [FieldSelect]
+    [FieldSelect("(registrationkey IS NULL)")]
     public bool registered {get;set;}
 
     //[Searchable]

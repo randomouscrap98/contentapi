@@ -7,9 +7,11 @@ namespace contentapi.Views;
 //[ForRequest(RequestType.content)]
 
 [ResultFor(RequestType.content)]
-[SelectFrom("content")]
+[SelectFrom("content as main")]
 public class ContentView : IIdView
 {
+    public const string NaturalCommentQuery = "deleted = 0 and module IS NULL";
+
     //[Searchable]
     //[WriteRule(WriteRuleType.None)] //The first parameter is for inserts, and the default write rule for updates (2nd param) is preserve, so...
     [FieldSelect]
@@ -51,7 +53,6 @@ public class ContentView : IIdView
     public long parentId { get; set; }
 
 
-    //[Computed] //REMEMBER: computed is reserved for things that can't be part of the standard query builder, that's all! Many fields CAN be, see below
     //NOtice the lack of "FieldSelect": this does NOT come from the standard query
     [NoQuery]
     [Writable]
@@ -59,7 +60,6 @@ public class ContentView : IIdView
     public Dictionary<long, string> permissions {get;set;} = new Dictionary<long, string>();
 
     //NOTE: values will have some content-specific things!
-    //[Computed]
     [NoQuery]
     [Writable]
     [Expensive(2)]
@@ -68,46 +68,36 @@ public class ContentView : IIdView
     //Although these are NOT searchable with a standard search system, they do at least have 
     //macros to let you search. Essentially, any field that is a "list" or something else
     //will not be searchable.
-    //[Computed]
     [NoQuery]
     [Writable]
     [Expensive(2)]
     public List<string> keywords {get;set;} = new List<string>();
 
-    //[Computed]
     [NoQuery]
     [Expensive(2)]
-    //[WriteRule(WriteRuleType.ReadOnly, WriteRuleType.ReadOnly)]
     public Dictionary<VoteType, int> votes {get;set;} = new Dictionary<VoteType, int>();
 
-
-    //[Searchable]
     [Expensive(1)]
-    //[WriteRule(WriteRuleType.ReadOnly, WriteRuleType.ReadOnly)]
+    [FieldSelect("(select createDate from comments where main.id = contentId and " + NaturalCommentQuery + " order by id desc limit 1)")]
     public DateTime lastCommentDate {get;set;}
 
-    //[Searchable]
     [Expensive(1)]
-    //[WriteRule(WriteRuleType.ReadOnly, WriteRuleType.ReadOnly)]
+    [FieldSelect("(select id from comments where main.id = contentId and " + NaturalCommentQuery + " order by id desc limit 1)")]
     public long lastCommentId {get;set;}
 
-    //[Searchable]
     [Expensive(1)]
-    //[WriteRule(WriteRuleType.ReadOnly, WriteRuleType.ReadOnly)]
+    [FieldSelect("(select count(*) from comments where main.id = contentId and " + NaturalCommentQuery + ")")]
     public int commentCount {get;set;}
 
-    //[Searchable]
     [Expensive(1)]
-    //[WriteRule(WriteRuleType.ReadOnly, WriteRuleType.ReadOnly)]
+    [FieldSelect("(select count(*) from content_watches where main.id = contentId)")]
     public int watchCount {get;set;}
 
-    //[Searchable]
     [Expensive(1)]
-    //[WriteRule(WriteRuleType.ReadOnly, WriteRuleType.ReadOnly)]
+    [FieldSelect("(select createDate from content_history where main.id = contentId order by id desc limit 1)")]
     public DateTime lastRevisionDate {get;set;}
 
-    //[Searchable]
     [Expensive(1)]
-    //[WriteRule(WriteRuleType.ReadOnly, WriteRuleType.ReadOnly)]
+    [FieldSelect("(select id from content_history where main.id = contentId order by id desc limit 1)")]
     public long lastRevisionId {get;set;}
 }

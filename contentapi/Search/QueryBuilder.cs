@@ -17,9 +17,9 @@ public class QueryBuilder : IQueryBuilder
     protected IMapper mapper;
     protected IPermissionService permissionService;
 
-    public const string MainAlias = "main";
+    //public const string MainAlias = "main";
     public const string DescendingAppend = "_desc";
-    public const string NaturalCommentQuery = "deleted = 0 and module IS NULL";
+    //public const string NaturalCommentQuery = "deleted = 0 and module IS NULL";
     
     protected static readonly List<RequestType> CONTENTREQUESTTYPES = new List<RequestType>()
     {
@@ -29,19 +29,19 @@ public class QueryBuilder : IQueryBuilder
     public List<RequestType> ContentRequestTypes => CONTENTREQUESTTYPES;
 
     //These fields are too difficult to modify with the attributes, so we do it in code here
-    protected readonly Dictionary<(RequestType, string),string> StandardComplexFields = new Dictionary<(RequestType, string), string> {
-        { (RequestType.user, "registered"), $"(registrationKey IS NULL) as registered" },
-        //{ (RequestType.user, "deleted"), $"(salt = '') as deleted" }, // We USED to do it like this!
-    };
+    //protected readonly Dictionary<(RequestType, string),string> StandardComplexFields = new Dictionary<(RequestType, string), string> {
+    //    { (RequestType.user, "registered"), $"(registrationKey IS NULL) as registered" },
+    //    //{ (RequestType.user, "deleted"), $"(salt = '') as deleted" }, // We USED to do it like this!
+    //};
 
     //Some searches can easily be modified afterwards with constants, put that here.
-    protected readonly Dictionary<RequestType, string> StandardSearchModifiers = new Dictionary<RequestType, string>()
-    {
-       { RequestType.file, $"internalType = {(int)InternalContentType.file}" },
-       { RequestType.module, $"internalType = {(int)InternalContentType.module}" },
-       { RequestType.page, $"internalType = {(int)InternalContentType.page}" },
-       { RequestType.comment, $"module IS NULL" },
-    };
+    //protected readonly Dictionary<RequestType, string> StandardSearchModifiers = new Dictionary<RequestType, string>()
+    //{
+    //   { RequestType.file, $"internalType = {(int)InternalContentType.file}" },
+    //   { RequestType.module, $"internalType = {(int)InternalContentType.module}" },
+    //   { RequestType.page, $"internalType = {(int)InternalContentType.page}" },
+    //   { RequestType.comment, $"module IS NULL" },
+    //};
 
     protected readonly Dictionary<string, MacroDescription> StandardMacros = new Dictionary<string, MacroDescription>()
     {
@@ -86,53 +86,58 @@ public class QueryBuilder : IQueryBuilder
         StandardViewRequests = typeInfos.Where(x => x.requestType.HasValue).ToDictionary(
             k => k.requestType ?? throw new InvalidOperationException("How did the HasValue check fail on StandardViewRequest build??"), v => v.type);
 
-        SetupContentComplexFields();
+        //SetupContentComplexFields();
     }
 
-    public void SetupContentComplexFields()
-    {
-        const string LastPostDateField = nameof(ContentView.lastCommentDate);
-        const string LastPostIdField = nameof(ContentView.lastCommentId);
-        const string LastRevisionDateField = nameof(ContentView.lastRevisionDate);
-        const string LastRevisionIdField = nameof(ContentView.lastRevisionId);
-        const string PostCountField = nameof(ContentView.commentCount);
-        const string WatchCountField = nameof(ContentView.watchCount);
+    //public void SetupContentComplexFields()
+    //{
+    //    const string LastPostDateField = nameof(ContentView.lastCommentDate);
+    //    const string LastPostIdField = nameof(ContentView.lastCommentId);
+    //    const string LastRevisionDateField = nameof(ContentView.lastRevisionDate);
+    //    const string LastRevisionIdField = nameof(ContentView.lastRevisionId);
+    //    const string PostCountField = nameof(ContentView.commentCount);
+    //    const string WatchCountField = nameof(ContentView.watchCount);
 
-        //Because of how content is, we need to add these content fields to all things
-        foreach(var type in ContentRequestTypes)
-        {
-            StandardComplexFields.Add((type, LastPostDateField), 
-                $"(select createDate from comments where {MainAlias}.id = contentId and {NaturalCommentQuery} order by id desc limit 1) as {LastPostDateField}");
-            StandardComplexFields.Add((type, LastPostIdField), 
-                $"(select id from comments where {MainAlias}.id = contentId and {NaturalCommentQuery} order by id desc limit 1) as {LastPostIdField}");
-            StandardComplexFields.Add((type, LastRevisionDateField), 
-                $"(select createDate from content_history where {MainAlias}.id = contentId order by id desc limit 1) as {LastRevisionDateField}");
-            StandardComplexFields.Add((type, LastRevisionIdField), 
-                $"(select id from content_history where {MainAlias}.id = contentId order by id desc limit 1) as {LastRevisionIdField}");
-            StandardComplexFields.Add((type, PostCountField), 
-                $"(select count(*) from comments where {MainAlias}.id = contentId and {NaturalCommentQuery}) as {PostCountField}");
-            StandardComplexFields.Add((type, WatchCountField), 
-                $"(select count(*) from content_watches where {MainAlias}.id = contentId) as {WatchCountField}");
-        }
-    }
+    //    //Because of how content is, we need to add these content fields to all things
+    //    foreach(var type in ContentRequestTypes)
+    //    {
+    //        StandardComplexFields.Add((type, LastPostDateField), 
+    //            $"(select createDate from comments where {MainAlias}.id = contentId and {NaturalCommentQuery} order by id desc limit 1) as {LastPostDateField}");
+    //        StandardComplexFields.Add((type, LastPostIdField), 
+    //            $"(select id from comments where {MainAlias}.id = contentId and {NaturalCommentQuery} order by id desc limit 1) as {LastPostIdField}");
+    //        StandardComplexFields.Add((type, LastRevisionDateField), 
+    //            $"(select createDate from content_history where {MainAlias}.id = contentId order by id desc limit 1) as {LastRevisionDateField}");
+    //        StandardComplexFields.Add((type, LastRevisionIdField), 
+    //            $"(select id from content_history where {MainAlias}.id = contentId order by id desc limit 1) as {LastRevisionIdField}");
+    //        StandardComplexFields.Add((type, PostCountField), 
+    //            $"(select count(*) from comments where {MainAlias}.id = contentId and {NaturalCommentQuery}) as {PostCountField}");
+    //        StandardComplexFields.Add((type, WatchCountField), 
+    //            $"(select count(*) from content_watches where {MainAlias}.id = contentId) as {WatchCountField}");
+    //    }
+    //}
+
+    // ------------
+    // -- MACROS --
+    // ------------
 
     //NOTE: Even though these might say "0" references, they're all used by the macro system!
     public string KeywordLike(SearchRequestPlus request, string value)
     {
-        var typeInfo = typeService.GetTypeInfo<ContentKeyword>();
-        return $@"{MainAlias}.id in 
+        //var typeInfo = typeService.GetTypeInfo<ContentKeyword>();
+        //TODO: don't hardcode the table names? does it matter?
+        return $@"id in 
             (select {nameof(ContentKeyword.contentId)} 
-             from {typeInfo.modelTable} 
+             from content_keywords
              where {nameof(ContentKeyword.value)} like {value}
             )";
     }
 
     public string ValueLike(SearchRequestPlus request, string key, string value)
     {
-        var typeInfo = typeService.GetTypeInfo<ContentValue>();
-        return $@"{MainAlias}.id in 
+        //var typeInfo = typeService.GetTypeInfo<ContentValue>();
+        return $@"id in 
             (select {nameof(ContentValue.contentId)} 
-             from {typeInfo.modelTable} 
+             from content_values
              where {nameof(ContentValue.key)} like {key} 
                and {nameof(ContentValue.value)} like {value}
             )";
@@ -140,20 +145,20 @@ public class QueryBuilder : IQueryBuilder
 
     public string OnlyParents(SearchRequestPlus request)
     {
-        var typeInfo = typeService.GetTypeInfo<Content>();
-        return $@"{MainAlias}.id in 
+        //var typeInfo = typeService.GetTypeInfo<Content>();
+        return $@"id in 
             (select {nameof(Content.parentId)} 
-             from {typeInfo.modelTable} 
+             from content
              group by {nameof(Content.parentId)}
             )";
     }
 
     public string BasicHistory(SearchRequestPlus request)
     {
-        var typeInfo = typeService.GetTypeInfo<Content>();
-        return $@"{MainAlias}.contentId in 
+        //var typeInfo = typeService.GetTypeInfo<Content>();
+        return $@"contentId in 
             (select {nameof(Content.id)} 
-             from {typeInfo.modelTable} 
+             from content
              where internalType = {(int)InternalContentType.page}
              and deleted = 0
             )";
@@ -161,10 +166,10 @@ public class QueryBuilder : IQueryBuilder
 
     public string InGroupMacro(SearchRequestPlus request, string group)
     {
-        var typeInfo = typeService.GetTypeInfo<UserRelation>();
-        return $@"{MainAlias}.id in 
+        //var typeInfo = typeService.GetTypeInfo<UserRelation>();
+        return $@"id in 
             (select {nameof(Db.UserRelation.userId)} 
-             from {typeInfo.modelTable} 
+             from user_relations
              where {nameof(Db.UserRelation.relatedId)} = {group}
             )";
     }
@@ -178,14 +183,14 @@ public class QueryBuilder : IQueryBuilder
     //For now, this is JUST read limit!!
     public string PermissionLimit(SearchRequestPlus request, string requesters, string idField, string type)
     {
-        var typeInfo = typeService.GetTypeInfo<ContentPermission>();
+        //var typeInfo = typeService.GetTypeInfo<ContentPermission>();
         var checkCol = permissionService.ActionToColumn(permissionService.StringToAction(type));
 
         //Note: we're checking createUserId against ALL requester values they gave us! This is OK, because the
         //additional values are things like 0 or their groups, and groups can't create content
-        return $@"({MainAlias}.{idField} in 
+        return $@"({idField} in 
             (select {nameof(ContentPermission.contentId)} 
-             from {typeInfo.modelTable} 
+             from content_permissions
              where {nameof(ContentPermission.userId)} in {requesters}
                and `{checkCol}` = 1
             ))"; //NOTE: DO NOT CHECK CREATE USER! ALL PERMISSIONS ARE NOW IN THE TABLE! NOTHING IMPLIED!
@@ -201,6 +206,10 @@ public class QueryBuilder : IQueryBuilder
             throw new ArgumentException($"Unknown type '{type}' for set '{typeof(T).Name}'");
         return $"{name} = {Unsafe.As<T, int>(ref result)}";
     }
+
+    // -------------
+    // -- PARSING --
+    // -------------
 
     /// <summary>
     /// Throw exceptions on any funky business we can quickly report
@@ -561,10 +570,11 @@ public class QueryBuilder : IQueryBuilder
             AddStandardSelect(queryStr, reqplus);
 
             //Generate "where (x)"
-            var query = CreateStandardQuery(queryStr, reqplus, parameters);    
-            query = CombineQueryClause(query, StandardSearchModifiers.GetValueOrDefault(reqplus.requestType, ""));
-            if (!string.IsNullOrWhiteSpace(query))
-                queryStr.Append($"WHERE {query} ");
+            var whereQuery = CreateStandardQuery(queryStr, reqplus, parameters);    
+            whereQuery = CombineQueryClause(whereQuery, reqplus.typeInfo.whereSql);
+                //StandardSearchModifiers.GetValueOrDefault(reqplus.requestType, ""));
+            if (!string.IsNullOrWhiteSpace(whereQuery))
+                queryStr.Append($"WHERE {whereQuery} ");
 
             //Generate "order by limit offset"
             AddStandardFinalLimit(queryStr, reqplus, parameters);

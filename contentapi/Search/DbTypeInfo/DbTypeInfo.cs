@@ -19,7 +19,9 @@ public class DbTypeInfo
 
     //These don't necessarily map to direct database things, even though they MOSTLY do
     public RequestType? requestType {get;set;}
-    public string selectFrom {get;set;} = "";
+    public string selectFromSql {get;set;} = "";
+    public string whereSql {get;set;} = "";
+
     //public Type? modelType {get;set;}
     //public string? modelTable {get;set;}
     //Note: the modelProperties, although MOSTLY mapped to fields, aren't NECESSARILY mapped to fields, so we must have it be a separate list

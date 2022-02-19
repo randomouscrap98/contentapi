@@ -33,7 +33,8 @@ public class CacheDbTypeInfoService : IDbTypeInfoService
 
                 var result = new Search.DbTypeInfo() { 
                     type = t,
-                    selectFrom = t.GetCustomAttribute<SelectFromAttribute>()?.SelectFrom_Sql ?? "",
+                    selectFromSql = t.GetCustomAttribute<SelectFromAttribute>()?.SelectFrom_Sql ?? "",
+                    whereSql = t.GetCustomAttribute<WhereAttribute>()?.Where_Sql ?? "",
                     requestType = t.GetCustomAttribute<ResultForAttribute>()?.Type
                     //modelType = t.GetCustomAttribute<FromTableAttribute>()?.Type,
                     //requestType = t.GetCustomAttribute<ForRequestAttribute>()?.Type
