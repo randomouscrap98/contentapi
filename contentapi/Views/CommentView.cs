@@ -7,6 +7,7 @@ namespace contentapi.Views;
 [ResultFor(RequestType.comment)]
 [SelectFrom("comments")]
 [Where("module IS NULL")]
+[WriteAs(typeof(Db.Comment))]
 public class CommentView : IIdView
 {
     [FieldSelect]

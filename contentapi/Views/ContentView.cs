@@ -3,11 +3,9 @@ using contentapi.Search;
 
 namespace contentapi.Views;
 
-//[FromTable(typeof(Db.Content))]
-//[ForRequest(RequestType.content)]
-
 [ResultFor(RequestType.content)]
 [SelectFrom("content as main")]
+[WriteAs(typeof(Db.Content))]
 public class ContentView : IIdView
 {
     public const string NaturalCommentQuery = "deleted = 0 and module IS NULL";

@@ -21,10 +21,5 @@ public class ViewTypeInfo
     public RequestType? requestType {get;set;}
     public string selectFromSql {get;set;} = "";
     public string whereSql {get;set;} = "";
-
-    //public Type? modelType {get;set;}
-    //public string? modelTable {get;set;}
-    //Note: the modelProperties, although MOSTLY mapped to fields, aren't NECESSARILY mapped to fields, so we must have it be a separate list
-    //public Dictionary<string, System.Reflection.PropertyInfo> modelProperties {get;set;} = new Dictionary<string, System.Reflection.PropertyInfo>();
-
+    public DbTypeInfo? writeAsInfo {get;set;}
 }
