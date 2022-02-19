@@ -8,6 +8,7 @@ namespace contentapi.Views;
 [ResultFor(RequestType.page)]
 [SelectFrom("content")]
 [Where("internalType = 1")]
+[WriteAs(typeof(Db.Content))]
 public class PageView : ContentView
 {
     //[Searchable]

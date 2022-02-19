@@ -7,6 +7,7 @@ namespace contentapi.Views;
 //[ForRequest(RequestType.user)]
 [ResultFor(RequestType.user)]
 [SelectFrom("users")]
+[WriteAs(typeof(Db.User))]
 public class UserView : IIdView
 {
     //[Searchable]

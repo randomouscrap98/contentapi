@@ -6,6 +6,7 @@ namespace contentapi.Views;
 //[ForRequest(RequestType.uservariable)]
 [ResultFor(RequestType.uservariable)]
 [SelectFrom("user_variables")]
+[WriteAs(typeof(Db.UserVariable))]
 public class UserVariableView : IIdView
 {
     //[Searchable]

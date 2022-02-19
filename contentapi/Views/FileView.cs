@@ -3,11 +3,10 @@ using contentapi.Search;
 
 namespace contentapi.Views;
 
-//[FromTable(typeof(Db.Content))]
-//[ForRequest(RequestType.file)]
 [ResultFor(RequestType.file)]
 [SelectFrom("content")]
 [Where("internalType = 3")] //WARN: 3 is "file" and hopefully will always stay like that BUT...
+[WriteAs(typeof(Db.Content))]
 public class FileView : ContentView
 {
     //Consider whether hashes should be searchable or not. Remember, if a file is private, it won't show up in the results anyway.

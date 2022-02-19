@@ -7,6 +7,7 @@ namespace contentapi.Views;
 //[ForRequest(RequestType.watch)]
 [ResultFor(RequestType.watch)]
 [SelectFrom("content_watches")]
+[WriteAs(typeof(Db.ContentWatch))]
 public class WatchView : IIdView
 {
     //[Searchable]

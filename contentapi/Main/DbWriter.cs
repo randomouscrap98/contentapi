@@ -264,17 +264,17 @@ public class DbWriter : IDbWriter
     public List<string> MapSimpleViewFields<T>(DbWorkUnit<T> work, object dbModel) where T : class, IIdView, new()
     {
         //This can happen if our view type has no associated table
-        //if(work.typeInfo.modelType == null) 
-        //    throw new InvalidOperationException($"Typeinfo for type {work.typeInfo.type} doesn't appear to have an associated db model!");
+        if(work.typeInfo.writeAsInfo == null) 
+            throw new InvalidOperationException($"Typeinfo for type {work.typeInfo.type} doesn't appear to have an associated db model!");
     
         //Assume all properties will be mapped
         var unmapped = new List<string>(); 
 
         //We want to get as many fields as possible. If there are some we can't map, that's ok.
-        foreach(var dbModelProp in work.typeInfo.modelProperties) 
+        foreach(var dbModelProp in work.typeInfo.writeAsInfo.modelProperties) 
         {
             //Simply go find the field definition where the real database column is the same as the model property. 
-            var remap = work.typeInfo.fields.FirstOrDefault(x => x.Value.realDbColumn == dbModelProp.Key);
+            var remap = work.typeInfo.fields.FirstOrDefault(x => x.Value.fieldSelect == dbModelProp.Key);
 
             var isWriteRuleSet = new Func<WriteRule, bool>(t => 
                 remap.Value.onInsert == t && work.action == UserAction.create ||
@@ -304,7 +304,7 @@ public class DbWriter : IDbWriter
                 if(remap.Value.fieldType != typeof(int))
                     throw new InvalidOperationException($"API ERROR: tried to auto-increment non-integer field {remap.Key} (type: {remap.Value.fieldType})");
 
-                int original = (int)(remap.Value.rawProperty?.GetValue(work.existing) ?? 0;
+                int original = (int)(remap.Value.rawProperty?.GetValue(work.existing) ?? 0);
                 //throw new InvalidOperationException("Integer field was somehow null!!"));
                 dbModelProp.Value.SetValue(dbModel, original + 1);
             }
@@ -342,9 +342,9 @@ public class DbWriter : IDbWriter
     /// <returns></returns>
     public async Task DeleteAssociatedType<T>(long id, IDbTransaction tsx, string field, string type)
     {
-        //var tinfo = typeInfoService.GetTypeInfo<T>();
+        var tinfo = typeInfoService.GetTypeInfo<T>();
         var parameters = new { id = id };
-        var deleteCount = await dbcon.ExecuteAsync($"delete from {tinfo.modelTable} where {field} = @id", parameters, tsx);
+        var deleteCount = await dbcon.ExecuteAsync($"delete from {tinfo.writeAsInfo?.modelTable} where {field} = @id", parameters, tsx);
         logger.LogInformation($"Deleting {deleteCount} {typeof(T).Name} from {type} {id}");
     }
 
