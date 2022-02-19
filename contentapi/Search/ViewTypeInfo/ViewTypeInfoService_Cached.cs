@@ -19,6 +19,21 @@ public class ViewTypeInfoService_Cached : IViewTypeInfoService
         return GetTypeInfo(typeof(T));
     }
 
+    public DbTypeInfo GetDbTypeInfo<T>()
+    {
+        return GetDbTypeInfo(typeof(T));
+    }
+
+    public DbTypeInfo GetDbTypeInfo(Type modelType)
+    {
+        return new DbTypeInfo()
+        {
+            modelType = modelType,
+            modelTable = modelType.GetCustomAttribute<TableAttribute>()?.Name ?? throw new InvalidOperationException($"Db model {modelType} has no associated table??"),
+            modelProperties = modelType.GetProperties().ToDictionary(x => x.Name, x => x)
+        };
+    }
+
     public ViewTypeInfo GetTypeInfo(Type t)
     {
         lock(cacheLock)
@@ -35,15 +50,15 @@ public class ViewTypeInfoService_Cached : IViewTypeInfoService
                 var writeAs = t.GetCustomAttribute<WriteAsAttribute>();
 
                 if(writeAs != null)
-                {
-                    var modelType = writeAs.WriteType;
+                    result.writeAsInfo = GetDbTypeInfo(writeAs.WriteType);
 
-                    result.writeAsInfo = new DbTypeInfo()
-                    {
-                        modelType = modelType,
-                        modelTable = modelType.GetCustomAttribute<TableAttribute>()?.Name ?? throw new InvalidOperationException($"Db model {modelType} has no associated table??"),
-                        modelProperties = modelType.GetProperties().ToDictionary(x => x.Name, x => x)
-                    };
+                try
+                {
+                    result.selfDbInfo = GetDbTypeInfo(t);
+                }
+                catch
+                {
+                    logger.LogWarning($"No self dbinfo for type {t} (this is ok)");
                 }
 
                 var allProperties = t.GetProperties().ToDictionary(x => x.Name, x => x);

@@ -22,4 +22,5 @@ public class ViewTypeInfo
     public string selectFromSql {get;set;} = "";
     public string whereSql {get;set;} = "";
     public DbTypeInfo? writeAsInfo {get;set;}
+    public DbTypeInfo? selfDbInfo {get;set;}
 }

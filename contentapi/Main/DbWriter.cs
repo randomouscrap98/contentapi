@@ -344,8 +344,10 @@ public class DbWriter : IDbWriter
     {
         var tinfo = typeInfoService.GetTypeInfo<T>();
         var parameters = new { id = id };
-        var deleteCount = await dbcon.ExecuteAsync($"delete from {tinfo.writeAsInfo?.modelTable} where {field} = @id", parameters, tsx);
-        logger.LogInformation($"Deleting {deleteCount} {typeof(T).Name} from {type} {id}");
+        var sql = $"delete from {tinfo.selfDbInfo?.modelTable} where {field} = @id";
+        logger.LogInformation($"Running DELETE sql (associated type {tinfo.type}): {sql}");
+        var deleteCount = await dbcon.ExecuteAsync(sql, parameters, tsx);
+        logger.LogInformation($"Deleted {deleteCount} {typeof(T).Name} from {type} {id}");
     }
 
 
