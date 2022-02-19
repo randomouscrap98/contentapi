@@ -258,24 +258,32 @@ public class QueryBuilder : IQueryBuilder
     /// <param name="fieldName"></param>
     /// <param name="r"></param>
     /// <returns></returns>
-    public string StandardFieldRemap(string fieldName, SearchRequestPlus r)
+    public string StandardFieldSelect(string fieldName, SearchRequestPlus r)
     {
         //Our personal field modifiers always override all
-        if (StandardComplexFields.ContainsKey((r.requestType, fieldName)))
-        {
-            return StandardComplexFields[(r.requestType, fieldName)];
-        }
-        else //Otherwise, just use what is defined by the type info
-        {
-            var c = r.typeInfo.fields[fieldName].realDbColumn;
+        //if (StandardComplexFields.ContainsKey((r.requestType, fieldName)))
+        //{
+        //    return StandardComplexFields[(r.requestType, fieldName)];
+        //}
+        //else //Otherwise, just use what is defined by the type info
+        //{
+        //var c = r.typeInfo.fields[fieldName].realDbColumn;
+        var c = r.typeInfo.fields[fieldName].fieldSelect;
 
-            if(string.IsNullOrWhiteSpace(c))
-                throw new InvalidOperationException($"Can't remap field '{fieldName}': no complex field mapping defined in the query builder AND no real db column defined on the field! Computed: {r.typeInfo.fields[fieldName].computed}");
-            else if (c == fieldName)
-                return c;
-            else
-                return $"{c} AS {fieldName}";
-        }
+        if(string.IsNullOrWhiteSpace(c))
+            throw new InvalidOperationException($"Can't select field '{fieldName}' in base query: no 'select' sql defined for that field!");
+        else if (c == fieldName)
+            return c;
+        else
+            return $"({c}) AS {fieldName}";
+
+            //if(string.IsNullOrWhiteSpace(c))
+            //    throw new InvalidOperationException($"Can't remap field '{fieldName}': no complex field mapping defined in the query builder AND no real db column defined on the field! Computed: {r.typeInfo.fields[fieldName].computed}");
+            //else if (c == fieldName)
+            //    return c;
+            //else
+            //    return $"{c} AS {fieldName}";
+        //}
     }
 
     /// <summary>
@@ -332,20 +340,22 @@ public class QueryBuilder : IQueryBuilder
             throw new ArgumentException($"Field '{field}' not found in type '{request.type}'({request.name})!");
 
         if(!request.typeInfo.fields[field].queryable)
-            throw new ArgumentException($"Field '{field}' not searchable in type '{request.type}'({request.name})!");
+            throw new ArgumentException($"Field '{field}' not queryable in type '{request.type}'({request.name})!");
 
-        //Note: computed fields do NOT run through the query builder!
-
-        //Oops, sometimes a field might not be part of the request but we're querying against it. This requires special things
+        //For now, we outright reject querying against fields you don't explicitly pull. This CAN be made better in the
+        //future, but for now, I think this is a reasonable limitation to reduce potential bugs
         if(!request.requestFields.Contains(field))
-        {
-            if(StandardComplexFields.ContainsKey((request.requestType, field)))
-                throw new ArgumentException($"Field '{field}' is a complex field for type '{request.type}' and must be included in the requested fieldlist ({request.name})");
-            else if(string.IsNullOrWhiteSpace(request.typeInfo.fields[field].realDbColumn))
-                throw new InvalidOperationException($"Field '{field}' in type '{request.type}' doesn't map to any database data and does not have a complex field definition, which means it is misconfigured in the API. ({request.name})");
-            else //If we get to here, we have a renamed field that was NOT requested in the fieldlist, so we need to give the REAL database name for the parse
-                return request.typeInfo.fields[field].realDbColumn ?? throw new InvalidOperationException("Somehow, realDbColumn was null even after a null check!");
-        }
+            throw new InvalidOperationException($"Can't query against field '{field}' without selecting it: Current query system requires fields to be selected in order to be used in the 'query' clause");
+        ////Oops, sometimes a field might not be part of the request but we're querying against it. This requires special things
+        //if(!request.requestFields.Contains(field))
+        //{
+        //    if(StandardComplexFields.ContainsKey((request.requestType, field)))
+        //        throw new ArgumentException($"Field '{field}' is a complex field for type '{request.type}' and must be included in the requested fieldlist ({request.name})");
+        //    else if(string.IsNullOrWhiteSpace(request.typeInfo.fields[field].realDbColumn))
+        //        throw new InvalidOperationException($"Field '{field}' in type '{request.type}' doesn't map to any database data and does not have a complex field definition, which means it is misconfigured in the API. ({request.name})");
+        //    else //If we get to here, we have a renamed field that was NOT requested in the fieldlist, so we need to give the REAL database name for the parse
+        //        return request.typeInfo.fields[field].realDbColumn ?? throw new InvalidOperationException("Somehow, realDbColumn was null even after a null check!");
+        //}
 
         return field;
     }
@@ -486,13 +496,16 @@ public class QueryBuilder : IQueryBuilder
     /// <param name="r"></param>
     public void AddStandardSelect(StringBuilder queryStr, SearchRequestPlus r)
     {
-        var fieldSelect = r.requestFields.Where(x => !r.typeInfo.fields[x].computed).Select(x => StandardFieldRemap(x, r)).ToList();
+        //var fieldSelect = r.requestFields.Where(x => !r.typeInfo.fields[x].computed).Select(x => StandardFieldRemap(x, r)).ToList();
+        var fieldSelect = r.requestFields.Where(x => !r.typeInfo.fields[x].queryBuildable).Select(x => StandardFieldSelect(x, r)).ToList();
 
         queryStr.Append("SELECT ");
         queryStr.Append(string.Join(",", fieldSelect));
         queryStr.Append(" FROM ");
-        queryStr.Append(r.typeInfo.modelTable ?? throw new InvalidOperationException($"Standard select {r.type} doesn't map to database table in request {r.name}!"));
-        queryStr.Append($" AS {MainAlias} ");
+        queryStr.Append(r.typeInfo.selectFromSql ?? throw new InvalidOperationException($"Standard select {r.type} doesn't define a 'select from' statement in request {r.name}!"));
+        queryStr.Append(" "); //To be nice, always end in space?
+        //queryStr.Append(r.typeInfo.modelTable ?? throw new InvalidOperationException($"Standard select {r.type} doesn't map to database table in request {r.name}!"));
+        //queryStr.Append($" AS {MainAlias} ");
     }
 
 
