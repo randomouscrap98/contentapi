@@ -345,7 +345,7 @@ public class QueryBuilder : IQueryBuilder
         //For now, we outright reject querying against fields you don't explicitly pull. This CAN be made better in the
         //future, but for now, I think this is a reasonable limitation to reduce potential bugs
         if(!request.requestFields.Contains(field))
-            throw new InvalidOperationException($"Can't query against field '{field}' without selecting it: Current query system requires fields to be selected in order to be used in the 'query' clause");
+            throw new ArgumentException($"Can't query against field '{field}' without selecting it: Current query system requires fields to be selected in order to be used in the 'query' clause");
         ////Oops, sometimes a field might not be part of the request but we're querying against it. This requires special things
         //if(!request.requestFields.Contains(field))
         //{

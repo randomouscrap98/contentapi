@@ -5,8 +5,8 @@ namespace contentapi.Views;
 
 //[FromTable(typeof(Db.ContentHistory))]
 //[ForRequest(RequestType.comment_aggregate)]
-[SelectFrom("something join something else?")]
-[ResultFor(RequestType.comment_aggregate)]
+//[SelectFrom("something join something else?")]
+//[ResultFor(RequestType.comment_aggregate)]
 public class CommentAggregateView : IIdView
 {
     public long contentId { get; set; }

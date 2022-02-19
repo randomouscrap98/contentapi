@@ -469,7 +469,7 @@ public class GenericSearchDbTests : UnitTestBase, IClassFixture<DbUnitTestSearch
         {
             name = "testnotlike",
             type = "content",
-            fields = "id",
+            fields = "id, name",
             query = "name not like @contentnotlike"
         });
 
@@ -612,22 +612,24 @@ public class GenericSearchDbTests : UnitTestBase, IClassFixture<DbUnitTestSearch
         });
     }
 
-    [Fact]
-    public async Task GenericSearch_Search_BasicFieldNotRequired()
-    {
-        var search = new SearchRequests();
-        search.values.Add("userlike", "user_%");
-        search.requests.Add(new SearchRequest()
-        {
-            name = "basicfield",
-            type = "user",
-            fields = "id", //Even though username is not there, we should be able to query for it
-            query = "username like @userlike"
-        });
+    //TODO: this test was because we used to allow basic fields to be selected without actually selecting
+    //them in the field list. This is no longer the case.
+    //[Fact]
+    //public async Task GenericSearch_Search_BasicFieldNotRequired()
+    //{
+    //    var search = new SearchRequests();
+    //    search.values.Add("userlike", "user_%");
+    //    search.requests.Add(new SearchRequest()
+    //    {
+    //        name = "basicfield",
+    //        type = "user",
+    //        fields = "id", //Even though username is not there, we should be able to query for it
+    //        query = "username like @userlike"
+    //    });
 
-        var result = (await service.SearchUnrestricted(search)).data["basicfield"];
-        Assert.Equal(fixture.UserCount, result.Count());
-    }
+    //    var result = (await service.SearchUnrestricted(search)).data["basicfield"];
+    //    Assert.Equal(fixture.UserCount, result.Count());
+    //}
 
     [Fact]
     public async Task GenericSearch_Search_RemappedField_Searchable()
@@ -649,31 +651,33 @@ public class GenericSearchDbTests : UnitTestBase, IClassFixture<DbUnitTestSearch
         Assert.Equal(fixture.ContentCount / 4 / 2, result.Count());
     }
 
-    [Fact]
-    public async Task GenericSearch_Search_RemappedField_NotIncluded_SimpleAllowed()
-    {
-        var search = new SearchRequests();
-        search.values.Add("hash", "four");
-        search.requests.Add(new SearchRequest()
-        {
-            type = "file",
-            fields = "id", 
-            query = "hash = @hash"
-        });
+    //TODO: again, we outright deny all searches where the query field is not selected. This is a new restriction,
+    //so these tests are no longer valid
+    //[Fact]
+    //public async Task GenericSearch_Search_RemappedField_NotIncluded_SimpleAllowed()
+    //{
+    //    var search = new SearchRequests();
+    //    search.values.Add("hash", "four");
+    //    search.requests.Add(new SearchRequest()
+    //    {
+    //        type = "file",
+    //        fields = "id", 
+    //        query = "hash = @hash"
+    //    });
 
-        //This should still work, even though there's no hash included in the fields. The query system is smart enough to figure it out, even though it's
-        //a remapped field.
-        var result = await service.SearchUnrestricted(search);
+    //    //This should still work, even though there's no hash included in the fields. The query system is smart enough to figure it out, even though it's
+    //    //a remapped field.
+    //    var result = await service.SearchUnrestricted(search);
 
-        //This only works when the file type is 3. Dumb tests
-        Assert.Equal(3, (int)InternalContentType.file);
+    //    //This only works when the file type is 3. Dumb tests
+    //    Assert.Equal(3, (int)InternalContentType.file);
 
-        Assert.NotEmpty(result.data["file"]);
-        Assert.Equal("4", result.data["file"].First()["id"].ToString());
-        //await Assert.ThrowsAnyAsync<ArgumentException>(async () => {
-        //    var result = await service.SearchUnrestricted(search);
-        //});
-    }
+    //    Assert.NotEmpty(result.data["file"]);
+    //    Assert.Equal("4", result.data["file"].First()["id"].ToString());
+    //    //await Assert.ThrowsAnyAsync<ArgumentException>(async () => {
+    //    //    var result = await service.SearchUnrestricted(search);
+    //    //});
+    //}
 
     [Fact]
     public async Task GenericSearch_Search_RemappedField_FailGracefully()
