@@ -497,7 +497,7 @@ public class QueryBuilder : IQueryBuilder
     public void AddStandardSelect(StringBuilder queryStr, SearchRequestPlus r)
     {
         //var fieldSelect = r.requestFields.Where(x => !r.typeInfo.fields[x].computed).Select(x => StandardFieldRemap(x, r)).ToList();
-        var fieldSelect = r.requestFields.Where(x => !r.typeInfo.fields[x].queryBuildable).Select(x => StandardFieldSelect(x, r)).ToList();
+        var fieldSelect = r.requestFields.Where(x => r.typeInfo.fields[x].queryBuildable).Select(x => StandardFieldSelect(x, r)).ToList();
         var selectFrom = r.typeInfo.selectFromSql ; //?? throw new InvalidOperationException($"Standard select {r.type} doesn't define a 'select from' statement in request {r.name}!");
 
         if(string.IsNullOrWhiteSpace(selectFrom))

@@ -130,4 +130,22 @@ public class CachedTypeInfoServiceTest : UnitTestBase
         Assert.NotNull(typeInfo.writeAsInfo);
         Assert.Equal(typeof(Db.Content), typeInfo.writeAsInfo?.modelType);
     }
+
+    [Fact] 
+    public void GetTypeInfo_UserGroups()
+    {
+        var typeInfo = service.GetTypeInfo<UserView>();
+
+        var field = typeInfo.fields["groups"];
+
+        //Now ensure permissions make sense. We won't do this for ALL fields, but we've had
+        //problems with permissions before, and might as well check the system. Permissions are 
+        //one of the most important things to get right anyway.
+        Assert.True(string.IsNullOrEmpty(field.fieldSelect), "Groups had a backing field select set when it shouldn't!");
+        Assert.False(field.queryBuildable);
+        Assert.False(field.queryable);
+        Assert.Equal(WriteRule.User, field.onInsert);
+        Assert.Equal(WriteRule.User, field.onUpdate);
+        Assert.True(field.expensive > 0);
+    }
 }

@@ -106,4 +106,29 @@ public class QueryBuilderTests : UnitTestBase
         Assert.NotEmpty(result.types);
         Assert.NotEmpty(result.objects);
     }
+
+    [Fact]
+    public void FullParseRequest_User()
+    {
+        var result = service.FullParseRequest(new SearchRequest()
+        {
+            name = "somename",
+            type = "user",
+            fields = "*"
+        }, new Dictionary<string, object>());
+
+        Assert.Equal("somename", result.name);
+        Assert.Equal("user", result.type);
+        Assert.Equal(RequestType.user, result.requestType);
+        Assert.NotNull(result.typeInfo);
+        Assert.Equal("users", result.typeInfo.selectFromSql);
+        Assert.NotEmpty(result.requestFields);
+
+        //Even if WE can't parse it, the field BETTER show up in request fields! This is the only
+        //way to allow the searcher to add additional data!
+        Assert.Contains("groups", result.requestFields);
+
+        //And because groups are not part of the query builder, it should NOT show up in the query
+        Assert.DoesNotContain("groups", result.computedSql);
+    }
 }

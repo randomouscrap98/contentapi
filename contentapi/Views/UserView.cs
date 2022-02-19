@@ -61,6 +61,7 @@ public class UserView : IIdView
 
     //[FromField("")]
     //[Computed]
+    [NoQuery]
     [Expensive(2)]
     [Writable]
     //[WriteRule(WriteRuleType.ReadOnly, WriteRuleType.ReadOnly)]
