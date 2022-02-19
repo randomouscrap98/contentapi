@@ -1,4 +1,5 @@
 using System.Reflection;
+using Dapper.Contrib.Extensions;
 
 namespace contentapi.Search;
 
@@ -30,6 +31,20 @@ public class ViewTypeInfoService_Cached : IViewTypeInfoService
                     whereSql = t.GetCustomAttribute<WhereAttribute>()?.Where_Sql ?? "",
                     requestType = t.GetCustomAttribute<ResultForAttribute>()?.Type
                 };
+
+                var writeAs = t.GetCustomAttribute<WriteAsAttribute>();
+
+                if(writeAs != null)
+                {
+                    var modelType = writeAs.WriteType;
+
+                    result.writeAsInfo = new DbTypeInfo()
+                    {
+                        modelType = modelType,
+                        modelTable = modelType.GetCustomAttribute<TableAttribute>()?.Name ?? throw new InvalidOperationException($"Db model {modelType} has no associated table??"),
+                        modelProperties = modelType.GetProperties().ToDictionary(x => x.Name, x => x)
+                    };
+                }
 
                 var allProperties = t.GetProperties().ToDictionary(x => x.Name, x => x);
 
