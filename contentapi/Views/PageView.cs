@@ -6,9 +6,9 @@ namespace contentapi.Views;
 //[FromTable(typeof(Db.Content))]
 //[ForRequest(RequestType.page)]
 [ResultFor(RequestType.page)]
-[SelectFrom("content")]
+//[SelectFrom("content")]
 [Where("internalType = 1")]
-[WriteAs(typeof(Db.Content))]
+//[WriteAs(typeof(Db.Content))]
 public class PageView : ContentView
 {
     //[Searchable]

@@ -498,11 +498,15 @@ public class QueryBuilder : IQueryBuilder
     {
         //var fieldSelect = r.requestFields.Where(x => !r.typeInfo.fields[x].computed).Select(x => StandardFieldRemap(x, r)).ToList();
         var fieldSelect = r.requestFields.Where(x => !r.typeInfo.fields[x].queryBuildable).Select(x => StandardFieldSelect(x, r)).ToList();
+        var selectFrom = r.typeInfo.selectFromSql ; //?? throw new InvalidOperationException($"Standard select {r.type} doesn't define a 'select from' statement in request {r.name}!");
+
+        if(string.IsNullOrWhiteSpace(selectFrom))
+            throw new InvalidOperationException($"Standard select {r.type} doesn't define a 'select from' statement in request {r.name}, this is a program error!");
 
         queryStr.Append("SELECT ");
         queryStr.Append(string.Join(",", fieldSelect));
         queryStr.Append(" FROM ");
-        queryStr.Append(r.typeInfo.selectFromSql ?? throw new InvalidOperationException($"Standard select {r.type} doesn't define a 'select from' statement in request {r.name}!"));
+        queryStr.Append(selectFrom); // ?? throw new InvalidOperationException($"Standard select {r.type} doesn't define a 'select from' statement in request {r.name}!"));
         queryStr.Append(" "); //To be nice, always end in space?
         //queryStr.Append(r.typeInfo.modelTable ?? throw new InvalidOperationException($"Standard select {r.type} doesn't map to database table in request {r.name}!"));
         //queryStr.Append($" AS {MainAlias} ");

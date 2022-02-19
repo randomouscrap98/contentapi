@@ -5,9 +5,9 @@ namespace contentapi.Views;
 //[FromTable(typeof(Db.Content))]
 //[ForRequest(RequestType.module)]
 [ResultFor(RequestType.module)]
-[SelectFrom("content")]
+//[SelectFrom("content")]
 [Where("internalType = 2")]
-[WriteAs(typeof(Db.Content))]
+//[WriteAs(typeof(Db.Content))]
 public class ModuleView : ContentView
 {
     //[FromField("content")]

@@ -4,7 +4,7 @@ using contentapi.Search;
 namespace contentapi.Views;
 
 [ResultFor(RequestType.content)]
-[SelectFrom("content as main")]
+[SelectFrom("content AS main")]
 [WriteAs(typeof(Db.Content))]
 public class ContentView : IIdView
 {
