@@ -6,7 +6,7 @@ namespace contentapi.Views;
 [ResultFor(RequestType.comment_aggregate)]
 [SelectFrom("comments")]
 [GroupBy("contentId, createUserId")]
-[ExtraQueryFields("id")]
+[ExtraQueryFields("id", "createDate")]
 public class CommentAggregateView
 {
     [FieldSelect]

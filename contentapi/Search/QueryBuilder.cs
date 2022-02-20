@@ -38,11 +38,14 @@ public class QueryBuilder : IQueryBuilder
         //WARN: permission limiting could be very dangerous! Make sure that no matter how the user uses
         //this, they still ONLY get the stuff they're allowed to read!
         { "permissionlimit", new MacroDescription("vfi", "PermissionLimit", new List<RequestType> {
+            RequestType.activity,
             RequestType.content,
             RequestType.page,
             RequestType.file,
             RequestType.module,
-            RequestType.comment
+            RequestType.comment,
+            RequestType.comment_aggregate,
+            RequestType.activity_aggregate
         }) }
     };
 
@@ -273,6 +276,10 @@ public class QueryBuilder : IQueryBuilder
     /// <returns></returns>
     public string ParseField(string field, SearchRequestPlus request)
     {
+        //These special 'extraQueryFields' can be used regardless of any rules
+        if(request.typeInfo.extraQueryFields.Contains(field))
+            return field;
+
         if(!request.typeInfo.fields.ContainsKey(field))
             throw new ArgumentException($"Field '{field}' not found in type '{request.type}'({request.name})!");
 

@@ -1167,4 +1167,50 @@ public class GenericSearchDbTests : UnitTestBase, IClassFixture<DbUnitTestSearch
             Assert.True(content.Any(y => y.id == x.contentId), "returned comment not in content list!");
         });
     }
+
+    //This test ensures the basic structure of comment_aggregate makes sense
+    [Theory]
+    [InlineData(0)]
+    [InlineData(0, "id > @id")]
+    [InlineData(0, "createDate > @past")]
+    [InlineData((int)UserVariations.Super)]
+    [InlineData((int)UserVariations.Super, "id > @id")]
+    [InlineData((int)UserVariations.Super, "createDate > @past")]
+    [InlineData((int)UserVariations.Super + 1)]
+    [InlineData((int)UserVariations.Super + 1, "id > @id")]
+    [InlineData((int)UserVariations.Super + 1, "createDate > @past")]
+    public async Task GenericSearch_Search_CommentAggregateSimple(long userId, string query = "")
+    {
+        var search = new SearchRequests();
+        search.requests.Add(new SearchRequest()
+        {
+            type = "comment_aggregate",
+            fields = "*",
+            query = query
+        });
+        search.values.Add("id", 10);
+        search.values.Add("past", DateTime.UtcNow - TimeSpan.FromDays(5));
+
+        var result = (userId == 0 ? (await service.SearchUnrestricted(search)) : (await service.Search(search, userId)))
+            .data["comment_aggregate"];
+        var castResult = service.ToStronglyTyped<CommentAggregateView>(result);
+
+        //There should ALWAYS be results
+        Assert.True(castResult.Count > 0, "There were no results!");
+
+        //This is a weird little thing to ensure the grouping works
+        var groupSet = castResult.Select(x => $"{x.contentId}|{x.createUserId}" ).ToList();
+
+        //Ensure that there are no duplicates in groupBy
+        Assert.Equal(groupSet.Count, groupSet.Distinct().Count());
+
+        Assert.All(castResult, x =>
+        {
+            Assert.True(x.minId <= x.maxId);
+            Assert.True(x.minCreateDate <= x.maxCreateDate);
+            Assert.True(x.contentId != 0);
+            Assert.True(x.createUserId != 0);
+            Assert.True(x.count > 0); //THIS IS TRUE because a groupby would not include groups that don't exist!
+        });
+    }
 }
