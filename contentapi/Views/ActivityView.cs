@@ -3,8 +3,6 @@ using contentapi.Search;
 
 namespace contentapi.Views;
 
-//[FromTable(typeof(Db.ContentHistory))]
-//[ForRequest(RequestType.activity)]
 [ResultFor(RequestType.activity)]
 [SelectFrom("content_history")]
 public class ActivityView : IIdView

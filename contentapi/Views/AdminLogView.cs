@@ -4,8 +4,6 @@ using contentapi.Search;
 
 namespace contentapi.Views;
 
-//[FromTable(typeof(Db.AdminLog))]
-//[ForRequest(RequestType.adminlog)]
 [ResultFor(RequestType.adminlog)]
 [SelectFrom("admin_log")]
 public class AdminLogView : IIdView

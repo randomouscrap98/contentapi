@@ -44,6 +44,8 @@ public class ViewTypeInfoService_Cached : IViewTypeInfoService
                     type = t,
                     selectFromSql = t.GetCustomAttribute<SelectFromAttribute>()?.SelectFrom_Sql ?? "",
                     whereSql = t.GetCustomAttribute<WhereAttribute>()?.Where_Sql ?? "",
+                    groupBySql = t.GetCustomAttribute<GroupByAttribute>()?.GroupBy_Sql ?? "",
+                    extraQueryFields = t.GetCustomAttribute<ExtraQueryFieldsAttribute>()?.Fields ?? new List<string>(),
                     requestType = t.GetCustomAttribute<ResultForAttribute>()?.Type
                 };
 

@@ -12,7 +12,7 @@ public enum RequestType
     watch,
     adminlog,
     uservariable,
-    //comment_aggregate,
+    comment_aggregate,
     //activity_aggregate
     //agent, //This is 'all' users (including groups/etc), useful for permissions 
     //group

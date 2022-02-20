@@ -3,24 +3,35 @@ using contentapi.Search;
 
 namespace contentapi.Views;
 
-//[FromTable(typeof(Db.ContentHistory))]
-//[ForRequest(RequestType.comment_aggregate)]
-//[SelectFrom("something join something else?")]
-//[ResultFor(RequestType.comment_aggregate)]
-public class CommentAggregateView : IIdView
+[ResultFor(RequestType.comment_aggregate)]
+[SelectFrom("comments")]
+[GroupBy("contentId, createUserId")]
+[ExtraQueryFields("id")]
+public class CommentAggregateView
 {
+    [FieldSelect]
     public long contentId { get; set; }
 
+    [FieldSelect]
     public long createUserId { get; set; }
 
 
-    public long id { get; set; }
+    [FieldSelect("count(id)")]
+    public long count { get;set; }
 
-    //[FromField("createDate")]
-    public DateTime date { get; set; }
+    [NoQuery]
+    [FieldSelect("max(id)")]
+    public long maxId {get;set;}
 
-    //[Queryable]
-    //public string? message {get;set;}
+    [NoQuery]
+    [FieldSelect("min(id)")]
+    public long minId {get;set;}
 
-    public UserAction action {get;set;}
+    [NoQuery]
+    [FieldSelect("max(createDate)")]
+    public DateTime maxCreateDate {get;set;}
+
+    [NoQuery]
+    [FieldSelect("min(createDate)")]
+    public DateTime minCreateDate {get;set;}
 }

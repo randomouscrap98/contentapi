@@ -18,6 +18,9 @@ public class CachedTypeInfoServiceTest : UnitTestBase
 
     [ResultFor(RequestType.file)]
     [SelectFrom("cows as c")]
+    [Where("something = whatever")]
+    [GroupBy("magic")]
+    [ExtraQueryFields("id","createDate")]
     public class TestView
     {
         //An unmarked field is considered queryable, readonly, and NOT pullable by the query builder
@@ -49,10 +52,40 @@ public class CachedTypeInfoServiceTest : UnitTestBase
     }
 
     [Fact] 
-    public void GetTypeInfoType()
+    public void GetTypeInfo_Type()
     {
         var typeInfo = service.GetTypeInfo<TestView>();
         Assert.Equal(typeof(TestView), typeInfo.type);
+    }
+
+    [Fact] 
+    public void GetTypeInfo_SelectFrom()
+    {
+        var typeInfo = service.GetTypeInfo<TestView>();
+        Assert.Equal("cows as c", typeInfo.selectFromSql);
+    }
+
+    [Fact] 
+    public void GetTypeInfo_Where()
+    {
+        var typeInfo = service.GetTypeInfo<TestView>();
+        Assert.Equal("something = whatever", typeInfo.whereSql);
+    }
+
+    [Fact] 
+    public void GetTypeInfo_GroupBy()
+    {
+        var typeInfo = service.GetTypeInfo<TestView>();
+        Assert.Equal("magic", typeInfo.groupBySql);
+    }
+
+    [Fact] 
+    public void GetTypeInfo_ExtraQueryFields()
+    {
+        var typeInfo = service.GetTypeInfo<TestView>();
+        Assert.Contains("id", typeInfo.extraQueryFields);
+        Assert.Contains("createDate", typeInfo.extraQueryFields);
+        Assert.Equal(2, typeInfo.extraQueryFields.Count);
     }
 
     protected IEnumerable<string> RetrievableFields(ViewTypeInfo info) => info.fields.Keys;

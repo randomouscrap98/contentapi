@@ -10,42 +10,30 @@ public class ContentView : IIdView
 {
     public const string NaturalCommentQuery = "deleted = 0 and module IS NULL";
 
-    //[Searchable]
-    //[WriteRule(WriteRuleType.None)] //The first parameter is for inserts, and the default write rule for updates (2nd param) is preserve, so...
     [FieldSelect]
     [Writable(WriteRule.Preserve, WriteRule.Preserve)]
     public long id { get; set; }
 
-    //[Searchable]
-    //[WriteRule(WriteRuleType.DefaultValue, WriteRuleType.ReadOnly)]
     //Entirely not writable
     [FieldSelect]
     public bool deleted { get; set; }
 
-    //[Searchable]
-    //[WriteRule(WriteRuleType.AutoUserId)] 
     [FieldSelect]
     [Writable(WriteRule.AutoUserId, WriteRule.Preserve)]
     public long createUserId { get; set; }
 
-    //[Searchable]
-    //[WriteRule(WriteRuleType.AutoDate)] 
     [FieldSelect]
     [Writable(WriteRule.AutoDate, WriteRule.Preserve)]
     public DateTime createDate { get; set; }
 
-    //[Searchable]
-    [FieldSelect]
     //Entirely not writable
-    //[WriteRule(WriteRuleType.ReadOnly, WriteRuleType.ReadOnly)]  //This is set by the system, the user has no control over it.
+    [FieldSelect]
     public InternalContentType internalType {get;set;}
 
-    //[Searchable]
     [FieldSelect]
     [Writable]
     public string name { get; set; } = "";
 
-    //[Searchable]
     [FieldSelect]
     [Writable]
     public long parentId { get; set; }
@@ -76,26 +64,26 @@ public class ContentView : IIdView
     public Dictionary<VoteType, int> votes {get;set;} = new Dictionary<VoteType, int>();
 
     [Expensive(1)]
-    [FieldSelect("(select createDate from comments where main.id = contentId and " + NaturalCommentQuery + " order by id desc limit 1)")]
+    [FieldSelect("select createDate from comments where main.id = contentId and " + NaturalCommentQuery + " order by id desc limit 1")]
     public DateTime lastCommentDate {get;set;}
 
     [Expensive(1)]
-    [FieldSelect("(select id from comments where main.id = contentId and " + NaturalCommentQuery + " order by id desc limit 1)")]
+    [FieldSelect("select id from comments where main.id = contentId and " + NaturalCommentQuery + " order by id desc limit 1")]
     public long lastCommentId {get;set;}
 
     [Expensive(1)]
-    [FieldSelect("(select count(*) from comments where main.id = contentId and " + NaturalCommentQuery + ")")]
+    [FieldSelect("select count(*) from comments where main.id = contentId and " + NaturalCommentQuery)]
     public int commentCount {get;set;}
 
     [Expensive(1)]
-    [FieldSelect("(select count(*) from content_watches where main.id = contentId)")]
+    [FieldSelect("select count(*) from content_watches where main.id = contentId")]
     public int watchCount {get;set;}
 
     [Expensive(1)]
-    [FieldSelect("(select createDate from content_history where main.id = contentId order by id desc limit 1)")]
+    [FieldSelect("select createDate from content_history where main.id = contentId order by id desc limit 1")]
     public DateTime lastRevisionDate {get;set;}
 
     [Expensive(1)]
-    [FieldSelect("(select id from content_history where main.id = contentId order by id desc limit 1)")]
+    [FieldSelect("select id from content_history where main.id = contentId order by id desc limit 1")]
     public long lastRevisionId {get;set;}
 }

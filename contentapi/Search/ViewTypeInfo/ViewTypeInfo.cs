@@ -21,6 +21,9 @@ public class ViewTypeInfo
     public RequestType? requestType {get;set;}
     public string selectFromSql {get;set;} = "";
     public string whereSql {get;set;} = "";
+    public string groupBySql {get;set;} = "";
     public DbTypeInfo? writeAsInfo {get;set;}
     public DbTypeInfo? selfDbInfo {get;set;}
+
+    public List<string> extraQueryFields {get;set;} = new List<string>();
 }

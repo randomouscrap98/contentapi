@@ -43,6 +43,20 @@ public class WhereAttribute : System.Attribute
     public WhereAttribute(string sql = "") {  this.Where_Sql = sql; }  
 }  
 
+[System.AttributeUsage(System.AttributeTargets.Class | System.AttributeTargets.Struct)]
+public class GroupByAttribute : System.Attribute  
+{  
+    public string GroupBy_Sql {get;}
+    public GroupByAttribute(string sql = "") {  this.GroupBy_Sql = sql; }  
+}  
+
+[System.AttributeUsage(System.AttributeTargets.Class | System.AttributeTargets.Struct)]
+public class ExtraQueryFieldsAttribute : System.Attribute  
+{  
+    public List<string> Fields {get;}
+    public ExtraQueryFieldsAttribute(params string[] fields) { this.Fields = fields.ToList(); }  
+}  
+
 /// <summary>
 /// This attribute dictates whether a field can be used inside a user's "query" statement.
 /// Just because a field can be pulled doesn't mean it's fit to be used in a WHERE clause.
