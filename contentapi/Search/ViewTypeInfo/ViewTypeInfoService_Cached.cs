@@ -40,12 +40,15 @@ public class ViewTypeInfoService_Cached : IViewTypeInfoService
         {
             if(!cachedTypes.ContainsKey(t))
             {
+                var extraQueryAttributes = t.GetCustomAttributes<ExtraQueryFieldAttribute>() ?? new List<ExtraQueryFieldAttribute>();
+
                 var result = new Search.ViewTypeInfo() { 
                     type = t,
                     selectFromSql = t.GetCustomAttribute<SelectFromAttribute>()?.SelectFrom_Sql ?? "",
                     whereSql = t.GetCustomAttribute<WhereAttribute>()?.Where_Sql ?? "",
                     groupBySql = t.GetCustomAttribute<GroupByAttribute>()?.GroupBy_Sql ?? "",
-                    extraQueryFields = t.GetCustomAttribute<ExtraQueryFieldsAttribute>()?.Fields ?? new List<string>(),
+                    extraQueryFields = extraQueryAttributes.ToDictionary(x => x.field, y => y.select ?? y.field),
+                    //extraQueryFields = t.GetCustomAttribute<ExtraQueryFieldsAttribute>()?.Fields ?? new List<string>(),
                     requestType = t.GetCustomAttribute<ResultForAttribute>()?.Type
                 };
 

@@ -25,5 +25,5 @@ public class ViewTypeInfo
     public DbTypeInfo? writeAsInfo {get;set;}
     public DbTypeInfo? selfDbInfo {get;set;}
 
-    public List<string> extraQueryFields {get;set;} = new List<string>();
+    public Dictionary<string, string> extraQueryFields {get;set;} = new Dictionary<string, string>();
 }

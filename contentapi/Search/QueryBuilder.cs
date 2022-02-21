@@ -277,8 +277,8 @@ public class QueryBuilder : IQueryBuilder
     public string ParseField(string field, SearchRequestPlus request)
     {
         //These special 'extraQueryFields' can be used regardless of any rules
-        if(request.typeInfo.extraQueryFields.Contains(field))
-            return field;
+        if(request.typeInfo.extraQueryFields.ContainsKey(field))
+            return request.typeInfo.extraQueryFields[field];
 
         if(!request.typeInfo.fields.ContainsKey(field))
             throw new ArgumentException($"Field '{field}' not found in type '{request.type}'({request.name})!");

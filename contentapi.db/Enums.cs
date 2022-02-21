@@ -26,13 +26,13 @@ namespace contentapi.Db
 
     public enum UserType : long
     {
-        user = 0,
-        group = 1
+        user = 1,
+        group = 2
     }
 
     public enum UserRelationType : long
     {
-        inGroup = 0
+        inGroup = 1
     }
 
     public enum AdminLogType : long

@@ -83,6 +83,7 @@ public class DbUnitTestSearchFixture : DbUnitTestBase, IDisposable
                         username = $"user_{i}",
                         password = $"SECRETS_{i}",
                         avatar = rng.GetAlphaSequence(5),//UserCount - i,
+                        type = Db.UserType.user,
                         createDate = DateTime.Now.AddDays(i - UserCount),
                         salt = $"SALTYSECRETS_{i}"
                     };
@@ -126,6 +127,7 @@ public class DbUnitTestSearchFixture : DbUnitTestBase, IDisposable
                     {
                         var userGroup = new Db.UserRelation() {
                             userId = j + 1 + i * UserCount / GroupCount,
+                            type = Db.UserRelationType.inGroup,
                             relatedId = UserCount + i + 1
                         };
 

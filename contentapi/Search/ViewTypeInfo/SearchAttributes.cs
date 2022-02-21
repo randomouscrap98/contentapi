@@ -50,11 +50,16 @@ public class GroupByAttribute : System.Attribute
     public GroupByAttribute(string sql = "") {  this.GroupBy_Sql = sql; }  
 }  
 
-[System.AttributeUsage(System.AttributeTargets.Class | System.AttributeTargets.Struct)]
-public class ExtraQueryFieldsAttribute : System.Attribute  
+[System.AttributeUsage(System.AttributeTargets.Class | System.AttributeTargets.Struct, AllowMultiple = true)]
+public class ExtraQueryFieldAttribute : System.Attribute  
 {  
-    public List<string> Fields {get;}
-    public ExtraQueryFieldsAttribute(params string[] fields) { this.Fields = fields.ToList(); }  
+    public string field {get;set;}
+    public string? select {get;set;}
+    public ExtraQueryFieldAttribute(string field, string? select = null) 
+    { 
+       this.field = field;
+       this.select = select;
+    } 
 }  
 
 /// <summary>

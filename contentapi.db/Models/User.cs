@@ -15,7 +15,7 @@ namespace contentapi.Db
         public string special { get; set; } //Special is nullable!
         public bool super { get; set; }
         public bool deleted { get; set; }
-        public UserType type { get; set; }
+        public UserType type { get; set; } = UserType.user;
         public DateTime createDate { get; set; }
         public DateTime editDate { get; set; }
         public string email { get; set; } = "";

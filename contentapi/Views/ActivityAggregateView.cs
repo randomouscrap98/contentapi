@@ -8,7 +8,9 @@ namespace contentapi.Views;
 [ResultFor(RequestType.activity_aggregate)]
 [SelectFrom("content_history h join content c on h.contentId = c.id")]
 [GroupBy("h.contentId, h.createUserId")]
-[ExtraQueryFields("id", "createDate")] //This still requires a macro for "not files" though... egh
+[ExtraQueryField("id", "h.id")]
+[ExtraQueryField("createDate", "h.createDate")]
+[ExtraQueryField("internalType", "c.internalType")]
 public class ActivityAggregateView
 {
     [FieldSelect("h.contentId")]
