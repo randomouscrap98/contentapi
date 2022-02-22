@@ -1,9 +1,6 @@
-using contentapi.Db;
 using contentapi.Search;
 
 namespace contentapi.Views;
-
-//select h.contentId, h.createUserId, count(h.id), min(h.id), max(h.id), min(h.createDate), max(h.createDate) from content_history h join content c on h.contentId = c.id where h.id>5000 and c.internalType<>3 group by h.contentId, h.createUserId;
 
 [ResultFor(RequestType.activity_aggregate)]
 [SelectFrom("content_history h join content c on h.contentId = c.id")]

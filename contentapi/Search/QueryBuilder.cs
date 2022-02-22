@@ -568,6 +568,16 @@ public class QueryBuilder : IQueryBuilder
             });
         }
 
+        result.codes.Add("actions", Enum.GetValues<UserAction>().ToDictionary(x => (int)x, y => y.ToString("G")));
+        result.codes.Add("internal_types", Enum.GetValues<InternalContentType>().ToDictionary(x => (int)x, y => y.ToString("G")));
+        result.codes.Add("user_types", Enum.GetValues<UserType>().ToDictionary(x => (int)x, y => y.ToString("G")));
+        result.codes.Add("ban_types", Enum.GetValues<BanType>().ToDictionary(x => (int)x, y => y.ToString("G")));
+        result.codes.Add("admin_log_types", Enum.GetValues<AdminLogType>().ToDictionary(x => (int)x, y => y.ToString("G")));
+
         return result;
     }
+
+    //public Dictionary<int, string> AboutEnumCodes<T>() where T : 
+    //{
+    //}
 }
