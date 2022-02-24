@@ -131,4 +131,41 @@ public class QueryBuilderTests : UnitTestBase
         //And because groups are not part of the query builder, it should NOT show up in the query
         Assert.DoesNotContain("groups", result.computedSql);
     }
+
+    [Theory]
+    [InlineData("*", true)]
+    [InlineData("id", true)]
+    [InlineData("name", true)]
+    [InlineData("createDate,createUserId", true)]
+    [InlineData("id,values", true)]
+    [InlineData("values", false)]
+    [InlineData("keywords,permissions", false)]
+    [InlineData("id,values,keywords,permissions", true)]
+    public void FullParseRequest_AllowedFieldSets(string fields, bool allowed)
+    {
+        var request =new SearchRequest()
+        {
+            name = "contentTest",
+            type = "content",
+            fields = fields
+        };
+
+        if(allowed)
+        {
+            var result = service.FullParseRequest(request, new Dictionary<string, object>());
+            Assert.NotEmpty(result.computedSql);
+        }
+        else
+        {
+            try
+            {
+                var result = service.FullParseRequest(request, new Dictionary<string, object>());
+                Assert.False(true, "FullParseRequest should've thrown an exception but did not!");
+            }
+            catch(ArgumentException)
+            {
+                //This is expected
+            }
+        }
+    }
 }
