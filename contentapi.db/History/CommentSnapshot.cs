@@ -3,9 +3,13 @@ using System.Collections.Generic;
 
 namespace contentapi.Db.History
 {
-    public class CommentSnapshot : Comment
+    public class CommentSnapshot
     {
-        //public //Dictionary<string, string> values {get;set;} = new Dictionary<string, string>();
+        public long userId {get;set;}
+        public UserAction action {get;set;}
+        public DateTime editDate {get;set;}
+        public string previous {get;set;}
+
         public List<CommentValue> values {get;set;} = new List<CommentValue>();
     }
 }

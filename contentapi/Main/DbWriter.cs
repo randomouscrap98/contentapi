@@ -536,17 +536,6 @@ public class DbWriter : IDbWriter
             comment.deleted = true;
         }
 
-        ////Append the history to the comment if we're modifying the comment instead of inserting a new one!
-        //if(work.action == UserAction.update || work.action == UserAction.delete)
-        //{
-        //    //historyConverter.AddCommentHistory(new CommentSnapshot {
-        //    //    userId = work.requester.id,
-        //    //    editDate = DateTime.UtcNow,
-        //    //    previous = work.existing?.text,
-        //    //    action = work.action
-        //    //}, comment);
-        //}
-
         //Need to update the edit history with the previous comment!
         //Always need an ID to link to, so we actually need to create the content first and get the ID.
         using(var tsx = dbcon.BeginTransaction())
@@ -559,7 +548,8 @@ public class DbWriter : IDbWriter
             else if(work.action == UserAction.update || work.action == UserAction.delete)
             {
                 //Here, we need the snapshot of the PREVIOUS comment to add to the comment history!
-                var snapshot = CreateSnapshotFromBaseComment(work., work.existing ?? throw new InvalidOperationException($"COMMENT UPDATE CALLED ON ID {comment.id} WITHOUT EXISTING COMMENT SET, INTERNAL ERROR!"));
+                var snapshot = CreateSnapshotFromCommentWork(work);
+                historyConverter.AddCommentHistory(snapshot, comment);
                 await DeleteAssociatedType<CommentValue>(comment.id, tsx, nameof(CommentValue.commentId), "comment");
                 await dbcon.UpdateAsync(comment, tsx);
             }
@@ -568,15 +558,11 @@ public class DbWriter : IDbWriter
                 throw new InvalidOperationException($"Can't perform action {work.action} in DatabaseWork_Comments!");
             }
 
-            //Creating a snapshot actually parses the comment into the constituent database objects! The comment at this time
-            //should have an ID
-            var parsedComment = CreateSnapshotFromBaseComment(comment, work.view);
-
             //If we're not deleting, insert the various associated values from the comment
             if(work.action != UserAction.delete)
             {
                 //These insert entire lists.
-                await dbcon.InsertAsync(parsedComment.values, tsx);
+                await dbcon.InsertAsync(GetCommentValuesFromView(work.view), tsx);
             }
 
             tsx.Commit();
@@ -758,7 +744,7 @@ public class DbWriter : IDbWriter
     }
 
     /// <summary>
-    /// Create a ContentSnapshot object using an existing content object, plus a view that presumably has the rest of the fields.
+    /// Create a ContentSnapshot using an existing content object, plus a view that presumably has the rest of the fields.
     /// This is done like this because all the associated snapshot values must be linked to a valid ID, and we figure only a 
     /// real "Content" object would have this information, and mapping occurs based on the values in a Content object, so just
     /// give us a real, pre-filled-out content!
@@ -787,25 +773,33 @@ public class DbWriter : IDbWriter
     }
 
     /// <summary>
-    /// Create a CommentSnapshot using an existing comment object, plus a view that presumably has the rest of the fields.
-    /// This is done like this because all the associated snapshot values must be linked to a valid ID, and we figure only a 
-    /// real "Comment" object would have this information, and mapping occurs based on the values in a Comment object, so just
-    /// give us a real, pre-filled-out comment!
+    /// Compute writable database comment values from the given view
+    /// </summary>
+    /// <param name="view"></param>
+    /// <returns></returns>
+    public List<CommentValue> GetCommentValuesFromView(CommentView view)
+    {
+        return view.values.Select(x => new Db.CommentValue {
+            key = x.Key,
+            value = JsonConvert.SerializeObject(x.Value),
+            commentId = view.id
+        }).ToList();
+    }
+
+    /// <summary>
     /// </summary>
     /// <param name="comment"></param>
     /// <param name="originalView"></param>
     /// <returns></returns>
-    public CommentSnapshot CreateSnapshotFromBaseComment(Db.Comment comment, CommentView originalView)
+    public CommentSnapshot CreateSnapshotFromCommentWork(DbWorkUnit<CommentView> work)
     {
-        var snapshot = mapper.Map<CommentSnapshot>(comment);
-
-        snapshot.values = originalView.values.Select(x => new Db.CommentValue {
-            key = x.Key,
-            value = JsonConvert.SerializeObject(x.Value),
-            commentId = originalView.id
-        }).ToList();
-
-        return snapshot;
+        return new CommentSnapshot {
+            userId = work.requester.id,
+            editDate = DateTime.UtcNow,
+            previous = work.existing?.text,
+            action = work.action,
+            values = GetCommentValuesFromView(work.existing ?? throw new InvalidOperationException("NO EXISTING COMMENTVIEW WHEN CREATING SNAPSHOT, INTERNAL ERROR!"))
+        };
     }
 
     /// <summary>

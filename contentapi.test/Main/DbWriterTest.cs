@@ -142,6 +142,24 @@ public class DbWriterTest : ViewUnitTestBase, IClassFixture<DbUnitTestSearchFixt
         }
     }
 
+    [Fact]
+    public async Task WriteAsync_Page_NoValuesKeywordsPermissions() //long uid, long parentId, bool allowed)
+    {
+        var uid = (int)UserVariations.Super;
+
+        //NOTE: DO NOT PROVIDE CREATEDATE! ALSO IT SHOULD BE UTC TIME!
+        var content = GetNewPageView();
+        content.values.Clear();
+        content.permissions.Clear();
+        content.keywords.Clear();
+
+        var result = await writer.WriteAsync(content, uid);
+        StandardContentEqualityCheck(content, result, uid, InternalContentType.page);
+        await AssertHistoryMatchesAsync(result, UserAction.create);
+        Assert.Equal(content.text, result.text);
+        AssertContentEventMatches(result, uid, UserAction.create);
+    }
+
     //This tests whether supers and non supers can both write orphaned pages AND write into 
     //existing pages that have access to all.
     [Theory]

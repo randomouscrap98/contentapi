@@ -249,7 +249,7 @@ public class DbUnitTestSearchFixture : DbUnitTestBase, IDisposable
                             {
                                 contentId = i + 1,
                                 key = $"contentval_{j}_{i}",
-                                value = $"value_{j}"
+                                value = $"\"value_{j}\""
                             });
                         }
                     }

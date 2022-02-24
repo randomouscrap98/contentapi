@@ -929,7 +929,7 @@ public class GenericSearchDbTests : UnitTestBase, IClassFixture<DbUnitTestSearch
     {
         var search = new SearchRequests();
         search.values.Add("key", "contentval_%");
-        search.values.Add("search", "value_%");
+        search.values.Add("search", "%value_%");
         search.requests.Add(new SearchRequest()
         {
             name = "valuemacro",
