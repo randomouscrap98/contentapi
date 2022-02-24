@@ -11,7 +11,7 @@ namespace contentapi
             CreateMap<CategoryView, Db.Content_Convert>()
             .ForMember(x => x.publicType, 
                  opt => opt.MapFrom(src => "category")) //We're not using categories anymore
-            .ForMember(x => x.content, 
+            .ForMember(x => x.text, 
                  opt => opt.MapFrom(src => src.description))
             .ForMember(x => x.internalType, 
                  opt => opt.MapFrom(src => InternalContentType.page))

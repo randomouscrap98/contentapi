@@ -19,6 +19,7 @@ using System.Collections.Generic;
 using contentapi.Services;
 using contentapi.Db.History;
 using Newtonsoft.Json;
+using System.Text.RegularExpressions;
 
 namespace contentapi.Controllers
 {
@@ -212,11 +213,17 @@ namespace contentapi.Controllers
                 var lcnt = await newdb.InsertAsync(kws); //IDK if the list version has async
                 Log($"Inserted {lcnt} keywords for '{nc.name}'");
 
-                var vls = ct.values.Select(x => new ContentValue()
+                var vls = ct.values.Where(x => !String.IsNullOrEmpty(x.Value)).Select(x => new ContentValue()
                 {
                     contentId = id,
                     key = x.Key,
-                    value = x.Value
+                    value = JsonConvert.SerializeObject(
+                        x.Key == "badsbs2" ? long.Parse(x.Value) : 
+                        x.Key == "photos" ? (object)x.Value.Split(",".ToCharArray(), StringSplitOptions.RemoveEmptyEntries) : 
+                        x.Key == "pinned" ? (object)x.Value.Split(",".ToCharArray(), StringSplitOptions.RemoveEmptyEntries).Select(y => long.Parse(y)) : 
+                        (object)x.Value)
+                    //value = JsonConvert.SerializeObject(Regex.IsMatch(x.Value, @"^\s*(\s*\d+\s*,\s*)*\d+\s*$") ? 
+                    //    (object)x.Value.Split(",".ToCharArray(), StringSplitOptions.RemoveEmptyEntries) : (object)x.Value)
                 }).ToList();
 
                 lcnt = await newdb.InsertAsync(vls); //IDK if the list version has async
@@ -437,28 +444,23 @@ namespace contentapi.Controllers
                     foreach (var cmnt in cmnts)
                     {
                         var ncmnt = mapper.Map<Db.Comment_Convert>(cmnt);
+                        //var cmtvals = new List<CommentValue>();
+                        IDictionary<string, object> metaFields = null;
                         //Convert metadata into separate field
 
                         try
                         {
                             //string metadata = null;
                             var lines = ncmnt.text.Split("\n".ToCharArray());
-                            dynamic meta = JsonConvert.DeserializeObject(lines[0]);
-                            //var meta = (IDictionary<string, object>)JsonConvert.DeserializeObject(lines[0]);
+                            metaFields = JsonConvert.DeserializeObject<Dictionary<string, object>>(lines[0]);
 
-                            if(meta != null)
+                            if(metaFields != null)
                             {
-                                ncmnt.metadata = lines[0];
-
                                 //WE ASSUME that if there are multiple lines, it's the new format
                                 if(lines.Length > 1)
                                     ncmnt.text = ncmnt.text.Substring(lines[0].Length + 1); // +1 to skip newline
-                                else //if((meta as IDictionary<string, object>).ContainsKey("t"))
-                                    ncmnt.text = (string)meta.t;
-                                //else
-                                //    ncmnt.text = "";
-                                
-                                //Log($"Metadata set [{ncmnt.id}]: '{ncmnt.metadata}', text: '{ncmnt.text}'");
+                                else 
+                                    ncmnt.text = (string)metaFields["t"];
                             }
                             else
                             {
@@ -469,13 +471,21 @@ namespace contentapi.Controllers
                         {
                             Log($"Old comment format assumed [{ncmnt.id}], no metadata: {ncmnt.text}");
                         }
-                        //finally
-                        //{
-                        //    ncmnt.metadata = metadata;
-                        //}
 
                         //User dapper to store?
-                        cmids.Add(await newdb.InsertAsync(ncmnt));
+                        var cmid = await newdb.InsertAsync(ncmnt);
+                        cmids.Add(cmid);
+
+                        if(metaFields != null)
+                        {
+                            await newdb.InsertAsync(metaFields.Select(x => new CommentValue()
+                            {
+                                commentId = cmid, 
+                                key = x.Key,
+                                value = JsonConvert.SerializeObject(x.Value.ToString())
+                            }));
+                        }
+
                         if(cmids.Count >= 1000)
                         {
                             Log($"Inserted comments: {string.Join(",", cmids)}");

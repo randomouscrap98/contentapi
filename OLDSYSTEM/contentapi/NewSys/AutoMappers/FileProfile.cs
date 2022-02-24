@@ -15,7 +15,7 @@ namespace contentapi
                  opt => opt.MapFrom(src => src.name ?? "")) //Basically, a description of the file
             .ForMember(x => x.publicType, //The public type is the lookup hash, which has to be our id since there's no hash from before and we don't want to break our links
                  opt => opt.MapFrom(src => src.id.ToString()))
-            .ForMember(x => x.content, 
+            .ForMember(x => x.text, 
                  opt => opt.MapFrom(src => src.fileType)) //Basically, a description of the file
             .ForMember(x => x.internalType, 
                  opt => opt.MapFrom(src => InternalContentType.file))

@@ -13,7 +13,7 @@ namespace contentapi
                 opt => opt.MapFrom(src => src.description))
             .ForMember(x => x.publicType, 
                  opt => opt.MapFrom(src => ""))
-            .ForMember(x => x.content, 
+            .ForMember(x => x.text, 
                  opt => opt.MapFrom(src => src.code))
             .ForMember(x => x.internalType, 
                  opt => opt.MapFrom(src => InternalContentType.module))
