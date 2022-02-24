@@ -219,6 +219,7 @@ namespace contentapi.Controllers
                     key = x.Key,
                     value = JsonConvert.SerializeObject(
                         x.Key == "badsbs2" ? long.Parse(x.Value) : 
+                        x.Key == "order" ? double.Parse(x.Value) : 
                         x.Key == "photos" ? (object)x.Value.Split(",".ToCharArray(), StringSplitOptions.RemoveEmptyEntries) : 
                         x.Key == "pinned" ? (object)x.Value.Split(",".ToCharArray(), StringSplitOptions.RemoveEmptyEntries).Select(y => long.Parse(y)) : 
                         (object)x.Value)
@@ -478,11 +479,11 @@ namespace contentapi.Controllers
 
                         if(metaFields != null)
                         {
-                            await newdb.InsertAsync(metaFields.Select(x => new CommentValue()
+                            await newdb.InsertAsync(metaFields.Where(x => x.Value != null).Select(x => new CommentValue()
                             {
                                 commentId = cmid, 
                                 key = x.Key,
-                                value = JsonConvert.SerializeObject(x.Value.ToString())
+                                value = JsonConvert.SerializeObject(x.Value?.ToString())
                             }));
                         }
 
