@@ -4,7 +4,7 @@ using contentapi.Search;
 namespace contentapi.Views;
 
 [ResultFor(RequestType.watch)]
-[SelectFrom("content_watches")]
+[SelectFrom("content_watches as main")]
 [WriteAs(typeof(Db.ContentWatch))]
 public class WatchView : IIdView
 {
@@ -35,4 +35,12 @@ public class WatchView : IIdView
     [FieldSelect]
     [Writable(WriteRule.Preserve, WriteRule.AutoDate)]
     public DateTime editDate { get; set; }
+
+    [Expensive(2)]
+    [FieldSelect("select count(*) from comments c where c.contentId = main.contentId and c.id > main.lastCommentId")]
+    public int commentNotifications {get;set;}
+
+    [Expensive(2)]
+    [FieldSelect("select count(*) from content_history h where h.contentId = main.contentId and h.id > main.lastActivityId")]
+    public int activityNotifications {get;set;}
 }
