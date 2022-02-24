@@ -201,6 +201,11 @@ public class QueryBuilder : IQueryBuilder
         reqplus.typeInfo = typeService.GetTypeInfo(StandardViewRequests[reqplus.requestType]);
         reqplus.requestFields = ComputeRealFields(reqplus);
 
+        //A special check: ids are required for non-query-builder fields. Assume ALL ids are named like Content's id
+        var nonBuildableFields = reqplus.requestFields.Where(x => !reqplus.typeInfo.fields[x].queryBuildable).ToList();
+        if(nonBuildableFields.Count > 0 && !reqplus.requestFields.Contains(nameof(Content.id)))
+            throw new ArgumentException($"You MUST select field '{nameof(Content.id)}' when also selecting complex fields such as '{nonBuildableFields.First()}' in request '{request.name}'");
+
         return reqplus;
     }
 
@@ -430,9 +435,8 @@ public class QueryBuilder : IQueryBuilder
     /// <param name="r"></param>
     public void AddStandardSelect(StringBuilder queryStr, SearchRequestPlus r)
     {
-        //var fieldSelect = r.requestFields.Where(x => !r.typeInfo.fields[x].computed).Select(x => StandardFieldRemap(x, r)).ToList();
         var fieldSelect = r.requestFields.Where(x => r.typeInfo.fields[x].queryBuildable).Select(x => StandardFieldSelect(x, r)).ToList();
-        var selectFrom = r.typeInfo.selectFromSql ; //?? throw new InvalidOperationException($"Standard select {r.type} doesn't define a 'select from' statement in request {r.name}!");
+        var selectFrom = r.typeInfo.selectFromSql ; 
 
         if(string.IsNullOrWhiteSpace(selectFrom))
             throw new InvalidOperationException($"Standard select {r.type} doesn't define a 'select from' statement in request {r.name}, this is a program error!");

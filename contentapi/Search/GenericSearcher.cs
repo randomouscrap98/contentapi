@@ -6,6 +6,7 @@ using contentapi.Utilities;
 using contentapi.Views;
 using Dapper;
 using Newtonsoft.Json;
+using QueryResult = System.Collections.Generic.IDictionary<string, object>;
 using QueryResultSet = System.Collections.Generic.IEnumerable<System.Collections.Generic.IDictionary<string, object>>;
 
 namespace contentapi.Search;
@@ -49,11 +50,14 @@ public class GenericSearcher : IGenericSearch
         return (await dbcon.QueryAsync(query, parameters)).Cast<IDictionary<string, object>>();
     }
 
-    public IEnumerable<object> GetIds(QueryResultSet result) => result.Select(x => x["id"]);
+    public IEnumerable<object> GetIds(QueryResultSet result) => result.Select(x => x["id"]).OrderBy(x => x);
+    public Dictionary<long, QueryResult> IndexResults(QueryResultSet result) => result.ToDictionary(x => (long)x["id"], y => y);
 
     //WARN: should this be part of query builder?? who knows... it kinda doesn't need to be, it's not a big deal.
     public async Task AddExtraFields(SearchRequestPlus r, QueryResultSet result)
     {
+        //You CANNOT index results outside the if statements, since they might by default not have an id field!
+
         //This adds groups to users (if requested)
         if(r.requestType == RequestType.user)
         {
@@ -61,15 +65,18 @@ public class GenericSearcher : IGenericSearch
             const string ridkey =  nameof(Db.UserRelation.relatedId);
             const string uidkey =  nameof(Db.UserRelation.userId);
             const string typekey = nameof(Db.UserRelation.type);
+            var index = IndexResults(result);
 
             if(r.requestFields.Contains(groupskey))
             {
-                var keyinfo = typeService.GetTypeInfo<Db.UserRelation>();
-                var groups = await QueryAsyncCast($"select {ridkey},{uidkey} from {keyinfo.selfDbInfo?.modelTable} where {typekey} = @type and {uidkey} in @ids",
-                    new { ids = GetIds(result), type = (int)UserRelationType.inGroup }); 
+                var relinfo = typeService.GetTypeInfo<Db.UserRelation>();
+                var groups = await dbcon.QueryAsync<Db.UserRelation>($"select {ridkey},{uidkey} from {relinfo.selfDbInfo?.modelTable} where {typekey} = @type and {uidkey} in @ids",
+                    new { ids = index.Keys, type = (int)UserRelationType.inGroup }); 
+                
+                var lookup = groups.ToLookup(x => x.userId);
 
-                foreach(var u in result)
-                    u[groupskey] = groups.Where(x => x[uidkey].Equals(u["id"])).Select(x => x[ridkey]).ToList();
+                foreach(var u in index)
+                    u.Value[groupskey] = lookup.Contains(u.Key) ? lookup[u.Key].Select(x => x.relatedId).ToList() : new List<long>();
             }
         }
 
@@ -77,17 +84,18 @@ public class GenericSearcher : IGenericSearch
         {
             const string cidkey = nameof(Db.CommentValue.commentId);
             const string valkey = nameof(CommentView.values);
-            var ids = GetIds(result); //Even though we may not use it, it's better than calling it a million times?
+            var index = IndexResults(result);
 
             if(r.requestFields.Contains(valkey))
             {
                 var valinfo = typeService.GetTypeInfo<Db.CommentValue>();
-                var values = await QueryAsyncCast($"select {cidkey},key,value from {valinfo.selfDbInfo?.modelTable} where {cidkey} in @ids",
-                    new { ids = ids });
+                var values = await dbcon.QueryAsync<Db.CommentValue>($"select {cidkey},key,value from {valinfo.selfDbInfo?.modelTable} where {cidkey} in @ids",
+                    new { ids = index.Keys });
 
-                foreach(var c in result)
-                    c[valkey] = values.Where(x => x[cidkey].Equals(c["id"])).ToDictionary(x => x["key"], y => JsonConvert.DeserializeObject((string)y["value"]));
-                    //c[valkey] = values.Where(x => x[cidkey].Equals(c["id"])).ToDictionary(x => x["key"], y => y["value"]);
+                var lookup = values.ToLookup(x => x.commentId);
+
+                foreach(var c in index) 
+                    c.Value[valkey] = lookup.Contains(c.Key) ? lookup[c.Key].ToDictionary(x => x.key, y => JsonConvert.DeserializeObject(y.value)) : new Dictionary<string, object?>();
             }
         }
 
@@ -98,7 +106,8 @@ public class GenericSearcher : IGenericSearch
             const string permkey = nameof(ContentView.permissions);
             const string votekey = nameof(ContentView.votes);
             const string cidkey = nameof(Db.ContentKeyword.contentId); //WARN: assuming it's the same for all!
-            var ids = GetIds(result); //Even though we may not use it, it's better than calling it a million times?
+            var index = IndexResults(result);
+            var ids = index.Keys.ToList();
 
             if(r.requestFields.Contains(keykey))
             {
