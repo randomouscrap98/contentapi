@@ -8,7 +8,7 @@ public class ModuleView : ContentView
 {
     [NoQuery]
     [Multiline]
-    [FieldSelect("content")]
+    [FieldSelect("text")]
     [Writable]
     public string code { get; set; } = "";
 

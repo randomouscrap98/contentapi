@@ -154,7 +154,7 @@ public class DbUnitTestSearchFixture : DbUnitTestBase, IDisposable
                     var c = new Db.Content() {
                         name = $"content_{i}",
                         parentId = i / 4,
-                        content = $"text_{i}",
+                        text = $"text_{i}",
                         createUserId = 1 + (i % UserCount),
                         publicType = StandardPublicTypes[i % StandardPublicTypes.Count],
                         createDate = DateTime.Now.AddDays(i - ContentCount)

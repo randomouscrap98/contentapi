@@ -11,7 +11,7 @@ public class FileView : ContentView
     [FieldSelect("publicType")]
     public string hash { get; set; } = "";
 
-    [FieldSelect("content")]
+    [FieldSelect("text")]
     public string mimetype { get; set; } = "";
 
     [FieldSelect("extra1")]  //Quantization is string in case more info should be provided

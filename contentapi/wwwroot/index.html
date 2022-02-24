@@ -77,6 +77,18 @@
                     <a href="#" id="page-subpagedown">Previous Subpages</a>
                 </div>
                 <h3>Comments:</h3>
+                <div id="comment-submit-container">
+                    <form onsubmit="return t_comment_submit_submit(this)">
+                        <textarea id="comment-submit-text"></textarea>
+                        <label for="comment-submit-markup">Markup:</label>
+                        <select id="comment-submit-markup">
+                            <option>12y</option>
+                            <option>bbcode</option>
+                            <option>plaintext</option>
+                        </select>
+                        <input type="submit" value="Add Comment">
+                    </form>
+                </div>
                 <div id="page-comments" class="results"></div>
                 <div id="page-comments-nav" class="nav">
                     <a href="#" id="page-commentup">Older Comments</a>

@@ -15,5 +15,5 @@ public class PageView : ContentView
     [Multiline]
     [FieldSelect]
     [Writable]
-    public string content { get; set; } = "";
+    public string text { get; set; } = "";
 }

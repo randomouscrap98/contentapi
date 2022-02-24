@@ -443,7 +443,7 @@ public class DbWriter : IDbWriter
             //This needs to be here instead of tweak because the views have different fields all mapped to content.
             //Content is special, as usual
             content.createUserId = 0;
-            content.content = "";
+            content.text = "";
             content.name = "deleted_content";
             content.deleted = true;
             content.extra1 = null;

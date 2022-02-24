@@ -27,7 +27,7 @@ public class QueryBuilder : IQueryBuilder
     protected readonly Dictionary<string, MacroDescription> StandardMacros = new Dictionary<string, MacroDescription>()
     {
         { "keywordlike", new MacroDescription("v", "KeywordLike", CONTENTREQUESTTYPES) },
-        { "valuelike", new MacroDescription("vv", "ValueLike", CONTENTREQUESTTYPES) },
+        { "valuelike", new MacroDescription("vv", "ValueLike", new List<RequestType> { RequestType.content, RequestType.file, RequestType.page, RequestType.module, RequestType.comment }) }, 
         { "onlyparents", new MacroDescription("", "OnlyParents", CONTENTREQUESTTYPES) },
         { "basichistory", new MacroDescription("", "BasicHistory", new List<RequestType> { RequestType.activity }) },
         { "notdeleted", new MacroDescription("", "NotDeletedMacro", new List<RequestType> { RequestType.content, RequestType.file, RequestType.page, RequestType.module, RequestType.comment }) }, 

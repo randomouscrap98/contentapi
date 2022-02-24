@@ -78,7 +78,7 @@ create table if not exists content (
     internalType int not null, --page, file, module, category etc (use an enum)
     publicType text not null,
     `name` text not null,
-    content text not null,
+    `text` text not null,
     extra1 text default null,  -- extra fields used for special content type fields
     parentId int not null default 0 -- each content can only physically exist in one parent
 );
@@ -179,13 +179,26 @@ create table if not exists comments(
     createDate text not null,
     receiveUserId int not null default 0, -- sometimes comments can be directly linked to a recipient
     `text` text not null,
-    metadata text,
+    --markup text,
+    --avatar text,
+    --nickname text,
+    --metadata text,
     editUserId int default null,
     editDate text default null,
     module text default null,
     history text default null, -- most comments will NOT be edited, so this should be fine
     deleted int not null default 0
 );
+
+create table if not exists comment_values (
+    id integer primary key,
+    commentId int not null,
+    `key` text not null,
+    `value` text not null
+);
+
+create index if not exists idx_comment_values_commentId on comment_values(commentId);
+create index if not exists idx_comment_values_key on comment_values(`key`);
 
 -- TRY TO LIMIT INDEXES ON COMMENTS! I'm worried about the insert speed.
 -- This index is useful for massive comment searches within particularly rooms.

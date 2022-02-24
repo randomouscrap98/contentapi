@@ -65,11 +65,28 @@ public class GenericSearcher : IGenericSearch
             if(r.requestFields.Contains(groupskey))
             {
                 var keyinfo = typeService.GetTypeInfo<Db.UserRelation>();
-                var groups = await QueryAsyncCast($"select {ridkey},{uidkey} from user_relations where {typekey} = @type and {uidkey} in @ids",
+                var groups = await QueryAsyncCast($"select {ridkey},{uidkey} from {keyinfo.selfDbInfo?.modelTable} where {typekey} = @type and {uidkey} in @ids",
                     new { ids = GetIds(result), type = (int)UserRelationType.inGroup }); 
 
                 foreach(var u in result)
                     u[groupskey] = groups.Where(x => x[uidkey].Equals(u["id"])).Select(x => x[ridkey]).ToList();
+            }
+        }
+
+        if(r.requestType == RequestType.comment)
+        {
+            const string cidkey = nameof(Db.CommentValue.contentId); //WARN: assuming it's the same for all!
+            const string valkey = nameof(CommentView.values);
+            var ids = GetIds(result); //Even though we may not use it, it's better than calling it a million times?
+
+            if(r.requestFields.Contains(valkey))
+            {
+                var valinfo = typeService.GetTypeInfo<Db.CommentValue>();
+                var values = await QueryAsyncCast($"select {cidkey},key,value from {valinfo.selfDbInfo?.modelTable} where {cidkey} in @ids",
+                    new { ids = ids });
+
+                foreach(var c in result)
+                    c[valkey] = values.Where(x => x[cidkey].Equals(c["id"])).ToDictionary(x => x["key"], y => y["value"]);
             }
         }
 
@@ -85,7 +102,7 @@ public class GenericSearcher : IGenericSearch
             if(r.requestFields.Contains(keykey))
             {
                 var keyinfo = typeService.GetTypeInfo<Db.ContentKeyword>();
-                var keywords = await QueryAsyncCast($"select {cidkey},value from content_keywords where {cidkey} in @ids",
+                var keywords = await QueryAsyncCast($"select {cidkey},value from {keyinfo.selfDbInfo?.modelTable} where {cidkey} in @ids",
                     new { ids = ids });
 
                 foreach(var c in result)
@@ -94,7 +111,7 @@ public class GenericSearcher : IGenericSearch
             if(r.requestFields.Contains(valkey))
             {
                 var valinfo = typeService.GetTypeInfo<Db.ContentValue>();
-                var values = await QueryAsyncCast($"select {cidkey},key,value from content_values where {cidkey} in @ids",
+                var values = await QueryAsyncCast($"select {cidkey},key,value from {valinfo.selfDbInfo?.modelTable} where {cidkey} in @ids",
                     new { ids = ids });
 
                 foreach(var c in result)
@@ -103,7 +120,7 @@ public class GenericSearcher : IGenericSearch
             if(r.requestFields.Contains(permkey))
             {
                 var perminfo = typeService.GetTypeInfo<Db.ContentPermission>();
-                var permissions = await dbcon.QueryAsync($"select * from content_permissions where {cidkey} in @ids",
+                var permissions = await dbcon.QueryAsync($"select * from {perminfo.selfDbInfo?.modelTable} where {cidkey} in @ids",
                     new { ids = ids });
 
                 foreach(var c in result)
@@ -112,7 +129,7 @@ public class GenericSearcher : IGenericSearch
             if(r.requestFields.Contains(votekey))
             {
                 var voteinfo = typeService.GetTypeInfo<Db.ContentVote>();
-                var votes = await dbcon.QueryAsync($"select {cidkey}, vote, count(*) as count from content_votes where {cidkey} in @ids group by {cidkey}, vote",
+                var votes = await dbcon.QueryAsync($"select {cidkey}, vote, count(*) as count from {voteinfo.selfDbInfo?.modelTable} where {cidkey} in @ids group by {cidkey}, vote",
                     new { ids = ids });
                 var displayVotes = Enum.GetValues<VoteType>().Where(x => x != VoteType.none); //.Select(x => x.ToString());
 

@@ -14,7 +14,7 @@ namespace contentapi.Db
         public InternalContentType internalType { get; set; }
         public string publicType { get; set; } = "";
         public string name { get; set; } = "";
-        public string content { get; set; } = "";
+        public string text { get; set; } = "";
         public long parentId { get; set; }
 
         public string extra1 { get; set; }

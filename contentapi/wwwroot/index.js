@@ -426,3 +426,21 @@ function t_user_logout()
     SetToken(null);
     location.href = "?"; //Home page maybe?
 }
+
+function t_comment_submit_submit(form)
+{
+    var text = document.getElementById("comment-submit-text").value;
+    var markup = document.getElementById("confirmregister-key").value;
+
+    //NOTE: if you want the avatar you used to comment with saved with the comment for posterity
+    //(meaning searching for your old comment will show your original avatar when commenting and not
+    // your current avatar), you can add your avatar to the metadata. Note that the metadata
+    //may sometimes have integer avatars, these must be converted to strings.
+
+    api.ConfirmRegistration(new ConfirmRegistrationParameter(email, key), new ApiHandler(d => {
+        SetToken(d.result); //This endpoint returns a user token as well, like login!
+        location.href = `?t=user`;
+    }));
+
+    return false;
+}

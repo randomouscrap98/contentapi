@@ -44,6 +44,19 @@ function ApiHandler(success, error, always)
 // NOTE: These are here for reference. You CAN use them if you want, or you can simply ignore them
 // and pass in your own objects with the same fields. The API will work either way.
 
+//This is the data you'd need to submit a comment, not necessarily the format of the comments that are 
+//returned from the API. Many fields are computed automatically. Only "text" is truly required
+//of a comment though.
+function Comment(text, markup, avatar, nickname, metadata)
+{
+    this.id = 0; //Should be 0 for new comments; set to an id for an edit
+    this.text = text; 
+    this.markup = markup || "plaintext";
+    this.avatar = avatar || null;
+    this.nickname = nickname || null;
+    this.metadata = metadata || null; //This is a free-for-all text field used in special circumstances. 
+}
+
 // You only need EITHER username OR email, not both
 function LoginParameter(username, password, email, expireSeconds)
 {

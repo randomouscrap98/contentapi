@@ -99,7 +99,7 @@ public class ViewUnitTestBase : UnitTestBase
     {
         return new PageView {
             name = "whatever",
-            content = "Yeah this is content!",
+            text = "Yeah this is content!",
             parentId = parentId,
             values = new Dictionary<string, string> { { "one" , "thing" }, { "kek", "macaroni and things" } },
             keywords = new List<string> { "heck", "heck2", "dead" },

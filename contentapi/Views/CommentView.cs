@@ -29,9 +29,28 @@ public class CommentView : IIdView
     [Writable]
     public string text {get;set;} = "";
 
-    [FieldSelect]
+    //These three fields were originally part of the metadata
+
+    [NoQuery]
     [Writable]
-    public string? metadata {get;set;}
+    [Expensive(2)]
+    public Dictionary<string, string> values {get;set;} = new Dictionary<string, string>();
+
+    //[FieldSelect]
+    //[Writable]
+    //public string? markup {get;set;}
+
+    //[FieldSelect]
+    //[Writable]
+    //public string? avatar {get;set;}
+
+    //[FieldSelect]
+    //[Writable]
+    //public string? nickname {get;set;}
+
+    //[FieldSelect]
+    //[Writable]
+    //public string? metadata {get;set;}
 
     [FieldSelect]
     [Writable(WriteRule.Preserve, WriteRule.AutoDate)]

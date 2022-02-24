@@ -130,7 +130,7 @@ public class DbWriterTest : ViewUnitTestBase, IClassFixture<DbUnitTestSearchFixt
             var result = await writer.WriteAsync(content, uid);
             StandardContentEqualityCheck(content, result, uid, InternalContentType.page);
             await AssertHistoryMatchesAsync(result, UserAction.create);
-            Assert.Equal(content.content, result.content);
+            Assert.Equal(content.text, result.text);
             AssertContentEventMatches(result, uid, UserAction.create);
         }
         else
