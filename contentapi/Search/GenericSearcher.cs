@@ -5,7 +5,7 @@ using contentapi.Db;
 using contentapi.Utilities;
 using contentapi.Views;
 using Dapper;
-
+using Newtonsoft.Json;
 using QueryResultSet = System.Collections.Generic.IEnumerable<System.Collections.Generic.IDictionary<string, object>>;
 
 namespace contentapi.Search;
@@ -75,7 +75,7 @@ public class GenericSearcher : IGenericSearch
 
         if(r.requestType == RequestType.comment)
         {
-            const string cidkey = nameof(Db.CommentValue.contentId); //WARN: assuming it's the same for all!
+            const string cidkey = nameof(Db.CommentValue.commentId); //WARN: assuming it's the same for all!
             const string valkey = nameof(CommentView.values);
             var ids = GetIds(result); //Even though we may not use it, it's better than calling it a million times?
 
@@ -86,7 +86,7 @@ public class GenericSearcher : IGenericSearch
                     new { ids = ids });
 
                 foreach(var c in result)
-                    c[valkey] = values.Where(x => x[cidkey].Equals(c["id"])).ToDictionary(x => x["key"], y => y["value"]);
+                    c[valkey] = values.Where(x => x[cidkey].Equals(c["id"])).ToDictionary(x => x["key"], y => JsonConvert.DeserializeObject((string)y["value"]));
             }
         }
 
@@ -115,7 +115,7 @@ public class GenericSearcher : IGenericSearch
                     new { ids = ids });
 
                 foreach(var c in result)
-                    c[valkey] = values.Where(x => x[cidkey].Equals(c["id"])).ToDictionary(x => x["key"], y => y["value"]);
+                    c[valkey] = values.Where(x => x[cidkey].Equals(c["id"])).ToDictionary(x => x["key"], y => JsonConvert.DeserializeObject((string)y["value"]));
             }
             if(r.requestFields.Contains(permkey))
             {

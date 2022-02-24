@@ -34,7 +34,7 @@ public class CommentView : IIdView
     [NoQuery]
     [Writable]
     [Expensive(2)]
-    public Dictionary<string, string> values {get;set;} = new Dictionary<string, string>();
+    public Dictionary<string, object> values {get;set;} = new Dictionary<string, object>();
 
     //[FieldSelect]
     //[Writable]

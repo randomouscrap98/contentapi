@@ -7,7 +7,7 @@ namespace contentapi.Db
     {
         [Key]
         public long id { get; set; }
-        public long contentId { get; set; }
+        public long commentId { get; set; }
         public string key { get; set; } = "";
         public string value { get; set; } = "";
     }

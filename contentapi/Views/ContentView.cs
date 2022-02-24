@@ -49,7 +49,7 @@ public class ContentView : IIdView
     [NoQuery]
     [Writable]
     [Expensive(2)]
-    public Dictionary<string, string> values {get;set;} = new Dictionary<string, string>();
+    public Dictionary<string, object> values {get;set;} = new Dictionary<string, object>();
 
     //Although these are NOT searchable with a standard search system, they do at least have 
     //macros to let you search. Essentially, any field that is a "list" or something else

@@ -101,7 +101,7 @@ public class ViewUnitTestBase : UnitTestBase
             name = "whatever",
             text = "Yeah this is content!",
             parentId = parentId,
-            values = new Dictionary<string, string> { { "one" , "thing" }, { "kek", "macaroni and things" } },
+            values = new Dictionary<string, object> { { "one" , "thing" }, { "kek", "macaroni and things" } },
             keywords = new List<string> { "heck", "heck2", "dead" },
             permissions = permissions ?? new Dictionary<long, string> { { 0 , "CR" } }
         };
@@ -115,7 +115,7 @@ public class ViewUnitTestBase : UnitTestBase
             quantization = "10",
             parentId = parentId,
             hash = "babnana",
-            values = new Dictionary<string, string> { { "one" , "thing" }, { "kek", "macaroni and things" } },
+            values = new Dictionary<string, object> { { "one" , "thing" }, { "kek", "macaroni and things" } },
             keywords = new List<string> { "heck", "heck2", "dead" },
             permissions = permissions ?? new Dictionary<long, string> { { 0 , "CR" } },
         };
@@ -128,7 +128,7 @@ public class ViewUnitTestBase : UnitTestBase
             code = "Yeah this is... code? [beep boop] />?{Fd?>FDSI#!@$F--|='\"_+",
             description = "Aha! An extra field!",
             parentId = parentId,
-            values = new Dictionary<string, string> { { "one" , "thing" }, { "kek", "macaroni and things" } },
+            values = new Dictionary<string, object> { { "one" , "thing" }, { "kek", "macaroni and things" } },
             keywords = new List<string> { "heck", "heck2", "dead" },
             permissions = permissions ?? new Dictionary<long, string> { { 0 , "CR" } },
         };

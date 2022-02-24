@@ -32,7 +32,7 @@ namespace contentapi.Db.History
             return history;
         }
 
-        public async Task<byte[]> GetV1Snapshot(ContentSnapshot content)
+        public async Task<byte[]> GetV1Snapshot<T>(T content)
         {
             //Snapshot this time is a simple compressed json object.
             var jsonString = JsonConvert.SerializeObject(content);

@@ -15,7 +15,7 @@ namespace contentapi.Db.Setup
         public static void AddDefaultServices(IServiceCollection services)
         {
             services.AddSingleton<IHistoryConverter, HistoryConverter>();
-            services.AddAutoMapper(typeof(ContentSnapshotProfile));
+            services.AddAutoMapper(typeof(ContentHistorySnapshotProfile));
         }
     }
 }
