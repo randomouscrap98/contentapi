@@ -112,20 +112,24 @@ public class GenericSearcher : IGenericSearch
             if(r.requestFields.Contains(keykey))
             {
                 var keyinfo = typeService.GetTypeInfo<Db.ContentKeyword>();
-                var keywords = await QueryAsyncCast($"select {cidkey},value from {keyinfo.selfDbInfo?.modelTable} where {cidkey} in @ids",
+                var keywords = await dbcon.QueryAsync<Db.ContentKeyword>($"select {cidkey},value from {keyinfo.selfDbInfo?.modelTable} where {cidkey} in @ids",
                     new { ids = ids });
 
-                foreach(var c in result)
-                    c[keykey] = keywords.Where(x => x[cidkey].Equals(c["id"])).Select(x => x["value"]).ToList();
+                var lookup = keywords.ToLookup(x => x.contentId);
+
+                foreach(var c in index)
+                    c.Value[keykey] = lookup.Contains(c.Key) ? lookup[c.Key].Select(x => x.value).ToList() : new List<string>();
             }
             if(r.requestFields.Contains(valkey))
             {
                 var valinfo = typeService.GetTypeInfo<Db.ContentValue>();
-                var values = await QueryAsyncCast($"select {cidkey},key,value from {valinfo.selfDbInfo?.modelTable} where {cidkey} in @ids",
+                var values = await dbcon.QueryAsync<Db.ContentValue>($"select {cidkey},key,value from {valinfo.selfDbInfo?.modelTable} where {cidkey} in @ids",
                     new { ids = ids });
 
-                foreach(var c in result)
-                    c[valkey] = values.Where(x => x[cidkey].Equals(c["id"])).ToDictionary(x => x["key"], y => JsonConvert.DeserializeObject((string)y["value"]));
+                var lookup = values.ToLookup(x => x.contentId);
+
+                foreach(var c in index)
+                    c.Value[valkey] = lookup.Contains(c.Key) ? lookup[c.Key].ToDictionary(x => x.key, y => JsonConvert.DeserializeObject(y.value)) : new Dictionary<string, object?>();
             }
             if(r.requestFields.Contains(permkey))
             {
@@ -133,25 +137,29 @@ public class GenericSearcher : IGenericSearch
                 var permissions = await dbcon.QueryAsync($"select * from {perminfo.selfDbInfo?.modelTable} where {cidkey} in @ids",
                     new { ids = ids });
 
-                foreach(var c in result)
-                    c[permkey] = permissionService.ResultToPermissions(permissions.Where(x => x.contentId.Equals(c["id"])));
+                var lookup = permissions.ToLookup(x => x.contentId);
+
+                foreach(var c in index)
+                    c.Value[permkey] = permissionService.ResultToPermissions(lookup.Contains(c.Key) ? lookup[c.Key] : new List<dynamic>());//permissions.Where(x => x.contentId.Equals(c["id"])));
             }
             if(r.requestFields.Contains(votekey))
             {
                 var voteinfo = typeService.GetTypeInfo<Db.ContentVote>();
                 var votes = await dbcon.QueryAsync($"select {cidkey}, vote, count(*) as count from {voteinfo.selfDbInfo?.modelTable} where {cidkey} in @ids group by {cidkey}, vote",
                     new { ids = ids });
-                var displayVotes = Enum.GetValues<VoteType>().Where(x => x != VoteType.none); //.Select(x => x.ToString());
+                var displayVotes = Enum.GetValues<VoteType>().Where(x => x != VoteType.none); 
 
-                foreach(var c in result)
+                var lookup = votes.ToLookup(x => x.contentId);
+
+                foreach(var c in index)
                 {
-                    var cvotes = votes.Where(x => x.contentId.Equals(c["id"])).ToDictionary(x => (VoteType)x.vote, y => y.count);
+                    var cvotes = lookup.Contains(c.Key) ? lookup[c.Key].ToDictionary(x => (VoteType)x.vote, y => y.count) : new Dictionary<VoteType, dynamic>();
                     foreach(var v in displayVotes)
                     {
                         if(!cvotes.ContainsKey(v))
                             cvotes.Add(v, 0);
                     }
-                    c[votekey] = cvotes;
+                    c.Value[votekey] = cvotes;
                 }
             }
         }
