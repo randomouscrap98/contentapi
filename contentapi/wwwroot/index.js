@@ -188,6 +188,10 @@ function page_onload(template, state)
     var subpagesElement = template.querySelector("#page-subpages");
     var commentsElement = template.querySelector("#page-comments");
 
+    api.FillMarkupSelect(template.querySelector("#comment-submit-markup"));
+
+    template.querySelector("#comment-submit-contentid").value = state.pid;
+
     api.Search_BasicPageDisplay(state.pid, SUBPAGESPERPAGE, state.sp, COMMENTSPERPAGE, state.cp, new ApiHandler(d =>
     {
         if(d.result.data.page.length == 0)
@@ -430,16 +434,14 @@ function t_user_logout()
 function t_comment_submit_submit(form)
 {
     var text = document.getElementById("comment-submit-text").value;
-    var markup = document.getElementById("confirmregister-key").value;
+    var markup = document.getElementById("comment-submit-markup").value;
+    var contentId = document.getElementById("comment-submit-contentid").value;
 
     //NOTE: if you want the avatar you used to comment with saved with the comment for posterity
     //(meaning searching for your old comment will show your original avatar when commenting and not
-    // your current avatar), you can add your avatar to the metadata. Note that the metadata
-    //may sometimes have integer avatars, these must be converted to strings.
-
-    api.ConfirmRegistration(new ConfirmRegistrationParameter(email, key), new ApiHandler(d => {
-        SetToken(d.result); //This endpoint returns a user token as well, like login!
-        location.href = `?t=user`;
+    // your current avatar), you can add your avatar to the metadata. 
+    api.WriteNewComment(NewCommentParameter(text, contentId, markup), new ApiHandler(d => {
+        location.reload();
     }));
 
     return false;

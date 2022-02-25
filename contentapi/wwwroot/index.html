@@ -81,11 +81,8 @@
                     <form onsubmit="return t_comment_submit_submit(this)">
                         <textarea id="comment-submit-text"></textarea>
                         <label for="comment-submit-markup">Markup:</label>
-                        <select id="comment-submit-markup">
-                            <option>12y</option>
-                            <option>bbcode</option>
-                            <option>plaintext</option>
-                        </select>
+                        <select id="comment-submit-markup"></select>
+                        <input type="hidden" id="comment-submit-contentid" value="">
                         <input type="submit" value="Add Comment">
                     </form>
                 </div>

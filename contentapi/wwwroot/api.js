@@ -10,6 +10,14 @@ var APICONST = {
         BANNED : 418,
         RATELIMIT : 429,
         NETWORKERROR : 9999
+    },
+    MARKUP : [ "12y", "bbcode", "plaintext" ],
+    WRITETYPES : {
+        COMMENT : "comment",
+        PAGE : "page",
+        FILE : "file",
+        MODULE : "module",
+        USER : "user"
     }
 };
 
@@ -32,7 +40,8 @@ function ApiError(message, id, request)
     this.status_code = 0;   //This should be a duplicate of the code in request, but sometimes it isn't. Use this code for error handling...?
 }
 
-//An object which tells how to handle an API call, whether it succeeded or failed
+//An object which tells how to handle an API call, whether it succeeded or failed. Functions that accept
+//these handlers aren't picky, and will work with simple js {} objects instead
 function ApiHandler(success, error, always)
 {
     this.always = always || false;      //What to "always" do, regardless of failure or not (EXCEPT network errors). "Always" is called at the start of any api response, if provided
@@ -44,17 +53,17 @@ function ApiHandler(success, error, always)
 // NOTE: These are here for reference. You CAN use them if you want, or you can simply ignore them
 // and pass in your own objects with the same fields. The API will work either way.
 
-//This is the data you'd need to submit a comment, not necessarily the format of the comments that are 
-//returned from the API. Many fields are computed automatically. Only "text" is truly required
-//of a comment though.
-function Comment(text, markup, avatar, nickname, metadata)
+// This is the data you'd need to submit a NEW comment, not necessarily the format of the comments that are 
+// returned from the API. Many fields are computed automatically. Only "text" and "contentId" is truly 
+// required of a comment though.
+function NewCommentParameter(text, contentId, markup, avatar, nickname)
 {
     this.id = 0; //Should be 0 for new comments; set to an id for an edit
+    this.contentId = contentId;
     this.text = text; 
-    this.markup = markup || "plaintext";
+    this.markup = markup || null;
     this.avatar = avatar || null;
     this.nickname = nickname || null;
-    this.metadata = metadata || null; //This is a free-for-all text field used in special circumstances. 
 }
 
 // You only need EITHER username OR email, not both
@@ -171,6 +180,12 @@ function Api(url, tokenGet)
     this.userAutolinks = {
         createUserId: "createUser",
         editUserId: "editUser"
+    };
+
+    //The list of fields in ANY type of object that usually links to content (not exhaustive, probably)
+    this.contentAutoLinks = {
+        contentId: "content",
+        parendId: "parent"
     };
 }
 
@@ -374,6 +389,40 @@ Api.prototype.AboutSearch = function(handler)
     this.Raw("request/about", null, handler);
 };
 
+// NOTE: writes do not need your user information, because it's part of your login token.
+// This API wrapper tracks and sends your login token for you, so any writes are done by
+// "you". Writes will always fail if you're not logged in (or should, at least)
+Api.prototype.WriteType = function(type, object, handler)
+{
+    this.Raw("/write/" + type.replace(/[^a-zA-Z]+/g, "").toLowerCase(), object, handler);
+};
+
+// This is just a simplified shortcut for writing NEW comments. For updating existing 
+// comments, just send the comment object that you pulled from the API.
+// NOTES: comments are an interesting thing. Due to historical reasons, several key
+// pieces of information for comment rendering is stored in the "values" dictionary
+// that's part of every comment. So you'll commonly see "m", "a", and "n" values on
+// comments, representing the markup, avatar, and nickname, respectively. More may be
+// added in the future as well! Because they're not native fields on comments, and 
+// because constructing a new comment is a bit cumbersome, this function strives to
+// simplify all that by allowing you to provide the very basic fields. You don't have
+// to supply the user for any writes, because it is part of your login token supplied
+// by this API wrapper.
+Api.prototype.WriteNewComment = function(newComment, handler)
+    //text, contentId, markup, avatar, nickname, handler)
+{
+    var values = {};
+    if(newComment.markup) values.m = newComment.markup; //Should be one of the supported markups
+    if(newComment.avatar) values.a = newComment.avatar; //Should be a file HASH (a string), not the id!!
+    if(newComment.nickname) values.n = newComment.nickname;
+
+    this.WriteType(APICONST.WRITETYPES.COMMENT, {
+        text = newComment.text,
+        contentId = newComment.contentId,
+        values = values
+    }, handler);
+};
+
 // -- Some simple, common use cases for accessing the search endpoint. --
 // NOTE: You do NOT need to directly use these, especially if they don't fit your needs. 
 // You can simply use them as a starting grounds for your own custom constructed searches if you want
@@ -459,24 +508,43 @@ Api.prototype.KeyById = function(data, idField)
     return result;
 };
 
+// Given a dictionary of link ID fields to linked field names, automatically link the 
+// given data using the given list. This means that your "data" might be, for instance,
+// a list of comments, and the "list" is a list of users, and your "autoLinks" is a 
+// dictionary with stuff like "createUserId" and "editUserId". This function will add 
+// extra fields to each comment that points back to the real user object for any field
+// in "autoLinks". For an example, see the specific "AutoLink" functions after this
+Api.prototype.AutoLinkGeneric = function(data, list, autoLinks)
+{
+    var linkItems = this.KeyById(list);
+    data.forEach(x =>
+    {
+        for(var k in autoLinks)
+        {
+            var link = x[k];
+
+            //Link the found user to the field specified as the value in the userAutoLinks field
+            if(link && linkItems[link])
+                x[autoLinks[k]] = linkItems[link];
+        }
+    });
+};
+
 // Automatically link users to the given dataset. Tries to find normal fields like "createUserId",
 // and adds an additional field "createUser" which is the full user data from the provided userlist.
 // WARN: THIS MODIFIES THE DATASET IN-PLACE!
 Api.prototype.AutoLinkUsers = function(data, userlist)
 {
-    var me = this;
-    var users = this.KeyById(userlist);
-    data.forEach(x =>
-    {
-        for(var k in me.userAutolinks)
-        {
-            var link = x[k];
+    this.AutoLinkGeneric(data, userlist, this.userAutolinks);
+};
 
-            //Link the found user to the field specified as the value in the userAutoLinks field
-            if(link && users[link])
-                x[me.userAutolinks[k]] = users[link];
-        }
-    });
+// Automatically link content to the given dataset (even if the data is also content, such as linking
+// for parentId). Tries to find normal fields like "contentId" and "parentId" and adds an additional
+// field like "content" and "parent", which is the full content data from the provided contentlist.
+// WARN: THIS MODIFIES THE DATASET IN-PLACE!
+Api.prototype.AutoLinkContent = function(data, contentList)
+{
+    this.AutoLinkGeneric(data, contentList, this.contentAutolinks);
 };
 
 // Given one of the type descriptions from the "details" resultset of "AboutSearch", returns
@@ -499,4 +567,16 @@ Api.prototype.GetQueryableFields = function(typeDescriptor)
 Api.prototype.GetRequestableFields = function(typeDescriptor)
 {
     return Object.keys(typeDescriptor);
+};
+
+// Fill the given container (hopefully a select element) with options for our supported markup
+Api.prototype.FillMarkupSelect = function(selector, modify)
+{
+    APICONST.MARKUP.forEach(x =>
+    {
+        var opt = document.createElement("option");
+        opt.textContent = x;
+        if(modify) modify(opt);
+        selector.appendChild(opt);
+    });
 };
