@@ -799,4 +799,56 @@ public class DbWriterTest : ViewUnitTestBase, IClassFixture<DbUnitTestSearchFixt
     {
         await Assert.ThrowsAnyAsync<ForbiddenException>(async () => await writer.WriteAsync(new AdminLogView() { initiator = 1, target = 1 }, 1));
     }
+
+    [Fact]
+    //[InlineData((int)UserVariations.Super, (int)ContentVariations.AccessByAll + 1, true)]
+    //[InlineData(1 + (int)UserVariations.Super, (int)ContentVariations.AccessByAll + 1, true)] //THIS one is super
+    //[InlineData((int)UserVariations.Super, (int)ContentVariations.AccessBySupers + 1, false)]
+    //[InlineData(1 + (int)UserVariations.Super, (int)ContentVariations.AccessBySupers + 1, true)] //THIS one is super
+    public async Task WriteAsync_Comment_Values() //long uid, long parentId, bool allowed)
+    {
+        //NOTE: DO NOT PROVIDE CREATEDATE! ALSO IT SHOULD BE UTC TIME!
+        var contentId = (int)ContentVariations.AccessByAll + 1;
+        var uid = (int)UserVariations.Super; //NOT SUPER, NOT + 1
+        var comment = GetNewCommentView(contentId);
+
+        //Set values
+        comment.values.Add("m", "12y");
+        comment.values.Add("a", "1234");
+
+        var result = await writer.WriteAsync(comment, uid);
+        StandardCommentEqualityCheck(comment, result, uid);
+
+        //Good, now the comments stored the values initially just fine
+        Assert.Equal(comment.values.Count, result.values.Count);
+        Assert.Equal(comment.values["m"], result.values["m"]);
+        Assert.Equal(comment.values["a"], result.values["a"]);
+
+        //And now do a simple update, make sure the values are still there
+        result.text = "this is an edit";
+        var result2 = await writer.WriteAsync(result, uid);
+
+        //This ensures the update doesn't modify the values
+        Assert.Equal(2, result2.values.Count);
+        Assert.Equal(comment.values["m"], result2.values["m"]);
+        Assert.Equal(comment.values["a"], result2.values["a"]);
+
+        //Now modify one value, delete one, and add another
+        result2.values.Remove("m");
+        result2.values["a"] = "9999";
+        result2.values.Add("crap", "this is crap");
+
+        result = await writer.WriteAsync(result2, uid);
+        Assert.Equal(2, result.values.Count);
+        Assert.Equal(result2.values["a"], result.values["a"]);
+        Assert.Equal(result2.values["crap"], result.values["crap"]);
+
+        //And if you delete it, the values should go away
+        result = await writer.DeleteAsync<CommentView>(result.id, uid);
+        Assert.Empty(result.values);
+
+        result = await searcher.GetById<CommentView>(RequestType.comment, result.id);
+        Assert.Empty(result.values);
+    }
+
 }
