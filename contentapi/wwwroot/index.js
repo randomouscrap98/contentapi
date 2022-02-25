@@ -177,7 +177,7 @@ function user_onload(template, state)
 
 function page_onload(template, state)
 {
-    state.pid = state.pid || 0;
+    state.pid = Number(state.pid || 0);
 
     SetupPagination(template.querySelector("#page-subpageup"), template.querySelector("#page-subpagedown"), state, "sp");
     SetupPagination(template.querySelector("#page-commentup"), template.querySelector("#page-commentdown"), state, "cp");
@@ -188,9 +188,16 @@ function page_onload(template, state)
     var subpagesElement = template.querySelector("#page-subpages");
     var commentsElement = template.querySelector("#page-comments");
 
-    api.FillMarkupSelect(template.querySelector("#comment-submit-markup"));
-
-    template.querySelector("#comment-submit-contentid").value = state.pid;
+    //Setup the comment submit stuff if we're not at root, otherwise hide comment submit
+    if(state.pid)
+    {
+        api.FillMarkupSelect(template.querySelector("#comment-submit-markup"));
+        template.querySelector("#comment-submit-contentid").value = state.pid;
+    }
+    else
+    {
+        template.querySelector("#comment-submit-container").setAttribute("hidden", "");
+    }
 
     api.Search_BasicPageDisplay(state.pid, SUBPAGESPERPAGE, state.sp, COMMENTSPERPAGE, state.cp, new ApiHandler(d =>
     {

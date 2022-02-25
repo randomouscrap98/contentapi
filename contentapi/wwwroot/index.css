@@ -12,6 +12,7 @@ header {
 
 .error { color: red; }
 .success { color: green; }
+.hidden { display: none; }
 
 .describe tr td:first-of-type {
     font-weight: bold;

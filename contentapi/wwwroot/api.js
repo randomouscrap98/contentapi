@@ -417,9 +417,9 @@ Api.prototype.WriteNewComment = function(newComment, handler)
     if(newComment.nickname) values.n = newComment.nickname;
 
     this.WriteType(APICONST.WRITETYPES.COMMENT, {
-        text = newComment.text,
-        contentId = newComment.contentId,
-        values = values
+        text : newComment.text,
+        contentId : newComment.contentId,
+        values : values
     }, handler);
 };
 
