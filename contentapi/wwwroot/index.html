@@ -71,6 +71,9 @@
                 <h2 id="page-title"></h2>
                 <div id="page-content" title="This is raw markup"></div>
                 <table class="describe" id="page-table"></table>
+                <!-- The editor goes here (in this container) -->
+                <h3>New Page Here: <button id="page-submit-toggle"></button></h3>
+                <div id="page-submit-container"></div>
                 <h3>Subpages:</h3>
                 <div id="page-subpages" class="results"></div>
                 <div id="page-subpages-nav" class="nav">
@@ -80,7 +83,8 @@
                 <h3>Comments:</h3>
                 <div id="comment-submit-container">
                     <form onsubmit="return t_comment_submit_submit(this)">
-                        <textarea id="comment-submit-text"></textarea>
+                        <label for="comment-submit-text">New comment:</label>
+                        <textarea id="comment-submit-text" required=""></textarea>
                         <label for="comment-submit-markup">Markup:</label>
                         <select id="comment-submit-markup"></select>
                         <input type="hidden" id="comment-submit-contentid" value="">
@@ -130,14 +134,14 @@
             </div>
             <div id="comment_item" data-onload="comment_item_onload">
                 <img data-avatar>
-                <span data-username class="important"></span>
+                <span data-username class="important username"></span>
                 <span data-comment></span>
                 <time data-time class="annotation"></time>
                 <span data-contentid class="annotation"></span>
             </div>
             <div id="user_item" data-onload="user_item_onload">
                 <img data-avatar>
-                <span data-username class="important"></span>
+                <span data-username class="important username"></span>
                 <time data-time class="annotation"></time>
                 <span data-super>⭐</span>
             </div>
@@ -146,6 +150,24 @@
                 <span data-name class="important"></span>
                 <time data-time class="annotation"></time>
                 <span data-private>🔒</span>
+            </div>
+            <div id="page_editor" data-onload="page_editor_onload">
+                <form onsubmit="return t_page_editor_submit(this)">
+                    <input type="hidden" id="page-editor-id" value="0">
+                    <label for="page-editor-name">Title:</label>
+                    <input type="text" id="page-editor-name">
+                    <label for="page-editor-text">Text (raw):</label>
+                    <textarea id="page-editor-text"></textarea>
+                    <label for="page-editor-permissions">Permissions (comma separated, "UID":"CRUD"):</label>
+                    <input type="text" id="page-editor-permissions" value='"0":"CR"'>
+                    <label for="page-editor-values">Values (comma separated, "key":"value"):</label>
+                    <input type="text" id="page-editor-values" value='"test":"abc"'>
+                    <label for="page-editor-keywords">Keywords (space separated):</label>
+                    <input type="text" id="page-editor-keywords">
+                    <!-- permissions, values, keywords -->
+                    <input type="hidden" id="page-editor-parentid" value="0">
+                    <input type="submit" value="Submit page">
+                </form>
             </div>
         </template>
     </body>

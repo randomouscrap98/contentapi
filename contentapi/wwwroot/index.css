@@ -2,8 +2,15 @@ body {
     font-family: monospace;
 }
 
-label, input {
+label, input, textarea, select {
     display: block;
+    width: 100%;
+    max-width: 350px;
+    margin-bottom: 0.3em;
+}
+
+textarea {
+    min-height: 5em;
 }
 
 header {
@@ -13,6 +20,7 @@ header {
 .error { color: red; }
 .success { color: green; }
 .hidden { display: none; }
+.username::after { content: ":"; }
 
 .describe tr td:first-of-type {
     font-weight: bold;

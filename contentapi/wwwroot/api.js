@@ -394,7 +394,7 @@ Api.prototype.AboutSearch = function(handler)
 // "you". Writes will always fail if you're not logged in (or should, at least)
 Api.prototype.WriteType = function(type, object, handler)
 {
-    this.Raw("/write/" + type.replace(/[^a-zA-Z]+/g, "").toLowerCase(), object, handler);
+    this.Raw("write/" + type.replace(/[^a-zA-Z]+/g, "").toLowerCase(), object, handler);
 };
 
 // This is just a simplified shortcut for writing NEW comments. For updating existing 

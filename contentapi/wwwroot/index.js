@@ -60,6 +60,44 @@ function StateToUrl(state)
 //Make a "deep copy" of the given object (sort of)
 function Copy(object) { return JSON.parse(JSON.stringify(object)); }
 
+function QuickObjectToInput(object)
+{
+    var valueStr = JSON.stringify(object);
+    return valueStr.substring(1, valueStr.length - 1);
+}
+
+function QuickInputToObject(value)
+{
+    if(value) return JSON.parse("{" + value + "}");
+    else return {};
+}
+
+function SetCollapseButton(button, container, visibleState)
+{
+    var toggle = function(forceVisibleState)
+    {
+        var vstate = forceVisibleState !== undefined ? forceVisibleState : container.className.indexOf("hidden") >= 0;
+        console.log(forceVisibleState, vstate);
+
+        if(vstate) //If it's supposed to be visible, this
+        {
+            container.className = container.className.replace(/hidden/g, "");
+            button.textContent = "-";
+        }
+        else //If it's supposed to be hidden (not visible), this
+        {
+            container.className += " hidden";
+            button.textContent = "+";
+        }
+
+        //Shorten spaces
+        container.className = container.className.replace(/\s+/g, " ");
+    };
+
+    button.onclick = function() { toggle() };
+
+    toggle(visibleState);
+}
 
 // -- Some basic templating functions --
 
@@ -187,6 +225,12 @@ function page_onload(template, state)
     var title = template.querySelector("#page-title");
     var subpagesElement = template.querySelector("#page-subpages");
     var commentsElement = template.querySelector("#page-comments");
+
+    //Need to load the page editor! Since it's a "new" editor, the pid is 0
+    var pageEditor = LoadTemplate("page_editor", {parentId : state.pid, pid : 0});
+    var editorContainer = template.querySelector("#page-submit-container");
+    SetCollapseButton(template.querySelector("#page-submit-toggle"), editorContainer, false);
+    editorContainer.appendChild(pageEditor);
 
     //Setup the comment submit stuff if we're not at root, otherwise hide comment submit
     if(state.pid)
@@ -390,6 +434,23 @@ function file_item_onload(template, state)
         private.style.display = "none";
 }
 
+function page_editor_onload(template, state)
+{
+    //state is going to be the page IN the format from the api itself.
+    state = state || {};
+    template.querySelector("#page-editor-id").value = state.pid || 0;
+    template.querySelector("#page-editor-parentid").value = state.parentId || 0;
+    template.querySelector("#page-editor-name").value = state.name || "";
+    template.querySelector("#page-editor-text").value = state.text || "";
+
+    if(state.keywords)
+        template.querySelector("#page-editor-keywords").value = state.keywords.join(" ");
+    if(state.values)
+        template.querySelector("#page-editor-values").value = QuickObjectToInput(state.values);
+    if(state.permissions)
+        template.querySelector("#page-editor-permissions").value = QuickObjectToInput(state.permissions);
+}
+
 
 // -- Functions templates use directly --
 
@@ -447,8 +508,30 @@ function t_comment_submit_submit(form)
     //NOTE: if you want the avatar you used to comment with saved with the comment for posterity
     //(meaning searching for your old comment will show your original avatar when commenting and not
     // your current avatar), you can add your avatar to the metadata. 
-    api.WriteNewComment(NewCommentParameter(text, contentId, markup), new ApiHandler(d => {
+    api.WriteNewComment(new NewCommentParameter(text, contentId, markup), new ApiHandler(d => {
         location.reload();
+    }));
+
+    return false;
+}
+
+function t_page_editor_submit(form)
+{
+    //Pull the form together. These are about all the actual values you'd write for any page!
+    //It just looks complicated in real frontends because the "values" array probably contains
+    //things you want individual inputs for, like "what's the key" or whatever
+    var page = {
+        id : Number(document.getElementById("page-editor-id").value),
+        parentId : Number(document.getElementById("page-editor-parentid").value),
+        name : document.getElementById("page-editor-name").value,
+        text : document.getElementById("page-editor-text").value,
+        keywords : document.getElementById("page-editor-keywords").value.split(" "),
+        permissions : QuickInputToObject(document.getElementById("page-editor-permissions").value),
+        values : QuickInputToObject(document.getElementById("page-editor-values").value)
+    };
+
+    api.WriteType(APICONST.WRITETYPES.PAGE, page, new ApiHandler(d => {
+        location.href = "?t=page&pid=" + d.result.id;
     }));
 
     return false;
