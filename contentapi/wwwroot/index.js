@@ -77,7 +77,6 @@ function SetCollapseButton(button, container, visibleState)
     var toggle = function(forceVisibleState)
     {
         var vstate = forceVisibleState !== undefined ? forceVisibleState : container.hasAttribute("hidden"); //className.indexOf("hidden") >= 0;
-        console.log(forceVisibleState, vstate);
 
         if(vstate) //If it's supposed to be visible, this
         {
@@ -456,7 +455,6 @@ function page_editor_onload(template, state)
     template.querySelector("#page-editor-text").value = state.text || "";
     template.querySelector("#page-editor-type").value = state.type || "";
 
-    console.log("SATETE: ", state);
     if(state.keywords)
         template.querySelector("#page-editor-keywords").value = state.keywords.join(" ");
     if(state.values)
