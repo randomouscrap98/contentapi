@@ -69,6 +69,10 @@
             </div>
             <div id="t_page" data-onload="page_onload">
                 <h2 id="page-title"></h2>
+                <div id="page-edit-section" class="hidden">
+                    <h3>Edit: <button id="page-edit-toggle"></button></h3>
+                    <div id="page-edit-container"></div>
+                </div>
                 <div id="page-content" title="This is raw markup"></div>
                 <table class="describe" id="page-table"></table>
                 <!-- The editor goes here (in this container) -->
@@ -158,6 +162,8 @@
                     <input type="text" id="page-editor-name">
                     <label for="page-editor-text">Text (raw):</label>
                     <textarea id="page-editor-text"></textarea>
+                    <label for="page-editor-type">Type:</label>
+                    <input type="text" id="page-editor-type">
                     <label for="page-editor-permissions">Permissions (comma separated, "UID":"CRUD"):</label>
                     <input type="text" id="page-editor-permissions" value='"0":"CR"'>
                     <label for="page-editor-values">Values (comma separated, "key":"value"):</label>

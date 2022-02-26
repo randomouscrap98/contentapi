@@ -19,7 +19,7 @@ header {
 
 .error { color: red; }
 .success { color: green; }
-.hidden { display: none; }
+/*.hidden { display: none; }*/
 .username::after { content: ":"; }
 
 .describe tr td:first-of-type {

@@ -76,22 +76,25 @@ function SetCollapseButton(button, container, visibleState)
 {
     var toggle = function(forceVisibleState)
     {
-        var vstate = forceVisibleState !== undefined ? forceVisibleState : container.className.indexOf("hidden") >= 0;
+        var vstate = forceVisibleState !== undefined ? forceVisibleState : container.hasAttribute("hidden"); //className.indexOf("hidden") >= 0;
         console.log(forceVisibleState, vstate);
 
         if(vstate) //If it's supposed to be visible, this
         {
-            container.className = container.className.replace(/hidden/g, "");
+            //container.className = container.className.replace(/hidden/g, "");
+            if(container.hasAttribute("hidden"))
+                container.removeAttribute("hidden");
             button.textContent = "-";
         }
         else //If it's supposed to be hidden (not visible), this
         {
-            container.className += " hidden";
+            container.setAttribute("hidden", "")
+            //container.className += " hidden";
             button.textContent = "+";
         }
 
         //Shorten spaces
-        container.className = container.className.replace(/\s+/g, " ");
+        //container.className = container.className.replace(/\s+/g, " ");
     };
 
     button.onclick = function() { toggle() };
@@ -226,11 +229,16 @@ function page_onload(template, state)
     var subpagesElement = template.querySelector("#page-subpages");
     var commentsElement = template.querySelector("#page-comments");
 
-    //Need to load the page editor! Since it's a "new" editor, the pid is 0
-    var pageEditor = LoadTemplate("page_editor", {parentId : state.pid, pid : 0});
-    var editorContainer = template.querySelector("#page-submit-container");
-    SetCollapseButton(template.querySelector("#page-submit-toggle"), editorContainer, false);
-    editorContainer.appendChild(pageEditor);
+    var setupEditor = function(type, page)
+    {
+        //Need to load the page editor! Since it's a "new" editor, the pid is 0
+        var pageEditor = LoadTemplate("page_editor", page);
+        var editorContainer = template.querySelector(`#page-${type}-container`);
+        SetCollapseButton(template.querySelector(`#page-${type}-toggle`), editorContainer, false);
+        editorContainer.appendChild(pageEditor);
+    };
+
+    setupEditor("submit", {parentId : state.pid, id : 0});
 
     //Setup the comment submit stuff if we're not at root, otherwise hide comment submit
     if(state.pid)
@@ -240,7 +248,8 @@ function page_onload(template, state)
     }
     else
     {
-        template.querySelector("#comment-submit-container").setAttribute("hidden", "");
+        template.querySelector("#comment-submit-container").setAttribute("hidden", ""); 
+        template.querySelector("#page-edit-section").setAttribute("hidden", ""); 
     }
 
     api.Search_BasicPageDisplay(state.pid, SUBPAGESPERPAGE, state.sp, COMMENTSPERPAGE, state.cp, new ApiHandler(d =>
@@ -255,6 +264,7 @@ function page_onload(template, state)
         else
         {
             var page = d.result.data.page[0];
+            var originalPage = JSON.parse(JSON.stringify(page));
             title.textContent = page.name;
             content.textContent = page.content;
             delete page.name;
@@ -264,6 +274,8 @@ function page_onload(template, state)
             page.keywords = JSON.stringify(page.keywords);
             page.permissions = JSON.stringify(page.permissions);
             MakeTable(page, table);
+
+            setupEditor("edit", originalPage);
         }
 
         //Waste a few cycles linking some stuff together!
@@ -438,11 +450,13 @@ function page_editor_onload(template, state)
 {
     //state is going to be the page IN the format from the api itself.
     state = state || {};
-    template.querySelector("#page-editor-id").value = state.pid || 0;
+    template.querySelector("#page-editor-id").value = state.id || 0;
     template.querySelector("#page-editor-parentid").value = state.parentId || 0;
     template.querySelector("#page-editor-name").value = state.name || "";
     template.querySelector("#page-editor-text").value = state.text || "";
+    template.querySelector("#page-editor-type").value = state.type || "";
 
+    console.log("SATETE: ", state);
     if(state.keywords)
         template.querySelector("#page-editor-keywords").value = state.keywords.join(" ");
     if(state.values)
@@ -521,13 +535,14 @@ function t_page_editor_submit(form)
     //It just looks complicated in real frontends because the "values" array probably contains
     //things you want individual inputs for, like "what's the key" or whatever
     var page = {
-        id : Number(document.getElementById("page-editor-id").value),
-        parentId : Number(document.getElementById("page-editor-parentid").value),
-        name : document.getElementById("page-editor-name").value,
-        text : document.getElementById("page-editor-text").value,
-        keywords : document.getElementById("page-editor-keywords").value.split(" "),
-        permissions : QuickInputToObject(document.getElementById("page-editor-permissions").value),
-        values : QuickInputToObject(document.getElementById("page-editor-values").value)
+        id : Number(form.querySelector("#page-editor-id").value),
+        parentId : Number(form.querySelector("#page-editor-parentid").value),
+        name : form.querySelector("#page-editor-name").value,
+        text : form.querySelector("#page-editor-text").value,
+        type : form.querySelector("#page-editor-type").value,
+        keywords : form.querySelector("#page-editor-keywords").value.split(" "),
+        permissions : QuickInputToObject(form.querySelector("#page-editor-permissions").value),
+        values : QuickInputToObject(form.querySelector("#page-editor-values").value)
     };
 
     api.WriteType(APICONST.WRITETYPES.PAGE, page, new ApiHandler(d => {
