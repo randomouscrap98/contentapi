@@ -88,25 +88,33 @@ public class FileController : BaseController
       return result;
    }
 
+   public class UploadFileModel
+   {
+      public IFormFile? file {get;set;} = null;
+      public List<IFormFile>? files = null;
+      public string? name {get;set;}= null;
+      public bool tryResize {get;set;} = true;
+      public int quantize {get;set;} = -1; 
+      public string? globalPerms {get;set;} = null;
+   }
+
    [HttpPost]
    [Authorize]
-   public async Task<ActionResult<FileView>> UploadFile(IFormFile? file = null, List<IFormFile>? files = null,
-         [FromQuery] bool tryresize = true, [FromQuery]int quantize = -1, [FromQuery]string? name = null,
-         [FromQuery] string? globalPerms = null)
+   public async Task<ActionResult<FileView>> UploadFile([FromForm] UploadFileModel model)
    {
       //File ALWAYS takes precedence, but have a nice fallback.
-      if (file == null)
+      if (model.file == null)
       {
-         if (files != null && files.Count > 0)
-            file = files[0];
+         if (model.files != null && model.files.Count > 0)
+            model.file = model.files[0];
          else
             return BadRequest("No file or files form data found!");
       }
 
-      if (file.Length == 0)
+      if (model.file.Length == 0)
          return BadRequest("No data uploaded!");
       
-      if(quantize >= 0 && (quantize < config.MinQuantize || quantize > config.MaxQuantize))
+      if(model.quantize >= 0 && (model.quantize < config.MinQuantize || model.quantize > config.MaxQuantize))
          return BadRequest($"Quantize must be between {config.MinQuantize} and {config.MaxQuantize}");
 
       var requester = GetUserIdStrict();
@@ -119,14 +127,14 @@ public class FileController : BaseController
       return await MatchExceptions(async () =>
       {
          var newView = new FileView() { 
-            name = name ?? ""
+            name = model.name ?? ""
          };
 
-         newView.permissions[0] = globalPerms ?? "CR";
+         newView.permissions[0] = model.globalPerms ?? "CR";
 
          IImageFormat? format = null;
-         long imageByteCount = file.Length;
-         Stream imageStream = file.OpenReadStream();
+         long imageByteCount = model.file.Length;
+         Stream imageStream = model.file.OpenReadStream();
          var tempLocation = GetAndMakeTempPath();
 
          using(var memStream = new MemoryStream())
@@ -143,7 +151,7 @@ public class FileController : BaseController
                int width = image.Width;
                int height = image.Height;
 
-               while (tryresize && imageByteCount > config.MaxSize && sizeFactor > 0)
+               while (model.tryResize && imageByteCount > config.MaxSize && sizeFactor > 0)
                {
                   double resize = 1 / Math.Sqrt(imageByteCount / (config.MaxSize * sizeFactor));
                   services.logger.LogWarning($"User image too large ({imageByteCount}), trying ONE resize by {resize}");
@@ -177,8 +185,8 @@ public class FileController : BaseController
          try
          {
             //OK the quantization step. This SHOULD modify the view for us!
-            if (quantize > 0)
-               await TryQuantize(quantize, newView, tempLocation);
+            if (model.quantize > 0)
+               await TryQuantize(model.quantize, newView, tempLocation);
 
             await hashLock.WaitAsync();
 

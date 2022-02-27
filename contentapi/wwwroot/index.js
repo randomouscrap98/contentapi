@@ -431,14 +431,14 @@ function file_item_onload(template, state)
 {
     var file = template.querySelector("[data-file]");
     var filelink = template.querySelector("[data-filelink]");
-    var name = template.querySelector("[data-name]");
+    var hash = template.querySelector("[data-hash]");
     var time = template.querySelector("[data-time]");
     var private = template.querySelector("[data-private]");
 
     file.src = api.GetFileUrl(state.hash, new FileModifyParameter(50));
     file.title = `${state.mimetype} : ${state.quantization}`;
     filelink.href = api.GetFileUrl(state.hash);
-    name.textContent = `[${state.id}]: ${state.name}`;
+    hash.textContent = `${state.name} [${state.id}] pubId: ${state.hash}`;
     time.textContent = state.createDate;
 
     if(state.permissions[0] && state.permissions[0].indexOf("R") >= 0)
@@ -545,6 +545,17 @@ function t_page_editor_submit(form)
 
     api.WriteType(APICONST.WRITETYPES.PAGE, page, new ApiHandler(d => {
         location.href = "?t=page&pid=" + d.result.id;
+    }));
+
+    return false;
+}
+
+function t_user_files_submit(form)
+{
+    //We set up our form to be EXACTLY the form data that is required, so just... do that.
+    api.UploadFile(new FormData(form), new ApiHandler(d => {
+        alert("Upload successful. ID: " + d.result.id);
+        location.reload();
     }));
 
     return false;

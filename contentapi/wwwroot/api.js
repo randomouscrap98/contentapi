@@ -66,6 +66,17 @@ function NewCommentParameter(text, contentId, markup, avatar, nickname)
     this.nickname = nickname || null;
 }
 
+// The data you could provide when uploading a brand new file, NOT the format of file metadata
+// as retrieved from the API however!
+function UploadFileParameter(fileBlob, name, quantize, globalPerms, tryResize)
+{
+    this.fileBlob = fileBlob;   //Technically only this is required!
+    this.name = name;           //All the rest default to whatever is passed, including undefined!
+    this.quantize = quantize;
+    this.globalPerms = globalPerms;
+    this.tryResize = tryResize;
+}
+
 // You only need EITHER username OR email, not both
 function LoginParameter(username, password, email, expireSeconds)
 {
@@ -421,6 +432,30 @@ Api.prototype.WriteNewComment = function(newComment, handler)
         contentId : newComment.contentId,
         values : values
     }, handler);
+};
+
+// Use this endpoint to upload files to the API. Requires login. fileUploadParam can either
+// be a pre-filled FormData (if for instance you know exactly how the endpoint works), or
+// it can be the UploadFileParameter object
+Api.prototype.UploadFile = function(fileUploadParam, handler)
+{
+    //Unlike other endpoints, the file upload endpoint takes all its params as FormData!
+    //This is because we need to upload the file, and this is just easier.
+    var data = new FormData();
+
+    if(fileUploadParam instanceof FormData)
+    {
+        data = fileUploadParam;
+    }
+    else
+    {
+        for (var k in fileUploadParam) {
+            if (fileUploadParam.hasOwnProperty(k) && fileUploadParam[k] !== undefined)
+                data.set(k, fileUploadParam[k]);
+        }
+    }
+
+    this.Raw("file", data, handler);
 };
 
 // -- Some simple, common use cases for accessing the search endpoint. --
