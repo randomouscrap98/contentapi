@@ -194,6 +194,8 @@ function confirmregister_onload(template, state)
 function user_onload(template, state)
 {
     SetupPagination(template.querySelector("#user-files-pageup"), template.querySelector("#user-files-pagedown"), state, "fp");
+    SetCollapseButton(template.querySelector("#user-update-toggle"), template.querySelector("#user-update-form"), false);
+    SetCollapseButton(template.querySelector("#user-file-upload-toggle"), template.querySelector("#user-file-upload"), false);
 
     var table = template.querySelector("#user-table");
     var avatar = template.querySelector("#user-avatar");

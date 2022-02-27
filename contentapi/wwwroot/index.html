@@ -67,8 +67,8 @@
                 <table class="describe" id="user-table"></table>
                 <button onclick="t_user_logout()">Logout</button>
                 <div id="user-update">
-                    <h2>Update:</h2>
-                    <form onsubmit="return t_user_update_submit(this)">
+                    <h3>Update: <button id="user-update-toggle"></button></h3>
+                    <form id="user-update-form" onsubmit="return t_user_update_submit(this)">
                         <input type="hidden" id="user-update-id" value="0">
                         <label for="user-update-username">Username (limited changes?):<label>
                         <input type="text" id="user-update-username">
@@ -84,7 +84,7 @@
                     </form>
                 </div>
                 <div id="user-files">
-                    <h2>Upload new file:</h2>
+                    <h3>Upload new file: <button id="user-file-upload-toggle"></button></h3>
                     <form id="user-file-upload" name="user-file-upoad" onsubmit="return t_user_files_submit(this)">
                         <label for="user-files-file">Select file:</label>
                         <input type="file" name="file" id="user-files-file" accept="image/*" required="">
@@ -108,12 +108,12 @@
             </div>
             <div id="t_page" data-onload="page_onload">
                 <h2 id="page-title"></h2>
+                <div id="page-content" title="This is raw markup"></div>
+                <table class="describe" id="page-table"></table>
                 <div id="page-edit-section" class="hidden">
                     <h3>Edit: <button id="page-edit-toggle"></button></h3>
                     <div id="page-edit-container"></div>
                 </div>
-                <div id="page-content" title="This is raw markup"></div>
-                <table class="describe" id="page-table"></table>
                 <!-- The editor goes here (in this container) -->
                 <h3>New Page Here: <button id="page-submit-toggle"></button></h3>
                 <div id="page-submit-container"></div>
