@@ -60,18 +60,23 @@ function StateToUrl(state)
 //Make a "deep copy" of the given object (sort of)
 function Copy(object) { return JSON.parse(JSON.stringify(object)); }
 
+// For simplicity, convert an object into something editable in a single simple textbox
 function QuickObjectToInput(object)
 {
     var valueStr = JSON.stringify(object);
     return valueStr.substring(1, valueStr.length - 1);
 }
 
+// For simplicity, the opposite of above (take a single simple textbox and convert to object)
 function QuickInputToObject(value)
 {
     if(value) return JSON.parse("{" + value + "}");
     else return {};
 }
 
+// Essentially a spoiler maker, useful for collapsible elements. The button is the control for showing or hiding
+// the cointainer, and the visibleState is the initial visibility (set to false to hide initially). Note: the
+// button's text content is overwritten for this.
 function SetCollapseButton(button, container, visibleState)
 {
     var toggle = function(forceVisibleState)
@@ -80,7 +85,6 @@ function SetCollapseButton(button, container, visibleState)
 
         if(vstate) //If it's supposed to be visible, this
         {
-            //container.className = container.className.replace(/hidden/g, "");
             if(container.hasAttribute("hidden"))
                 container.removeAttribute("hidden");
             button.textContent = "-";
@@ -88,18 +92,15 @@ function SetCollapseButton(button, container, visibleState)
         else //If it's supposed to be hidden (not visible), this
         {
             container.setAttribute("hidden", "")
-            //container.className += " hidden";
             button.textContent = "+";
         }
-
-        //Shorten spaces
-        //container.className = container.className.replace(/\s+/g, " ");
     };
 
     button.onclick = function() { toggle() };
 
     toggle(visibleState);
 }
+
 
 // -- Some basic templating functions --
 
@@ -488,7 +489,7 @@ function page_editor_onload(template, state)
 }
 
 
-// -- Functions templates use directly --
+// -- Functions templates use directly (mostly form submits) --
 
 function t_login_submit(form)
 {
