@@ -66,6 +66,23 @@
                 <img src="" id="user-avatar">
                 <table class="describe" id="user-table"></table>
                 <button onclick="t_user_logout()">Logout</button>
+                <div id="user-update">
+                    <h2>Update:</h2>
+                    <form onsubmit="return t_user_update_submit(this)">
+                        <input type="hidden" id="user-update-id" value="0">
+                        <label for="user-update-username">Username (limited changes?):<label>
+                        <input type="text" id="user-update-username">
+                        <label for="user-update-avatar">Avatar (hash/pubId):<label>
+                        <input type="text" id="user-update-avatar">
+                        <label for="user-update-special">Special (unused?):<label>
+                        <input type="text" id="user-update-special">
+                        <label for="user-update-groups">Groups (space separated):<label>
+                        <input type="text" id="user-update-groups">
+                        <label for="user-update-super">Super (probably can't set):<label>
+                        <input type="text" id="user-update-super">
+                        <input type="submit" value="Update">
+                    </form>
+                </div>
                 <div id="user-files">
                     <h2>Upload new file:</h2>
                     <form id="user-file-upload" name="user-file-upoad" onsubmit="return t_user_files_submit(this)">

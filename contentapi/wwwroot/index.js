@@ -219,8 +219,16 @@ function user_onload(template, state)
                 return;
             }
 
-            avatar.src = api.GetFileUrl(dd.result.data.user[0].avatar, new FileModifyParameter(50));
-            MakeTable(dd.result.data.user[0], table);
+            var user = dd.result.data.user[0];
+            avatar.src = api.GetFileUrl(user.avatar, new FileModifyParameter(50));
+            MakeTable(user, table);
+
+            template.querySelector("#user-update-id").value = user.id;
+            template.querySelector("#user-update-username").value = user.username;
+            template.querySelector("#user-update-avatar").value = user.avatar;
+            template.querySelector("#user-update-special").value = user.special;
+            template.querySelector("#user-update-groups").value = user.groups.join(" ");
+            template.querySelector("#user-update-super").value = user.super;
 
             //Now go set up the file list display thing
             dd.result.data.file.forEach(x => {
@@ -574,6 +582,27 @@ function t_user_files_submit(form)
     api.UploadFile(data, new ApiHandler(d => {
         alert("Upload successful. ID: " + d.result.id);
         console.log("Upload successful. ID: " + d.result.id);
+        location.reload();
+    }));
+
+    return false;
+}
+
+function t_user_update_submit(form)
+{
+    //Pull the form together. These are about all the actual values you'd write for any page!
+    //It just looks complicated in real frontends because the "values" array probably contains
+    //things you want individual inputs for, like "what's the key" or whatever
+    var user = {
+        id : Number(form.querySelector("#user-update-id").value),
+        username : form.querySelector("#user-update-username").value,
+        avatar : form.querySelector("#user-update-avatar").value,
+        special : form.querySelector("#user-update-special").value,
+        groups : form.querySelector("#user-update-groups").value.split(" ").filter(x => x).map(x => Number(x)),
+        super : Number(form.querySelector("#user-update-super").value)
+    };
+
+    api.WriteType(APICONST.WRITETYPES.USER, user, new ApiHandler(d => {
         location.reload();
     }));
 
