@@ -68,17 +68,18 @@
                 <button onclick="t_user_logout()">Logout</button>
                 <div id="user-files">
                     <h2>Upload new file:</h2>
-                    <form onsubmit="return t_user_files_submit(this)">
+                    <!--<form enctype="multipart/form-data" method="post" name="user-file-upoad" onsubmit="return t_user_files_submit(this)">-->
+                    <form id="user-file-upload" name="user-file-upoad" onsubmit="return t_user_files_submit(this)">
                         <label for="user-files-file">Select file:</label>
                         <input type="file" name="file" id="user-files-file" accept="image/*" required="">
                         <label for="user-files-name">Name (optional):</label>
                         <input type="text" name="name" id="user-files-name">
                         <label for="user-files-quantize">Quantize (png only, optional):</label>
-                        <input type="number" name="quantize" id="user-files-quantize">
+                        <input type="number" name="quantize" id="user-files-quantize" value="-1">
                         <label for="user-files-globalperms">Global permissions (optional):</label>
                         <input type="text" name="globalPerms" id="user-files-globalperms" value="CR">
                         <label for="user-files-tryresize">Try resize (auto resize too-large images):</label>
-                        <input type="checkbox" name="tryResize" id="user-files-tryresize" checked="true">
+                        <input type="checkbox" name="tryResize" id="user-files-tryresize" checked="true" value="true">
                         <input type="submit" value="Upload">
                     </form>
                     <h2>Your files:</h2>

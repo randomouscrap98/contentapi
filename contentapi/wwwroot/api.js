@@ -295,7 +295,6 @@ Api.prototype.Raw = function(path, postData, handler, modifyRequest, parseData)
 
     request.open(method, url);
     request.setRequestHeader("accept", "application/json");
-    request.setRequestHeader("Content-Type", "application/json");
     request.setRequestHeader("Cache-Control", "no-cache, no-store, must-revalidate");
     request.setRequestHeader("Pragma", "no-cache"); //For internet explorer?
 
@@ -311,9 +310,15 @@ Api.prototype.Raw = function(path, postData, handler, modifyRequest, parseData)
     {
         //Don't modify the data if it's already in a special format
         if(postData instanceof FormData)
+        {
+            //request.setRequestHeader("Content-Type", "multipart/form-data");
             request.send(postData);
+        }
         else
+        {
+            request.setRequestHeader("Content-Type", "application/json");
             request.send(JSON.stringify(postData));
+        }
     }
     else
     {

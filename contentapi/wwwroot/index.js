@@ -552,8 +552,11 @@ function t_page_editor_submit(form)
 
 function t_user_files_submit(form)
 {
+    //var realForm = document.getElementById("user-file-upload"); //form);
+    var data = new FormData(form);//realForm);//document.getElementById("user-file-upload")); //form);
+    //console.log(realForm, data);
     //We set up our form to be EXACTLY the form data that is required, so just... do that.
-    api.UploadFile(new FormData(form), new ApiHandler(d => {
+    api.UploadFile(data, new ApiHandler(d => {
         alert("Upload successful. ID: " + d.result.id);
         location.reload();
     }));
