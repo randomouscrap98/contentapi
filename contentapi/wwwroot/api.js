@@ -460,6 +460,14 @@ Api.prototype.UploadFile = function(fileUploadParam, handler)
         }
     }
 
+    //The api actually ignores periods specifically for this endpoint, and we need that in
+    //order for this empty value to go through as form data
+    if(data.get("globalPerms") === "")
+    {
+        console.debug("Adding hack to force empty globalPerms to send through formData for file upload");
+        data.set("globalPerms", "."); 
+    }
+
     this.Raw("file", data, handler);
 };
 

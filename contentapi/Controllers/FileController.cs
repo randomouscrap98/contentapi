@@ -1,4 +1,5 @@
 using System.Diagnostics;
+using System.Text.RegularExpressions;
 using contentapi.Main;
 using contentapi.Search;
 using contentapi.Utilities;
@@ -130,7 +131,9 @@ public class FileController : BaseController
             name = model.name ?? ""
          };
 
-         newView.permissions[0] = model.globalPerms ?? "CR";
+         //This may look strange: it's because we have a bit of a hack to make empty globalPerms work. We strip
+         //spaces and periods, just in case the browser requires SOME character to be there for "empty"
+         newView.permissions[0] = (model.globalPerms ?? "CR").Trim().Replace(".", "");
 
          IImageFormat? format = null;
          long imageByteCount = model.file.Length;

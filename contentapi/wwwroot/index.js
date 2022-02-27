@@ -192,6 +192,8 @@ function confirmregister_onload(template, state)
 
 function user_onload(template, state)
 {
+    SetupPagination(template.querySelector("#user-files-pageup"), template.querySelector("#user-files-pagedown"), state, "fp");
+
     var table = template.querySelector("#user-table");
     var avatar = template.querySelector("#user-avatar");
     var userFiles = template.querySelector("#user-files-container");
@@ -570,8 +572,8 @@ function t_user_files_submit(form)
 
     //We set up our form to be EXACTLY the form data that is required, so just... do that.
     api.UploadFile(data, new ApiHandler(d => {
+        alert("Upload successful. ID: " + d.result.id);
         console.log("Upload successful. ID: " + d.result.id);
-        //alert("Upload successful. ID: " + d.result.id);
         location.reload();
     }));
 
