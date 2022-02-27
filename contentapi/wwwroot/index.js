@@ -194,10 +194,18 @@ function user_onload(template, state)
 {
     var table = template.querySelector("#user-table");
     var avatar = template.querySelector("#user-avatar");
+    var userFiles = template.querySelector("#user-files-container");
 
     api.AboutToken(new ApiHandler(d =>
     {
-        api.Search_ById("user", d.result.userId, new ApiHandler(dd =>
+        var search = new RequestParameter({
+            uid : d.result.userId
+        }, [
+            new RequestSearchParameter("user", "*", "id = @uid"),
+            new RequestSearchParameter("file", "*", "createUserId = @uid", "id_desc", SEARCHRESULTSPERPAGE, state.fp * SEARCHRESULTSPERPAGE),
+        ]);
+
+        api.Search(search, new ApiHandler(dd =>
         {
             //So the data from the api is in "result", but results from the "request"
             //endpoint are complicated and contain additional information about the request,
@@ -211,6 +219,12 @@ function user_onload(template, state)
 
             avatar.src = api.GetFileUrl(dd.result.data.user[0].avatar, new FileModifyParameter(50));
             MakeTable(dd.result.data.user[0], table);
+
+            //Now go set up the file list display thing
+            dd.result.data.file.forEach(x => {
+                var item = LoadTemplate(`file_item`, x);
+                userFiles.appendChild(item);
+            });
         }));
     }));
 }
@@ -552,12 +566,12 @@ function t_page_editor_submit(form)
 
 function t_user_files_submit(form)
 {
-    //var realForm = document.getElementById("user-file-upload"); //form);
-    var data = new FormData(form);//realForm);//document.getElementById("user-file-upload")); //form);
-    //console.log(realForm, data);
+    var data = new FormData(form);
+
     //We set up our form to be EXACTLY the form data that is required, so just... do that.
     api.UploadFile(data, new ApiHandler(d => {
-        alert("Upload successful. ID: " + d.result.id);
+        console.log("Upload successful. ID: " + d.result.id);
+        //alert("Upload successful. ID: " + d.result.id);
         location.reload();
     }));
 
