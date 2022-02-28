@@ -2,12 +2,13 @@ using contentapi.Search;
 
 namespace contentapi.Views;
 
-[ResultFor(RequestType.comment_aggregate)]
-[SelectFrom("comments")]
+[ResultFor(RequestType.message_aggregate)]
+[SelectFrom("messages")]
 [GroupBy("contentId, createUserId")]
 [ExtraQueryField("id")]
-[ExtraQueryField( "createDate")]
-public class CommentAggregateView
+[ExtraQueryField("createDate")]
+[ExtraQueryField("module")]
+public class MessageAggregateView
 {
     [FieldSelect]
     public long contentId { get; set; }

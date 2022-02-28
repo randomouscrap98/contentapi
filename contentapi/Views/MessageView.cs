@@ -2,14 +2,13 @@ using contentapi.Search;
 
 namespace contentapi.Views;
 
-[ResultFor(RequestType.comment)]
-[SelectFrom("comments")]
-[Where("module IS NULL")]
-[WriteAs(typeof(Db.Comment))]
-public class CommentView : IIdView
+[ResultFor(RequestType.message)]
+[SelectFrom("messages")]
+[WriteAs(typeof(Db.Message))]
+public class MessageView : IIdView
 {
     [FieldSelect]
-    [Writable(WriteRule.Preserve, WriteRule.Preserve)]
+    //[Writable(WriteRule.Preserve, WriteRule.Preserve)] //Why preserve? So it's forced to be 0
     public long id {get;set;}
 
     [FieldSelect]

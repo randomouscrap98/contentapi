@@ -8,10 +8,11 @@ namespace contentapi.Views;
 [WriteAs(typeof(Db.Content))]
 public class ContentView : IIdView
 {
+    public const string MessagesTable = "messages";
     public const string NaturalCommentQuery = "deleted = 0 and module IS NULL";
 
     [FieldSelect]
-    [Writable(WriteRule.Preserve, WriteRule.Preserve)]
+    //[Writable(WriteRule.Preserve, WriteRule.Preserve)]
     public long id { get; set; }
 
     //Entirely not writable
@@ -28,7 +29,7 @@ public class ContentView : IIdView
 
     //Entirely not writable
     [FieldSelect]
-    public InternalContentType internalType {get;set;}
+    public InternalContentType contentType {get;set;}
 
     [FieldSelect]
     [Writable]
@@ -37,6 +38,22 @@ public class ContentView : IIdView
     [FieldSelect]
     [Writable]
     public long parentId { get; set; }
+
+
+    [FieldSelect]
+    [Writable] //Not for files though!
+    public string? literalType {get;set;}   //The page type set by users, OR the file mimetype
+
+    [FieldSelect] //NEVER WRITABLE
+    public string? meta {get;set;}          //Not always used, READONLY after insert
+
+    [FieldSelect] 
+    [Writable]
+    public string? description {get;set;}   //Tagline for pages, description for anything else maybe
+
+    [FieldSelect]  //This is special, because it MUST be unique! The API will manage it... hopefully
+    [Writable(WriteRule.User, WriteRule.Preserve)]
+    public string hash {get;set;} = "";     //Some kind of unique public identifier. Uniqueness is enforced by the API however
 
 
     //NOtice the lack of "FieldSelect": this does NOT come from the standard query
@@ -64,15 +81,15 @@ public class ContentView : IIdView
     public Dictionary<VoteType, int> votes {get;set;} = new Dictionary<VoteType, int>();
 
     [Expensive(1)]
-    [FieldSelect("select createDate from comments where main.id = contentId and " + NaturalCommentQuery + " order by id desc limit 1")]
+    [FieldSelect("select createDate from " + MessagesTable + " where main.id = contentId and " + NaturalCommentQuery + " order by id desc limit 1")]
     public DateTime lastCommentDate {get;set;}
 
     [Expensive(1)]
-    [FieldSelect("select id from comments where main.id = contentId and " + NaturalCommentQuery + " order by id desc limit 1")]
+    [FieldSelect("select id from " + MessagesTable + " where main.id = contentId and " + NaturalCommentQuery + " order by id desc limit 1")]
     public long lastCommentId {get;set;}
 
     [Expensive(1)]
-    [FieldSelect("select count(*) from comments where main.id = contentId and " + NaturalCommentQuery)]
+    [FieldSelect("select count(*) from " + MessagesTable + " where main.id = contentId and " + NaturalCommentQuery)]
     public int commentCount {get;set;}
 
     [Expensive(1)]
