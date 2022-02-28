@@ -17,20 +17,13 @@ public class QueryBuilder : IQueryBuilder
 
     public const string DescendingAppend = "_desc";
     
-    protected static readonly List<RequestType> CONTENTREQUESTTYPES = new List<RequestType>()
-    {
-        RequestType.content, RequestType.file, RequestType.page, RequestType.module
-    };
-
-    public List<RequestType> ContentRequestTypes => CONTENTREQUESTTYPES;
-
     protected readonly Dictionary<string, MacroDescription> StandardMacros = new Dictionary<string, MacroDescription>()
     {
-        { "keywordlike", new MacroDescription("v", "KeywordLike", CONTENTREQUESTTYPES) },
-        { "valuelike", new MacroDescription("vv", "ValueLike", new List<RequestType> { RequestType.content, RequestType.file, RequestType.page, RequestType.module, RequestType.comment }) }, 
-        { "onlyparents", new MacroDescription("", "OnlyParents", CONTENTREQUESTTYPES) },
+        { "keywordlike", new MacroDescription("v", "KeywordLike", new List<RequestType> { RequestType.content }) },
+        { "valuelike", new MacroDescription("vv", "ValueLike", new List<RequestType> { RequestType.content, RequestType.message }) }, 
+        { "onlyparents", new MacroDescription("", "OnlyParents", new List<RequestType> { RequestType.content }) },
         { "basichistory", new MacroDescription("", "BasicHistory", new List<RequestType> { RequestType.activity }) },
-        { "notdeleted", new MacroDescription("", "NotDeletedMacro", new List<RequestType> { RequestType.content, RequestType.file, RequestType.page, RequestType.module, RequestType.comment }) }, 
+        { "notdeleted", new MacroDescription("", "NotDeletedMacro", new List<RequestType> { RequestType.content, RequestType.message }) }, 
         { "notnull", new MacroDescription("f", "NotNullMacro", Enum.GetValues<RequestType>().ToList()) },
         { "null", new MacroDescription("f", "NullMacro", Enum.GetValues<RequestType>().ToList()) },
         { "usertype", new MacroDescription("i", "UserTypeMacro", new List<RequestType> { RequestType.user }) },
@@ -40,11 +33,8 @@ public class QueryBuilder : IQueryBuilder
         { "permissionlimit", new MacroDescription("vfi", "PermissionLimit", new List<RequestType> {
             RequestType.activity,
             RequestType.content,
-            RequestType.page,
-            RequestType.file,
-            RequestType.module,
-            RequestType.comment,
-            RequestType.comment_aggregate,
+            RequestType.message,
+            RequestType.message_aggregate,
             RequestType.activity_aggregate
         }) }
     };

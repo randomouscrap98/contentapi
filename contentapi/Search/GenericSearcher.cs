@@ -80,26 +80,26 @@ public class GenericSearcher : IGenericSearch
             }
         }
 
-        if(r.requestType == RequestType.comment)
+        if(r.requestType == RequestType.message)
         {
-            const string cidkey = nameof(Db.CommentValue.commentId);
-            const string valkey = nameof(CommentView.values);
+            const string cidkey = nameof(Db.MessageValue.messageId);
+            const string valkey = nameof(MessageView.values);
             var index = IndexResults(result);
 
             if(r.requestFields.Contains(valkey))
             {
-                var valinfo = typeService.GetTypeInfo<Db.CommentValue>();
-                var values = await dbcon.QueryAsync<Db.CommentValue>($"select {cidkey},key,value from {valinfo.selfDbInfo?.modelTable} where {cidkey} in @ids",
+                var valinfo = typeService.GetTypeInfo<Db.MessageValue>();
+                var values = await dbcon.QueryAsync<Db.MessageValue>($"select {cidkey},key,value from {valinfo.selfDbInfo?.modelTable} where {cidkey} in @ids",
                     new { ids = index.Keys });
 
-                var lookup = values.ToLookup(x => x.commentId);
+                var lookup = values.ToLookup(x => x.messageId);
 
                 foreach(var c in index) 
                     c.Value[valkey] = lookup.Contains(c.Key) ? lookup[c.Key].ToDictionary(x => x.key, y => JsonConvert.DeserializeObject(y.value)) : new Dictionary<string, object?>();
             }
         }
 
-        if(queryBuilder.ContentRequestTypes.Contains(r.requestType))
+        if(r.requestType == RequestType.content) //queryBuilder.ContentRequestTypes.Contains(r.requestType))
         {
             const string keykey = nameof(ContentView.keywords);
             const string valkey = nameof(ContentView.values);
@@ -324,11 +324,11 @@ public class GenericSearcher : IGenericSearch
         foreach(var request in requests.requests)
         {
             //This is VERY important: limit content searches based on permissions!
-            if(queryBuilder.ContentRequestTypes.Select(x => x.ToString()).Contains(request.type))
+            if(request.type == RequestType.content.ToString()) //queryBuilder.ContentRequestTypes.Select(x => x.ToString()).Contains(request.type))
             {
                 request.query = queryBuilder.CombineQueryClause(request.query, $"!permissionlimit(@{groupsKey}, id, R)");
             }
-            if(request.type == RequestType.comment.ToString() || request.type == RequestType.activity.ToString() || request.type == RequestType.watch.ToString()) //ALSO MODULEMESSAGE!@!
+            if(request.type == RequestType.message.ToString() || request.type == RequestType.activity.ToString() || request.type == RequestType.watch.ToString())
             {
                 request.query = queryBuilder.CombineQueryClause(request.query, $"!permissionlimit(@{groupsKey}, contentId, R)");
             }
