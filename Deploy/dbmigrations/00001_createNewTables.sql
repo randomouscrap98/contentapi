@@ -73,13 +73,15 @@ create table if not exists bans (
 create table if not exists content (
     id integer primary key,
     deleted int not null default 0, -- deleting removes the id, don't want that.
-    createDate text not null,
     createUserId int not null,
-    internalType int not null, --page, file, module, category etc (use an enum)
-    publicType text not null,
+    createDate text not null,
+    contentType int not null,   --page, file, module, category etc (use an enum)
+    literalType text not null,  --the actual type of the content represented by this, like a file mimetype
+    `meta` text default null,  
+    `description` text default null,  
+    `hash` text not null,  
     `name` text not null,
     `text` text not null,
-    extra1 text default null,  -- extra fields used for special content type fields
     parentId int not null default 0 -- each content can only physically exist in one parent
 );
 
