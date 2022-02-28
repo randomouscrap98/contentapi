@@ -4,14 +4,15 @@ public enum RequestType
 {
     user,
     content,
-    comment,
-    page,
-    file,
-    module,
+    //comment,
+    message,
+    //page,
+    //file,
+    //module,
     activity,
     watch,
     adminlog,
     uservariable,
-    comment_aggregate,
+    message_aggregate,
     activity_aggregate
 }

@@ -170,40 +170,36 @@ create table if not exists content_history(
 create index if not exists idx_content_history_contentId on content_history(contentId);
 create index if not exists idx_content_history_createDate on content_history(createDate);
 
--- To make comment searches more simple and performant(?), put the edit
+-- To make message searches more simple and performant(?), put the edit
 -- data right in the comment. no linking
-create table if not exists comments(
+create table if not exists messages(
     id integer primary key,
     contentId int not null,
     createUserId int not null,
     createDate text not null,
-    receiveUserId int not null default 0, -- sometimes comments can be directly linked to a recipient
     `text` text not null,
-    --markup text,
-    --avatar text,
-    --nickname text,
-    --metadata text,
     editUserId int default null,
     editDate text default null,
-    module text default null,
     history text default null, -- most comments will NOT be edited, so this should be fine
+    module text default null,
+    receiveUserId int not null default 0, -- sometimes comments can be directly linked to a recipient
     deleted int not null default 0
 );
 
-create table if not exists comment_values (
+create table if not exists message_values (
     id integer primary key,
-    commentId int not null,
+    messageId int not null,
     `key` text not null,
     `value` text not null
 );
 
-create index if not exists idx_comment_values_commentId on comment_values(commentId);
-create index if not exists idx_comment_values_key on comment_values(`key`);
+create index if not exists idx_message_values_commentId on message_values(messageId);
+create index if not exists idx_message_values_key on message_values(`key`);
 
 -- TRY TO LIMIT INDEXES ON COMMENTS! I'm worried about the insert speed.
 -- This index is useful for massive comment searches within particularly rooms.
 -- Don't need to search EVERY comment in existence for values...
-create index if not exists idx_comment_contentId on comments(contentId, deleted, module);
+create index if not exists idx_message_contentId on messages(contentId, deleted, module);
 
 -- IF READ PERFORMANCE BECOMES AN ISSUE AGAIN: index on createDate and deleted
 

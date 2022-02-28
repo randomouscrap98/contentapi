@@ -2,12 +2,12 @@ using Dapper.Contrib.Extensions;
 
 namespace contentapi.Db
 {
-    [Table("comment_values")]
-    public class CommentValue
+    [Table("message_values")]
+    public class MessageValue
     {
         [Key]
         public long id { get; set; }
-        public long commentId { get; set; }
+        public long messageId { get; set; }
         public string key { get; set; } = "";
         public string value { get; set; } = "";
     }

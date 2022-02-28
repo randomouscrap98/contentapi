@@ -36,22 +36,6 @@ public class CommentView : IIdView
     [Expensive(2)]
     public Dictionary<string, object> values {get;set;} = new Dictionary<string, object>();
 
-    //[FieldSelect]
-    //[Writable]
-    //public string? markup {get;set;}
-
-    //[FieldSelect]
-    //[Writable]
-    //public string? avatar {get;set;}
-
-    //[FieldSelect]
-    //[Writable]
-    //public string? nickname {get;set;}
-
-    //[FieldSelect]
-    //[Writable]
-    //public string? metadata {get;set;}
-
     [FieldSelect]
     [Writable(WriteRule.Preserve, WriteRule.AutoDate)]
     public DateTime? editDate {get;set;}
