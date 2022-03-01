@@ -334,7 +334,7 @@ function search_onload(template, state)
     var aboutElement = template.querySelector("#search-about");
 
     searchtext.value = state.search || "";
-    searchtype.value = state.type || "page";
+    searchtype.value = state.type || "content";
 
     //Also, go out and get the "about" information so we can fill in the datalist elements for options
     api.AboutSearch(new ApiHandler(d => 
@@ -561,6 +561,7 @@ function t_page_editor_submit(form)
     //things you want individual inputs for, like "what's the key" or whatever
     var page = {
         id : Number(form.querySelector("#page-editor-id").value),
+        contentType : Number(form.querySelector("#page-editor-contenttype").value),
         parentId : Number(form.querySelector("#page-editor-parentid").value),
         name : form.querySelector("#page-editor-name").value,
         text : form.querySelector("#page-editor-text").value,
@@ -570,7 +571,7 @@ function t_page_editor_submit(form)
         values : QuickInputToObject(form.querySelector("#page-editor-values").value)
     };
 
-    api.WriteType(APICONST.WRITETYPES.PAGE, page, new ApiHandler(d => {
+    api.WriteType(APICONST.WRITETYPES.CONTENT, page, new ApiHandler(d => {
         location.href = "?t=page&pid=" + d.result.id;
     }));
 

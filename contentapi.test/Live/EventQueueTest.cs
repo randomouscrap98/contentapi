@@ -139,12 +139,12 @@ public class EventQueueTest : ViewUnitTestBase, IClassFixture<DbUnitTestSearchFi
         search.values.Add("id", contentId);
         search.requests.Add(new SearchRequest()
         {
-            type = "comment",
+            type = "message",
             fields = "*",
             query = "contentId = @id"
         });
         var baseResult = await searcher.SearchUnrestricted(search);
-        var comments= searcher.ToStronglyTyped<MessageView>(baseResult.data["comment"]);
+        var comments= searcher.ToStronglyTyped<MessageView>(baseResult.data["message"]);
 
         Assert.True(comments.Count > 1); //It should be greater than 1 for content 1, because of inverse activity amounts
         foreach(var c in comments)
@@ -155,14 +155,14 @@ public class EventQueueTest : ViewUnitTestBase, IClassFixture<DbUnitTestSearchFi
 
             //Now, make sure the result contains content, comment, and user results.
             Assert.True(result.data.ContainsKey("content"));
-            Assert.True(result.data.ContainsKey("comment"));
+            Assert.True(result.data.ContainsKey("message"));
             Assert.True(result.data.ContainsKey("user"));
 
             //The content, when requested, MUST have permissions!!
             Assert.True(result.data["content"].First().ContainsKey("permissions"));
 
             var content = searcher.ToStronglyTyped<ContentView>(result.data["content"]);
-            var comment = searcher.ToStronglyTyped<MessageView>(result.data["comment"]);
+            var comment = searcher.ToStronglyTyped<MessageView>(result.data["message"]);
             var user = searcher.ToStronglyTyped<UserView>(result.data["user"]);
 
             Assert.Single(content);

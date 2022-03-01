@@ -164,13 +164,14 @@ public class DbWriterTest : ViewUnitTestBase, IClassFixture<DbUnitTestSearchFixt
 
     //This tests whether supers and non supers can both write orphaned pages AND write into 
     //existing pages that have access to all.
+    //HAHA GUESS WHAT: NOBODY CAN CREATE FILES! Updated with single typification
     [Theory]
-    [InlineData((int)UserVariations.Super, 0, true)]
-    [InlineData(1 + (int)UserVariations.Super, 0, true)] //THIS one is super
-    [InlineData((int)UserVariations.Super, (int)ContentVariations.AccessByAll + 1, true)]
-    [InlineData(1 + (int)UserVariations.Super, (int)ContentVariations.AccessByAll + 1, true)] //THIS one is super
+    [InlineData((int)UserVariations.Super, 0, false)]
+    [InlineData(1 + (int)UserVariations.Super, 0, false)] //THIS one is super
+    [InlineData((int)UserVariations.Super, (int)ContentVariations.AccessByAll + 1, false)]
+    [InlineData(1 + (int)UserVariations.Super, (int)ContentVariations.AccessByAll + 1, false)] //THIS one is super
     [InlineData((int)UserVariations.Super, (int)ContentVariations.AccessBySupers + 1, false)]
-    [InlineData(1 + (int)UserVariations.Super, (int)ContentVariations.AccessBySupers + 1, true)] //THIS one is super
+    [InlineData(1 + (int)UserVariations.Super, (int)ContentVariations.AccessBySupers + 1, false)] //THIS one is super
     public async Task WriteAsync_BasicFile(long uid, long parentId, bool allowed)
     {
         //NOTE: DO NOT PROVIDE CREATEDATE! ALSO IT SHOULD BE UTC TIME!

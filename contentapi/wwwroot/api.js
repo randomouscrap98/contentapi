@@ -13,10 +13,8 @@ var APICONST = {
     },
     MARKUP : [ "12y", "bbcode", "plaintext" ],
     WRITETYPES : {
-        COMMENT : "comment",
-        PAGE : "page",
-        FILE : "file",
-        MODULE : "module",
+        CONTENT : "message",
+        CONTENT : "content",
         USER : "user"
     }
 };
@@ -503,10 +501,10 @@ Api.prototype.Search_BasicPageDisplay = function(id, subpagesPerPage, subpagePag
     var search = new RequestParameter({
         pageid : id
     }, [
-        new RequestSearchParameter("page", "*", "id = @pageid"),
+        new RequestSearchParameter("content", "*", "id = @pageid"),
         //Subpages: we want most fields, but not SOME big/expensive fields. Hence ~
-        new RequestSearchParameter("page", "~permissions,values,keywords,votes", "parentId = @pageid", "type,name", subpagesPerPage, subpagesPerPage * subpagePage, "subpages"),
-        new RequestSearchParameter("comment", "*", "contentId = @pageid and !notdeleted()", "id_desc", commentsPerPage, commentsPerPage * commentPage),
+        new RequestSearchParameter("content", "~permissions,values,keywords,votes", "parentId = @pageid", "type,name", subpagesPerPage, subpagesPerPage * subpagePage, "subpages"),
+        new RequestSearchParameter("message", "*", "contentId = @pageid and !notdeleted()", "id_desc", commentsPerPage, commentsPerPage * commentPage),
         new RequestSearchParameter("user", "*", "id in @comment.createUserId or id in @page.createUserId or id in @subpages.createUserId"),
     ]);
 

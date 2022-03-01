@@ -811,8 +811,7 @@ public class DbWriter : IDbWriter
 
     /// <summary>
     /// </summary>
-    /// <param name="comment"></param>
-    /// <param name="originalView"></param>
+    /// <param name="work"></param>
     /// <returns></returns>
     public CommentSnapshot CreateSnapshotFromCommentWork(DbWorkUnit<MessageView> work)
     {

@@ -683,11 +683,12 @@ public class GenericSearchDbTests : UnitTestBase, IClassFixture<DbUnitTestSearch
     {
         var search = new SearchRequests();
         search.values.Add("revid", 1);
+        search.values.Add("type", 1);
         search.requests.Add(new SearchRequest()
         {
-            type = "page",
+            type = "content",
             fields = "id", 
-            query = "lastRevisionId > @revid"
+            query = "lastRevisionId > @revid and contentType = @type"
         });
 
         //This fails because the field in question is complex and thus is required to be included
@@ -1075,11 +1076,13 @@ public class GenericSearchDbTests : UnitTestBase, IClassFixture<DbUnitTestSearch
     public async Task GenericSearch_StandardUseCase1(long uid)
     {
         var search = new SearchRequests();
+        search.values.Add("type", 1);
         search.requests.Add(new SearchRequest()
         {
             name = "allreadable",
-            type = "page",
-            fields = "*"
+            type = "content",
+            fields = "*",
+            query = "contentType = @type"
         });
         search.requests.Add(new SearchRequest()
         {
@@ -1091,7 +1094,7 @@ public class GenericSearchDbTests : UnitTestBase, IClassFixture<DbUnitTestSearch
         search.requests.Add(new SearchRequest()
         {
             name = "allcomments",
-            type = "comment",
+            type = "message",
             fields = "id, text, contentId",
             query = "contentId in @allreadable.id"
         });
@@ -1136,7 +1139,7 @@ public class GenericSearchDbTests : UnitTestBase, IClassFixture<DbUnitTestSearch
         search.requests.Add(new SearchRequest()
         {
             name = "lastcomments",
-            type = "comment",
+            type = "message",
             fields = "*",
             query = "id in @allreadable.lastCommentId"
         });
