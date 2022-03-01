@@ -8,6 +8,8 @@ namespace contentapi.Views;
 [WriteAs(typeof(Db.ContentWatch))]
 public class WatchView : IIdView
 {
+    public const string MessageTable = "messages";
+
     [FieldSelect]
     [Writable(WriteRule.Preserve, WriteRule.Preserve)]
     public long id { get; set; }
@@ -37,7 +39,7 @@ public class WatchView : IIdView
     public DateTime editDate { get; set; }
 
     [Expensive(2)]
-    [FieldSelect("select count(*) from comments c where c.contentId = main.contentId and c.id > main.lastCommentId")]
+    [FieldSelect("select count(*) from " + MessageTable + " c where c.contentId = main.contentId and c.id > main.lastCommentId")]
     public int commentNotifications {get;set;}
 
     [Expensive(2)]

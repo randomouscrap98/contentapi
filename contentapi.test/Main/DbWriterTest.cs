@@ -414,7 +414,7 @@ public class DbWriterTest : ViewUnitTestBase, IClassFixture<DbUnitTestSearchFixt
 
         //Ensure there's something of every type in there
         var pv = await writer.WriteAsync(GetNewPageView(), 1);
-        var fv = await writer.WriteAsync(GetNewFileView(), 1);
+        //var fv = await writer.WriteAsync(GetNewFileView(), 1);
         var mv = await writer.WriteAsync(GetNewModuleView(), modUid);
 
         //await Assert.ThrowsAnyAsync<InvalidOperationException>(async () => {
@@ -429,7 +429,7 @@ public class DbWriterTest : ViewUnitTestBase, IClassFixture<DbUnitTestSearchFixt
 
         //These should succeed
         await writer.DeleteAsync<ContentView>(pv.id, 1);
-        await writer.DeleteAsync<ContentView>(fv.id, 1);
+        //await writer.DeleteAsync<ContentView>(fv.id, 1);
         await writer.DeleteAsync<ContentView>(mv.id, modUid);
     }
 

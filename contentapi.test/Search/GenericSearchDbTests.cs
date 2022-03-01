@@ -1170,7 +1170,7 @@ public class GenericSearchDbTests : UnitTestBase, IClassFixture<DbUnitTestSearch
         });
     }
 
-    //This test ensures the basic structure of comment_aggregate makes sense
+    //This test ensures the basic structure of message_aggregate makes sense
     [Theory]
     [InlineData(0)]
     [InlineData(0, "id > @id")]
@@ -1186,7 +1186,7 @@ public class GenericSearchDbTests : UnitTestBase, IClassFixture<DbUnitTestSearch
         var search = new SearchRequests();
         search.requests.Add(new SearchRequest()
         {
-            type = "comment_aggregate",
+            type = "message_aggregate",
             fields = "*",
             query = query
         });
@@ -1194,7 +1194,7 @@ public class GenericSearchDbTests : UnitTestBase, IClassFixture<DbUnitTestSearch
         search.values.Add("past", DateTime.UtcNow - TimeSpan.FromDays(5));
 
         var result = (userId == 0 ? (await service.SearchUnrestricted(search)) : (await service.Search(search, userId)))
-            .data["comment_aggregate"];
+            .data["message_aggregate"];
         var castResult = service.ToStronglyTyped<MessageAggregateView>(result);
 
         //There should ALWAYS be results
@@ -1216,7 +1216,7 @@ public class GenericSearchDbTests : UnitTestBase, IClassFixture<DbUnitTestSearch
         });
     }
 
-    //This test ensures the basic structure of comment_aggregate makes sense
+    //This test ensures the basic structure of activity_aggregate makes sense
     [Theory]
     [InlineData(0)]
     [InlineData(0, "id > @id")]
