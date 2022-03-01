@@ -9,6 +9,8 @@ namespace contentapi.test;
 
 public class CachedTypeInfoServiceTest : UnitTestBase
 {
+    public const WriteRule DefWR = WriteRule.Preserve;
+
     protected ViewTypeInfoService_Cached service;
 
     public CachedTypeInfoServiceTest()
@@ -84,9 +86,7 @@ public class CachedTypeInfoServiceTest : UnitTestBase
     public void GetTypeInfo_ResultFor()
     {
         var typeInfo = service.GetTypeInfo<TestView>();
-        Assert.NotNull(typeInfo.writeAsInfo);
-        Assert.Equal(typeof(Db.User), typeInfo.writeAsInfo?.modelType);
-        Assert.Equal("users", typeInfo.writeAsInfo?.modelTable);
+        Assert.Equal(RequestType.user, typeInfo.requestType);
     }
 
     [Fact] 
@@ -106,16 +106,16 @@ public class CachedTypeInfoServiceTest : UnitTestBase
 
 
     [Theory]
-    [InlineData("queryableFieldLong", true, null, null, null, false, false, 0)]
-    [InlineData("unsearchableField", false, null, null, null, false, false, 0)]
-    [InlineData("buildableField", true, null, null, "buildableField", false, true, 0)]
-    [InlineData("remappedField", true, null, null, "otherField", false, true, 0)]
+    [InlineData("queryableFieldLong", true, DefWR, DefWR, null, false, false, 0)]
+    [InlineData("unsearchableField", false, DefWR, DefWR, null, false, false, 0)]
+    [InlineData("buildableField", true, DefWR, DefWR, "buildableField", false, true, 0)]
+    [InlineData("remappedField", true, DefWR, DefWR, "otherField", false, true, 0)]
     [InlineData("freeWriteField", true, WriteRule.User, WriteRule.User, null, false, false, 0)]
     [InlineData("createDateField", true, WriteRule.AutoDate, WriteRule.Preserve, null, false, false, 0)]
     [InlineData("editUserField", true, WriteRule.Preserve, WriteRule.AutoUserId, null, false, false, 0)]
-    [InlineData("multilineField", true, null, null, null, true, false, 0)]
-    [InlineData("expensiveField", true, null, null, null, false, false, 3)]
-    public void GetTypeInfo_All(string fname, bool queryable, WriteRule? onInsert, WriteRule? onUpdate,
+    [InlineData("multilineField", true, DefWR, DefWR, null, true, false, 0)]
+    [InlineData("expensiveField", true, DefWR, DefWR, null, false, false, 3)]
+    public void GetTypeInfo_All(string fname, bool queryable, WriteRule onInsert, WriteRule onUpdate,
         string? fieldSelect, bool multiline, bool queryBuildable, int expensive)
     {
         var typeInfo = service.GetTypeInfo<TestView>();

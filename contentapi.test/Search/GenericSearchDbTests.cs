@@ -634,20 +634,26 @@ public class GenericSearchDbTests : UnitTestBase, IClassFixture<DbUnitTestSearch
     public async Task GenericSearch_Search_RemappedField_Searchable()
     {
         //This test relies on the amount of content types. If it changes, just fix it, it's easy
-        Assert.Equal(4, Enum.GetValues<InternalContentType>().Count());
+        //Assert.Equal(4, Enum.GetValues<InternalContentType>().Count());
 
         var search = new SearchRequests();
-        search.values.Add("hash", fixture.StandardPublicTypes[(int)InternalContentType.file]);
+        //search.values.Add("hash", fixture.StandardPublicTypes[(int)InternalContentType.file]);
+        //search.values.Add("type", InternalContentType.file);
+        search.values.Add("registered", true);
+        search.values.Add("usertype", UserType.user);
         search.requests.Add(new SearchRequest()
         {
             name = "complex",
-            type = "file",
-            fields = "id, hash", 
-            query = "hash = @hash"
+            type = "user",
+            //type = "content",
+            fields = "id, registered, type", 
+            //fields = "id, registered, contentType", 
+            query = "registered = @registered and type = @usertype",
+            //query = "hash = @hash and contentType = @type",
         });
 
         var result = (await service.SearchUnrestricted(search)).data["complex"];
-        Assert.Equal(fixture.ContentCount / 4 / 2, result.Count());
+        Assert.Equal(fixture.UserCount / 2, result.Count());
     }
 
     //TODO: again, we outright deny all searches where the query field is not selected. This is a new restriction,

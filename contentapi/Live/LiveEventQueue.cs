@@ -238,12 +238,12 @@ public class LiveEventQueue : ILiveEventQueue
         if(first.type == EventType.message)
         {
             requests.requests.Add(basicRequest(RequestType.message.ToString())); 
-            requests.requests.Add(contentRequest("id in @comment.contentId"));
+            requests.requests.Add(contentRequest("id in @message.contentId"));
             requests.requests.Add(new SearchRequest()
             {
                 type = RequestType.user.ToString(),
                 fields = "*",
-                query = "id in @content.createUserId or id in @comment.createUserId or id in @comment.editUserId"
+                query = "id in @content.createUserId or id in @message.createUserId or id in @message.editUserId"
             });
         }
         else if(first.type == EventType.activity)

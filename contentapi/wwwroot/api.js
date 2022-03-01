@@ -505,7 +505,7 @@ Api.prototype.Search_BasicPageDisplay = function(id, subpagesPerPage, subpagePag
         //Subpages: we want most fields, but not SOME big/expensive fields. Hence ~
         new RequestSearchParameter("content", "~permissions,values,keywords,votes", "parentId = @pageid", "type,name", subpagesPerPage, subpagesPerPage * subpagePage, "subpages"),
         new RequestSearchParameter("message", "*", "contentId = @pageid and !notdeleted()", "id_desc", commentsPerPage, commentsPerPage * commentPage),
-        new RequestSearchParameter("user", "*", "id in @comment.createUserId or id in @page.createUserId or id in @subpages.createUserId"),
+        new RequestSearchParameter("user", "*", "id in @message.createUserId or id in @page.createUserId or id in @subpages.createUserId"),
     ]);
 
     this.Search(search, handler);
@@ -518,7 +518,7 @@ Api.prototype.Search_BasicPageDisplay = function(id, subpagesPerPage, subpagePag
         //get ALL data, we must (currently) just ask for all types. This may be fixed in the future with
         //a further specialized request type, but for now this is what we have. It is NOT inefficient, 
         //searching for a non-existent page takes nearly no time.
-        //new RequestSearchParameter("user", "*", "id in @comment.createUserId or id in @page.createUserId or id in @module.createUserId or id in @file.createUserId or id in @subpages.createUserId"),
+        //new RequestSearchParameter("user", "*", "id in @message.createUserId or id in @page.createUserId or id in @module.createUserId or id in @file.createUserId or id in @subpages.createUserId"),
 
 
 // -- Some helper functions which don't necessarily directly connect to the API --
