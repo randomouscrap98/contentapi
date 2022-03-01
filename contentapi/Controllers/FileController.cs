@@ -6,6 +6,7 @@ using contentapi.Utilities;
 using contentapi.Views;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
+using Newtonsoft.Json;
 using SixLabors.ImageSharp;
 using SixLabors.ImageSharp.Formats;
 using SixLabors.ImageSharp.Processing;
@@ -22,8 +23,6 @@ public class FileControllerConfig
    public int MaxQuantize { get; set; } = 256;
    public int MinQuantize { get; set; } = 2;
    public double ResizeRepeatFactor {get;set;} = 0.8;
-   public int HashChars {get;set;} = 5;
-   public int MaxHashRetries {get;set;} = 50;
    public string DefaultHash {get;set;} = "0";
    public string? DefaultImageFallback {get;set;} = null;
 }
@@ -33,19 +32,16 @@ public class FileController : BaseController
    protected FileControllerConfig config;
    protected IDbWriter writer;
    protected IGenericSearch searcher;
-   protected IRandomGenerator rng;
 
    protected static readonly SemaphoreSlim filelock = new SemaphoreSlim(1, 1);
-   protected static readonly SemaphoreSlim hashLock = new SemaphoreSlim(1, 1);
 
    public FileController(BaseControllerServices services, FileControllerConfig config,
-      IDbWriter writer, IGenericSearch searcher, IRandomGenerator rng)
+      IDbWriter writer, IGenericSearch searcher)
          : base(services)
    {
       this.config = config;
       this.writer = writer;
       this.searcher = searcher;
-      this.rng = rng;
    }
 
    protected string GetUploadPath(string hash, GetFileModify? modify = null)
@@ -101,7 +97,7 @@ public class FileController : BaseController
 
    [HttpPost]
    [Authorize]
-   public async Task<ActionResult<FileView>> UploadFile([FromForm] UploadFileModel model)
+   public async Task<ActionResult<ContentView>> UploadFile([FromForm] UploadFileModel model)
    {
       //File ALWAYS takes precedence, but have a nice fallback.
       if (model.file == null)
@@ -127,7 +123,7 @@ public class FileController : BaseController
 
       return await MatchExceptions(async () =>
       {
-         var newView = new FileView() { 
+         var newView = new ContentView() { 
             name = model.name ?? ""
          };
 
@@ -137,6 +133,9 @@ public class FileController : BaseController
 
          IImageFormat? format = null;
          long imageByteCount = model.file.Length;
+         int width = 0; 
+         int height = 0;
+         int trueQuantize = 0;
          Stream imageStream = model.file.OpenReadStream();
          var tempLocation = GetAndMakeTempPath();
 
@@ -148,11 +147,11 @@ public class FileController : BaseController
             //This will throw an exception if it's not an image (most likely)
             using (var image = Image.Load(imageStream, out format))
             {
-               newView.mimetype = format.DefaultMimeType;
+               newView.literalType = format.DefaultMimeType;
 
                double sizeFactor = config.ResizeRepeatFactor;
-               int width = image.Width;
-               int height = image.Height;
+               width = image.Width;
+               height = image.Height;
 
                while (model.tryResize && imageByteCount > config.MaxSize && sizeFactor > 0)
                {
@@ -174,6 +173,7 @@ public class FileController : BaseController
                //If the image is still too big, bad ok bye
                if (imageByteCount > config.MaxSize)
                   throw new RequestException("File too large!");
+                  
             }
 
             services.logger.LogDebug($"New image size: {imageByteCount}");
@@ -187,38 +187,31 @@ public class FileController : BaseController
 
          try
          {
+            dynamic meta = new {
+               size = imageByteCount, 
+               width = width, 
+               height = height, 
+            };
+
             //OK the quantization step. This SHOULD modify the view for us!
             if (model.quantize > 0)
-               await TryQuantize(model.quantize, newView, tempLocation);
+               trueQuantize = await TryQuantize(model.quantize, newView, tempLocation);
+            
+            if(trueQuantize > 0)
+               meta.quantize = trueQuantize;
 
-            await hashLock.WaitAsync();
+            //We now have the metadata
+            newView.meta = JsonConvert.SerializeObject(meta);
 
-            //If all that is successful, then we can actually do the file write to db!
-            try
+            await writer.GenerateContentHash(async x => 
             {
-               //NOW we can generate a hash!
-               newView.hash = "";
-               int retries = 0;
-               while (true)
-               {
-                  newView.hash = rng.GetAlphaSequence(config.HashChars);
-                  //Lookup files with the same hash. This is INEFFICIENT but we'll fix it later
-                  var like = await searcher.GetByField<FileView>(RequestType.file, "hash", newView.hash);
-                  if (like.Count == 0)
-                     break;
-                  services.logger.LogWarning($"HASH COLLISION: {newView.hash}");
-                  retries++;
-                  if (retries > config.MaxHashRetries)
-                      throw new InvalidOperationException("Ran out of hash retries! Maybe there's too many files on the system?");
-               }
+               //This is what happens WITHIN the hash lock, hence why we need to write it
+               //now so nobody else can do the thing
+               newView.hash = x;
                var finalLocation = GetAndMakeUploadPath(newView.hash);
                System.IO.File.Copy(tempLocation, finalLocation);
                newView = await writer.WriteAsync(newView, requester);
-            }
-            finally
-            {
-                hashLock.Release();
-            }
+            });
          }
          finally
          {
@@ -236,11 +229,11 @@ public class FileController : BaseController
    /// <param name="newView"></param>
    /// <param name="quantize"></param>
    /// <returns></returns>
-   protected bool CheckQuantize(FileView newView, int quantize)
+   protected bool CheckQuantize(ContentView newView, int quantize)
    {
-      if (newView.mimetype.ToLower() != "image/png")
+      if (newView.literalType?.ToLower() != "image/png")
       {
-         services.logger.LogWarning($"NOT quantizing non-png image {newView.id} (was {newView.mimetype})!");
+         services.logger.LogWarning($"NOT quantizing non-png image {newView.id} (was {newView.literalType})!");
       }
       else if (quantize > config.MaxQuantize || quantize < config.MinQuantize)
       {
@@ -266,7 +259,7 @@ public class FileController : BaseController
    /// <param name="fileLocation"></param>
    /// <param name="requester"></param>
    /// <returns></returns>
-   protected async Task<FileView> TryQuantize(int quantize, FileView newView, string fileLocation) //, long requster)
+   protected async Task<int> TryQuantize(int quantize, ContentView newView, string fileLocation) //, long requster)
    {
       if(CheckQuantize(newView, quantize))
       {
@@ -290,7 +283,8 @@ public class FileController : BaseController
 
             services.logger.LogInformation($"Quantized {fileLocation} to {quantize} colors using '{config.QuantizerProgram} {quantizeParams}'");
 
-            newView.quantization = quantize.ToString();
+            return quantize; 
+            //newView.quantization = quantize.ToString();
             //await w.WriteAsync(newView, new Requester() { system = true });
          }
          catch (Exception ex)
@@ -298,7 +292,8 @@ public class FileController : BaseController
             services.logger.LogError($"ERROR DURING IMAGE {newView.id} QUANTIZATION TO {quantize}: {ex}");
          }
       }
-      return newView;
+
+      return -1;
    }
 
    //[HttpPut("{id}")]
@@ -337,7 +332,7 @@ public class FileController : BaseController
 
       //Go get that ONE file. This should return null if we can't read it... let's hope!
       //SPECIAL: the 0 file is 
-      FileView? fileData = null;
+      ContentView? fileData = null;
 
       if (hash == config.DefaultHash)
       {
@@ -358,15 +353,15 @@ public class FileController : BaseController
          }
             
          if(exists)
-            fileData = new FileView() { id = 0, mimetype = "image/png", hash = hash };
+            fileData = new ContentView() { id = 0, literalType = "image/png", hash = hash, contentType = Db.InternalContentType.file };
       }
       else
       {
          //Doesn't matter who the requester is, ANY file with this hash is fine... what about deleted though?
-         fileData = (await searcher.GetByField<FileView>(RequestType.file, "hash", hash)).FirstOrDefault();
+         fileData = (await searcher.GetByField<ContentView>(RequestType.content, "hash", hash)).FirstOrDefault();
       }
 
-      if (fileData == null || fileData.deleted)
+      if (fileData == null || fileData.deleted || fileData.contentType != Db.InternalContentType.file)
          return NotFound();
 
       var finalPath = GetAndMakeUploadPath(fileData.hash, modify);
@@ -434,7 +429,7 @@ public class FileController : BaseController
       }
 
       Response.Headers.Add("ETag", GetETag(finalPath));
-      return File(System.IO.File.OpenRead(finalPath), fileData.mimetype);
+      return File(System.IO.File.OpenRead(finalPath), fileData.literalType ?? throw new InvalidOperationException("Retrieved API file data somehow did not have a set literalType (mimetype for file)!"));
    }
 
    //[HttpGet]

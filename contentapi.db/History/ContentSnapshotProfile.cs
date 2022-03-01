@@ -7,7 +7,7 @@ namespace contentapi.Db.History
         public ContentHistorySnapshotProfile()
         {
             CreateMap<Content, ContentSnapshot>().ReverseMap();
-            CreateMap<Comment, CommentSnapshot>().ReverseMap();
+            CreateMap<Message, CommentSnapshot>().ReverseMap();
         }
     }
 }

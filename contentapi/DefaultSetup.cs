@@ -52,6 +52,7 @@ public static class DefaultSetup
         services.AddSingleton<UserServiceConfig>();
         services.AddSingleton<CacheCheckpointTrackerConfig>();
         services.AddSingleton<LiveEventQueueConfig>();
+        services.AddSingleton<DbWriterConfig>();
 
         //NOTE: do NOT just add all configs to the service! Only configs which have 
         //reasonable defaults! For instance: the EmailConfig should NOT be added!

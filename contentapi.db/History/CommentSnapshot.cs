@@ -10,6 +10,6 @@ namespace contentapi.Db.History
         public DateTime editDate {get;set;}
         public string previous {get;set;}
 
-        public List<CommentValue> values {get;set;} = new List<CommentValue>();
+        public List<MessageValue> values {get;set;} = new List<MessageValue>();
     }
 }

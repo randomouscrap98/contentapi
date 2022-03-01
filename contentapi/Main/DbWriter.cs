@@ -13,6 +13,15 @@ using Newtonsoft.Json;
 
 namespace contentapi.Main;
 
+public class DbWriterConfig
+{
+   public int HashChars {get;set;} = 5;
+   public int MaxHashRetries {get;set;} = 50;
+   public string HashRegex {get;set;} = @"^[a-z\-]+$";
+   public int HashMinLength {get;set;} = 8;
+   public int HashMaxLength {get;set;} = 32;
+}
+
 public class DbWriter : IDbWriter
 {
     protected ILogger logger;
@@ -23,10 +32,15 @@ public class DbWriter : IDbWriter
     protected IHistoryConverter historyConverter;
     protected IPermissionService permissionService;
     protected ILiveEventQueue eventQueue;
+    protected DbWriterConfig config;
+    protected IRandomGenerator rng;
+
+    protected static readonly SemaphoreSlim hashLock = new SemaphoreSlim(1, 1);
 
     public DbWriter(ILogger<DbWriter> logger, IGenericSearch searcher, ContentApiDbConnection connection,
         IViewTypeInfoService typeInfoService, IMapper mapper, IHistoryConverter historyConverter,
-        IPermissionService permissionService, ILiveEventQueue eventQueue)
+        IPermissionService permissionService, ILiveEventQueue eventQueue, DbWriterConfig config,
+        IRandomGenerator rng)
     {
         this.logger = logger;
         this.searcher = searcher;
@@ -36,6 +50,8 @@ public class DbWriter : IDbWriter
         this.historyConverter = historyConverter;
         this.permissionService = permissionService;
         this.eventQueue = eventQueue;
+        this.config = config;
+        this.rng = rng;
     
         //Preemptively open this, we know us (as a writer) SHOULD BE short-lived, so...
         this.dbcon.Open();
@@ -832,5 +848,55 @@ public class DbWriter : IDbWriter
                and {nameof(ContentPermission.userId)} in @requesters 
                and `{checkCol}` = 1
             ", new { contentId = thing, requesters = permissionService.GetPermissionIdsForUser(requester) })) > 0;
+    }
+
+    public async Task<string> GenerateContentHash(Func<string, Task> writeHash)
+    {
+        await hashLock.WaitAsync();
+
+        try
+        {
+            var hash = "";
+            int retries = 0;
+            while (true)
+            {
+                hash = rng.GetAlphaSequence(config.HashChars);
+
+                try
+                {
+                    break;
+                }
+                catch(Exception ex)
+                {
+                    logger.LogWarning($"RANDOM HASH GENERATION ERROR: {ex}");
+                    retries++;
+                }
+
+                if (retries > config.MaxHashRetries)
+                    throw new InvalidOperationException("Ran out of hash retries! Maybe there's too many files on the system?");
+            }
+
+            await writeHash(hash);
+            return hash;
+        }
+        finally
+        {
+            hashLock.Release();
+        }
+    }
+
+    public async Task VerifyHash(string hash)
+    {
+        if(hash.Length > config.HashMaxLength)
+            throw new ArgumentException($"Hash '{hash}' too long! Max: {config.HashMaxLength}");
+        else if(hash.Length < config.HashMinLength)
+            throw new ArgumentException($"Hash '{hash}' too short! Min: {config.HashMaxLength}");
+        else if(!Regex.IsMatch(hash, config.HashRegex))
+            throw new ArgumentException($"Hash '{hash}' has invalid characters!");
+
+        var like = await searcher.GetByField<ContentView>(RequestType.content, "hash", hash);
+
+        if (like.Count != 0)
+            throw new ArgumentException($"Duplicate hash: already content with hash '{hash}'!");
     }
 }

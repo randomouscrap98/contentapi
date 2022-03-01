@@ -14,4 +14,17 @@ public interface IDbWriter
     Task<T> DeleteAsync<T>(long id, long requestUserId, string? message = null) where T : class, IIdView, new();
 
     Task ValidateUserPermissionForAction<T>(T view, T? existing, UserView requester, UserAction action) where T : class, IIdView, new();
+
+    /// <summary>
+    /// Generate a RANDOM new content hash
+    /// </summary>
+    /// <returns></returns>
+    Task<string> GenerateContentHash(Func<string, Task> writeHash);
+
+    /// <summary>
+    /// Verify that a given hash is unique and usable
+    /// </summary>
+    /// <param name="hash"></param>
+    /// <returns></returns>
+    Task VerifyHash(string hash);
 }

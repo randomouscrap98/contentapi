@@ -48,7 +48,7 @@ namespace contentapi.Db.History
             }
         }
 
-        public void AddCommentHistory(CommentSnapshot snapshot, Comment current)
+        public void AddCommentHistory(CommentSnapshot snapshot, Message current)
         {
             List<CommentSnapshot> snapshots = new List<CommentSnapshot>();
 
@@ -60,7 +60,7 @@ namespace contentapi.Db.History
             SetCommentHistory(snapshots, current);
         }
 
-        public void SetCommentHistory(List<CommentSnapshot> snapshots, Comment current)
+        public void SetCommentHistory(List<CommentSnapshot> snapshots, Message current)
         {
             current.history = JsonConvert.SerializeObject(snapshots);
         }
