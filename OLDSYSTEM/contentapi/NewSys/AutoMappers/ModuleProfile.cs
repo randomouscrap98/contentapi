@@ -11,11 +11,11 @@ namespace contentapi
             CreateMap<ModuleView, Db.Content_Convert>()
             .ForMember(x => x.extra1,
                 opt => opt.MapFrom(src => src.description))
-            .ForMember(x => x.publicType, 
+            .ForMember(x => x.literalType, 
                  opt => opt.MapFrom(src => ""))
             .ForMember(x => x.text, 
                  opt => opt.MapFrom(src => src.code))
-            .ForMember(x => x.internalType, 
+            .ForMember(x => x.contentType, 
                  opt => opt.MapFrom(src => InternalContentType.module))
                  ;
         }

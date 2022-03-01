@@ -105,7 +105,7 @@ public class QueryBuilder : IQueryBuilder
         return $@"contentId in 
             (select {nameof(Content.id)} 
              from {typeInfo.selfDbInfo?.modelTable}
-             where internalType = {(int)InternalContentType.page}
+             where contentType = {(int)InternalContentType.page}
              and deleted = 0
             )";
     }

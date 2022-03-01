@@ -154,7 +154,6 @@ public class GenericSearchDbTests : UnitTestBase, IClassFixture<DbUnitTestSearch
         Assert.All(castResult, x =>
         {
             Assert.False(string.IsNullOrWhiteSpace(x.name), "Content name wasn't cast properly!");
-            //Assert.NotEqual(InternalContentType.none, x.internalType); //string.IsNullOrWhiteSpace(x.internalType), "Content internalType (string) wasn't cast properly!");
             if(((x.id - 1) & (int)ContentVariations.Comments) > 0)
                 Assert.Equal(x.id - 1, x.commentCount);
             else

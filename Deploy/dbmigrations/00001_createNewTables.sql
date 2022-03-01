@@ -85,8 +85,8 @@ create table if not exists content (
     parentId int not null default 0 -- each content can only physically exist in one parent
 );
 
-create index if not exists idx_content_internalType on content(internalType, deleted);
-create index if not exists idx_content_publicType on content(publicType, deleted);
+create index if not exists idx_content_contentType on content(contentType, deleted);
+create index if not exists idx_content_literalType on content(literalType, deleted);
 create index if not exists idx_content_parentId on content(parentId, deleted);
 
 -- Later, if you need stuff to have multiple parents, they can be SOFT LINKS

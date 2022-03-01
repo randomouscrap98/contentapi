@@ -7,7 +7,7 @@ namespace contentapi.Views;
 [GroupBy("h.contentId, h.createUserId")]
 [ExtraQueryField("id", "h.id")]
 [ExtraQueryField("createDate", "h.createDate")]
-[ExtraQueryField("internalType", "c.internalType")]
+[ExtraQueryField("contentType", "c.contentType")]
 public class ActivityAggregateView
 {
     [FieldSelect("h.contentId")]
