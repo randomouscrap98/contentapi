@@ -22,6 +22,7 @@ public class DbWriterTest : ViewUnitTestBase, IClassFixture<DbUnitTestSearchFixt
     protected IMapper mapper;
     protected DbWriter writer;
     protected IGenericSearch searcher;
+    protected DbWriterConfig config;
 
 
     public DbWriterTest(DbUnitTestSearchFixture fixture)
@@ -29,10 +30,11 @@ public class DbWriterTest : ViewUnitTestBase, IClassFixture<DbUnitTestSearchFixt
         this.fixture = fixture;
         this.mapper = fixture.GetService<IMapper>();
         this.events= new FakeEventQueue();
+        this.config = new DbWriterConfig();
         writer = new DbWriter(fixture.GetService<ILogger<DbWriter>>(), fixture.GetService<IGenericSearch>(),
             fixture.GetService<Db.ContentApiDbConnection>(), fixture.GetService<IViewTypeInfoService>(), fixture.GetService<IMapper>(),
             fixture.GetService<Db.History.IHistoryConverter>(), fixture.GetService<IPermissionService>(),
-            events); 
+            events, config, new RandomGenerator()); 
         searcher = fixture.GetService<IGenericSearch>();
 
         //Reset it for every test
@@ -67,7 +69,7 @@ public class DbWriterTest : ViewUnitTestBase, IClassFixture<DbUnitTestSearchFixt
         var ev = AssertEventMatchesBase(content.lastRevisionId, expected, userId, EventType.activity);
     }
 
-    protected void AssertCommentEventMatches(CommentView comment, long userId, UserAction expected)
+    protected void AssertCommentEventMatches(MessageView comment, long userId, UserAction expected)
     {
         //Ensure the events are reported correctly
         var ev = AssertEventMatchesBase(comment.id, expected, userId, EventType.message);
@@ -84,7 +86,7 @@ public class DbWriterTest : ViewUnitTestBase, IClassFixture<DbUnitTestSearchFixt
     [InlineData(-1)]
     public async Task WriteAsync_MustSetUser(long uid)
     {
-        var content = new PageView {
+        var content = new ContentView {
             createUserId = uid
         };
 
@@ -179,9 +181,9 @@ public class DbWriterTest : ViewUnitTestBase, IClassFixture<DbUnitTestSearchFixt
             var result = await writer.WriteAsync(content, uid);
             StandardContentEqualityCheck(content, result, uid, InternalContentType.file);
             await AssertHistoryMatchesAsync(result, UserAction.create);
-            Assert.Equal(content.mimetype, result.mimetype);
+            Assert.Equal(content.literalType, result.literalType);
             Assert.Equal(content.hash, result.hash);
-            Assert.Equal(content.quantization, result.quantization);
+            Assert.Equal(content.meta, result.meta);
             AssertContentEventMatches(result, uid, UserAction.create);
         }
         else
@@ -210,7 +212,7 @@ public class DbWriterTest : ViewUnitTestBase, IClassFixture<DbUnitTestSearchFixt
             var result = await writer.WriteAsync(content, uid);
             StandardContentEqualityCheck(content, result, uid, InternalContentType.module);
             await AssertHistoryMatchesAsync(result, UserAction.create);
-            Assert.Equal(content.code, result.code);
+            Assert.Equal(content.text, result.text);
             Assert.Equal(content.description, result.description);
             AssertContentEventMatches(result, uid, UserAction.create);
         }
@@ -402,6 +404,8 @@ public class DbWriterTest : ViewUnitTestBase, IClassFixture<DbUnitTestSearchFixt
         });
     }
 
+    //NOTE: this test USED to check if you couldn't delete base types, but 
+    //now is just another deletion test for all types.
     [Fact]
     public async Task DeleteAsync_ForcedBaseType()
     {
@@ -412,15 +416,15 @@ public class DbWriterTest : ViewUnitTestBase, IClassFixture<DbUnitTestSearchFixt
         var fv = await writer.WriteAsync(GetNewFileView(), 1);
         var mv = await writer.WriteAsync(GetNewModuleView(), modUid);
 
-        await Assert.ThrowsAnyAsync<InvalidOperationException>(async () => {
-            await writer.DeleteAsync<PageView>(pv.id, 1);
-        });
-        await Assert.ThrowsAnyAsync<InvalidOperationException>(async () => {
-            await writer.DeleteAsync<FileView>(fv.id, 1);
-        });
-        await Assert.ThrowsAnyAsync<InvalidOperationException>(async () => {
-            await writer.DeleteAsync<ModuleView>(mv.id, modUid);
-        });
+        //await Assert.ThrowsAnyAsync<InvalidOperationException>(async () => {
+        //    await writer.DeleteAsync<PageView>(pv.id, 1);
+        //});
+        //await Assert.ThrowsAnyAsync<InvalidOperationException>(async () => {
+        //    await writer.DeleteAsync<FileView>(fv.id, 1);
+        //});
+        //await Assert.ThrowsAnyAsync<InvalidOperationException>(async () => {
+        //    await writer.DeleteAsync<ModuleView>(mv.id, modUid);
+        //});
 
         //These should succeed
         await writer.DeleteAsync<ContentView>(pv.id, 1);
@@ -501,7 +505,7 @@ public class DbWriterTest : ViewUnitTestBase, IClassFixture<DbUnitTestSearchFixt
         //Now try to delete it!
         if(allowed)
         {
-            var result = await writer.DeleteAsync<CommentView>(written.id, editor);
+            var result = await writer.DeleteAsync<MessageView>(written.id, editor);
             AssertCommentEventMatches(written, poster, UserAction.create);
             AssertCommentEventMatches(result, editor, UserAction.delete);
             Assert.True(result.deleted);
@@ -514,7 +518,7 @@ public class DbWriterTest : ViewUnitTestBase, IClassFixture<DbUnitTestSearchFixt
         {
             await Assert.ThrowsAnyAsync<ForbiddenException>(async () =>
             {
-                await writer.DeleteAsync<CommentView>(written.id, editor);
+                await writer.DeleteAsync<MessageView>(written.id, editor);
             });
         }
     }
@@ -844,10 +848,10 @@ public class DbWriterTest : ViewUnitTestBase, IClassFixture<DbUnitTestSearchFixt
         Assert.Equal(result2.values["crap"], result.values["crap"]);
 
         //And if you delete it, the values should go away
-        result = await writer.DeleteAsync<CommentView>(result.id, uid);
+        result = await writer.DeleteAsync<MessageView>(result.id, uid);
         Assert.Empty(result.values);
 
-        result = await searcher.GetById<CommentView>(RequestType.comment, result.id);
+        result = await searcher.GetById<MessageView>(RequestType.message, result.id);
         Assert.Empty(result.values);
     }
 

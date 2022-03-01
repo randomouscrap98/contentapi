@@ -140,7 +140,7 @@ public class DbUnitTestSearchFixture : DbUnitTestBase, IDisposable
                 conn.Insert(userRelations, tsx);
 
                 var content = new List<Db.Content>();
-                var comments = new List<Db.Comment>();
+                var comments = new List<Db.Message>();
                 var values = new List<Db.ContentValue>();
                 var keywords = new List<Db.ContentKeyword>();
                 var permissions = new List<Db.ContentPermission>();
@@ -156,13 +156,13 @@ public class DbUnitTestSearchFixture : DbUnitTestBase, IDisposable
                         parentId = i / 4,
                         text = $"text_{i}",
                         createUserId = 1 + (i % UserCount),
-                        publicType = StandardPublicTypes[i % StandardPublicTypes.Count],
+                        literalType = StandardPublicTypes[i % StandardPublicTypes.Count],
                         createDate = DateTime.Now.AddDays(i - ContentCount)
                     };
 
                     c.deleted = (i & (int)ContentVariations.Deleted) > 0;
                     //c.internalType = (Db.InternalContentType)((i & ((int)ContentVariations.TypeBits1 | (int)ContentVariations.TypeBits2)) >> (int)ContentVariations.TypeBits1);//(i % 4);//(i & (int)ContentVariations.PageOrFile) > 0 ? Db.InternalContentType.page : Db.InternalContentType.file;
-                    c.internalType = (Db.InternalContentType)(i % 4);
+                    c.contentType = (Db.InternalContentType)(i % 4);
 
                     //The activity is inversely proportional to i, but only 1/16 of the whatevers.
                     //If the content is deleted, the last history inserted should be a delete
@@ -272,7 +272,7 @@ public class DbUnitTestSearchFixture : DbUnitTestBase, IDisposable
                         //comment count should equal (indexed) contentId, yes even if it's a crapload
                         for(var j = 0; j < i; j++)
                         {
-                            comments.Add(new Db.Comment()
+                            comments.Add(new Db.Message()
                             {
                                 contentId = i + 1,
                                 createDate = DateTime.Now.AddDays(j - i),

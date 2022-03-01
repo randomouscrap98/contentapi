@@ -67,7 +67,7 @@ public class ViewUnitTestBase : UnitTestBase
         Assert.Equal(original.name, result.name);
         Assert.Equal(uid, result.createUserId);
         Assert.Equal(original.parentId, result.parentId);
-        Assert.Equal(expectedType, result.internalType);
+        Assert.Equal(expectedType, result.contentType);
         AssertKeywordsEqual(original, result);
         AssertValuesEqual(original, result);
         AssertPermissionsNormal(original, result);
@@ -86,7 +86,7 @@ public class ViewUnitTestBase : UnitTestBase
         Assert.True(original.groups.OrderBy(x => x).SequenceEqual(result.groups.OrderBy(x => x)), $"Groups not the same in user {result.id}!");
     }
 
-    protected void StandardCommentEqualityCheck(CommentView original, CommentView result, long uid)
+    protected void StandardCommentEqualityCheck(MessageView original, MessageView result, long uid)
     {
         AssertDateClose(result.createDate);
         Assert.True(result.id > 0, "ID was not assigned to returned view!");
@@ -95,10 +95,11 @@ public class ViewUnitTestBase : UnitTestBase
         Assert.Equal(original.contentId, result.contentId);
     }
 
-    protected PageView GetNewPageView(long parentId = 0, Dictionary<long, string>? permissions = null)
+    protected ContentView GetNewPageView(long parentId = 0, Dictionary<long, string>? permissions = null)
     {
-        return new PageView {
+        return new ContentView {
             name = "whatever",
+            contentType = InternalContentType.page,
             text = "Yeah this is content!",
             parentId = parentId,
             values = new Dictionary<string, object> { { "one" , "thing" }, { "kek", "macaroni and things" } },
@@ -107,12 +108,13 @@ public class ViewUnitTestBase : UnitTestBase
         };
     }
 
-    protected FileView GetNewFileView(long parentId = 0, Dictionary<long, string>? permissions = null)
+    protected ContentView GetNewFileView(long parentId = 0, Dictionary<long, string>? permissions = null)
     {
-        return new FileView {
+        return new ContentView {
             name = "whatever",
-            mimetype = "image/png",
-            quantization = "10",
+            contentType = InternalContentType.file,
+            literalType = "image/png",
+            meta = "{\"quantization\":10}",
             parentId = parentId,
             hash = "babnana",
             values = new Dictionary<string, object> { { "one" , "thing" }, { "kek", "macaroni and things" } },
@@ -121,11 +123,12 @@ public class ViewUnitTestBase : UnitTestBase
         };
     }
 
-    public ModuleView GetNewModuleView(long parentId = 0, Dictionary<long, string>? permissions = null)
+    public ContentView GetNewModuleView(long parentId = 0, Dictionary<long, string>? permissions = null)
     {
-        return new ModuleView {
+        return new ContentView {
             name = "whatever",
-            code = "Yeah this is... code? [beep boop] />?{Fd?>FDSI#!@$F--|='\"_+",
+            contentType = InternalContentType.module,
+            text = "Yeah this is... code? [beep boop] />?{Fd?>FDSI#!@$F--|='\"_+",
             description = "Aha! An extra field!",
             parentId = parentId,
             values = new Dictionary<string, object> { { "one" , "thing" }, { "kek", "macaroni and things" } },
@@ -134,11 +137,12 @@ public class ViewUnitTestBase : UnitTestBase
         };
     }
 
-    protected CommentView GetNewCommentView(long contentId)//, Dictionary<long, string>? permissions = null)
+    protected MessageView GetNewCommentView(long contentId)//, Dictionary<long, string>? permissions = null)
     {
-        return new CommentView {
+        return new MessageView {
             text = "Yeah this is comment!",
             contentId = contentId,
+            module = null
         };
     }
 }

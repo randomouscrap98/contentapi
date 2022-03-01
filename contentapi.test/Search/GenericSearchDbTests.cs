@@ -74,10 +74,10 @@ public class GenericSearchDbTests : UnitTestBase, IClassFixture<DbUnitTestSearch
     }
 
     [Fact] public async Task GenericSearch_GetById_BasicContent() => await GetByIdBasicTest<ContentView>(RequestType.content, 1 + (int)InternalContentType.none);
-    [Fact] public async Task GenericSearch_GetById_BasicFile() => await GetByIdBasicTest<FileView>(RequestType.file, 1 + (int)InternalContentType.file);
-    [Fact] public async Task GenericSearch_GetById_BasicPage() => await GetByIdBasicTest<PageView>(RequestType.page, 1 + (int)InternalContentType.page);
-    [Fact] public async Task GenericSearch_GetById_BasicModule() => await GetByIdBasicTest<ModuleView>(RequestType.module, 1 + (int)InternalContentType.module);
-    [Fact] public async Task GenericSearch_GetById_BasicComment() => await GetByIdBasicTest<CommentView>(RequestType.comment, 1);
+    //[Fact] public async Task GenericSearch_GetById_BasicFile() => await GetByIdBasicTest<FileView>(RequestType.file, 1 + (int)InternalContentType.file);
+    //[Fact] public async Task GenericSearch_GetById_BasicPage() => await GetByIdBasicTest<PageView>(RequestType.page, 1 + (int)InternalContentType.page);
+    //[Fact] public async Task GenericSearch_GetById_BasicModule() => await GetByIdBasicTest<ModuleView>(RequestType.module, 1 + (int)InternalContentType.module);
+    [Fact] public async Task GenericSearch_GetById_BasicComment() => await GetByIdBasicTest<MessageView>(RequestType.message, 1);
     [Fact] public async Task GenericSearch_GetById_BasicActivity() => await GetByIdBasicTest<ActivityView>(RequestType.activity, 1);
     [Fact] public async Task GenericSearch_GetById_BasicUser() => await GetByIdBasicTest<UserView>(RequestType.user, 1);
     [Fact] public async Task GenericSearch_GetById_BasicWatch() => await GetByIdBasicTest<WatchView>(RequestType.watch, 1);
@@ -168,7 +168,7 @@ public class GenericSearchDbTests : UnitTestBase, IClassFixture<DbUnitTestSearch
 
         Assert.Equal(4, Enum.GetValues<InternalContentType>().Count());
         foreach(var type in Enum.GetValues<InternalContentType>())
-            Assert.Equal(fixture.ContentCount / 4, castResult.Where(x => x.internalType == type).Count());
+            Assert.Equal(fixture.ContentCount / 4, castResult.Where(x => x.contentType == type).Count());
         Assert.Equal(fixture.ContentCount / 2, castResult.Where(x => x.deleted).Count());
         Assert.Equal(fixture.ContentCount - 4, castResult.Where(x => x.parentId > 0).Count());
         //It's minus four because the parent id is actually divided by 4, so only the first 4 values will be 0
@@ -1035,7 +1035,7 @@ public class GenericSearchDbTests : UnitTestBase, IClassFixture<DbUnitTestSearch
         {
             var c = content.First(y => y.id == x.contentId);
             Assert.False(c.deleted);
-            Assert.Equal(InternalContentType.page, c.internalType);
+            Assert.Equal(InternalContentType.page, c.contentType);
         });
     }
 
@@ -1104,13 +1104,13 @@ public class GenericSearchDbTests : UnitTestBase, IClassFixture<DbUnitTestSearch
         Assert.Contains("createusers", result.Keys);
         Assert.Contains("allcomments", result.Keys);
 
-        var content = service.ToStronglyTyped<PageView>(result["allreadable"]);
+        var content = service.ToStronglyTyped<ContentView>(result["allreadable"]);
         var users = service.ToStronglyTyped<UserView>(result["createusers"]);
-        var comments = service.ToStronglyTyped<CommentView>(result["allcomments"]);
+        var comments = service.ToStronglyTyped<MessageView>(result["allcomments"]);
 
         Assert.All(content, x => 
         {
-            Assert.Equal(InternalContentType.page, x.internalType);
+            Assert.Equal(InternalContentType.page, x.contentType);
             Assert.Contains(0, x.permissions.Keys);
             Assert.Contains("R", x.permissions[0]);
             Assert.True(users.Any(y => y.id == x.createUserId), "Didn't return matched content user!");
@@ -1149,7 +1149,7 @@ public class GenericSearchDbTests : UnitTestBase, IClassFixture<DbUnitTestSearch
         Assert.Contains("lastcomments", result.Keys);
 
         var content = service.ToStronglyTyped<ContentView>(result["allreadable"]);
-        var comments = service.ToStronglyTyped<CommentView>(result["lastcomments"]);
+        var comments = service.ToStronglyTyped<MessageView>(result["lastcomments"]);
         
         Assert.True(content.Count > 0, "There were no pages with comments somehow!");
         Assert.True(comments.Count > 0, "There were no comments somehow!");
@@ -1193,7 +1193,7 @@ public class GenericSearchDbTests : UnitTestBase, IClassFixture<DbUnitTestSearch
 
         var result = (userId == 0 ? (await service.SearchUnrestricted(search)) : (await service.Search(search, userId)))
             .data["comment_aggregate"];
-        var castResult = service.ToStronglyTyped<CommentAggregateView>(result);
+        var castResult = service.ToStronglyTyped<MessageAggregateView>(result);
 
         //There should ALWAYS be results
         Assert.True(castResult.Count > 0, "There were no results!");

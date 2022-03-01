@@ -16,7 +16,7 @@ public class CachedTypeInfoServiceTest : UnitTestBase
         service = GetService<ViewTypeInfoService_Cached>();//new CachedTypeInfoService();
     }
 
-    [ResultFor(RequestType.file)]
+    [ResultFor(RequestType.user)]
     [SelectFrom("cows as c")]
     [Where("something = whatever")]
     [GroupBy("magic")]
@@ -81,6 +81,15 @@ public class CachedTypeInfoServiceTest : UnitTestBase
     }
 
     [Fact] 
+    public void GetTypeInfo_ResultFor()
+    {
+        var typeInfo = service.GetTypeInfo<TestView>();
+        Assert.NotNull(typeInfo.writeAsInfo);
+        Assert.Equal(typeof(Db.User), typeInfo.writeAsInfo?.modelType);
+        Assert.Equal("users", typeInfo.writeAsInfo?.modelTable);
+    }
+
+    [Fact] 
     public void GetTypeInfo_ExtraQueryFields()
     {
         var typeInfo = service.GetTypeInfo<TestView>();
@@ -130,9 +139,9 @@ public class CachedTypeInfoServiceTest : UnitTestBase
 
     [Theory] 
     [InlineData(typeof(ContentView))]
-    [InlineData(typeof(PageView))]
-    [InlineData(typeof(ModuleView))]
-    [InlineData(typeof(FileView))]
+    //[InlineData(typeof(PageView))]
+    //[InlineData(typeof(ModuleView))]
+    //[InlineData(typeof(FileView))]
     public void GetTypeInfo_ContentPermission(Type t)
     {
         var typeInfo = service.GetTypeInfo(t);
@@ -152,9 +161,9 @@ public class CachedTypeInfoServiceTest : UnitTestBase
 
     [Theory] 
     [InlineData(typeof(ContentView))]
-    [InlineData(typeof(PageView))]
-    [InlineData(typeof(ModuleView))]
-    [InlineData(typeof(FileView))]
+    //[InlineData(typeof(PageView))]
+    //[InlineData(typeof(ModuleView))]
+    //[InlineData(typeof(FileView))]
     public void GetTypeInfo_ContentGeneral(Type t)
     {
         var typeInfo = service.GetTypeInfo(t);

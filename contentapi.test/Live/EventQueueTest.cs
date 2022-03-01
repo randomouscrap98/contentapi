@@ -51,7 +51,8 @@ public class EventQueueTest : ViewUnitTestBase, IClassFixture<DbUnitTestSearchFi
         this.queue = new LiveEventQueue(fixture.GetService<ILogger<LiveEventQueue>>(), this.config, this.tracker, () => this.searcher, this.permission, this.mapper);
         writer = new DbWriter(fixture.GetService<ILogger<DbWriter>>(), this.searcher, 
             fixture.GetService<Db.ContentApiDbConnection>(), fixture.GetService<IViewTypeInfoService>(), this.mapper,
-            fixture.GetService<Db.History.IHistoryConverter>(), this.permission, this.queue); 
+            fixture.GetService<Db.History.IHistoryConverter>(), this.permission, this.queue,
+            new DbWriterConfig(), new RandomGenerator()); 
 
         //Reset it for every test
         fixture.ResetDatabase();
@@ -143,7 +144,7 @@ public class EventQueueTest : ViewUnitTestBase, IClassFixture<DbUnitTestSearchFi
             query = "contentId = @id"
         });
         var baseResult = await searcher.SearchUnrestricted(search);
-        var comments= searcher.ToStronglyTyped<CommentView>(baseResult.data["comment"]);
+        var comments= searcher.ToStronglyTyped<MessageView>(baseResult.data["comment"]);
 
         Assert.True(comments.Count > 1); //It should be greater than 1 for content 1, because of inverse activity amounts
         foreach(var c in comments)
@@ -161,7 +162,7 @@ public class EventQueueTest : ViewUnitTestBase, IClassFixture<DbUnitTestSearchFi
             Assert.True(result.data["content"].First().ContainsKey("permissions"));
 
             var content = searcher.ToStronglyTyped<ContentView>(result.data["content"]);
-            var comment = searcher.ToStronglyTyped<CommentView>(result.data["comment"]);
+            var comment = searcher.ToStronglyTyped<MessageView>(result.data["comment"]);
             var user = searcher.ToStronglyTyped<UserView>(result.data["user"]);
 
             Assert.Single(content);

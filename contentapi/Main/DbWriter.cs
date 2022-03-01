@@ -98,7 +98,7 @@ public class DbWriter : IDbWriter
     /// validation in here!
     /// </summary>
     /// <typeparam name="T"></typeparam>
-    public async Task ValidateUserPermissionForAction<T>(T view, T? existing, UserView requester, UserAction action) where T : class, IIdView, new()
+    public async Task ValidateWorkGeneral<T>(T view, T? existing, UserView requester, UserAction action) where T : class, IIdView, new()
     {
         //Each type needs a different kind of check
         if(view is ContentView)
@@ -117,14 +117,28 @@ public class DbWriter : IDbWriter
             if(action == UserAction.create)
             {
                 //Only supers can create modules, but after that, permissions are based on their internal permissions.
-                if(cView.contentType == InternalContentType.module && !requester.super) //view is ModuleView && !requester.super)
+                if(cView.contentType == InternalContentType.module && !requester.super)
                     throw new ForbiddenException($"Only supers can create modules!");
+                
+                if(cView.contentType == InternalContentType.file || cView.contentType == InternalContentType.none)
+                    throw new ForbiddenException($"You can't create content type '{cView.contentType}'!");
             }
             else if(action != UserAction.read)
             {
                 //We generally assume that the views and such have proper fields by the time it gets to us...
                 if(!(await CanUserAsync(requester, action, cView.id)))
                     throw new ForbiddenException($"User {requester.id} can't '{action}' content {cView.id}!");
+            }
+
+            //Very particular checks. Some fields are marked as writable, but some types don't allow that
+            if(action == UserAction.update)
+            {
+                var exView = existing as ContentView ?? throw new InvalidOperationException("Permissions wasn't given the old view during check!");
+
+                //Can't change literal type on files! But just like all other fields, we just... fail silently? I
+                //don't know about that... it makes it so that you don't have to send certain fields but... ugh
+                if(cView.contentType == InternalContentType.file) //&& cView.literalType != exView.literalType)
+                    cView.literalType = exView.literalType;
             }
 
             //Now for general validation
@@ -137,6 +151,9 @@ public class DbWriter : IDbWriter
         {
             var cView = view as MessageView ?? throw new InvalidOperationException("Somehow, MessageView could not be cast to a MessageView");
 
+            if(cView.module != null)
+                throw new ForbiddenException($"You cannot create or modify module messages!");
+
             //Modification actions
             if(action == UserAction.update || action == UserAction.delete)
             {
@@ -144,6 +161,9 @@ public class DbWriter : IDbWriter
 
                 if(!(requester.super || exView.createUserId == requester.id))
                     throw new ForbiddenException($"Only the original poster and supers can modify existing comments!");
+
+                if(exView.module != null)
+                    throw new ForbiddenException($"You cannot create or modify module messages!");
             }
 
             //Create is special, because we need the parent create permission. We also check updates so users can't 
@@ -245,7 +265,7 @@ public class DbWriter : IDbWriter
 
         //It's more important to throw a NotFound exception than the permission exception, it keeps things more consistent, so
         //keep this call down here.
-        await ValidateUserPermissionForAction(view, existing, requester, action);
+        await ValidateWorkGeneral(view, existing, requester, action);
 
         //Ok at this point, we know everything is good to go, there shouldn't be ANY MORE checks required past here!
         if(view is ContentView)
@@ -319,7 +339,6 @@ public class DbWriter : IDbWriter
                     throw new InvalidOperationException($"API ERROR: tried to auto-increment non-integer field {remap.Key} (type: {remap.Value.fieldType})");
 
                 int original = (int)(remap.Value.rawProperty?.GetValue(work.existing) ?? 0);
-                //throw new InvalidOperationException("Integer field was somehow null!!"));
                 dbModelProp.Value.SetValue(dbModel, original + 1);
             }
             else if(isWriteRuleSet(WriteRule.Preserve)) 
@@ -405,19 +424,6 @@ public class DbWriter : IDbWriter
         };
     }
 
-    //public InternalContentType InternalContentTypeFromView(ContentView view)
-    //{
-    //    //Don't forget to set the type appropriately!
-    //    if(view is PageView)
-    //        return InternalContentType.page;
-    //    else if(view is FileView)
-    //        return InternalContentType.file;
-    //    else if(view is ModuleView)
-    //        return  InternalContentType.module;
-    //    else
-    //        return InternalContentType.none;
-    //}
-
     /// <summary>
     /// This function handles any database modification for the given view, from inserts to updates to deletes.
     /// NOTE: these work functions should NOT perform validation! That's all done beforehand!
@@ -432,15 +438,11 @@ public class DbWriter : IDbWriter
         //Some basic sanity checks
         if(!work.typeInfo.type.IsAssignableTo(typeof(ContentView)))
             throw new InvalidOperationException($"TypeInfo given in DatabaseWork was for type '{work.typeInfo.type}', not '{typeof(ContentView)}'");
-        //if(work.action == UserAction.delete && work.typeInfo.type != typeof(ContentView))
-        //    throw new InvalidOperationException("You must use the basetype ContentView when deleting content!");
-        //if((work.action == UserAction.create || work.action == UserAction.update) && work.typeInfo.type == typeof(ContentView))
-        //    throw new InvalidOperationException("You cannot write the raw type ContentView! It doesn't have enough information!");
 
         //NOTE: other validation is performed in the generic, early validation
 
         var content = new Db.Content();
-        var unmapped = MapSimpleViewFields(work, content); //.typeInfo, work.view, content);
+        var unmapped = MapSimpleViewFields(work, content);
 
         if(unmapped.Count > 0)
             logger.LogWarning($"Fields '{string.Join(",", unmapped)}' not mapped in content!");
@@ -469,7 +471,6 @@ public class DbWriter : IDbWriter
         else
         {
             work.view.permissions[work.requester.id] = "CRUD"; //FORCE permissions to include full access for creator all the time
-            //content.internalType = InternalContentTypeFromView(work.view);
         }
 
         //Always need an ID to link to, so we actually need to create the content first and get the ID.
@@ -860,20 +861,18 @@ public class DbWriter : IDbWriter
             {
                 hash = rng.GetAlphaSequence(config.HashChars);
 
-                try
-                {
+                if(await IsDuplicateHash(hash))
                     break;
-                }
-                catch(Exception ex)
-                {
-                    logger.LogWarning($"RANDOM HASH GENERATION ERROR: {ex}");
-                    retries++;
-                }
+                else
+                    logger.LogWarning($"DUPLICATE HASH: {hash}");
+
+                retries++;
 
                 if (retries > config.MaxHashRetries)
                     throw new InvalidOperationException("Ran out of hash retries! Maybe there's too many files on the system?");
             }
 
+            //WARN: if this doesn't return for some reason, the hashLock will never release! We'll see how this works...
             await writeHash(hash);
             return hash;
         }
@@ -881,6 +880,11 @@ public class DbWriter : IDbWriter
         {
             hashLock.Release();
         }
+    }
+
+    public async Task<bool> IsDuplicateHash(string hash)
+    {
+        return (await searcher.GetByField<ContentView>(RequestType.content, "hash", hash)).Count != 0;
     }
 
     public async Task VerifyHash(string hash)
@@ -892,9 +896,7 @@ public class DbWriter : IDbWriter
         else if(!Regex.IsMatch(hash, config.HashRegex))
             throw new ArgumentException($"Hash '{hash}' has invalid characters!");
 
-        var like = await searcher.GetByField<ContentView>(RequestType.content, "hash", hash);
-
-        if (like.Count != 0)
+        if(await IsDuplicateHash(hash))
             throw new ArgumentException($"Duplicate hash: already content with hash '{hash}'!");
     }
 }

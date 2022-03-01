@@ -38,6 +38,10 @@ public class ContentView : IIdView
     [Writable]
     public long parentId { get; set; }
 
+    [FieldSelect]
+    [Writable]
+    public string text { get; set; } = "";
+
 
     [FieldSelect]
     [Writable] //Not for files though!
