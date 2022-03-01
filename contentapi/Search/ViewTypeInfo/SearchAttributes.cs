@@ -84,7 +84,8 @@ public enum WriteRule
     /// </summary>
     User,
     /// <summary>
-    /// Keep whatever was in the database. If there is no value, the default value for the type is chosen
+    /// Keep whatever was in the database. If there is no value, the default value for the type is chosen.
+    /// THIS IS THE DEFAULT, because it is the safest option!
     /// </summary>
     Preserve,
     /// <summary>

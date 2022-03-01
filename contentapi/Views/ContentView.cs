@@ -12,7 +12,6 @@ public class ContentView : IIdView
     public const string NaturalCommentQuery = "deleted = 0 and module IS NULL";
 
     [FieldSelect]
-    //[Writable(WriteRule.Preserve, WriteRule.Preserve)]
     public long id { get; set; }
 
     //Entirely not writable

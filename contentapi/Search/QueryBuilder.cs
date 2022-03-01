@@ -23,7 +23,7 @@ public class QueryBuilder : IQueryBuilder
         { "valuelike", new MacroDescription("vv", "ValueLike", new List<RequestType> { RequestType.content, RequestType.message }) }, 
         { "onlyparents", new MacroDescription("", "OnlyParents", new List<RequestType> { RequestType.content }) },
         { "basichistory", new MacroDescription("", "BasicHistory", new List<RequestType> { RequestType.activity }) },
-        { "notdeleted", new MacroDescription("", "NotDeletedMacro", new List<RequestType> { RequestType.content, RequestType.message }) }, 
+        { "notdeleted", new MacroDescription("", "NotDeletedMacro", new List<RequestType> { RequestType.content, RequestType.message, RequestType.user }) }, 
         { "notnull", new MacroDescription("f", "NotNullMacro", Enum.GetValues<RequestType>().ToList()) },
         { "null", new MacroDescription("f", "NullMacro", Enum.GetValues<RequestType>().ToList()) },
         { "usertype", new MacroDescription("i", "UserTypeMacro", new List<RequestType> { RequestType.user }) },
@@ -434,10 +434,8 @@ public class QueryBuilder : IQueryBuilder
         queryStr.Append("SELECT ");
         queryStr.Append(string.Join(",", fieldSelect));
         queryStr.Append(" FROM ");
-        queryStr.Append(selectFrom); // ?? throw new InvalidOperationException($"Standard select {r.type} doesn't define a 'select from' statement in request {r.name}!"));
+        queryStr.Append(selectFrom);
         queryStr.Append(" "); //To be nice, always end in space?
-        //queryStr.Append(r.typeInfo.modelTable ?? throw new InvalidOperationException($"Standard select {r.type} doesn't map to database table in request {r.name}!"));
-        //queryStr.Append($" AS {MainAlias} ");
     }
 
 
@@ -457,8 +455,6 @@ public class QueryBuilder : IQueryBuilder
             //Can't parameterize the column... inserting directly; scary. Also, immediately adding the order by even
             //though we don't know what we're doing yet... eehhh should be fine?
             queryStr.Append("ORDER BY ");
-            //queryStr.Append($"ORDER BY {order} ");
-            //var order = r.order;
 
             for(int i = 0; i < orders.Length; i++)
             {
@@ -471,7 +467,7 @@ public class QueryBuilder : IQueryBuilder
                     order = r.order.Substring(0, r.order.Length - DescendingAppend.Length);
                 }
 
-                if (!r.typeInfo.fields.ContainsKey(order)) //queryableFields.Contains(order))
+                if (!r.typeInfo.fields.ContainsKey(order))
                     throw new ArgumentException($"Unknown order field {order} for request {r.name}");
                 
                 queryStr.Append(order);
@@ -517,7 +513,7 @@ public class QueryBuilder : IQueryBuilder
             //Generate "where (x)"
             var whereQuery = CreateStandardQuery(queryStr, reqplus, parameters);    
             whereQuery = CombineQueryClause(whereQuery, reqplus.typeInfo.whereSql);
-                //StandardSearchModifiers.GetValueOrDefault(reqplus.requestType, ""));
+
             if (!string.IsNullOrWhiteSpace(whereQuery))
                 queryStr.Append($"WHERE {whereQuery} ");
             
@@ -570,8 +566,4 @@ public class QueryBuilder : IQueryBuilder
 
         return result;
     }
-
-    //public Dictionary<int, string> AboutEnumCodes<T>() where T : 
-    //{
-    //}
 }

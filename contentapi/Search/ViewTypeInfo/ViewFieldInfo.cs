@@ -31,22 +31,8 @@ public class ViewFieldInfo
     /// </summary>
     public int expensive {get;set;} = -1;
 
-    /// <summary>
-    /// Whether this particular field is even pulled from the database or done within the api itself. It is RARE for
-    /// a field to be computed...
-    /// </summary>
-    //public bool computed {get;set;} = false;
-
-
-    public WriteRule? onInsert {get;set;}
-    public WriteRule? onUpdate {get;set;}
-
-    /// <summary>
-    /// If this is null or empty, there is "no" backing database conversion at all! For safety, we define complex fields with a dbcolumn of ""
-    /// </summary>
-    /// <value></value>
-    //public string? realDbColumn {get;set;} = "";
-
+    public WriteRule onInsert {get;set;}
+    public WriteRule onUpdate {get;set;}
 
     /// <summary>
     /// A shortcut to the type info, stored inside rawProperty

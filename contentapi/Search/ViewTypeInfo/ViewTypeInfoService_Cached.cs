@@ -48,7 +48,6 @@ public class ViewTypeInfoService_Cached : IViewTypeInfoService
                     whereSql = t.GetCustomAttribute<WhereAttribute>()?.Where_Sql ?? "",
                     groupBySql = t.GetCustomAttribute<GroupByAttribute>()?.GroupBy_Sql ?? "",
                     extraQueryFields = extraQueryAttributes.ToDictionary(x => x.field, y => y.select ?? y.field),
-                    //extraQueryFields = t.GetCustomAttribute<ExtraQueryFieldsAttribute>()?.Fields ?? new List<string>(),
                     requestType = t.GetCustomAttribute<ResultForAttribute>()?.Type
                 };
 
@@ -79,8 +78,8 @@ public class ViewTypeInfoService_Cached : IViewTypeInfoService
                         queryable = !Attribute.IsDefined(pk.Value, typeof(NoQueryAttribute)),
                         multiline = Attribute.IsDefined(pk.Value, typeof(MultilineAttribute)),
                         expensive = pk.Value.GetCustomAttribute<ExpensiveAttribute>()?.PotentialCost ?? 0,
-                        onInsert = writeRule?.InsertRule, //null means not writable
-                        onUpdate = writeRule?.UpdateRule,
+                        onInsert = writeRule?.InsertRule ?? WriteRule.Preserve, //Preserve is safer, basically "readonly"
+                        onUpdate = writeRule?.UpdateRule ?? WriteRule.Preserve,
                         fieldSelect = (fieldSelect == "") ? pk.Key : fieldSelect
                     };
 
