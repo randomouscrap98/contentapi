@@ -120,7 +120,7 @@ public class LiveEventQueue : ILiveEventQueue
 
         //This is the ONLY place we're performing this permission calculation nonsense. Be VERY CAREFUL, this is
         //quite the hack!
-        if(evnt.type == EventType.activity || evnt.type == EventType.comment)
+        if(evnt.type == EventType.activity || evnt.type == EventType.message)
         {
             var currentPermissions = GetStandardContentPermissions(cacheItem.data ?? throw new InvalidOperationException("No cache result data to pull permissions from!"));
 
@@ -235,9 +235,9 @@ public class LiveEventQueue : ILiveEventQueue
             query = "id in @ids"
         });
 
-        if(first.type == EventType.comment)
+        if(first.type == EventType.message)
         {
-            requests.requests.Add(basicRequest(RequestType.comment.ToString())); 
+            requests.requests.Add(basicRequest(RequestType.message.ToString())); 
             requests.requests.Add(contentRequest("id in @comment.contentId"));
             requests.requests.Add(new SearchRequest()
             {

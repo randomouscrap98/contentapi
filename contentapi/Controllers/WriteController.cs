@@ -19,10 +19,6 @@ public class WriteController : BaseController
         this.writer = writer;
     }
 
-    //[HttpPost("comment")]
-    //public Task<ActionResult<CommentView>> WriteCommentAsync([FromBody]CommentView comment) =>
-    //    MatchExceptions(async () => await writer.WriteAsync(comment, GetUserIdStrict())); //message used for activity and such
-
     [HttpPost("message")]
     public Task<ActionResult<MessageView>> WriteMessageAsync([FromBody]MessageView message) =>
         MatchExceptions(async () => await writer.WriteAsync(message, GetUserIdStrict())); //message used for activity and such
@@ -30,19 +26,6 @@ public class WriteController : BaseController
     [HttpPost("content")]
     public Task<ActionResult<ContentView>> WriteContentAsync([FromBody]ContentView page, [FromQuery]string? activityMessage) =>
         MatchExceptions(async () => await writer.WriteAsync(page, GetUserIdStrict(), activityMessage)); //message used for activity and such
-
-    //[HttpPost("page")]
-    //public Task<ActionResult<PageView>> WritePageAsync([FromBody]PageView page, [FromQuery]string? activityMessage) =>
-    //    MatchExceptions(async () => await writer.WriteAsync(page, GetUserIdStrict(), activityMessage)); //message used for activity and such
-
-    //[HttpPost("file")]
-    //public Task<ActionResult<FileView>> WriteFileAsync([FromBody]FileView file, [FromQuery]string? activityMessage) =>
-    //    MatchExceptions(async () => await writer.WriteAsync(file, GetUserIdStrict(), activityMessage)); //message used for activity and such
-
-    //[HttpPost("module")]
-    //public Task<ActionResult<ModuleView>> WriteModuleAsync([FromBody]ModuleView module, [FromQuery]string? activityMessage) =>
-    //    MatchExceptions(async () => await writer.WriteAsync(module, GetUserIdStrict(), activityMessage)); //message used for activity and such
-
 
     //This is SLIGHTLY special in that user writes are mostly for self updates... but might be used for new groups as well? You also
     //can't update PRIVATE data through this endpoint

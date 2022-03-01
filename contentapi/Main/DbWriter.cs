@@ -117,7 +117,7 @@ public class DbWriter : IDbWriter
             if(action == UserAction.create)
             {
                 //Only supers can create modules, but after that, permissions are based on their internal permissions.
-                if(view is ModuleView && !requester.super)
+                if(cView.contentType == InternalContentType.module && !requester.super) //view is ModuleView && !requester.super)
                     throw new ForbiddenException($"Only supers can create modules!");
             }
             else if(action != UserAction.read)
@@ -133,14 +133,14 @@ public class DbWriter : IDbWriter
             if(cView.deleted)
                 throw new RequestException("Don't delete content by setting the deleted flag!");
         }
-        else if(view is CommentView)
+        else if(view is MessageView)
         {
-            var cView = view as CommentView ?? throw new InvalidOperationException("Somehow, CommentView could not be cast to a CommentView");
+            var cView = view as MessageView ?? throw new InvalidOperationException("Somehow, MessageView could not be cast to a MessageView");
 
             //Modification actions
             if(action == UserAction.update || action == UserAction.delete)
             {
-                var exView = existing as CommentView ?? throw new InvalidOperationException("Permissions wasn't given the old view during check!");
+                var exView = existing as MessageView ?? throw new InvalidOperationException("Permissions wasn't given the old view during check!");
 
                 if(!(requester.super || exView.createUserId == requester.id))
                     throw new ForbiddenException($"Only the original poster and supers can modify existing comments!");
@@ -187,9 +187,6 @@ public class DbWriter : IDbWriter
 
                 if(uView.super != exView?.super && !requester.super)
                     throw new ForbiddenException("You cannot modify the super state unless you're a super user!");
-
-                //if(!uView.groups.OrderBy(x => x).SequenceEqual() && !requester.super)
-                //    throw new ForbiddenException("You cannot modify your own groups unless you're a super user!");
             }
 
             if(action == UserAction.delete)
@@ -255,9 +252,9 @@ public class DbWriter : IDbWriter
         {
             id = await DatabaseWork_Content(new DbWorkUnit<ContentView>((view as ContentView)!, requester, typeInfo, action, existing as ContentView, message));
         }
-        else if(view is CommentView)
+        else if(view is MessageView)
         {
-            id = await DatabaseWork_Comments(new DbWorkUnit<CommentView>((view as CommentView)!, requester, typeInfo, action, existing as CommentView, message));
+            id = await DatabaseWork_Message(new DbWorkUnit<MessageView>((view as MessageView)!, requester, typeInfo, action, existing as MessageView, message));
         }
         else if (view is UserView)
         {
@@ -408,18 +405,18 @@ public class DbWriter : IDbWriter
         };
     }
 
-    public InternalContentType InternalContentTypeFromView(ContentView view)
-    {
-        //Don't forget to set the type appropriately!
-        if(view is PageView)
-            return InternalContentType.page;
-        else if(view is FileView)
-            return InternalContentType.file;
-        else if(view is ModuleView)
-            return  InternalContentType.module;
-        else
-            return InternalContentType.none;
-    }
+    //public InternalContentType InternalContentTypeFromView(ContentView view)
+    //{
+    //    //Don't forget to set the type appropriately!
+    //    if(view is PageView)
+    //        return InternalContentType.page;
+    //    else if(view is FileView)
+    //        return InternalContentType.file;
+    //    else if(view is ModuleView)
+    //        return  InternalContentType.module;
+    //    else
+    //        return InternalContentType.none;
+    //}
 
     /// <summary>
     /// This function handles any database modification for the given view, from inserts to updates to deletes.
@@ -435,10 +432,10 @@ public class DbWriter : IDbWriter
         //Some basic sanity checks
         if(!work.typeInfo.type.IsAssignableTo(typeof(ContentView)))
             throw new InvalidOperationException($"TypeInfo given in DatabaseWork was for type '{work.typeInfo.type}', not '{typeof(ContentView)}'");
-        if(work.action == UserAction.delete && work.typeInfo.type != typeof(ContentView))
-            throw new InvalidOperationException("You must use the basetype ContentView when deleting content!");
-        if((work.action == UserAction.create || work.action == UserAction.update) && work.typeInfo.type == typeof(ContentView))
-            throw new InvalidOperationException("You cannot write the raw type ContentView! It doesn't have enough information!");
+        //if(work.action == UserAction.delete && work.typeInfo.type != typeof(ContentView))
+        //    throw new InvalidOperationException("You must use the basetype ContentView when deleting content!");
+        //if((work.action == UserAction.create || work.action == UserAction.update) && work.typeInfo.type == typeof(ContentView))
+        //    throw new InvalidOperationException("You cannot write the raw type ContentView! It doesn't have enough information!");
 
         //NOTE: other validation is performed in the generic, early validation
 
@@ -463,15 +460,16 @@ public class DbWriter : IDbWriter
             content.text = "";
             content.name = "deleted_content";
             content.deleted = true;
-            content.extra1 = null;
+            content.description = null;
+            content.literalType = null;
+            content.meta = null;
             //Don't give out any information
-            content.internalType = InternalContentType.none;
-            content.publicType = "";
+            content.contentType = InternalContentType.none;
         }
         else
         {
             work.view.permissions[work.requester.id] = "CRUD"; //FORCE permissions to include full access for creator all the time
-            content.internalType = InternalContentTypeFromView(work.view);
+            //content.internalType = InternalContentTypeFromView(work.view);
         }
 
         //Always need an ID to link to, so we actually need to create the content first and get the ID.
@@ -525,13 +523,13 @@ public class DbWriter : IDbWriter
         }
     }
     
-    public async Task<long> DatabaseWork_Comments(DbWorkUnit<CommentView> work)
+    public async Task<long> DatabaseWork_Message(DbWorkUnit<MessageView> work)
     {
-        if(!work.typeInfo.type.IsAssignableTo(typeof(CommentView)))
-            throw new InvalidOperationException($"TypeInfo given in DatabaseWork was for type '{work.typeInfo.type}', not '{typeof(CommentView)}'");
+        if(!work.typeInfo.type.IsAssignableTo(typeof(MessageView)))
+            throw new InvalidOperationException($"TypeInfo given in DatabaseWork was for type '{work.typeInfo.type}', not '{typeof(MessageView)}'");
 
         //NOTE: As usual, validation is performed outside this function!
-        var comment = new Db.Comment();
+        var comment = new Db.Message();
         var unmapped = MapSimpleViewFields(work, comment); 
 
         if(unmapped.Count > 0)
@@ -566,12 +564,12 @@ public class DbWriter : IDbWriter
                 //Here, we need the snapshot of the PREVIOUS comment to add to the comment history!
                 var snapshot = CreateSnapshotFromCommentWork(work);
                 historyConverter.AddCommentHistory(snapshot, comment);
-                await DeleteAssociatedType<CommentValue>(comment.id, tsx, nameof(CommentValue.commentId), "comment");
+                await DeleteAssociatedType<MessageValue>(comment.id, tsx, nameof(MessageValue.messageId), "message");
                 await dbcon.UpdateAsync(comment, tsx);
             }
             else 
             {
-                throw new InvalidOperationException($"Can't perform action {work.action} in DatabaseWork_Comments!");
+                throw new InvalidOperationException($"Can't perform action {work.action} in DatabaseWork_Message!");
             }
 
             //If we're not deleting, insert the various associated values from the comment
@@ -583,7 +581,7 @@ public class DbWriter : IDbWriter
 
             tsx.Commit();
 
-            await eventQueue.AddEventAsync(new LiveEvent(work.requester.id, work.action, EventType.comment, work.view.id));
+            await eventQueue.AddEventAsync(new LiveEvent(work.requester.id, work.action, EventType.message, work.view.id));
 
             logger.LogDebug($"User {work.requester.id} commented on {comment.contentId}"); //No admin log for comments, so have to construct the message ourselves
 
@@ -793,12 +791,12 @@ public class DbWriter : IDbWriter
     /// </summary>
     /// <param name="view"></param>
     /// <returns></returns>
-    public List<CommentValue> GetCommentValuesFromView(CommentView view)
+    public List<MessageValue> GetCommentValuesFromView(MessageView view)
     {
-        return view.values.Select(x => new Db.CommentValue {
+        return view.values.Select(x => new Db.MessageValue {
             key = x.Key,
             value = JsonConvert.SerializeObject(x.Value),
-            commentId = view.id
+            messageId = view.id
         }).ToList();
     }
 
@@ -807,7 +805,7 @@ public class DbWriter : IDbWriter
     /// <param name="comment"></param>
     /// <param name="originalView"></param>
     /// <returns></returns>
-    public CommentSnapshot CreateSnapshotFromCommentWork(DbWorkUnit<CommentView> work)
+    public CommentSnapshot CreateSnapshotFromCommentWork(DbWorkUnit<MessageView> work)
     {
         return new CommentSnapshot {
             userId = work.requester.id,

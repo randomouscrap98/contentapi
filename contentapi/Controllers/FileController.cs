@@ -116,11 +116,6 @@ public class FileController : BaseController
 
       var requester = GetUserIdStrict();
       
-      //if(testRequester == null)
-      //  return Forbid("You must be logged in to upload files!");
-      
-      //var requester = testRequester.Value;
-
       return await MatchExceptions(async () =>
       {
          var newView = new ContentView() { 
@@ -284,8 +279,6 @@ public class FileController : BaseController
             services.logger.LogInformation($"Quantized {fileLocation} to {quantize} colors using '{config.QuantizerProgram} {quantizeParams}'");
 
             return quantize; 
-            //newView.quantization = quantize.ToString();
-            //await w.WriteAsync(newView, new Requester() { system = true });
          }
          catch (Exception ex)
          {
@@ -296,20 +289,11 @@ public class FileController : BaseController
       return -1;
    }
 
-   //[HttpPut("{id}")]
-   //[Authorize]
-   //public Task<ActionResult<FileView>> PutAsync([FromRoute] long id, [FromBody] FileView view)
-   //{
-   //   view.id = id;
-   //   return ThrowToAction(() => service.WriteAsync(view, GetRequesterNoFail()));
-   //}
-
    public class GetFileModify
    {
       public int size { get; set; }
       public bool crop { get; set; }
       public bool freeze { get; set; } = false;
-      //public bool noGrow {get;set;}
    }
 
    [HttpGet("raw/{hash}")]
@@ -431,16 +415,4 @@ public class FileController : BaseController
       Response.Headers.Add("ETag", GetETag(finalPath));
       return File(System.IO.File.OpenRead(finalPath), fileData.literalType ?? throw new InvalidOperationException("Retrieved API file data somehow did not have a set literalType (mimetype for file)!"));
    }
-
-   //[HttpGet]
-   //public Task<ActionResult<List<FileView>>> GetAsync([FromQuery] FileSearch search)
-   //{
-   //   return ThrowToAction(() => service.SearchAsync(search, GetRequesterNoFail()));
-   //}
-
-   //[HttpGet("docs")]
-   //public Task<ActionResult<string>> DocsAsync()
-   //{
-   //   return ThrowToAction(() => Task.FromResult(docService.GetString("doc.file", "en")));
-   //}
 }

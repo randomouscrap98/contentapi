@@ -149,7 +149,7 @@ public class EventQueueTest : ViewUnitTestBase, IClassFixture<DbUnitTestSearchFi
         foreach(var c in comments)
         {
             //The event user shouldn't matter but just in case...
-            var request = queue.GetSearchRequestsForEvents(new[] { new LiveEvent(c.createUserId, Db.UserAction.create, EventType.comment, c.id) });
+            var request = queue.GetSearchRequestsForEvents(new[] { new LiveEvent(c.createUserId, Db.UserAction.create, EventType.message, c.id) });
             var result = await searcher.SearchUnrestricted(request);
 
             //Now, make sure the result contains content, comment, and user results.

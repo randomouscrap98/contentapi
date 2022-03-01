@@ -2,7 +2,7 @@ namespace contentapi.Live;
 
 public enum EventType : byte
 {
-    comment,
+    message,
     activity,
     watch,
     uservariable,

@@ -70,7 +70,7 @@ public class DbWriterTest : ViewUnitTestBase, IClassFixture<DbUnitTestSearchFixt
     protected void AssertCommentEventMatches(CommentView comment, long userId, UserAction expected)
     {
         //Ensure the events are reported correctly
-        var ev = AssertEventMatchesBase(comment.id, expected, userId, EventType.comment);
+        var ev = AssertEventMatchesBase(comment.id, expected, userId, EventType.message);
     }
 
     protected void AssertUserEventMatches(UserView user, long userId, UserAction expected)
