@@ -281,6 +281,22 @@ public class DbUnitTestSearchFixture : DbUnitTestBase, IDisposable
                             });
                         }
                     }
+                    //Every NON comment content will get MODULE MESSAGES
+                    else
+                    {
+                        //comment count should equal (indexed) contentId, yes even if it's a crapload
+                        for(var j = 0; j < i; j++)
+                        {
+                            comments.Add(new Db.Message()
+                            {
+                                module = StandardPublicTypes[j % StandardPublicTypes.Count],
+                                contentId = i + 1,
+                                createDate = DateTime.Now.AddDays(j - i),
+                                createUserId = 1 + (j % UserCount),
+                                text = $"modulemessage_{i}",
+                            });
+                        }
+                    }
 
                     content.Add(c);
                 }

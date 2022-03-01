@@ -23,6 +23,7 @@ public class DbWriterTest : ViewUnitTestBase, IClassFixture<DbUnitTestSearchFixt
     protected DbWriter writer;
     protected IGenericSearch searcher;
     protected DbWriterConfig config;
+    protected Random random = new Random();
 
 
     public DbWriterTest(DbUnitTestSearchFixture fixture)
@@ -856,4 +857,96 @@ public class DbWriterTest : ViewUnitTestBase, IClassFixture<DbUnitTestSearchFixt
         Assert.Empty(result.values);
     }
 
+    //NOBODY CAN CREATE OR EDIT OR DELETE MODULE MESSAGES, regardless of where they go!
+    [Theory]
+    [InlineData((int)UserVariations.Super, (int)ContentVariations.AccessByAll + 1)]
+    [InlineData(1 + (int)UserVariations.Super, (int)ContentVariations.AccessByAll + 1)] //THIS one is super
+    [InlineData((int)UserVariations.Super, (int)ContentVariations.AccessBySupers + 1)]
+    [InlineData(1 + (int)UserVariations.Super, (int)ContentVariations.AccessBySupers + 1)] //THIS one is super
+    public async Task WriteAsync_DisallowModuleMessage(long uid, long parentId) //, bool allowed)
+    {
+        //NOTE: DO NOT PROVIDE CREATEDATE! ALSO IT SHOULD BE UTC TIME!
+        var comment = GetNewCommentView(parentId);
+        comment.module = "NOTALLOWED";
+
+        await Assert.ThrowsAnyAsync<ForbiddenException>(async () =>
+        {
+            await writer.WriteAsync(comment, uid);
+        });
+
+        //Now go get some random-ass module message
+        var modMessages = await searcher.SearchSingleTypeUnrestricted<MessageView>(new SearchRequest() {
+            type = "message",
+            fields = "*",
+            query = "!notnull(module)"
+        });
+
+        Assert.True(modMessages.Count > 0, "No module messages found!");
+        
+        //Try on 10 random module messages, I don't know
+        for(var i = 0; i < 10; i++)
+        {
+            var modMessage = modMessages[(int)(random.NextInt64() % modMessages.Count)];
+
+            Assert.True(modMessage.id != 0, "Module message pulled didn't have an id set!");
+
+            //Try to edit
+            modMessage.text = "EDITED TEXT";
+
+            await Assert.ThrowsAnyAsync<ForbiddenException>(async () => {
+                await writer.WriteAsync(modMessage, uid);
+            });
+
+            //Try to delete 
+            await Assert.ThrowsAnyAsync<ForbiddenException>(async () => {
+                await writer.DeleteAsync<MessageView>(modMessage.id, uid);
+            });
+        }
+    }
+
+    //Nobody should be able to alter the literal type on files, BUT they all should be able to alter 
+    //it on content!
+    [Theory]
+    [InlineData((int)UserVariations.Super, InternalContentType.file, false)] //1 + ((int)ContentVariations.AccessByAll | ((int)InternalContentType.file * 4)), false)]
+    [InlineData(1 + (int)UserVariations.Super, InternalContentType.file, false)] // + ((int)ContentVariations.AccessByAll | ((int)InternalContentType.file * 4)), false)]
+    [InlineData((int)UserVariations.Super, InternalContentType.page, true)] //1 + ((int)ContentVariations.AccessByAll | ((int)InternalContentType.page * 4)), true)]
+    [InlineData(1 + (int)UserVariations.Super, InternalContentType.page, true)] //1 + ((int)ContentVariations.AccessByAll | ((int)InternalContentType.page * 4)), true)]
+    [InlineData((int)UserVariations.Super, InternalContentType.module, true)] //1 + ((int)ContentVariations.AccessByAll | ((int)InternalContentType.module * 4)), true)]
+    [InlineData(1 + (int)UserVariations.Super, InternalContentType.module, true)] //1 + ((int)ContentVariations.AccessByAll | ((int)InternalContentType.module * 4)), true)]
+    public async Task WriteAsync_LiteralTypeEdit(long uid, InternalContentType type, bool alterable)
+    {
+        //To ensure the user can access the content NO MATTER WHAT, set them to the ultra mega group
+        var user = await searcher.GetById<UserView>(RequestType.user, uid);
+        var ultraGroup = fixture.UserCount + fixture.GroupCount;
+
+        var relId = await fixture.WriteSingle(new UserRelation() {
+            type = UserRelationType.inGroup,
+            userId = uid,
+            relatedId = ultraGroup
+        });
+
+        Assert.True(relId > 0, "Couldn't add user to ultra group!");
+
+        //OK, NOW we can go get the content
+        var contentId = 1 + (int)type;
+        var content = await searcher.GetById<ContentView>(RequestType.content, contentId, true);
+
+        var originalType = content.literalType;
+        content.literalType = "EDITED_LITERAL";
+
+        //Anyone should be able to write it, BUT
+        var written = await writer.WriteAsync(content, uid);
+
+        //The literalType will be editable based on the "alterable" flag
+        if(alterable)
+        {
+            Assert.Equal(content.literalType, written.literalType);
+            Assert.NotEqual(originalType, written.literalType);
+        }
+        else
+        {
+            Assert.NotEqual(content.literalType, written.literalType);
+            Assert.Equal(originalType, written.literalType);
+        }
+    }
 }

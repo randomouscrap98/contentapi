@@ -2,8 +2,10 @@ using System;
 using System.Collections.Generic;
 using System.Data;
 using System.Linq;
+using System.Threading.Tasks;
 using contentapi.Db;
 using Dapper;
+using Dapper.Contrib.Extensions;
 using Microsoft.Data.Sqlite;
 using Microsoft.Extensions.DependencyInjection;
 
@@ -56,6 +58,14 @@ public class DbUnitTestBase : UnitTestBase, IDisposable
         var result = GetService<ContentApiDbConnection>().Connection; //new SqliteConnection(MasterConnectionString);
         result.Open();
         return result;
+    }
+
+    public async Task<int> WriteSingle<T>(T thing) where T : class
+    {
+        using(var conn = CreateNewConnection())
+        {
+            return await conn.InsertAsync(thing);
+        }
     }
 
     public void SetBackupNow()
