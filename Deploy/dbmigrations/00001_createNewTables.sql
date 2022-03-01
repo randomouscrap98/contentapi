@@ -76,7 +76,7 @@ create table if not exists content (
     createUserId int not null,
     createDate text not null,
     contentType int not null,   --page, file, module, category etc (use an enum)
-    literalType text not null,  --the actual type of the content represented by this, like a file mimetype
+    literalType text default null,  --the actual type of the content represented by this, like a file mimetype
     `meta` text default null,  
     `description` text default null,  
     `hash` text not null,  

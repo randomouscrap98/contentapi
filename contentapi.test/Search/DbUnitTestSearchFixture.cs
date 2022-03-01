@@ -157,7 +157,8 @@ public class DbUnitTestSearchFixture : DbUnitTestBase, IDisposable
                         text = $"text_{i}",
                         createUserId = 1 + (i % UserCount),
                         literalType = StandardPublicTypes[i % StandardPublicTypes.Count],
-                        createDate = DateTime.Now.AddDays(i - ContentCount)
+                        createDate = DateTime.Now.AddDays(i - ContentCount),
+                        hash = Guid.NewGuid().ToString() //NOT NULL CONSTRAINT ON TABLE!
                     };
 
                     c.deleted = (i & (int)ContentVariations.Deleted) > 0;

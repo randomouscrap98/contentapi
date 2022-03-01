@@ -130,17 +130,6 @@ public class DbWriter : IDbWriter
                     throw new ForbiddenException($"User {requester.id} can't '{action}' content {cView.id}!");
             }
 
-            //Very particular checks. Some fields are marked as writable, but some types don't allow that
-            if(action == UserAction.update)
-            {
-                var exView = existing as ContentView ?? throw new InvalidOperationException("Permissions wasn't given the old view during check!");
-
-                //Can't change literal type on files! But just like all other fields, we just... fail silently? I
-                //don't know about that... it makes it so that you don't have to send certain fields but... ugh
-                if(cView.contentType == InternalContentType.file) //&& cView.literalType != exView.literalType)
-                    cView.literalType = exView.literalType;
-            }
-
             //Now for general validation
             await ValidatePermissionFormat(cView.permissions);
 
@@ -473,12 +462,31 @@ public class DbWriter : IDbWriter
             work.view.permissions[work.requester.id] = "CRUD"; //FORCE permissions to include full access for creator all the time
         }
 
+        //Very particular checks. Some fields are marked as writable, but some types don't allow that
+        if(work.action == UserAction.update && work.view.contentType == InternalContentType.file)
+            content.literalType = work.existing?.literalType;
+        
+
         //Always need an ID to link to, so we actually need to create the content first and get the ID.
         using(var tsx = dbcon.BeginTransaction())
         {
             if(work.action == UserAction.create)
             {
-                work.view.id = await dbcon.InsertAsync(content, tsx);
+                //This is VERY silly, but the actual write needs to within a hash lock! This is the only
+                //time we need to worry about the hash!
+                if(string.IsNullOrWhiteSpace(content.hash))
+                {
+                    //Autogenerate
+                    await GenerateContentHash(async x => {
+                        content.hash = x;
+                        work.view.id = await dbcon.InsertAsync(content, tsx);
+                    });
+                }
+                else
+                {
+                    await VerifyHash(content.hash);
+                    work.view.id = await dbcon.InsertAsync(content, tsx);
+                }
             }
             else if(work.action == UserAction.update || work.action == UserAction.delete)
             {
@@ -861,7 +869,8 @@ public class DbWriter : IDbWriter
             {
                 hash = rng.GetAlphaSequence(config.HashChars);
 
-                if(await IsDuplicateHash(hash))
+                //Not a duplicate hash? We can quit!
+                if(!(await IsDuplicateHash(hash)))
                     break;
                 else
                     logger.LogWarning($"DUPLICATE HASH: {hash}");

@@ -26,8 +26,8 @@ public class ContentView : IIdView
     [Writable(WriteRule.AutoDate, WriteRule.Preserve)]
     public DateTime createDate { get; set; }
 
-    //Entirely not writable
     [FieldSelect]
+    [Writable(WriteRule.User, WriteRule.Preserve)]
     public InternalContentType contentType {get;set;}
 
     [FieldSelect]
