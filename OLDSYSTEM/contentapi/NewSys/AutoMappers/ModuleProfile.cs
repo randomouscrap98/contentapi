@@ -9,7 +9,7 @@ namespace contentapi
         public ModuleProfile()
         {
             CreateMap<ModuleView, Db.Content_Convert>()
-            .ForMember(x => x.extra1,
+            .ForMember(x => x.description,
                 opt => opt.MapFrom(src => src.description))
             .ForMember(x => x.literalType, 
                  opt => opt.MapFrom(src => ""))

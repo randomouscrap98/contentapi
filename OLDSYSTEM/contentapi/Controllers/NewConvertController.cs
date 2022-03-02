@@ -407,7 +407,7 @@ namespace contentapi.Controllers
                     foreach (var mm in mms)
                     {
                         var umm = mapper.Map<UnifiedModuleMessageView>(mm);
-                        var nmm = mapper.Map<Db.Comment_Convert>(umm);
+                        var nmm = mapper.Map<Db.Message_Convert>(umm);
                         //User dapper to store?
                         mmids.Add(await newdb.InsertAsync(nmm));
                         if(mmids.Count >= 1000)
@@ -426,7 +426,7 @@ namespace contentapi.Controllers
                     foreach (var mm in cms)
                     {
                         var umm = mapper.Map<UnifiedModuleMessageView>(mm);
-                        var nmm = mapper.Map<Db.Comment_Convert>(umm);
+                        var nmm = mapper.Map<Db.Message_Convert>(umm);
                         //User dapper to store?
                         mmids.Add(await newdb.InsertAsync(nmm));
                         if(mmids.Count >= 1000)
@@ -444,7 +444,7 @@ namespace contentapi.Controllers
                     var cmids = new List<long>();
                     foreach (var cmnt in cmnts)
                     {
-                        var ncmnt = mapper.Map<Db.Comment_Convert>(cmnt);
+                        var ncmnt = mapper.Map<Db.Message_Convert>(cmnt);
                         //var cmtvals = new List<CommentValue>();
                         IDictionary<string, object> metaFields = null;
                         //Convert metadata into separate field
@@ -479,9 +479,9 @@ namespace contentapi.Controllers
 
                         if(metaFields != null)
                         {
-                            await newdb.InsertAsync(metaFields.Where(x => x.Value != null).Select(x => new CommentValue()
+                            await newdb.InsertAsync(metaFields.Where(x => x.Value != null).Select(x => new MessageValue()
                             {
-                                commentId = cmid, 
+                                messageId = cmid, 
                                 key = x.Key,
                                 value = JsonConvert.SerializeObject(x.Value?.ToString())
                             }));

@@ -82,7 +82,7 @@ namespace contentapi.Services.Implementations
 
             if(orderedRelations.Count() > 0)
             {
-                var fakeComment = new Db.Comment();
+                var fakeComment = new Db.Message();
 
                 historyService.SetCommentHistory(orderedRelations.Select(x => new Db.History.CommentSnapshot
                 {
