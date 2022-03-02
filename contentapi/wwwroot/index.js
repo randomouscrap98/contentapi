@@ -204,10 +204,11 @@ function user_onload(template, state)
     api.AboutToken(new ApiHandler(d =>
     {
         var search = new RequestParameter({
-            uid : d.result.userId
+            uid : d.result.userId,
+            type : 3
         }, [
             new RequestSearchParameter("user", "*", "id = @uid"),
-            new RequestSearchParameter("file", "*", "createUserId = @uid", "id_desc", SEARCHRESULTSPERPAGE, state.fp * SEARCHRESULTSPERPAGE),
+            new RequestSearchParameter("content", "*", "createUserId = @uid and contentType = @type", "id_desc", SEARCHRESULTSPERPAGE, state.fp * SEARCHRESULTSPERPAGE),
         ]);
 
         api.Search(search, new ApiHandler(dd =>
@@ -234,7 +235,7 @@ function user_onload(template, state)
             template.querySelector("#user-update-super").value = user.super;
 
             //Now go set up the file list display thing
-            dd.result.data.file.forEach(x => {
+            dd.result.data.content.forEach(x => {
                 var item = LoadTemplate(`file_item`, x);
                 userFiles.appendChild(item);
             });
@@ -292,9 +293,9 @@ function page_onload(template, state)
             var page = d.result.data.page[0];
             var originalPage = JSON.parse(JSON.stringify(page));
             title.textContent = page.name;
-            content.textContent = page.content;
+            content.textContent = page.text;
             delete page.name;
-            delete page.content;
+            delete page.text;
             page.votes = JSON.stringify(page.votes);
             page.values = JSON.stringify(page.values);
             page.keywords = JSON.stringify(page.keywords);
@@ -309,7 +310,8 @@ function page_onload(template, state)
         api.AutoLinkUsers(d.result.data.comment, d.result.data.user);
 
         d.result.data.subpages.forEach(x => {
-            var subpage = LoadTemplate("page_item", x);
+            var template = x.contentType === 3 ? "file_item" : "page_item";
+            var subpage = LoadTemplate(template, x);
             subpagesElement.appendChild(subpage);
         });
 
@@ -391,7 +393,12 @@ function search_onload(template, state)
                 api.AutoLinkUsers(d.result.data.main, d.result.data.user);
 
             d.result.data.main.forEach(x => {
-                var item = LoadTemplate(`${state.type}_item`, x);
+                var template = `${state.type}_item`;
+                if(x.contentType === 3)
+                    template = "file_item";
+                else if(x.contentType === 1 || x.contentType === 2)
+                    template = "page_item";
+                var item = LoadTemplate(template, x);
                 resultElement.appendChild(item);
             });
 
@@ -408,7 +415,7 @@ function page_item_onload(template, state)
     var type = template.querySelector("[data-type]");
     var title = template.querySelector("[data-title]");
     var time = template.querySelector("[data-time]");
-    type.textContent = state.type;
+    type.textContent = state.literalType;
     title.href = "?t=page&pid=" + state.id;
     title.textContent = state.name;
     time.textContent = state.createDate;
@@ -463,7 +470,7 @@ function file_item_onload(template, state)
     var private = template.querySelector("[data-private]");
 
     file.src = api.GetFileUrl(state.hash, new FileModifyParameter(50));
-    file.title = `${state.mimetype} : ${state.quantization}`;
+    file.title = `${state.literalType} : ${state.meta}`;
     filelink.href = api.GetFileUrl(state.hash);
     hash.textContent = `${state.name} [${state.id}] pubId: ${state.hash}`;
     time.textContent = state.createDate;
@@ -480,7 +487,7 @@ function page_editor_onload(template, state)
     template.querySelector("#page-editor-parentid").value = state.parentId || 0;
     template.querySelector("#page-editor-name").value = state.name || "";
     template.querySelector("#page-editor-text").value = state.text || "";
-    template.querySelector("#page-editor-type").value = state.type || "";
+    template.querySelector("#page-editor-type").value = state.literalType || "";
 
     if(state.keywords)
         template.querySelector("#page-editor-keywords").value = state.keywords.join(" ");
@@ -561,11 +568,11 @@ function t_page_editor_submit(form)
     //things you want individual inputs for, like "what's the key" or whatever
     var page = {
         id : Number(form.querySelector("#page-editor-id").value),
-        contentType : Number(form.querySelector("#page-editor-contenttype").value),
         parentId : Number(form.querySelector("#page-editor-parentid").value),
+        contentType : Number(form.querySelector("#page-editor-contenttype").value),
+        literalType : form.querySelector("#page-editor-type").value,
         name : form.querySelector("#page-editor-name").value,
         text : form.querySelector("#page-editor-text").value,
-        type : form.querySelector("#page-editor-type").value,
         keywords : form.querySelector("#page-editor-keywords").value.split(" "),
         permissions : QuickInputToObject(form.querySelector("#page-editor-permissions").value),
         values : QuickInputToObject(form.querySelector("#page-editor-values").value)

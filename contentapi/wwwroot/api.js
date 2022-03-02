@@ -13,7 +13,7 @@ var APICONST = {
     },
     MARKUP : [ "12y", "bbcode", "plaintext" ],
     WRITETYPES : {
-        CONTENT : "message",
+        MESSAGE : "message",
         CONTENT : "content",
         USER : "user"
     }
@@ -430,7 +430,7 @@ Api.prototype.WriteNewComment = function(newComment, handler)
     if(newComment.avatar) values.a = newComment.avatar; //Should be a file HASH (a string), not the id!!
     if(newComment.nickname) values.n = newComment.nickname;
 
-    this.WriteType(APICONST.WRITETYPES.COMMENT, {
+    this.WriteType(APICONST.WRITETYPES.MESSAGE, {
         text : newComment.text,
         contentId : newComment.contentId,
         values : values
@@ -503,22 +503,13 @@ Api.prototype.Search_BasicPageDisplay = function(id, subpagesPerPage, subpagePag
     }, [
         new RequestSearchParameter("content", "*", "id = @pageid"),
         //Subpages: we want most fields, but not SOME big/expensive fields. Hence ~
-        new RequestSearchParameter("content", "~permissions,values,keywords,votes", "parentId = @pageid", "type,name", subpagesPerPage, subpagesPerPage * subpagePage, "subpages"),
-        new RequestSearchParameter("message", "*", "contentId = @pageid and !notdeleted()", "id_desc", commentsPerPage, commentsPerPage * commentPage),
+        new RequestSearchParameter("content", "~values,keywords,votes", "parentId = @pageid and !notdeleted()", "contentType,literalType,name", subpagesPerPage, subpagesPerPage * subpagePage, "subpages"),
+        new RequestSearchParameter("message", "*", "contentId = @pageid and !notdeleted() and !isnull(module)", "id_desc", commentsPerPage, commentsPerPage * commentPage),
         new RequestSearchParameter("user", "*", "id in @message.createUserId or id in @page.createUserId or id in @subpages.createUserId"),
     ]);
 
     this.Search(search, handler);
 };
-
-        //Some funny quirks in the API (that are a result of user requests): ALL content is "content" now, 
-        //including pages, files, modules, etc. But searching against the bare minimum "content" means
-        //you get only the fields that are common to all content types. This is a LOT of fields, but not 
-        //enough to actually display a full page, so in order to make the search work for ANY type and
-        //get ALL data, we must (currently) just ask for all types. This may be fixed in the future with
-        //a further specialized request type, but for now this is what we have. It is NOT inefficient, 
-        //searching for a non-existent page takes nearly no time.
-        //new RequestSearchParameter("user", "*", "id in @message.createUserId or id in @page.createUserId or id in @module.createUserId or id in @file.createUserId or id in @subpages.createUserId"),
 
 
 // -- Some helper functions which don't necessarily directly connect to the API --
