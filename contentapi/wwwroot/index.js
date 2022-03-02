@@ -281,7 +281,7 @@ function page_onload(template, state)
 
     api.Search_BasicPageDisplay(state.pid, SUBPAGESPERPAGE, state.sp, COMMENTSPERPAGE, state.cp, new ApiHandler(d =>
     {
-        if(d.result.data.page.length == 0)
+        if(d.result.data.content.length == 0)
         {
             if(state.pid == 0)
                 title.textContent = "Root parent (not a page)";
@@ -290,7 +290,7 @@ function page_onload(template, state)
         }
         else
         {
-            var page = d.result.data.page[0];
+            var page = d.result.data.content[0];
             var originalPage = JSON.parse(JSON.stringify(page));
             title.textContent = page.name;
             content.textContent = page.text;
@@ -307,7 +307,7 @@ function page_onload(template, state)
 
         //Waste a few cycles linking some stuff together!
         api.AutoLinkUsers(d.result.data.subpages, d.result.data.user);
-        api.AutoLinkUsers(d.result.data.comment, d.result.data.user);
+        api.AutoLinkUsers(d.result.data.message, d.result.data.user);
 
         d.result.data.subpages.forEach(x => {
             var template = x.contentType === 3 ? "file_item" : "page_item";
@@ -315,7 +315,7 @@ function page_onload(template, state)
             subpagesElement.appendChild(subpage);
         });
 
-        d.result.data.comment.forEach(x => {
+        d.result.data.message.forEach(x => {
             var comment = LoadTemplate("comment_item", x);
             commentsElement.appendChild(comment);
         });
@@ -336,7 +336,7 @@ function search_onload(template, state)
     var aboutElement = template.querySelector("#search-about");
 
     searchtext.value = state.search || "";
-    searchtype.value = state.type || "content";
+    searchtype.value = state.type || "page";
 
     //Also, go out and get the "about" information so we can fill in the datalist elements for options
     api.AboutSearch(new ApiHandler(d => 
@@ -344,10 +344,13 @@ function search_onload(template, state)
         //Assume the format is known, and the data will be fine.
         var resetOptions = function()
         {
-            console.log(searchtype.value, d);
-            FillOptions(api.GetQueryableFields(d.result.details.types[searchtype.value]), searchfield);
+            var searchType = searchtype.value;
+            if(searchType === "page" || searchType === "file") searchType = "content";
+            console.log(searchType, d);
+            var typeInfo = d.result.details.types[searchType];
+            FillOptions(api.GetQueryableFields(typeInfo), searchfield);
             var sortOptions = [];
-            api.GetRequestableFields(d.result.details.types[searchtype.value]).forEach(x =>
+            api.GetRequestableFields(typeInfo).forEach(x =>
             {
                 sortOptions.push(x);
                 sortOptions.push(x + "_desc");
@@ -368,16 +371,33 @@ function search_onload(template, state)
     {
         //This is how you'd set up your own search
         var values = {};
-        var query = "";
+        var query = [];
 
         if(state.search)
         {
             values.search = `%${state.search}%`;
-            query = `${state.field} LIKE @search`;
+            query.push(`${state.field} LIKE @search`);
         }
 
+        var searchType = state.type;
+
+        //We have ONE type now, and that makes this auto search a bit more complex
+        if(searchType == "file")
+        {
+            //Goddamn make this a macro, shit
+            values.filetype = 3;
+            searchType = "content";
+            query.push("contentType = @filetype");
+        } 
+        else if(searchType == "page")
+        {
+            values.pagetype = 1;
+            searchType = "content";
+            query.push("contentType = @pagetype");
+        } 
+
         var requests = [
-            new RequestSearchParameter(state.type, "*", query, state.sort, SEARCHRESULTSPERPAGE, state.sp * SEARCHRESULTSPERPAGE, "main"),
+            new RequestSearchParameter(searchType, "*", query.join(" AND "), state.sort, SEARCHRESULTSPERPAGE, state.sp * SEARCHRESULTSPERPAGE, "main"),
         ];
 
         //Can't link users to themselves... not really
@@ -393,12 +413,7 @@ function search_onload(template, state)
                 api.AutoLinkUsers(d.result.data.main, d.result.data.user);
 
             d.result.data.main.forEach(x => {
-                var template = `${state.type}_item`;
-                if(x.contentType === 3)
-                    template = "file_item";
-                else if(x.contentType === 1 || x.contentType === 2)
-                    template = "page_item";
-                var item = LoadTemplate(template, x);
+                var item = LoadTemplate(`${state.type}_item`, x);
                 resultElement.appendChild(item);
             });
 

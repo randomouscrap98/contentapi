@@ -499,13 +499,14 @@ Api.prototype.Search_AllByType = function(type, fields, order, perPage, page, ha
 Api.prototype.Search_BasicPageDisplay = function(id, subpagesPerPage, subpagePage, commentsPerPage, commentPage, handler)
 {
     var search = new RequestParameter({
-        pageid : id
+        pageid : id,
+        filetype : 3
     }, [
         new RequestSearchParameter("content", "*", "id = @pageid"),
         //Subpages: we want most fields, but not SOME big/expensive fields. Hence ~
-        new RequestSearchParameter("content", "~values,keywords,votes", "parentId = @pageid and !notdeleted()", "contentType,literalType,name", subpagesPerPage, subpagesPerPage * subpagePage, "subpages"),
+        new RequestSearchParameter("content", "~values,keywords,votes", "parentId = @pageid and !notdeleted() and contentType <> @filetype", "contentType,literalType,name", subpagesPerPage, subpagesPerPage * subpagePage, "subpages"),
         new RequestSearchParameter("message", "*", "contentId = @pageid and !notdeleted() and !null(module)", "id_desc", commentsPerPage, commentsPerPage * commentPage),
-        new RequestSearchParameter("user", "*", "id in @message.createUserId or id in @page.createUserId or id in @subpages.createUserId"),
+        new RequestSearchParameter("user", "*", "id in @message.createUserId or id in @content.createUserId or id in @subpages.createUserId"),
     ]);
 
     this.Search(search, handler);
