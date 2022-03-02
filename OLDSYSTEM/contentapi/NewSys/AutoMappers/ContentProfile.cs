@@ -13,6 +13,8 @@ namespace contentapi
                  opt => opt.MapFrom(src => src.type))
             .ForMember(x => x.hash, //The public type is the lookup hash, which has to be our id since there's no hash from before and we don't want to break our links
                  opt => opt.MapFrom(src => src.id.ToString()))
+            .ForMember(x => x.text, 
+                 opt => opt.MapFrom(src => src.content))
             .ForMember(x => x.contentType, 
                  opt => opt.MapFrom(src => InternalContentType.page))
                  ;

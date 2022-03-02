@@ -15,6 +15,8 @@ namespace contentapi
                  opt => opt.MapFrom(src => src.id.ToString()))
             .ForMember(x => x.text, 
                  opt => opt.MapFrom(src => src.description))
+            .ForMember(x => x.description, 
+                 opt => opt.MapFrom(src => ""))
             .ForMember(x => x.contentType, 
                  opt => opt.MapFrom(src => InternalContentType.page))
                  ;
