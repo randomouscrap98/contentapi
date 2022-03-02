@@ -24,6 +24,7 @@ public class DbWriterTest : ViewUnitTestBase, IClassFixture<DbUnitTestSearchFixt
     protected IGenericSearch searcher;
     protected DbWriterConfig config;
     protected Random random = new Random();
+    protected RandomGenerator rng;
 
 
     public DbWriterTest(DbUnitTestSearchFixture fixture)
@@ -32,10 +33,11 @@ public class DbWriterTest : ViewUnitTestBase, IClassFixture<DbUnitTestSearchFixt
         this.mapper = fixture.GetService<IMapper>();
         this.events= new FakeEventQueue();
         this.config = new DbWriterConfig();
+        this.rng = new RandomGenerator();
         writer = new DbWriter(fixture.GetService<ILogger<DbWriter>>(), fixture.GetService<IGenericSearch>(),
             fixture.GetService<Db.ContentApiDbConnection>(), fixture.GetService<IViewTypeInfoService>(), fixture.GetService<IMapper>(),
             fixture.GetService<Db.History.IHistoryConverter>(), fixture.GetService<IPermissionService>(),
-            events, config, new RandomGenerator()); 
+            events, config, rng);
         searcher = fixture.GetService<IGenericSearch>();
 
         //Reset it for every test
@@ -904,18 +906,8 @@ public class DbWriterTest : ViewUnitTestBase, IClassFixture<DbUnitTestSearchFixt
         }
     }
 
-    //Nobody should be able to alter the literal type on files, BUT they all should be able to alter 
-    //it on content!
-    [Theory]
-    [InlineData((int)UserVariations.Super, InternalContentType.file, false)] //1 + ((int)ContentVariations.AccessByAll | ((int)InternalContentType.file * 4)), false)]
-    [InlineData(1 + (int)UserVariations.Super, InternalContentType.file, false)] // + ((int)ContentVariations.AccessByAll | ((int)InternalContentType.file * 4)), false)]
-    [InlineData((int)UserVariations.Super, InternalContentType.page, true)] //1 + ((int)ContentVariations.AccessByAll | ((int)InternalContentType.page * 4)), true)]
-    [InlineData(1 + (int)UserVariations.Super, InternalContentType.page, true)] //1 + ((int)ContentVariations.AccessByAll | ((int)InternalContentType.page * 4)), true)]
-    [InlineData((int)UserVariations.Super, InternalContentType.module, true)] //1 + ((int)ContentVariations.AccessByAll | ((int)InternalContentType.module * 4)), true)]
-    [InlineData(1 + (int)UserVariations.Super, InternalContentType.module, true)] //1 + ((int)ContentVariations.AccessByAll | ((int)InternalContentType.module * 4)), true)]
-    public async Task WriteAsync_LiteralTypeEdit(long uid, InternalContentType type, bool alterable)
+    protected async Task FullPermify(long uid)
     {
-        //To ensure the user can access the content NO MATTER WHAT, set them to the ultra mega group
         var user = await searcher.GetById<UserView>(RequestType.user, uid);
         var ultraGroup = fixture.UserCount + fixture.GroupCount;
 
@@ -926,27 +918,163 @@ public class DbWriterTest : ViewUnitTestBase, IClassFixture<DbUnitTestSearchFixt
         });
 
         Assert.True(relId > 0, "Couldn't add user to ultra group!");
+    }
+
+    /// <summary>
+    /// This is a powerful function that enables many tests of field editability for content, regardless of the field type.
+    /// </summary>
+    /// <param name="uid"></param>
+    /// <param name="type"></param>
+    /// <param name="alterable"></param>
+    /// <param name="getField"></param>
+    /// <param name="setField"></param>
+    /// <typeparam name="T"></typeparam>
+    /// <returns></returns>
+    private async Task WriteAsync_FieldEditable_Generic<T>(long uid, InternalContentType type, bool alterable, Func<ContentView, T> getField, Action<ContentView> setField)
+    {
+        //To ensure the user can access the content NO MATTER WHAT, set them to the ultra mega group
+        await FullPermify(uid);
 
         //OK, NOW we can go get the content
         var contentId = 1 + (int)type;
         var content = await searcher.GetById<ContentView>(RequestType.content, contentId, true);
 
-        var originalType = content.literalType;
-        content.literalType = "EDITED_LITERAL";
+        var originalType = getField(content); //content.literalType;
+        setField(content);
+        //content.literalType = "EDITED_LITERAL";
 
         //Anyone should be able to write it, BUT
         var written = await writer.WriteAsync(content, uid);
 
+        var writtenField = getField(written);
+        var contentField = getField(content);
+
         //The literalType will be editable based on the "alterable" flag
         if(alterable)
         {
-            Assert.Equal(content.literalType, written.literalType);
-            Assert.NotEqual(originalType, written.literalType);
+            Assert.Equal(contentField, writtenField);
+            Assert.NotEqual(originalType, writtenField);
         }
         else
         {
-            Assert.NotEqual(content.literalType, written.literalType);
-            Assert.Equal(originalType, written.literalType);
+            Assert.NotEqual(contentField, writtenField);
+            Assert.Equal(originalType, writtenField);
         }
+    }
+
+    //Nobody should be able to alter the literal type on files, BUT they all should be able to alter 
+    //it on content!
+    [Theory]
+    [InlineData((int)UserVariations.Super, InternalContentType.file, false)]        
+    [InlineData(1 + (int)UserVariations.Super, InternalContentType.file, false)]    
+    [InlineData((int)UserVariations.Super, InternalContentType.page, true)]         
+    [InlineData(1 + (int)UserVariations.Super, InternalContentType.page, true)]     
+    [InlineData((int)UserVariations.Super, InternalContentType.module, true)]       
+    [InlineData(1 + (int)UserVariations.Super, InternalContentType.module, true)]   
+    public Task WriteAsync_LiteralTypeEditable(long uid, InternalContentType type, bool alterable)
+    {
+        return WriteAsync_FieldEditable_Generic(uid, type, alterable, x => x.literalType, x => x.literalType = "EDITED_LITERAL");
+    }
+
+    [Theory]
+    [InlineData((int)UserVariations.Super, InternalContentType.file, false)]        
+    [InlineData(1 + (int)UserVariations.Super, InternalContentType.file, false)]    
+    [InlineData((int)UserVariations.Super, InternalContentType.page, false)]         
+    [InlineData(1 + (int)UserVariations.Super, InternalContentType.page, false)]     
+    [InlineData((int)UserVariations.Super, InternalContentType.module, false)]       
+    [InlineData(1 + (int)UserVariations.Super, InternalContentType.module, false)]   
+    public Task WriteAsync_MetaEditable(long uid, InternalContentType type, bool alterable)
+    {
+        return WriteAsync_FieldEditable_Generic(uid, type, alterable, x => x.meta, x => x.meta = "EDITED_META");
+    }
+
+    [Theory]
+    [InlineData((int)UserVariations.Super, InternalContentType.file, false)]        
+    [InlineData(1 + (int)UserVariations.Super, InternalContentType.file, false)]    
+    [InlineData((int)UserVariations.Super, InternalContentType.page, false)]         
+    [InlineData(1 + (int)UserVariations.Super, InternalContentType.page, false)]     
+    [InlineData((int)UserVariations.Super, InternalContentType.module, false)]       
+    [InlineData(1 + (int)UserVariations.Super, InternalContentType.module, false)]   
+    public Task WriteAsync_HashEditable(long uid, InternalContentType type, bool alterable)
+    {
+        return WriteAsync_FieldEditable_Generic(uid, type, alterable, x => x.hash, x => x.hash = "EDITED_HASH");
+    }
+
+    //And then just for funsies: make sure the text field is ALWAYS editable
+    [Theory]
+    [InlineData((int)UserVariations.Super, InternalContentType.file, true)]        
+    [InlineData(1 + (int)UserVariations.Super, InternalContentType.file, true)]    
+    [InlineData((int)UserVariations.Super, InternalContentType.page, true)]         
+    [InlineData(1 + (int)UserVariations.Super, InternalContentType.page, true)]     
+    [InlineData((int)UserVariations.Super, InternalContentType.module, true)]       
+    [InlineData(1 + (int)UserVariations.Super, InternalContentType.module, true)]   
+    public Task WriteAsync_TextEditable(long uid, InternalContentType type, bool alterable)
+    {
+        return WriteAsync_FieldEditable_Generic(uid, type, alterable, x => x.text, x => x.text = "OMG SUCH A BIG \n EDIT");
+    }
+
+    [Theory]
+    [InlineData("bad", false)]
+    [InlineData("superduperbad", false)]
+    [InlineData("fine", true)]
+    [InlineData("bad2", false)]
+    [InlineData("g-o-o-d", true)]
+    [InlineData(" dead", false)]
+    public async Task VerifyHash_AllChecks(string hash, bool valid)
+    {
+        config.HashMinLength = 4;
+        config.HashMaxLength = 8;
+        config.HashRegex = @"^[a-z\-]+$";
+
+        if(valid)
+            await writer.VerifyHash(hash);
+        else
+            await Assert.ThrowsAnyAsync<ArgumentException>(() => writer.VerifyHash(hash));
+    }
+
+    [Fact]
+    public async Task VerifyHash_FindDuplicate()
+    {
+        //Be as LENIENT as possible, we want specifically the DUPLICATE to work
+        config.HashMinLength = 1;
+        config.HashMaxLength = 800;
+        config.HashRegex = ".*";
+
+        var content = await searcher.GetById<ContentView>(RequestType.content, 1 + (int)ContentVariations.AccessByAll, true);
+
+        await Assert.ThrowsAnyAsync<ArgumentException>(() => writer.VerifyHash(content.hash));
+    }
+
+    //This is a VERY complex test BUT it serves a very important task, of testing real world
+    //scenarios! THIS IS A VERY SLOW TEST!!! Even with only 26 letters, we can somehow make it take ages.
+    [Fact]
+    public async Task GenerateHash_Gamut()
+    {
+        //All that REALLY matters is the hash length for auto generation. Well oops, and the retry count.
+        //If we somehow reach 100 retries WITHOUT finding 1 out of 5 letters, that's really dumb. BUT,
+        //it's definitely a possibility!
+        config.HashChars = 1;
+        config.MaxHashRetries = 200;
+
+        //This is VERY important, as it makes this test take WAY less time!!
+        rng.AlphaSequenceAvailableAlphabet = 8;
+
+        var uid = 1 + (int)UserVariations.Super;
+
+        //We want to write as many content as there are single letter combinations, they should ALL succeed AND have different hashes!
+        var hashSet = new HashSet<string>();
+
+        for(var i = 0; i < rng.AlphaSequenceAvailableAlphabet; i++)
+        {
+            var page = GetNewPageView();
+            var written = await writer.WriteAsync(page, uid);
+            Assert.Single(written.hash);
+            hashSet.Add(written.hash);
+            Assert.Equal(i + 1, hashSet.Count);
+        }
+
+        //BUT, attempting to add just ONE more should fail!
+        var failPage = GetNewPageView();
+        await Assert.ThrowsAnyAsync<InvalidOperationException>(() => writer.WriteAsync(failPage, uid));
     }
 }

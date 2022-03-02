@@ -158,6 +158,7 @@ public class DbUnitTestSearchFixture : DbUnitTestBase, IDisposable
                         createUserId = 1 + (i % UserCount),
                         literalType = StandardPublicTypes[i % StandardPublicTypes.Count],
                         createDate = DateTime.Now.AddDays(i - ContentCount),
+                        meta = $"meta_{i}",
                         hash = Guid.NewGuid().ToString() //NOT NULL CONSTRAINT ON TABLE!
                     };
 
