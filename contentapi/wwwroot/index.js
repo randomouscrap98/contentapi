@@ -430,10 +430,14 @@ function page_item_onload(template, state)
     var type = template.querySelector("[data-type]");
     var title = template.querySelector("[data-title]");
     var time = template.querySelector("[data-time]");
+    var private = template.querySelector("[data-private]");
     type.textContent = state.literalType;
     title.href = "?t=page&pid=" + state.id;
     title.textContent = state.name;
+    title.title = `${state.createUser.username}`;
     time.textContent = state.createDate;
+    if(state.permissions[0] && state.permissions[0].indexOf("R") >= 0)
+        private.style.display = "none";
 }
 
 function comment_item_onload(template, state)

@@ -38,6 +38,7 @@ public class ContentView : IIdView
     [Writable]
     public long parentId { get; set; }
 
+    [NoQuery]
     [FieldSelect]
     [Writable]
     public string text { get; set; } = "";
