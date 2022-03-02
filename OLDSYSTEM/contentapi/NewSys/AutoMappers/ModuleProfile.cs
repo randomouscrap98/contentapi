@@ -1,3 +1,4 @@
+using System;
 using AutoMapper;
 using contentapi.Db;
 using contentapi.Views;
@@ -11,6 +12,10 @@ namespace contentapi
             CreateMap<ModuleView, Db.Content_Convert>()
             .ForMember(x => x.description,
                 opt => opt.MapFrom(src => src.description))
+            .ForMember(x => x.hash, //The public type is the lookup hash, which has to be our id since there's no hash from before and we don't want to break our links
+                 opt => opt.MapFrom(src => src.id.ToString()))
+            //.ForMember(x => x.hash,
+            //    opt => opt.MapFrom(src => Guid.NewGuid().ToString()))
             .ForMember(x => x.literalType, 
                  opt => opt.MapFrom(src => ""))
             .ForMember(x => x.text, 

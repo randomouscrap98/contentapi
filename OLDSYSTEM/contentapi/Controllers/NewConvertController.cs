@@ -416,7 +416,7 @@ namespace contentapi.Controllers
                             mmids.Clear();
                         }
                     }
-                    var count = newdb.ExecuteScalar<int>("SELECT COUNT(*) FROM comments");
+                    var count = newdb.ExecuteScalar<int>("SELECT COUNT(*) FROM messages");
                     Log($"Successfully inserted modulemessages, {count} in table");
 
                     Log("Starting modulemessage2 convert");
@@ -435,7 +435,7 @@ namespace contentapi.Controllers
                             mmids.Clear();
                         }
                     }
-                    count = newdb.ExecuteScalar<int>("SELECT COUNT(*) FROM comments");
+                    count = newdb.ExecuteScalar<int>("SELECT COUNT(*) FROM messages");
                     Log($"Successfully inserted modulemessages 2, {count} in table");
 
                     Log("Starting comment convert!!!");
@@ -493,7 +493,7 @@ namespace contentapi.Controllers
                             cmids.Clear();
                         }
                     }
-                    count = newdb.ExecuteScalar<int>("SELECT COUNT(*) FROM comments");
+                    count = newdb.ExecuteScalar<int>("SELECT COUNT(*) FROM messages");
                     Log($"Successfully inserted comments!!!, {count} in table");
 
                     trs.Commit();
