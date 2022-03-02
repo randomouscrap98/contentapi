@@ -434,7 +434,7 @@ function page_item_onload(template, state)
     type.textContent = state.literalType;
     title.href = "?t=page&pid=" + state.id;
     title.textContent = state.name;
-    title.title = `${state.createUser.username}`;
+    if(state.createUser) title.title = `${state.createUser.username}`;
     time.textContent = state.createDate;
     if(state.permissions[0] && state.permissions[0].indexOf("R") >= 0)
         private.style.display = "none";
