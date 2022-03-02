@@ -54,7 +54,7 @@ public class BaseController : Controller
                 return NotFound($"Not found: {ex.Message}");
 
             if(ex is ForbiddenException)
-                return Forbid($"Forbidden error: {ex.Message}");
+                return new ObjectResult($"Forbidden error: {ex.Message}") { StatusCode = 403 }; //Forbidden
             
             //Just rethrow if we couldn't figure out what it was.
             throw;

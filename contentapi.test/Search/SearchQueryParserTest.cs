@@ -138,6 +138,7 @@ public class SearchQueryParserTest : UnitTestBase, IClassFixture<SearchQueryPars
     [InlineData("!macro()", "macro()")] //We finally allow empty macros! I hope!
     [InlineData("!macro(  )", "macro()")]
     [InlineData("!macro(_)", "macro(_)")]  //This is the OLD way of doing it
+    [InlineData("!null(field)", "null(field)")]  // REGRESSION TEST 2022-03-01: NULL WAS A KEYWORD???
     public void SearchQueryParser_MacroCheck(string query, string? expected)
     {
         string result = "";

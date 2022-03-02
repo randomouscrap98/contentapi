@@ -113,13 +113,14 @@ public class FileController : BaseController
       
       if(model.quantize >= 0 && (model.quantize < config.MinQuantize || model.quantize > config.MaxQuantize))
          return BadRequest($"Quantize must be between {config.MinQuantize} and {config.MaxQuantize}");
-
-      var requester = GetUserIdStrict();
       
       return await MatchExceptions(async () =>
       {
+         var requester = GetUserIdStrict();
+
          var newView = new ContentView() { 
-            name = model.name ?? ""
+            name = model.name ?? "",
+            contentType = Db.InternalContentType.file
          };
 
          //This may look strange: it's because we have a bit of a hack to make empty globalPerms work. We strip
@@ -198,15 +199,20 @@ public class FileController : BaseController
             //We now have the metadata
             newView.meta = JsonConvert.SerializeObject(meta);
 
-            await writer.GenerateContentHash(async x => 
+            //This is QUITE dangerous: a file could be created in the api first and THEN the file write fails!
+            newView = await writer.WriteAsync(newView, requester);
+            string finalLocation = "";
+
+            try
             {
-               //This is what happens WITHIN the hash lock, hence why we need to write it
-               //now so nobody else can do the thing
-               newView.hash = x;
-               var finalLocation = GetAndMakeUploadPath(newView.hash);
+               finalLocation = GetAndMakeUploadPath(newView.hash);
                System.IO.File.Copy(tempLocation, finalLocation);
-               newView = await writer.WriteAsync(newView, requester);
-            });
+            }
+            catch(Exception ex)
+            {
+               services.logger.LogError($"FILE WRITE '{finalLocation}' FAILED: {ex}");
+               await writer.DeleteAsync<ContentView>(newView.id, requester);
+            }
          }
          finally
          {

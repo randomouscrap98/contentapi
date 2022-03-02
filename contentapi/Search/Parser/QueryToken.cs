@@ -18,7 +18,7 @@ public enum QueryToken
     [Lexeme(@"[iI][nN]\b")] IN,
     [Lexeme(@"[nN][oO][tT]\b")] NOT,
     [Lexeme(@"[lL][iI][kK][eE]\b")] LIKE,
-    [Lexeme(@"[nN][uU][lL][lL]\b")] NULL,
+    //[Lexeme(@"[nN][uU][lL][lL]\b")] NULL,
 
     [Lexeme(@"[aA][nN][dD]\b")] AND,
     [Lexeme(@"[oO][rR]\b")] OR,

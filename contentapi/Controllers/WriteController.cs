@@ -1,5 +1,6 @@
 using contentapi.Main;
 using contentapi.Search;
+using contentapi.Utilities;
 using contentapi.Views;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
@@ -24,8 +25,18 @@ public class WriteController : BaseController
         MatchExceptions(async () => await writer.WriteAsync(message, GetUserIdStrict())); //message used for activity and such
 
     [HttpPost("content")]
-    public Task<ActionResult<ContentView>> WriteContentAsync([FromBody]ContentView page, [FromQuery]string? activityMessage) =>
-        MatchExceptions(async () => await writer.WriteAsync(page, GetUserIdStrict(), activityMessage)); //message used for activity and such
+    public Task<ActionResult<ContentView>> WriteContentAsync([FromBody]ContentView page, [FromQuery]string? activityMessage) 
+    {
+        return MatchExceptions(async () => 
+        {
+            //THIS IS AWFUL! WHAT TO DO ABOUT THIS??? Or is it fine: files ARE written by the controllers after all...
+            //so maybe it makes sense for the controllers to control this aspect as well
+            if(page.id == 0 && page.contentType == Db.InternalContentType.file)
+                throw new ForbiddenException("You cannot create files through this endpoint! Use the file controller!");
+
+            return await writer.WriteAsync(page, GetUserIdStrict(), activityMessage);
+        }); //message used for activity and such
+    }
 
     //This is SLIGHTLY special in that user writes are mostly for self updates... but might be used for new groups as well? You also
     //can't update PRIVATE data through this endpoint
