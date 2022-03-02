@@ -47,7 +47,8 @@ public class ContentView : IIdView
     [Writable] //Not for files though!
     public string? literalType {get;set;}   //The page type set by users, OR the file mimetype
 
-    [FieldSelect] //NEVER WRITABLE
+    [FieldSelect] 
+    [Writable(WriteRule.User, WriteRule.Preserve)] // Don't know if this is what I want... 
     public string? meta {get;set;}          //Not always used, READONLY after insert
 
     [FieldSelect] 

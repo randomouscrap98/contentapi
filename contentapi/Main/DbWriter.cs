@@ -120,7 +120,7 @@ public class DbWriter : IDbWriter
                 if(cView.contentType == InternalContentType.module && !requester.super)
                     throw new ForbiddenException($"Only supers can create modules!");
                 
-                if(cView.contentType == InternalContentType.file || cView.contentType == InternalContentType.none)
+                if(cView.contentType == InternalContentType.none)
                     throw new ForbiddenException($"You can't create content type '{cView.contentType}'!");
             }
             else if(action != UserAction.read)
@@ -900,7 +900,7 @@ public class DbWriter : IDbWriter
         if(hash.Length > config.HashMaxLength)
             throw new ArgumentException($"Hash '{hash}' too long! Max: {config.HashMaxLength}");
         else if(hash.Length < config.HashMinLength)
-            throw new ArgumentException($"Hash '{hash}' too short! Min: {config.HashMaxLength}");
+            throw new ArgumentException($"Hash '{hash}' too short! Min: {config.HashMinLength}");
         else if(!Regex.IsMatch(hash, config.HashRegex))
             throw new ArgumentException($"Hash '{hash}' has invalid characters!");
 

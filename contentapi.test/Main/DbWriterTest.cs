@@ -169,16 +169,17 @@ public class DbWriterTest : ViewUnitTestBase, IClassFixture<DbUnitTestSearchFixt
     //existing pages that have access to all.
     //HAHA GUESS WHAT: NOBODY CAN CREATE FILES! Updated with single typification
     [Theory]
-    [InlineData((int)UserVariations.Super, 0, false)]
-    [InlineData(1 + (int)UserVariations.Super, 0, false)] //THIS one is super
-    [InlineData((int)UserVariations.Super, (int)ContentVariations.AccessByAll + 1, false)]
-    [InlineData(1 + (int)UserVariations.Super, (int)ContentVariations.AccessByAll + 1, false)] //THIS one is super
+    [InlineData((int)UserVariations.Super, 0, true)]
+    [InlineData(1 + (int)UserVariations.Super, 0, true)] //THIS one is super
+    [InlineData((int)UserVariations.Super, (int)ContentVariations.AccessByAll + 1, true)]
+    [InlineData(1 + (int)UserVariations.Super, (int)ContentVariations.AccessByAll + 1, true)] //THIS one is super
     [InlineData((int)UserVariations.Super, (int)ContentVariations.AccessBySupers + 1, false)]
-    [InlineData(1 + (int)UserVariations.Super, (int)ContentVariations.AccessBySupers + 1, false)] //THIS one is super
+    [InlineData(1 + (int)UserVariations.Super, (int)ContentVariations.AccessBySupers + 1, true)] //THIS one is super
     public async Task WriteAsync_BasicFile(long uid, long parentId, bool allowed)
     {
         //NOTE: DO NOT PROVIDE CREATEDATE! ALSO IT SHOULD BE UTC TIME!
         var content = GetNewFileView(parentId);
+        content.hash = "somethinglong"; //Need a SPECIFIC hash so we can test it
 
         if(allowed)
         {
@@ -417,7 +418,7 @@ public class DbWriterTest : ViewUnitTestBase, IClassFixture<DbUnitTestSearchFixt
 
         //Ensure there's something of every type in there
         var pv = await writer.WriteAsync(GetNewPageView(), 1);
-        //var fv = await writer.WriteAsync(GetNewFileView(), 1);
+        var fv = await writer.WriteAsync(GetNewFileView(), 1);
         var mv = await writer.WriteAsync(GetNewModuleView(), modUid);
 
         //await Assert.ThrowsAnyAsync<InvalidOperationException>(async () => {
@@ -432,7 +433,7 @@ public class DbWriterTest : ViewUnitTestBase, IClassFixture<DbUnitTestSearchFixt
 
         //These should succeed
         await writer.DeleteAsync<ContentView>(pv.id, 1);
-        //await writer.DeleteAsync<ContentView>(fv.id, 1);
+        await writer.DeleteAsync<ContentView>(fv.id, 1);
         await writer.DeleteAsync<ContentView>(mv.id, modUid);
     }
 

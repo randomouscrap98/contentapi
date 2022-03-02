@@ -116,7 +116,7 @@ public class ViewUnitTestBase : UnitTestBase
             literalType = "image/png",
             meta = "{\"quantization\":10}",
             parentId = parentId,
-            hash = "babnana",
+            //hash = "babnana", //We specifically set a hash 
             values = new Dictionary<string, object> { { "one" , "thing" }, { "kek", "macaroni and things" } },
             keywords = new List<string> { "heck", "heck2", "dead" },
             permissions = permissions ?? new Dictionary<long, string> { { 0 , "CR" } },
