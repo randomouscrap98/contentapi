@@ -5,6 +5,7 @@ using System.Threading.Tasks;
 using contentapi.Main;
 using contentapi.Module;
 using contentapi.Search;
+using contentapi.Utilities;
 using contentapi.Views;
 using Microsoft.Data.Sqlite;
 using Microsoft.Extensions.Logging;
@@ -359,59 +360,153 @@ public class ModuleServiceTests : ViewUnitTestBase, IClassFixture<DbUnitTestSear
         Assert.Equal("something", result);
     }
 
-    [Fact]
-    public void ReadMessagesInstant()
+
+    //These are useful everywhere, perhaps move it somewhere else?
+    public const long SuperUserId = (int)UserVariations.Super + 1;
+    public const long NormalUserId = (int)UserVariations.Super;
+    public const long AllAccessContentId = (int)ContentVariations.AccessByAll + 1;
+    public const long SuperAccessContentId = (int)ContentVariations.AccessBySupers + 1;
+
+    [Theory]
+    [InlineData(NormalUserId, NormalUserId, NormalUserId, true)] 
+    [InlineData(SuperUserId, SuperUserId, SuperUserId, true)] 
+    [InlineData(NormalUserId, SuperUserId, SuperUserId, true)] 
+    [InlineData(SuperUserId, NormalUserId, NormalUserId, true)] 
+    [InlineData(NormalUserId, NormalUserId, 0, false)] 
+    [InlineData(SuperUserId, SuperUserId, 0, false)] 
+    [InlineData(NormalUserId, SuperUserId, 0, false)] 
+    [InlineData(NormalUserId, 0, NormalUserId, true)]
+    [InlineData(NormalUserId, 0, SuperUserId, true)]
+    [InlineData(NormalUserId, 0, 0, true)]
+    public async Task SendMessage_UserMessage(long sender, long receiver, long reader, bool exists)
     {
         var roomId = 1 + (int)ContentVariations.AccessByAll;
-        var uid = (int)UserVariations.Super;
         var modview = new ContentView() { name = "test", text = @"
-            function default(uid, data)
-                usermessage(uid, ""hey"")
-                usermessage(uid + 1, ""hey NO"")
+            subcommands = {[""""]={[""arguments""]={""first_int""}} }
+            function command_(uid, receiver)
+                usermessage(receiver, ""hey"")
+                -- usermessage(uid + 1, ""hey NO"")
             end",
             contentType = Db.InternalContentType.module
         };
-        //var realmod = await writer.WriteAsync(modview, 1 + (int)UserVariations.Super);
-        //var requester = new Requester() { userId = 9 };
         var mod = service.UpdateModule(modview);
-        var result = service.RunCommand("test", "whatever", uid, roomId); //requester);
-        var messages = searcher.SearchSingleType<MessageView>(uid, new SearchRequest()
-        {
+        var result = service.RunCommand("test", receiver.ToString(), sender, roomId); 
+        var messages = await searcher.SearchSingleType<MessageView>(reader, new SearchRequest()
+        { //This excludes the existing module messages because checking for specific module
             type = "message",
             fields = "*",
             query = "module = @module and contentId = @cid"
         }, new Dictionary<string, object> {
             { "cid", roomId },
             { "module", "test" }
-        }).Result;
-         //moduleMessageService.SearchAsync(new ModuleMessageViewSearch(), requester).Result; //service.ListenAsync(-1, requester, TimeSpan.FromSeconds(1), CancellationToken.None).Result;
-        Assert.Single(messages); //Because you shouldn't be able to see the OTHER user's messages
-        Assert.Equal("hey", messages.First().text);
-        Assert.Equal("test", messages.First().module);
-        //Assert.Equal(requester.userId, messages.First().receiveUserId);
-        //Assert.Equal(requester.userId, messages.First().sendUserId);
-        Assert.Equal(uid, messages.First().receiveUserId);
-        Assert.Equal(uid, messages.First().createUserId);
+        });
+
+        if(exists)
+        {
+            Assert.Single(messages);
+            Assert.Equal("hey", messages.First().text);
+            Assert.Equal("test", messages.First().module);
+            Assert.Equal(receiver, messages.First().receiveUserId);
+            Assert.Equal(sender, messages.First().createUserId);
+        }
+        else
+        {
+            Assert.Empty(messages);
+        }
     }
 
-    //[Fact]
-    //public void ReadRoomMessagesInstant()
-    //{
-    //    var modview = new ContentView() { name = "test", code = @"
-    //        function default(uid, data)
-    //            broadcastmessage(""hey"")
-    //            broadcastmessage(uid + 1, ""hey NO"")
-    //        end" 
-    //    };
-    //    var requester = new Requester() { userId = 9 };
-    //    var mod = service.UpdateModule(modview);
-    //    var result = service.RunCommand("test", "whatever", requester, );
-    //    var messages = moduleMessageService.SearchAsync(new ModuleMessageViewSearch(), requester).Result; //service.ListenAsync(-1, requester, TimeSpan.FromSeconds(1), CancellationToken.None).Result;
-    //    Assert.Single(messages);
-    //    Assert.Equal("hey", messages.First().message);
-    //    Assert.Equal("test", messages.First().module);
-    //    Assert.Equal(requester.userId, messages.First().receiveUserId);
-    //    Assert.Equal(requester.userId, messages.First().sendUserId);
-    //}
+    [Theory]
+    [InlineData(NormalUserId, NormalUserId, true)]
+    [InlineData(NormalUserId, SuperUserId, true)]
+    [InlineData(NormalUserId, 0, true)] //NOTE: change this if randos can't get module messages
+    [InlineData(SuperUserId, NormalUserId, true)]
+    [InlineData(SuperUserId, SuperUserId, true)]
+    [InlineData(SuperUserId, 0, true)]
+    public async Task SendMessage_BroadcastMessage(long sender, long reader, bool exists)
+    {
+        var roomId = 1 + (int)ContentVariations.AccessByAll;
+        var modview = new ContentView() { name = "test", text = @"
+            function default(uid, data)
+                broadcastmessage(""hey"")
+            end",
+            contentType = Db.InternalContentType.module
+        };
+        var mod = service.UpdateModule(modview);
+        var result = service.RunCommand("test", "whatever", sender, roomId); 
+        var messages = await searcher.SearchSingleType<MessageView>(reader, new SearchRequest()
+        { //This excludes the existing module messages because checking for specific module
+            type = "message",
+            fields = "*",
+            query = "module = @module and contentId = @cid"
+        }, new Dictionary<string, object> {
+            { "cid", roomId },
+            { "module", "test" }
+        });
 
+        if(exists)
+        {
+            Assert.Single(messages);
+            Assert.Equal("hey", messages.First().text);
+            Assert.Equal("test", messages.First().module);
+            Assert.Equal(0, messages.First().receiveUserId);
+            Assert.Equal(sender, messages.First().createUserId);
+        }
+        else
+        {
+            Assert.Empty(messages);
+        }
+    }
+
+    [Theory]
+    [InlineData(NormalUserId, AllAccessContentId, true)]
+    [InlineData(NormalUserId, SuperAccessContentId, false)]
+    [InlineData(NormalUserId, 0, false)]
+    [InlineData(NormalUserId, 9000, false)]
+    [InlineData(SuperUserId, AllAccessContentId, true)]
+    [InlineData(SuperUserId, SuperAccessContentId, true)]
+    [InlineData(SuperUserId, 0, false)]
+    [InlineData(SuperUserId, 9000, false)]
+    public async Task SendMessage_ParentAllowed(long sender, long contentId, bool allowed)
+    {
+        //var roomId = 1 + (int)ContentVariations.AccessByAll;
+        var modview = new ContentView() { name = "test", text = @"
+            function default(uid, data)
+                broadcastmessage(""hey"")
+            end",
+            contentType = Db.InternalContentType.module
+        };
+        var mod = service.UpdateModule(modview);
+
+        var action = new Action(() => {
+            var result = service.RunCommand("test", "whatever", sender, contentId); 
+        });
+
+        if(allowed)
+        {
+            action();
+
+            var messages = await searcher.SearchSingleType<MessageView>(sender, new SearchRequest()
+            { //This excludes the existing module messages because checking for specific module
+                type = "message",
+                fields = "*",
+                query = "module = @module and contentId = @cid"
+            }, new Dictionary<string, object> {
+                { "cid", contentId },
+                { "module", "test" }
+            });
+
+            Assert.Single(messages);
+            Assert.Equal("hey", messages.First().text);
+            Assert.Equal("test", messages.First().module);
+            Assert.Equal(0, messages.First().receiveUserId);
+            Assert.Equal(sender, messages.First().createUserId);
+        }
+        else
+        {
+            if(contentId == 0 || contentId >= 1000)
+                Assert.ThrowsAny<NotFoundException>(action);
+            else
+                Assert.ThrowsAny<ForbiddenException>(action);
+        }
+    }
 }

@@ -1330,6 +1330,14 @@ public class GenericSearchDbTests : UnitTestBase, IClassFixture<DbUnitTestSearch
         var all = await service.SearchSingleTypeUnrestricted<MessageView>(searchreq, values);
         var desiredMessages = all.Where(x => x.receiveUserId == 0 || x.receiveUserId == uid).ToList();
 
+        //Make sure the test itself makes sense
+        Assert.Contains(all, x => x.module != null); //Modules
+        Assert.Contains(all, x => x.module == null); //Non modules
+        Assert.Contains(all, x => x.receiveUserId == 0); //Broadcast
+        Assert.Contains(all, x => x.receiveUserId != 0); //Not broadcast
+        Assert.Contains(all, x => x.receiveUserId == uid); //Something for us
+        Assert.Contains(all, x => x.receiveUserId != 0 && x.receiveUserId != uid); //A private message NOT for us
+
         Assert.NotEqual(all.Count, desiredMessages.Count);
 
         var searchMessages = await service.SearchSingleType<MessageView>(uid, searchreq, values);
