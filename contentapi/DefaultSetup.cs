@@ -1,6 +1,7 @@
 using System.Collections.Concurrent;
 using contentapi.Live;
 using contentapi.Main;
+using contentapi.Module;
 using contentapi.Search;
 using contentapi.Security;
 using contentapi.Utilities;
@@ -53,6 +54,23 @@ public static class DefaultSetup
         services.AddSingleton<CacheCheckpointTrackerConfig>();
         services.AddSingleton<LiveEventQueueConfig>();
         services.AddSingleton<DbWriterConfig>();
+        services.AddSingleton<ModuleServiceConfig>();
+
+        services.AddSingleton<IModuleService, ModuleService>();
+        services.AddSingleton<ModuleMessageAdder>((p) => (m, r) =>
+        {
+            //This is EXCEPTIONALLY inefficient: a new database context (not to mention other services)
+            //will need to be created EVERY TIME someone sends a module message. That is awful...
+            //I mean it's not MUCH worse IF the module is only sending a single message... eh, if you
+            //notice bad cpu usage, go fix this.
+            var creator = p.CreateScope().ServiceProvider.GetService<IDbWriter>() ?? throw new InvalidOperationException("No db writer for modules!!");
+            creator.WriteAsync(m, r).Wait();
+            //var creator = p.CreateScope().ServiceProvider.GetService<Db.ContentApiDbConnection>();
+            //creator.Connection.Open();
+            //creator.Connection.InsertAsync()
+            //creator.WriteAsync
+            //creator.AddMessageAsync(m, r).Wait();
+        });
 
         //NOTE: do NOT just add all configs to the service! Only configs which have 
         //reasonable defaults! For instance: the EmailConfig should NOT be added!

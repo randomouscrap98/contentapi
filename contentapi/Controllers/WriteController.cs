@@ -21,8 +21,16 @@ public class WriteController : BaseController
     }
 
     [HttpPost("message")]
-    public Task<ActionResult<MessageView>> WriteMessageAsync([FromBody]MessageView message) =>
-        MatchExceptions(async () => await writer.WriteAsync(message, GetUserIdStrict())); //message used for activity and such
+    public Task<ActionResult<MessageView>> WriteMessageAsync([FromBody]MessageView message)
+    {
+        return MatchExceptions(async () => 
+        {
+            if(message.module != null)
+                throw new ForbiddenException("You cannot create module messages yourself!");
+
+            return await writer.WriteAsync(message, GetUserIdStrict());
+        }); //message used for activity and such
+    }
 
     [HttpPost("content")]
     public Task<ActionResult<ContentView>> WriteContentAsync([FromBody]ContentView page, [FromQuery]string? activityMessage) 

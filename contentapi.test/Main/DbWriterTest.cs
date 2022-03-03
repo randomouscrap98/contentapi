@@ -872,10 +872,9 @@ public class DbWriterTest : ViewUnitTestBase, IClassFixture<DbUnitTestSearchFixt
         var comment = GetNewCommentView(parentId);
         comment.module = "NOTALLOWED";
 
-        await Assert.ThrowsAnyAsync<ForbiddenException>(async () =>
-        {
-            await writer.WriteAsync(comment, uid);
-        });
+        //THIS SHOULD NOW BE ALLOWED!!
+        var newModMessage = await writer.WriteAsync(comment, uid);
+        Assert.Equal(comment.module, newModMessage.module);
 
         //Now go get some random-ass module message
         var modMessages = await searcher.SearchSingleTypeUnrestricted<MessageView>(new SearchRequest() {

@@ -140,8 +140,8 @@ public class DbWriter : IDbWriter
         {
             var cView = view as MessageView ?? throw new InvalidOperationException("Somehow, MessageView could not be cast to a MessageView");
 
-            if(cView.module != null)
-                throw new ForbiddenException($"You cannot create or modify module messages!");
+            //if(cView.module != null)
+            //    throw new ForbiddenException($"You cannot create or modify module messages!");
 
             //Modification actions
             if(action == UserAction.update || action == UserAction.delete)
@@ -152,7 +152,7 @@ public class DbWriter : IDbWriter
                     throw new ForbiddenException($"Only the original poster and supers can modify existing comments!");
 
                 if(exView.module != null)
-                    throw new ForbiddenException($"You cannot create or modify module messages!");
+                    throw new ForbiddenException($"You cannot modify module messages!");
             }
 
             //Create is special, because we need the parent create permission. We also check updates so users can't 
