@@ -129,6 +129,8 @@ public class QueryBuilder : IQueryBuilder
     public string ReceiveUserLimit(SearchRequestPlus request, string requester)
     {
         var typeInfo = typeService.GetTypeInfo<Message>();
+        //return $@"receiveUserId = 0 or ({requester} <> 0 and receiveUserId = {requester})";
+        //It is OK if requester is 0, because it'st he same check as the previous...
         return $@"receiveUserId = 0 or receiveUserId = {requester}";
     }
 

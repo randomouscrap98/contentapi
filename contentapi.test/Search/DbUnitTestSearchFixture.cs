@@ -294,6 +294,8 @@ public class DbUnitTestSearchFixture : DbUnitTestBase, IDisposable
                                 contentId = i + 1,
                                 createDate = DateTime.Now.AddDays(j - i),
                                 createUserId = 1 + (j % UserCount),
+                                // Every OTHER one has a receive user id
+                                receiveUserId = (j & 1) * (1 + ((j / 2) % UserCount)),
                                 text = $"modulemessage_{i}",
                             });
                         }

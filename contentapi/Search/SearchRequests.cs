@@ -10,7 +10,7 @@ public class SearchRequest
     public string fields {get;set;} = "";
     public string query {get;set;} = "";
     public string order {get;set;} = ""; //_desc for descending
-    public int limit {get;set;}
+    public int limit {get;set;} = -1;
     public int skip {get;set;}
 }
 

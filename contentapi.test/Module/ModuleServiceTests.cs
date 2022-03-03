@@ -189,7 +189,7 @@ public class ModuleServiceTests : ViewUnitTestBase, IClassFixture<DbUnitTestSear
 
     [Theory]
     [InlineData(0, "Moments ago")]
-    [InlineData(30, "30 seconds ago")]
+    [InlineData(30, "30 seconds ago", "31 seconds ago")]
     [InlineData(90, "1 minute ago")]
     [InlineData(601, "10 minutes ago")]
     [InlineData(7000, "1 hour ago")] //this is special, as it's close to 2 hours. We expect it (currently) to round down
@@ -199,7 +199,7 @@ public class ModuleServiceTests : ViewUnitTestBase, IClassFixture<DbUnitTestSear
     [InlineData(3600 * 24 * 32 + 50, "1 month ago")] //Assume months are at least 30 days
     [InlineData(3600 * 24 * 31 * 11 + 50, "11 months ago")] 
     [InlineData(3600 * 24 * 365 * 8 + 50, "8 years ago")]  //Ah boy, years
-    public void TimeSinceTimestamp(double subtractSeconds, string expected)
+    public void TimeSinceTimestamp(double subtractSeconds, string expected, string? altExpected = null)
     {
         //The subcommands variable exists but is the wrong type, the module system shouldn't care
         var modview = new ContentView() { name = "test", text = @"
@@ -210,7 +210,18 @@ public class ModuleServiceTests : ViewUnitTestBase, IClassFixture<DbUnitTestSear
         //userService.WriteAsync(new UserViewFull() { username = "dude1"}, new Requester() { system = true }).Wait();
         var mod = service.UpdateModule(modview);
         var result = service.RunCommand("test", DateTime.Now.Subtract(TimeSpan.FromSeconds(subtractSeconds)).ToString(), 8); //new Requester() {userId = 8});
-        Assert.Equal(expected, result);
+
+        try
+        {
+            Assert.Equal(expected, result);
+        }
+        catch
+        {
+            if(altExpected != null)
+                Assert.Equal(altExpected, result);
+            else
+                throw;
+        }
     }
 
     [Theory]

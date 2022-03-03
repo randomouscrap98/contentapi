@@ -185,7 +185,6 @@ public class GenericSearcher : IGenericSearch
         Dictionary<string, double>? timedic = null)
     {
         //Need to limit the 'limit'!
-        request.limit = Math.Min(request.limit > 0 ? request.limit : int.MaxValue, config.MaxIndividualResultSet);
         var reqplus = queryBuilder.FullParseRequest(request, parameterValues);
         logger.LogDebug($"Running SQL for {request.type}({request.name}): {reqplus.computedSql}");
 
@@ -323,6 +322,10 @@ public class GenericSearcher : IGenericSearch
         //to be absolutely restricted by permissions!
         foreach(var request in requests.requests)
         {
+            //This USED to be part of the single search thing, but I want unrestricted search to be
+            //truly unrestricted
+            request.limit = Math.Min(request.limit > 0 ? request.limit : int.MaxValue, config.MaxIndividualResultSet);
+
             //This is VERY important: limit content searches based on permissions!
             if(request.type == RequestType.content.ToString()) //queryBuilder.ContentRequestTypes.Select(x => x.ToString()).Contains(request.type))
             {

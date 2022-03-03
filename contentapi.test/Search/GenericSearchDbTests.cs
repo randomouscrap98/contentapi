@@ -1,4 +1,5 @@
 using System;
+using System.Collections.Generic;
 using System.Data;
 using System.Linq;
 using System.Text.RegularExpressions;
@@ -1266,5 +1267,79 @@ public class GenericSearchDbTests : UnitTestBase, IClassFixture<DbUnitTestSearch
             Assert.True(x.createUserId != 0);
             Assert.True(x.count > 0); //THIS IS TRUE because a groupby would not include groups that don't exist!
         });
+    }
+
+    //This test may seem superfluous, but it's important to me, because I need to ensure that
+    //comments and module messages make sense together and don't overlap, and that the system
+    //(which includes weird stuff like receiveUserId filtering) isn't doing something nuts
+    [Fact]
+    public async Task SearchUnrestricted_ModulesAndComments()
+    {
+        //We want to get both comments and module messages at once
+        var all = await service.SearchSingleTypeUnrestricted<MessageView>(new SearchRequest()
+        {
+            type = "message",
+            fields = "*"
+        });
+
+        //And then get module messages and comments separately
+        var comments = await service.SearchSingleTypeUnrestricted<MessageView>(new SearchRequest()
+        {
+            type = "message",
+            fields = "*",
+            query = "!null(module)"
+        });
+
+        var moduleMessages = await service.SearchSingleTypeUnrestricted<MessageView>(new SearchRequest()
+        {
+            type = "message",
+            fields = "*",
+            query = "!notnull(module)"
+        });
+
+        var allids = all.Select(x => x.id);
+        var commentids = comments.Select(x => x.id);
+        var modulemids = moduleMessages.Select(x => x.id);
+        Assert.Equal(all.Count, comments.Count + moduleMessages.Count);
+        Assert.Empty(commentids.Intersect(modulemids));
+        Assert.True(allids.Intersect(commentids).OrderBy(x => x).SequenceEqual(commentids.OrderBy(x => x)));
+        Assert.True(allids.Intersect(modulemids).OrderBy(x => x).SequenceEqual(modulemids.OrderBy(x => x)));
+    }
+
+    [Theory]
+    [InlineData((int)UserVariations.Super)]
+    [InlineData(1 + (int)UserVariations.Super)]
+    [InlineData(0)]
+    public async Task Search_ReceiveUserIds(long uid)
+    {
+        var searchreq = new SearchRequest()
+        {
+            type = "message",
+            fields = "*",
+            query = $"contentId IN @cids"
+        };
+        var values = new Dictionary<string, object> {
+            { "cids", new [] { 
+                1 + (int)ContentVariations.AccessByAll + (int)ContentVariations.Comments,
+                1 + (int)ContentVariations.AccessByAll + (int)ContentVariations.Keywords, //jUST ANY high non-comments variation will be mod messages
+            }} 
+        };
+        //NOTE: limitation of receiveUserId for comments is enforced by the controller. The writer
+        //doesn't care, you can write comments with a receiveUserid and they will function like
+        //private messages.
+        var all = await service.SearchSingleTypeUnrestricted<MessageView>(searchreq, values);
+        var desiredMessages = all.Where(x => x.receiveUserId == 0 || x.receiveUserId == uid).ToList();
+
+        Assert.NotEqual(all.Count, desiredMessages.Count);
+
+        var searchMessages = await service.SearchSingleType<MessageView>(uid, searchreq, values);
+
+        //Regardless of who's searching, I KNOW we don't have all the messages!!
+        Assert.NotEqual(all.Count, searchMessages.Count);
+        Assert.NotEqual(1000, searchMessages.Count); // I also want to make sure we're not auto-limited
+        Assert.Equal(desiredMessages.Count, searchMessages.Count);
+
+        //And finally, just make sure they were found exactly
+        Assert.True(desiredMessages.Select(x => x.id).OrderBy(x => x).SequenceEqual(searchMessages.Select(x => x.id).OrderBy(x => x)));
     }
 }
