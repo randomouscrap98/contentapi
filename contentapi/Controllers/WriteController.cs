@@ -28,6 +28,9 @@ public class WriteController : BaseController
             if(message.module != null)
                 throw new ForbiddenException("You cannot create module messages yourself!");
 
+            if(message.receiveUserId != 0)
+                throw new ForbiddenException("Setting receiveUserId in a comment is not supported right now!");
+
             return await writer.WriteAsync(message, GetUserIdStrict());
         }); //message used for activity and such
     }

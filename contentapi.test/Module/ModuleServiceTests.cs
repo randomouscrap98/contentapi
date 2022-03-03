@@ -10,11 +10,13 @@ using Xunit;
 
 namespace contentapi.test;
 
-public class ModuleServiceTests : DbUnitTestBase //ServiceConfigTestBase<ModuleService, ModuleServiceConfig>
+//public class ModuleServiceTests : DbUnitTestBase //ServiceConfigTestBase<ModuleService, ModuleServiceConfig>
+public class ModuleServiceTests : ViewUnitTestBase, IClassFixture<DbUnitTestSearchFixture>
 {
     protected ModuleServiceConfig config;
     protected IGenericSearch searcher;
     protected ModuleService service;
+    protected DbUnitTestSearchFixture fixture;
     //protected ModuleMessageViewService moduleMessageService;
     //protected UserViewService userService;
 
@@ -24,14 +26,15 @@ public class ModuleServiceTests : DbUnitTestBase //ServiceConfigTestBase<ModuleS
 
     protected SqliteConnection masterconnection;
 
-    public ModuleServiceTests()
+    public ModuleServiceTests(DbUnitTestSearchFixture fixture)
     {
+        this.fixture = fixture;
         config = new ModuleServiceConfig() {
             ModuleDataConnectionString = "Data Source=moduledata;Mode=Memory;Cache=Shared"
         };
 
-        searcher = GetService<IGenericSearch>();
-        service = new ModuleService(config, GetService<ILogger<ModuleService>>(), GetService<ModuleMessageAdder>(), searcher);
+        searcher = fixture.GetService<IGenericSearch>();
+        service = new ModuleService(config, fixture.GetService<ILogger<ModuleService>>(), fixture.GetService<ModuleMessageAdder>(), searcher);
         masterconnection = new SqliteConnection(config.ModuleDataConnectionString);
         masterconnection.Open();
 

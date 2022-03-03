@@ -545,8 +545,8 @@ public class DbWriter : IDbWriter
             logger.LogWarning($"Fields '{string.Join(",", unmapped)}' not mapped in comment!");
 
         //Always ensure these fields are like this for comments
-        comment.module = null;
-        comment.receiveUserId = 0;
+        //comment.module = null;
+        //comment.receiveUserId = 0;
 
         //Clear out fields and junk on delete
         if(work.action == UserAction.delete)

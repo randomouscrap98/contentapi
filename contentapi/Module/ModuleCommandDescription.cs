@@ -15,6 +15,6 @@ public class ModuleArgumentInfo
 public class ModuleSubcommandInfo
 {
     public List<ModuleArgumentInfo?> Arguments {get;set;} = new List<ModuleArgumentInfo?>();
-    public string Description {get;set;} = "";
-    public string FunctionName {get;set;} = "";
+    public string? Description {get;set;} = null;
+    public string? FunctionName {get;set;} = null;
 }

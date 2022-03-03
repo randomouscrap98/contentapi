@@ -13,7 +13,7 @@ public class LoadedModule
     //= new Dictionary<string, ModuleSubcommandInfo>();
     public Queue<string> debug {get;set;} = new Queue<string>();
 
-    public string currentFunction = "";
+    public string? currentFunction = null;
     public string? currentArgs = null;
     public long currentUserId = 0;
     public long currentParentId = 0;
