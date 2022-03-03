@@ -30,6 +30,7 @@ public class QueryBuilder : IQueryBuilder
         { "ingroup", new MacroDescription("v", "InGroupMacro", new List<RequestType> { RequestType.user }) },
         //WARN: permission limiting could be very dangerous! Make sure that no matter how the user uses
         //this, they still ONLY get the stuff they're allowed to read!
+        { "receiveuserlimit", new MacroDescription("v", "ReceiveUserLimit", new List<RequestType> { RequestType.message }) },
         { "permissionlimit", new MacroDescription("vfi", "PermissionLimit", new List<RequestType> {
             RequestType.activity,
             RequestType.content,
@@ -124,6 +125,12 @@ public class QueryBuilder : IQueryBuilder
     public string NullMacro(SearchRequestPlus request, string field) { return $"{field} IS NULL"; }
     public string UserTypeMacro(SearchRequestPlus request, string type) { return EnumMacroSearch<UserType>(type); }
     public string NotDeletedMacro(SearchRequestPlus request) { return "deleted = 0"; }
+
+    public string ReceiveUserLimit(SearchRequestPlus request, string requester)
+    {
+        var typeInfo = typeService.GetTypeInfo<Message>();
+        return $@"receiveUserId = 0 or receiveUserId = {requester}";
+    }
 
     //NOTE: Even though these might say "0" references, they're all used by the macro system!
     //For now, this is JUST read limit!!

@@ -1,3 +1,4 @@
+using System.Runtime.ExceptionServices;
 using contentapi.Live;
 using contentapi.Main;
 using contentapi.Module;
@@ -63,7 +64,13 @@ public static class DefaultSetup
             //I mean it's not MUCH worse IF the module is only sending a single message... eh, if you
             //notice bad cpu usage, go fix this.
             var creator = p.CreateScope().ServiceProvider.GetService<IDbWriter>() ?? throw new InvalidOperationException("No db writer for modules!!");
-            creator.WriteAsync(m, r).Wait();
+
+            try {
+                creator.WriteAsync(m, r).Wait();
+            }
+            catch(AggregateException ex) {
+                ExceptionDispatchInfo.Capture(ex.InnerException ?? ex).Throw();
+            }
         });
 
         //NOTE: do NOT just add all configs to the service! Only configs which have 

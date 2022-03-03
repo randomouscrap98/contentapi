@@ -159,12 +159,16 @@ public class DbWriter : IDbWriter
             //move a comment into an unusable room (if that ever gets allowed)
             if(action == UserAction.create || action == UserAction.update)
             {
-                //No orphaned comments, so the parent MUST exist! This is an easy check. You will get a "notfound" exception
-                var parent = await searcher.GetById<ContentView>(RequestType.content, cView.contentId, true);
+                //We DON'T perform this check ONLY IF the contentId is 0 AND the module is set
+                //if(!(cView.module != null && cView.contentId == 0))
+                //{
+                    //No orphaned comments, so the parent MUST exist! This is an easy check. You will get a "notfound" exception
+                    var parent = await searcher.GetById<ContentView>(RequestType.content, cView.contentId, true);
 
-                //Can't post in invalid locations! So we check ANY contentId passed in, even if it's invalid
-                if(!(await CanUserAsync(requester, action, cView.contentId)))
-                    throw new ForbiddenException($"User {requester.id} can't '{action}' comments in content {cView.contentId}!");
+                    //Can't post in invalid locations! So we check ANY contentId passed in, even if it's invalid
+                    if (!(await CanUserAsync(requester, action, cView.contentId)))
+                        throw new ForbiddenException($"User {requester.id} can't '{action}' comments in content {cView.contentId}!");
+                //}
             }
 
             if(cView.deleted)

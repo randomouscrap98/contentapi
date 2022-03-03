@@ -862,19 +862,28 @@ public class DbWriterTest : ViewUnitTestBase, IClassFixture<DbUnitTestSearchFixt
 
     //NOBODY CAN CREATE OR EDIT OR DELETE MODULE MESSAGES, regardless of where they go!
     [Theory]
-    [InlineData((int)UserVariations.Super, (int)ContentVariations.AccessByAll + 1)]
-    [InlineData(1 + (int)UserVariations.Super, (int)ContentVariations.AccessByAll + 1)] //THIS one is super
-    [InlineData((int)UserVariations.Super, (int)ContentVariations.AccessBySupers + 1)]
-    [InlineData(1 + (int)UserVariations.Super, (int)ContentVariations.AccessBySupers + 1)] //THIS one is super
-    public async Task WriteAsync_DisallowModuleMessage(long uid, long parentId) //, bool allowed)
+    [InlineData((int)UserVariations.Super, (int)ContentVariations.AccessByAll + 1, true)]
+    [InlineData(1 + (int)UserVariations.Super, (int)ContentVariations.AccessByAll + 1, true)] //THIS one is super
+    [InlineData((int)UserVariations.Super, (int)ContentVariations.AccessBySupers + 1, false)]
+    [InlineData(1 + (int)UserVariations.Super, (int)ContentVariations.AccessBySupers + 1, true)] //THIS one is super
+    public async Task WriteAsync_DisallowModuleMessage(long uid, long parentId, bool allowed)
     {
         //NOTE: DO NOT PROVIDE CREATEDATE! ALSO IT SHOULD BE UTC TIME!
-        var comment = GetNewCommentView(1 + (int)ContentVariations.AccessByAll);
+        var comment = GetNewCommentView(parentId); //1 + (int)ContentVariations.AccessByAll);
         comment.module = "NOTALLOWED";
+        comment.receiveUserId = 69;
 
         //THIS SHOULD NOW BE ALLOWED!!
-        var newModMessage = await writer.WriteAsync(comment, uid);
-        Assert.Equal(comment.module, newModMessage.module);
+        if(allowed)
+        {
+            var newModMessage = await writer.WriteAsync(comment, uid);
+            Assert.Equal(comment.module, newModMessage.module);
+            Assert.Equal(comment.receiveUserId, newModMessage.receiveUserId);
+        }
+        else
+        {
+            await Assert.ThrowsAnyAsync<ForbiddenException>(() => writer.WriteAsync(comment, uid));
+        }
 
         //Now go get some random-ass module message
         var modMessages = await searcher.SearchSingleTypeUnrestricted<MessageView>(new SearchRequest() {

@@ -179,8 +179,8 @@ public class ModuleService : IModuleService
             while(mod.debug.Count > config.MaxDebugSize)
                 mod.debug.Dequeue();
         });
-        mod.script.Globals["sendrawmessage"] = sendRawMessage;
-        mod.script.Globals["usermessage"] = new Action<long, string>((uid, message) => sendRawMessage(uid, 0, message));
+        //mod.script.Globals["sendrawmessage"] = sendRawMessage;
+        mod.script.Globals["usermessage"] = new Action<long, string>((uid, message) => sendRawMessage(uid, mod.currentParentId, message)); //sendRawMessage(uid, 0, message));
         mod.script.Globals["broadcastmessage"] = new Action<string>((message) => sendRawMessage(0, mod.currentParentId, message));
 
         var pluralize = new Func<int, string, string>((i, s) => s + (i == 1 ? "" : "s"));
@@ -262,8 +262,8 @@ public class ModuleService : IModuleService
         var result = new ModuleSubcommandInfo()
         {
             Arguments = new List<ModuleArgumentInfo?>(),
-            Description = subcommand.Get(config.DescriptionKey)?.String ?? "",
-            FunctionName = subcommand.Get(config.SubcommandFunctionKey)?.String ?? ""
+            Description = subcommand.Get(config.DescriptionKey)?.String,
+            FunctionName = subcommand.Get(config.SubcommandFunctionKey)?.String
         };
 
         //Find the args

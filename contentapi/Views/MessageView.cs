@@ -52,6 +52,6 @@ public class MessageView : IIdView
     public string? module { get; set; }
 
     [FieldSelect]
-    [Writable(WriteRule.Preserve, WriteRule.Preserve)] //Is this necessary?
+    [Writable(WriteRule.User, WriteRule.Preserve)] //Is this necessary?
     public long receiveUserId { get; set; } 
 }

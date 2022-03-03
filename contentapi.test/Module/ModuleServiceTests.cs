@@ -1,6 +1,8 @@
 using System;
+using System.Collections.Generic;
 using System.Linq;
 using System.Threading.Tasks;
+using contentapi.Main;
 using contentapi.Module;
 using contentapi.Search;
 using contentapi.Views;
@@ -15,6 +17,7 @@ public class ModuleServiceTests : ViewUnitTestBase, IClassFixture<DbUnitTestSear
 {
     protected ModuleServiceConfig config;
     protected IGenericSearch searcher;
+    protected IDbWriter writer;
     protected ModuleService service;
     protected DbUnitTestSearchFixture fixture;
     //protected ModuleMessageViewService moduleMessageService;
@@ -29,6 +32,8 @@ public class ModuleServiceTests : ViewUnitTestBase, IClassFixture<DbUnitTestSear
     public ModuleServiceTests(DbUnitTestSearchFixture fixture)
     {
         this.fixture = fixture;
+        this.writer = fixture.GetService<IDbWriter>();
+
         config = new ModuleServiceConfig() {
             ModuleDataConnectionString = "Data Source=moduledata;Mode=Memory;Cache=Shared"
         };
@@ -38,6 +43,7 @@ public class ModuleServiceTests : ViewUnitTestBase, IClassFixture<DbUnitTestSear
         masterconnection = new SqliteConnection(config.ModuleDataConnectionString);
         masterconnection.Open();
 
+        fixture.ResetDatabase();
         //moduleMessageService = CreateService<ModuleMessageViewService>();
         //userService = CreateService<UserViewService>();
     }
@@ -140,7 +146,7 @@ public class ModuleServiceTests : ViewUnitTestBase, IClassFixture<DbUnitTestSear
             end" 
         };
         var mod = service.UpdateModule(modview);
-        var result = service.RunCommand("test", "whatever stop", 8); //new Requester() {userId = 99});
+        var result = service.RunCommand("test", "whatever stop", 99); //new Requester() {userId = 99});
         Assert.Equal("Id: 99 Word1: whatever Word2: stop", result);
     }
 
@@ -161,7 +167,7 @@ public class ModuleServiceTests : ViewUnitTestBase, IClassFixture<DbUnitTestSear
         //userService.WriteAsync(new UserViewFull() { username = "dude2"}, new Requester() { system = true }).Wait();
         var mod = service.UpdateModule(modview);
         var result = service.RunCommand("test", $"wow {user1.id} {user2.id}(lol_username!)", 8);
-        Assert.Equal($"Id: 8 {user1.username}: {user1.id} {user2.username}: {user2.id}", result);
+        Assert.Equal($"Id: 8 User1: {user1.id} User2: {user2.id}", result);
     }
 
     [Fact]
@@ -345,28 +351,36 @@ public class ModuleServiceTests : ViewUnitTestBase, IClassFixture<DbUnitTestSear
     [Fact]
     public void ReadMessagesInstant()
     {
+        var roomId = 1 + (int)ContentVariations.AccessByAll;
+        var uid = (int)UserVariations.Super;
         var modview = new ContentView() { name = "test", text = @"
             function default(uid, data)
                 usermessage(uid, ""hey"")
                 usermessage(uid + 1, ""hey NO"")
-            end" 
+            end",
+            contentType = Db.InternalContentType.module
         };
+        //var realmod = await writer.WriteAsync(modview, 1 + (int)UserVariations.Super);
         //var requester = new Requester() { userId = 9 };
         var mod = service.UpdateModule(modview);
-        var result = service.RunCommand("test", "whatever", 9); //requester);
-        var messages = searcher.SearchSingleTypeUnrestricted<MessageView>(new SearchRequest()
+        var result = service.RunCommand("test", "whatever", uid, roomId); //requester);
+        var messages = searcher.SearchSingleType<MessageView>(uid, new SearchRequest()
         {
             type = "message",
-            query = "!notnull(module)"
+            fields = "*",
+            query = "module = @module and contentId = @cid"
+        }, new Dictionary<string, object> {
+            { "cid", roomId },
+            { "module", "test" }
         }).Result;
          //moduleMessageService.SearchAsync(new ModuleMessageViewSearch(), requester).Result; //service.ListenAsync(-1, requester, TimeSpan.FromSeconds(1), CancellationToken.None).Result;
-        Assert.Single(messages);
+        Assert.Single(messages); //Because you shouldn't be able to see the OTHER user's messages
         Assert.Equal("hey", messages.First().text);
         Assert.Equal("test", messages.First().module);
         //Assert.Equal(requester.userId, messages.First().receiveUserId);
         //Assert.Equal(requester.userId, messages.First().sendUserId);
-        Assert.Equal(9, messages.First().receiveUserId);
-        Assert.Equal(9, messages.First().createUserId);
+        Assert.Equal(uid, messages.First().receiveUserId);
+        Assert.Equal(uid, messages.First().createUserId);
     }
 
     //[Fact]
