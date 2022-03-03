@@ -17,5 +17,5 @@ public class LoadedModule
     public string? currentArgs = null;
     public long currentUserId = 0;
     public long currentParentId = 0;
-    public SqliteConnection dataConnection = new SqliteConnection(":memory:");
+    public SqliteConnection? dataConnection; // = new SqliteConnection(":memory:");
 }

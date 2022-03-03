@@ -116,7 +116,7 @@ public class ModuleService : IModuleService
 
         var getData = new Func<string, Dictionary<string, string?>>((k) =>
         {
-            var command = mod.dataConnection.CreateCommand();
+            var command = mod.dataConnection?.CreateCommand() ?? throw new InvalidOperationException("No connection to module storage!");
             command.CommandText = $"SELECT key, value FROM {module.name} WHERE key LIKE $key";
             command.Parameters.AddWithValue("$key", k);
             var result = new Dictionary<string, string?>();
@@ -156,7 +156,7 @@ public class ModuleService : IModuleService
         mod.script.Globals["getalldata"] = getData;
         mod.script.Globals["setdata"] = new Action<string, string>((k,v) =>
         {
-            var command = mod.dataConnection.CreateCommand();
+            var command = mod.dataConnection?.CreateCommand() ?? throw new InvalidOperationException("No connection to module storage!");
             var vtext = "$value";
 
             command.Parameters.AddWithValue("$key", k);

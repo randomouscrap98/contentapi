@@ -10,7 +10,7 @@ using Xunit;
 
 namespace contentapi.test;
 
-public class ModuleServiceTests : UnitTestBase //ServiceConfigTestBase<ModuleService, ModuleServiceConfig>
+public class ModuleServiceTests : DbUnitTestBase //ServiceConfigTestBase<ModuleService, ModuleServiceConfig>
 {
     protected ModuleServiceConfig config;
     protected IGenericSearch searcher;

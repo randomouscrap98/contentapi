@@ -47,8 +47,8 @@ public class MessageView : IIdView
     //Note: completely not writable
     public bool deleted {get;set;}
 
-    [FieldSelect] //Definitely not writable under any circumstances
-    [Writable(WriteRule.Preserve, WriteRule.Preserve)] //Is this necessary?
+    [FieldSelect] 
+    [Writable(WriteRule.User, WriteRule.Preserve)] //Is this necessary?
     public string? module { get; set; }
 
     [FieldSelect]

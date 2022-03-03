@@ -869,7 +869,7 @@ public class DbWriterTest : ViewUnitTestBase, IClassFixture<DbUnitTestSearchFixt
     public async Task WriteAsync_DisallowModuleMessage(long uid, long parentId) //, bool allowed)
     {
         //NOTE: DO NOT PROVIDE CREATEDATE! ALSO IT SHOULD BE UTC TIME!
-        var comment = GetNewCommentView(parentId);
+        var comment = GetNewCommentView(1 + (int)ContentVariations.AccessByAll);
         comment.module = "NOTALLOWED";
 
         //THIS SHOULD NOW BE ALLOWED!!

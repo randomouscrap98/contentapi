@@ -1,4 +1,3 @@
-using System.Collections.Concurrent;
 using contentapi.Live;
 using contentapi.Main;
 using contentapi.Module;
@@ -65,11 +64,6 @@ public static class DefaultSetup
             //notice bad cpu usage, go fix this.
             var creator = p.CreateScope().ServiceProvider.GetService<IDbWriter>() ?? throw new InvalidOperationException("No db writer for modules!!");
             creator.WriteAsync(m, r).Wait();
-            //var creator = p.CreateScope().ServiceProvider.GetService<Db.ContentApiDbConnection>();
-            //creator.Connection.Open();
-            //creator.Connection.InsertAsync()
-            //creator.WriteAsync
-            //creator.AddMessageAsync(m, r).Wait();
         });
 
         //NOTE: do NOT just add all configs to the service! Only configs which have 
