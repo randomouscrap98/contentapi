@@ -50,24 +50,30 @@ public class UserController : BaseController
     }
 
     [HttpPost("login")]
-    public async Task<ActionResult<string>> Login([FromBody]UserLogin loginInfo)
+    public Task<ActionResult<string>> Login([FromBody]UserLogin loginInfo)
     {
-        if(string.IsNullOrWhiteSpace(loginInfo.password))
-            return BadRequest("Must provide password field!");
-        if(string.IsNullOrWhiteSpace(loginInfo.username) && string.IsNullOrWhiteSpace(loginInfo.email))
-           return BadRequest("Must provide either username or email!");
-
-        TimeSpan? expireOverride = null;
-
-        if(loginInfo.expireSeconds > 0)
-            expireOverride = TimeSpan.FromSeconds(loginInfo.expireSeconds);
-        
-        return await MatchExceptions(() =>
+        return MatchExceptions(() =>
         {
+            if(string.IsNullOrWhiteSpace(loginInfo.password))
+                throw new RequestException("Must provide password field!");
+            if(string.IsNullOrWhiteSpace(loginInfo.username) && string.IsNullOrWhiteSpace(loginInfo.email))
+                throw new RequestException("Must provide either username or email!");
+
+            TimeSpan? expireOverride = null;
+
+            if(loginInfo.expireSeconds > 0)
+                expireOverride = TimeSpan.FromSeconds(loginInfo.expireSeconds);
+        
             if(!string.IsNullOrWhiteSpace(loginInfo.username))
+            {
+                RateLimit(RateLogin, loginInfo.username);
                 return userService.LoginUsernameAsync(loginInfo.username, loginInfo.password, expireOverride);
+            }
             else
+            {
+                RateLimit(RateLogin, loginInfo.email);
                 return userService.LoginEmailAsync(loginInfo.email, loginInfo.password, expireOverride);
+            }
         });
     }
 

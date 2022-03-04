@@ -42,12 +42,6 @@ public class RateLimitConfig
         }
         return _parsedRates!;
     }}
-
-    //{
-    //    //Means 5 allowed per 5 seconds. The 6th one will be rejected
-    //    {"write", "5,5"},
-    //    {"login","1,2"}
-    //};
 }
 
 [ApiController]
@@ -87,15 +81,18 @@ public class BaseController : Controller
 
             if(ex is ForbiddenException)
                 return new ObjectResult($"Forbidden error: {ex.Message}") { StatusCode = 403 }; //Forbidden
+
+            if(ex is RateLimitException)
+                return new ObjectResult($"Rate limited: {ex.Message}") { StatusCode = 429 };
             
             //Just rethrow if we couldn't figure out what it was.
             throw;
         }
     }
 
-    protected void RateLimit(string thing)
+    protected void RateLimit(string thing, string? id = null)
     {
-        var id = GetUserId()?.ToString() ?? "0";
+        id = id ?? GetUserId()?.ToString() ?? "0";
         var key = $"{thing}_{id}";
 
         if(!services.rateConfig.ParsedRates.ContainsKey(thing))
@@ -104,7 +101,9 @@ public class BaseController : Controller
         var limit = services.rateConfig.ParsedRates[thing];
         services.tracker.AddEvent(key);
 
-        if(services.tracker.CountEvents(key, limit.Item2) > limit.Item1)
-            throw new RateLimitException($"Rate limited: {limit.Item1} requests per {limit.Item2.TotalSeconds} seconds");
+        var count = services.tracker.CountEvents(key, limit.Item2);
+
+        if(count > limit.Item1)
+            throw new RateLimitException($"{limit.Item1} requests per {limit.Item2.TotalSeconds} seconds, you're at {count}");
     }
 }
