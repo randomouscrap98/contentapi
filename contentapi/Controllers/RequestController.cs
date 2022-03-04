@@ -22,13 +22,10 @@ public class RequestResponseProfile : Profile
 
 public class RequestController : BaseController
 {
-    protected IGenericSearch searcher;
     protected IQueryBuilder queryBuilder;
 
-    public RequestController(BaseControllerServices services, IGenericSearch search,
-        IQueryBuilder queryBuilder) : base(services)
+    public RequestController(BaseControllerServices services, IQueryBuilder queryBuilder) : base(services)
     {
-        this.searcher = search;
         this.queryBuilder = queryBuilder;
     }
 
@@ -40,7 +37,7 @@ public class RequestController : BaseController
 
         return MatchExceptions(async () =>
         {
-            var data = await searcher.Search(search, GetUserId() ?? 0);
+            var data = await services.searcher.Search(search, GetUserId() ?? 0);
             var result = services.mapper.Map<RequestResponse>(data);
             result.requestUser = GetUserId();
             sw.Stop();

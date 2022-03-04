@@ -30,18 +30,13 @@ public class FileControllerConfig
 public class FileController : BaseController
 {
    protected FileControllerConfig config;
-   protected IDbWriter writer;
-   protected IGenericSearch searcher;
 
    protected static readonly SemaphoreSlim filelock = new SemaphoreSlim(1, 1);
 
-   public FileController(BaseControllerServices services, FileControllerConfig config,
-      IDbWriter writer, IGenericSearch searcher)
+   public FileController(BaseControllerServices services, FileControllerConfig config)
          : base(services)
    {
       this.config = config;
-      this.writer = writer;
-      this.searcher = searcher;
    }
 
    protected string GetUploadPath(string hash, GetFileModify? modify = null)
@@ -116,6 +111,8 @@ public class FileController : BaseController
       
       return await MatchExceptions(async () =>
       {
+         RateLimit(RateFile);
+
          var requester = GetUserIdStrict();
 
          var newView = new ContentView() { 
@@ -200,7 +197,7 @@ public class FileController : BaseController
             newView.meta = JsonConvert.SerializeObject(meta);
 
             //This is QUITE dangerous: a file could be created in the api first and THEN the file write fails!
-            newView = await writer.WriteAsync(newView, requester);
+            newView = await services.writer.WriteAsync(newView, requester);
             string finalLocation = "";
 
             try
@@ -211,7 +208,7 @@ public class FileController : BaseController
             catch(Exception ex)
             {
                services.logger.LogError($"FILE WRITE '{finalLocation}' FAILED: {ex}");
-               await writer.DeleteAsync<ContentView>(newView.id, requester);
+               await services.writer.DeleteAsync<ContentView>(newView.id, requester);
             }
          }
          finally
@@ -348,7 +345,7 @@ public class FileController : BaseController
       else
       {
          //Doesn't matter who the requester is, ANY file with this hash is fine... what about deleted though?
-         fileData = (await searcher.GetByField<ContentView>(RequestType.content, "hash", hash)).FirstOrDefault();
+         fileData = (await services.searcher.GetByField<ContentView>(RequestType.content, "hash", hash)).FirstOrDefault();
       }
 
       if (fileData == null || fileData.deleted || fileData.contentType != Db.InternalContentType.file)

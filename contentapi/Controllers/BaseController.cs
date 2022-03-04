@@ -1,4 +1,5 @@
 using AutoMapper;
+using contentapi.Main;
 using contentapi.Search;
 using contentapi.Security;
 using contentapi.Utilities;
@@ -14,14 +15,20 @@ public class BaseControllerServices
     public IEventTracker tracker;
     public RateLimitConfig rateConfig;
 
+    public IDbWriter writer;
+    public IGenericSearch searcher;
+
     public BaseControllerServices(ILogger<BaseController> logger, IAuthTokenService<long> authService, 
-        IMapper mapper, IEventTracker tracker, RateLimitConfig rateConfig)
+        IMapper mapper, IEventTracker tracker, RateLimitConfig rateConfig, IDbWriter writer,
+        IGenericSearch search)
     {
         this.logger = logger;
         this.authService = authService;
         this.mapper = mapper;
         this.tracker = tracker;
         this.rateConfig = rateConfig;
+        this.writer = writer;
+        this.searcher = search;
     }
 }
 
@@ -57,6 +64,8 @@ public class BaseController : Controller
 
     public const string RateWrite = "write";
     public const string RateLogin = "login";
+    public const string RateInteract = "interact";
+    public const string RateFile = "file";
 
     protected long? GetUserId() => services.authService.GetUserId(User.Claims);
     protected bool IsUserLoggedIn() => GetUserId() != null;

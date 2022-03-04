@@ -10,14 +10,7 @@ namespace contentapi.Controllers;
 [Authorize()]
 public class DeleteController : BaseController
 {
-    protected IDbWriter writer;
-    protected IGenericSearch searcher;
-
-    public DeleteController(BaseControllerServices services, IGenericSearch search, IDbWriter writer) : base(services)
-    {
-        this.searcher = search;
-        this.writer = writer;
-    }
+    public DeleteController(BaseControllerServices services) : base(services) { }
 
     [HttpPost("message/{id}")]
     public Task<ActionResult<MessageView>> DeleteCommentAsync([FromRoute]long id)
@@ -25,7 +18,7 @@ public class DeleteController : BaseController
         return MatchExceptions(async () => 
         {
             RateLimit(RateWrite);
-            return await writer.DeleteAsync<MessageView>(id, GetUserIdStrict()); //message used for activity and such
+            return await services.writer.DeleteAsync<MessageView>(id, GetUserIdStrict()); //message used for activity and such
         });
     }
 
@@ -35,7 +28,7 @@ public class DeleteController : BaseController
         return MatchExceptions(async () => 
         {
             RateLimit(RateWrite);
-            return await writer.DeleteAsync<ContentView>(id, GetUserIdStrict(), activityMessage); //message used for activity and such
+            return await services.writer.DeleteAsync<ContentView>(id, GetUserIdStrict(), activityMessage); //message used for activity and such
         });
     }
 
@@ -46,7 +39,7 @@ public class DeleteController : BaseController
         return MatchExceptions(async () => 
         {
             RateLimit(RateWrite);
-            return await writer.DeleteAsync<UserView>(id, GetUserIdStrict()); //message used for activity and such
+            return await services.writer.DeleteAsync<UserView>(id, GetUserIdStrict()); //message used for activity and such
         });
     }
 
@@ -55,8 +48,8 @@ public class DeleteController : BaseController
     {
         return MatchExceptions(async () => 
         {
-            RateLimit(RateWrite);
-            return await writer.DeleteAsync<WatchView>(id, GetUserIdStrict()); //message used for activity and such
+            RateLimit(RateInteract); //watches are different I guess?
+            return await services.writer.DeleteAsync<WatchView>(id, GetUserIdStrict()); //message used for activity and such
         });
     }
 }
