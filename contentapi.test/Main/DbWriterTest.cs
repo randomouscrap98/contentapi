@@ -1124,6 +1124,7 @@ public class DbWriterTest : ViewUnitTestBase, IClassFixture<DbUnitTestSearchFixt
         if(allowed)
         {
             await writeWatch();
+            Assert.True(writtenWatch.id > 0);
             Assert.Equal(content, writtenWatch.contentId);
             Assert.Equal(uid, writtenWatch.userId);
             AssertWatchEventMatches(writtenWatch, uid, UserAction.create);
@@ -1136,5 +1137,124 @@ public class DbWriterTest : ViewUnitTestBase, IClassFixture<DbUnitTestSearchFixt
         {
             await Assert.ThrowsAnyAsync<ForbiddenException>(writeWatch);
         }
+    }
+
+    [Fact]
+    public async Task WriteAsync_WatchEdit()
+    {
+        //Also test to ensure the watch view auto-sets fields for us
+        var normalWatch = new WatchView() { contentId = AllAccessContentId };
+        var superWatch = new WatchView() { contentId = AllAccessContentId };
+
+        normalWatch = await writer.WriteAsync(new WatchView() { contentId = AllAccessContentId }, NormalUserId);
+        superWatch = await writer.WriteAsync(new WatchView() { contentId = AllAccessContentId }, SuperUserId);
+
+        //Both should be able to edit themselves, but not edit the other's
+        normalWatch.lastActivityId = 555;
+        superWatch.lastActivityId = 999;
+
+        var normalWatchUpdated = await writer.WriteAsync(normalWatch, NormalUserId);
+        var superWatchUpdated = await writer.WriteAsync(superWatch, SuperUserId);
+
+        Assert.Equal(normalWatch.lastActivityId, normalWatchUpdated.lastActivityId);
+        Assert.Equal(superWatch.lastActivityId, superWatchUpdated.lastActivityId);
+        Assert.Equal(normalWatch.id, normalWatchUpdated.id);
+        Assert.Equal(superWatch.id, superWatchUpdated.id);
+
+        await Assert.ThrowsAnyAsync<ForbiddenException>(() => writer.WriteAsync(normalWatchUpdated, SuperUserId));
+        await Assert.ThrowsAnyAsync<ForbiddenException>(() => writer.WriteAsync(superWatchUpdated, NormalUserId));
+
+        //Neither should be able to delete the others too
+        await Assert.ThrowsAnyAsync<ForbiddenException>(() => writer.DeleteAsync<WatchView>(normalWatchUpdated.id, SuperUserId));
+        await Assert.ThrowsAnyAsync<ForbiddenException>(() => writer.DeleteAsync<WatchView>(superWatchUpdated.id, NormalUserId));
+
+        //But these should be fine
+        var normalWatchDeleted = writer.DeleteAsync<WatchView>(normalWatchUpdated.id, NormalUserId);
+        var superWatchDeleted = writer.DeleteAsync<WatchView>(superWatchUpdated.id, SuperUserId);
+    }
+
+    //A bad bug where permissions would take on whoever was WRITING, very bad!
+    [Fact]
+    public async Task WriteAsync_Regression_CreateContent_PermissionsSelf()
+    {
+        //Go create simple content as me
+        var content = GetNewPageView();
+        content.permissions.Clear();
+
+        var writtenContent = await writer.WriteAsync(content, NormalUserId);
+
+        Assert.Single(writtenContent.permissions);
+        Assert.Contains(NormalUserId, writtenContent.permissions.Keys);
+    }
+
+    //Ensure that writing as a different person doesn't suddenly make permissions wonky
+    [Fact]
+    public async Task WriteAsync_Regression_ClearPermissions()
+    {
+        var content = GetNewPageView();
+        content.permissions.Clear();
+        content.permissions[0] = "CRUD";
+
+        var writtenContent = await writer.WriteAsync(content, NormalUserId);
+
+        Assert.Contains(0, writtenContent.permissions.Keys);
+        Assert.Contains(NormalUserId, writtenContent.permissions.Keys);
+
+        //Now write it again as someone else
+        writtenContent.permissions.Clear();
+
+        writtenContent = await writer.WriteAsync(writtenContent, SuperUserId);
+
+        //The only permissions should be the ORIGINAL creator, NOT the super user!
+        Assert.Single(writtenContent.permissions);
+        Assert.Contains(NormalUserId, writtenContent.permissions.Keys);
+    }
+
+    [Fact]
+    public async Task WatchView_CantRetrievePrivate()
+    {
+        //go find a currently not-private page that isn't made by our normal user
+        var readableContent = await searcher.SearchSingleType<ContentView>(NormalUserId, new SearchRequest()
+        {
+            type = "content",
+            fields = "*",
+            query = "createUserId <> @me"
+        }, new Dictionary<string, object> {
+            { "me", NormalUserId }
+        });
+
+        Assert.NotEmpty(readableContent);
+
+        var content = readableContent.First();
+        var watch = new WatchView() { contentId = content.id };
+        var writtenWatch = await writer.WriteAsync(watch, NormalUserId);
+
+        var searchWatches = new Func<Task<List<WatchView>>>(() => searcher.SearchSingleType<WatchView>(NormalUserId, new SearchRequest()
+        {
+            type = "watch",
+            fields = "*",
+            query = "contentId = @cid"
+        }, new Dictionary<string, object> {
+            { "cid", content.id }
+        }));
+
+        //OK, now go get our watches. There should be ONE
+        var watches = await searchWatches();
+
+        Assert.Single(watches);
+        Assert.Equal(NormalUserId, watches.First().userId);
+        Assert.Equal(content.id, watches.First().contentId);
+
+        //Now, go make that page private. Funny enough, we can still write to it
+        //because the original permissions were fine.
+        content.permissions.Clear();
+        var newContent = await writer.WriteAsync(content, NormalUserId);
+        Assert.Single(newContent.permissions); //Should be the create user id
+        Assert.Contains(newContent.createUserId, newContent.permissions.Keys);
+
+        //OK, do the previous search again. Should be empty
+        watches = await searchWatches();
+
+        Assert.Empty(watches);
     }
 }

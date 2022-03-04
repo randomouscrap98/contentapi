@@ -209,6 +209,7 @@ public class DbWriter : IDbWriter
         else if(view is WatchView)
         {
             var wView = (view as WatchView)!;
+            var exView = existing as WatchView;
 
             //Watch is fairly simple, because the fields do most of the work
             if(action == UserAction.create)
@@ -218,6 +219,11 @@ public class DbWriter : IDbWriter
 
                 if(content == null || !(await CanUserAsync(requester, UserAction.read, content.id)))
                     throw new ForbiddenException($"You don't have access to content {wView.contentId}");
+            }
+            else if(action == UserAction.update || action == UserAction.delete)
+            {
+                if(exView?.userId != requester.id)
+                    throw new ForbiddenException("You can only modify your own watches!");
             }
         }
         else 
@@ -474,9 +480,11 @@ public class DbWriter : IDbWriter
             //Don't give out any information
             content.contentType = InternalContentType.none;
         }
-        else
-        {
+        else if(work.action == UserAction.create) {
             work.view.permissions[work.requester.id] = "CRUD"; //FORCE permissions to include full access for creator all the time
+        }
+        else if(work.action == UserAction.update) {
+            work.view.permissions[work.existing!.createUserId] = "CRUD"; //FORCE permissions to include full access for creator all the time
         }
 
         //Very particular checks. Some fields are marked as writable, but some types don't allow that
