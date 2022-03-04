@@ -68,7 +68,7 @@ public class WriteController : BaseController
     {
         return MatchExceptions(async () => 
         {
-            RateLimit(RateWrite);
+            RateLimit(RateInteract); //A different rate for watches
             return await writer.WriteAsync(watch, GetUserIdStrict()); //message used for activity and such
         });
     }

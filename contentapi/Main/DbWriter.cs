@@ -219,6 +219,20 @@ public class DbWriter : IDbWriter
 
                 if(content == null || !(await CanUserAsync(requester, UserAction.read, content.id)))
                     throw new ForbiddenException($"You don't have access to content {wView.contentId}");
+
+                //Also, ensure we're not adding a second watch for the same content
+                var dupeWatch = await searcher.SearchSingleTypeUnrestricted<WatchView>(new SearchRequest()
+                {
+                    type = "watch",
+                    fields = "*",
+                    query = "userId = @me and contentId = @cid"
+                }, new Dictionary<string, object> {
+                    { "me", requester.id },
+                    { "cid", wView.contentId }
+                });
+
+                if(dupeWatch.Count > 0)
+                    throw new RequestException($"Duplicate watch for content {wView.contentId}");
             }
             else if(action == UserAction.update || action == UserAction.delete)
             {

@@ -19,23 +19,22 @@ public class ShortcutsService
 
     public async Task ClearNotificationsAsync(WatchView watch, long uid)
     {
-        //Need the latest values for comment and activity. Don't care if message is a module
-        //message, the id will still be valid for tracking purposes
-        var messages = await search.SearchSingleType<MessageView>(uid, new SearchRequest()
+        var getRequest = new Func<string, SearchRequest>(t => new SearchRequest()
         {
-            type = "message",
-            fields = "id",
+            type = t,
+            fields = "id,contentId",
+            query = "contentId = @cid",
             order = "id_desc",
             limit = 1
+        });
+        var getValues = new Func<Dictionary<string, object>>(() => new Dictionary<string, object> {
+            { "cid", watch.contentId }
         });
 
-        var activity = await search.SearchSingleType<ActivityView>(uid, new SearchRequest()
-        {
-            type = "activity",
-            fields = "id",
-            order = "id_desc",
-            limit = 1
-        });
+        //Need the latest values for comment and activity. Don't care if message is a module
+        //message, the id will still be valid for tracking purposes
+        var messages = await search.SearchSingleType<MessageView>(uid, getRequest("message"), getValues());
+        var activity = await search.SearchSingleType<ActivityView>(uid, getRequest("activity"), getValues());
 
         if (messages.Count > 0)
             watch.lastCommentId = messages.First().id;
@@ -48,7 +47,7 @@ public class ShortcutsService
         var watches = await search.SearchSingleType<WatchView>(uid, new SearchRequest()
         {
             type = "watch",
-            fields = "id, contentId",
+            fields = $"~{nameof(WatchView.activityNotifications)},{nameof(WatchView.commentNotifications)}", 
             query = "userId = @me and contentId = @cid"
         }, new Dictionary<string, object> {
             { "me", uid },

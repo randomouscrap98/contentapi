@@ -1252,4 +1252,32 @@ public class DbWriterTest : ViewUnitTestBase, IClassFixture<DbUnitTestSearchFixt
 
         Assert.Empty(watches);
     }
+
+    [Fact]
+    public async Task WriteAsync_WatchDuplicate()
+    {
+        //Also test to ensure the watch view auto-sets fields for us
+        var watch = new WatchView()
+        {
+            contentId = AllAccessContentId,
+        };
+
+        var writtenWatch = await writer.WriteAsync(watch, NormalUserId);
+        Assert.Equal(AllAccessContentId, writtenWatch.contentId);
+        Assert.Equal(NormalUserId, writtenWatch.userId);
+
+        //Now write another to the same content
+        var watch2 = new WatchView()
+        {
+            contentId = AllAccessContentId,
+        };
+
+        await Assert.ThrowsAnyAsync<RequestException>(() => writer.WriteAsync(watch2, NormalUserId));
+
+        //BUT we can write it as a super 
+        writtenWatch = await writer.WriteAsync(watch2, SuperUserId);
+        Assert.Equal(AllAccessContentId, writtenWatch.contentId);
+        Assert.Equal(SuperUserId, writtenWatch.userId);
+    }
+
 }
