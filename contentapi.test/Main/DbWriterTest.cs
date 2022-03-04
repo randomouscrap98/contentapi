@@ -1092,11 +1092,6 @@ public class DbWriterTest : ViewUnitTestBase, IClassFixture<DbUnitTestSearchFixt
         await Assert.ThrowsAnyAsync<InvalidOperationException>(() => writer.WriteAsync(failPage, uid));
     }
 
-    public const long SuperUserId = 1 + (int)UserVariations.Super;
-    public const long NormalUserId = (int)UserVariations.Super;
-    public const long AllAccessContentId = 1 + (int)ContentVariations.AccessByAll;
-    public const long SuperAccessContentId = 1 + (int)ContentVariations.AccessBySupers;
-
     [Theory]
     [InlineData(NormalUserId, 0, false)]
     [InlineData(NormalUserId, 9000, false)]

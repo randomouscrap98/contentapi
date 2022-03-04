@@ -17,6 +17,11 @@ namespace contentapi.test;
 
 public class ViewUnitTestBase : UnitTestBase
 {
+    protected const long SuperUserId = 1 + (int)UserVariations.Super;
+    protected const long NormalUserId = (int)UserVariations.Super;
+    protected const long AllAccessContentId = 1 + (int)ContentVariations.AccessByAll;
+    protected const long SuperAccessContentId = 1 + (int)ContentVariations.AccessBySupers;
+
     public ViewUnitTestBase()
     {
 

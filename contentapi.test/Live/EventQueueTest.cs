@@ -329,4 +329,37 @@ public class EventQueueTest : ViewUnitTestBase, IClassFixture<DbUnitTestSearchFi
             Assert.True(ex is OperationCanceledException || ex is TaskCanceledException, "LISTEN TASK DID NOT GET CANCELLED WHEN ASKED!");
         }
     }
+
+    [Theory]
+    [InlineData(NormalUserId, NormalUserId, true)]
+    [InlineData(NormalUserId, SuperUserId, false)]
+    [InlineData(NormalUserId, 0, false)]
+    [InlineData(SuperUserId, SuperUserId, true)]
+    [InlineData(SuperUserId, NormalUserId, false)]
+    [InlineData(SuperUserId, 0, false)]
+    public async Task ListenAsync_WatchPrivacy(long writerId, long listenerId, bool allowed)
+    {
+        //Write some trash content that anyone can read so our listener completes instantly
+        var content = GetNewPageView();
+        content.permissions[0] = "CRUD";
+        var writtenContent = await writer.WriteAsync(content, NormalUserId);
+
+        //Ensure only the user themselves are getting the watch data
+        var watch = await writer.WriteAsync(new WatchView() { contentId = AllAccessContentId }, writerId);
+
+        //See what events we can get. Use a fake user view because nothing in there matters
+        var events = await queue.ListenAsync(new UserView() { id = listenerId, super = listenerId == SuperUserId }, -1, safetySource.Token);
+
+        if(allowed)
+        {
+            Assert.Contains(events.events, x => x.type == EventType.watch && x.refId == watch.id);
+
+            //Since we're here anyway, might as well ensure the content is pulled
+            Assert.Contains(events.data[EventType.watch]["content"], x => (long)x["id"] == watch.contentId);
+        }
+        else
+        {
+            Assert.DoesNotContain(events.events, x => x.type == EventType.watch && x.refId == watch.id);
+        }
+    }
 }

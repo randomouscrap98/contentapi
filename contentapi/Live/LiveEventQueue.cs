@@ -166,10 +166,6 @@ public class LiveEventQueue : ILiveEventQueue
         {
             dataCache.RemoveAll(x => (DateTime.Now - x.createDate) > config.DataCacheExpire);
             dataCache.Add(cacheItem);
-            //var removeKeys = dataCache.Where(x => (DateTime.Now - x.Value.createDate) > config.DataCacheExpire);
-
-            //foreach(var removeKey in removeKeys)
-            //    dataCache.Remove(removeKey.Key);
         }
 
         //THEN we can update the checkpoint, as that will wake up all the listeners. NOTE: sort of bad design; this has a side effect
@@ -268,6 +264,7 @@ public class LiveEventQueue : ILiveEventQueue
         else if(first.type == EventType.watch) 
         {
             requests.requests.Add(basicRequest(RequestType.watch.ToString())); 
+            requests.requests.Add(contentRequest("id in @watch.contentId"));
         }
         else
         {

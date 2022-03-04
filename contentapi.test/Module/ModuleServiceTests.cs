@@ -361,12 +361,6 @@ public class ModuleServiceTests : ViewUnitTestBase, IClassFixture<DbUnitTestSear
     }
 
 
-    //These are useful everywhere, perhaps move it somewhere else?
-    public const long SuperUserId = (int)UserVariations.Super + 1;
-    public const long NormalUserId = (int)UserVariations.Super;
-    public const long AllAccessContentId = (int)ContentVariations.AccessByAll + 1;
-    public const long SuperAccessContentId = (int)ContentVariations.AccessBySupers + 1;
-
     [Theory]
     [InlineData(NormalUserId, NormalUserId, NormalUserId, true)] 
     [InlineData(SuperUserId, SuperUserId, SuperUserId, true)] 
