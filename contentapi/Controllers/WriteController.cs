@@ -25,6 +25,7 @@ public class WriteController : BaseController
     {
         return MatchExceptions(async () => 
         {
+            RateLimit(RateWrite);
             if(message.module != null)
                 throw new ForbiddenException("You cannot create module messages yourself!");
 
@@ -40,6 +41,7 @@ public class WriteController : BaseController
     {
         return MatchExceptions(async () => 
         {
+            RateLimit(RateWrite);
             //THIS IS AWFUL! WHAT TO DO ABOUT THIS??? Or is it fine: files ARE written by the controllers after all...
             //so maybe it makes sense for the controllers to control this aspect as well
             if(page.id == 0 && page.contentType == Db.InternalContentType.file)
@@ -52,10 +54,22 @@ public class WriteController : BaseController
     //This is SLIGHTLY special in that user writes are mostly for self updates... but might be used for new groups as well? You also
     //can't update PRIVATE data through this endpoint
     [HttpPost("user")]
-    public Task<ActionResult<UserView>> WriteUserAsync([FromBody]UserView user) =>
-        MatchExceptions(async () => await writer.WriteAsync(user, GetUserIdStrict())); //message used for activity and such
+    public Task<ActionResult<UserView>> WriteUserAsync([FromBody]UserView user)
+    {
+        return MatchExceptions(async () => 
+        {
+            RateLimit(RateWrite);
+            return await writer.WriteAsync(user, GetUserIdStrict()); //message used for activity and such
+        });
+    }
 
     [HttpPost("watch")]
-    public Task<ActionResult<WatchView>> WriteWatchAsync([FromBody]WatchView watch) =>
-        MatchExceptions(async () => await writer.WriteAsync(watch, GetUserIdStrict())); //message used for activity and such
+    public Task<ActionResult<WatchView>> WriteWatchAsync([FromBody]WatchView watch)
+    {
+        return MatchExceptions(async () => 
+        {
+            RateLimit(RateWrite);
+            return await writer.WriteAsync(watch, GetUserIdStrict()); //message used for activity and such
+        });
+    }
 }

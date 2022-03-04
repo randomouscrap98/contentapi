@@ -15,3 +15,9 @@ public class NotFoundException : Exception
 {
     public NotFoundException(string message) : base(message) {}
 }
+
+public class RateLimitException : Exception
+{
+    public RateLimitException(string message) : base(message) {}
+    public RateLimitException(string message, Exception inner) : base(message, inner) {}
+}

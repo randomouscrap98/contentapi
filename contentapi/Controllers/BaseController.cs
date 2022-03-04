@@ -11,14 +11,43 @@ public class BaseControllerServices
     public ILogger<BaseController> logger;
     public IMapper mapper;
     public IAuthTokenService<long> authService;
+    public IEventTracker tracker;
+    public RateLimitConfig rateConfig;
 
     public BaseControllerServices(ILogger<BaseController> logger, IAuthTokenService<long> authService, 
-        IMapper mapper)
+        IMapper mapper, IEventTracker tracker, RateLimitConfig rateConfig)
     {
         this.logger = logger;
         this.authService = authService;
         this.mapper = mapper;
+        this.tracker = tracker;
+        this.rateConfig = rateConfig;
     }
+}
+
+public class RateLimitConfig
+{
+    public Dictionary<string, string> Rates {get;set;} = new Dictionary<string, string>();
+    private Dictionary<string, Tuple<int, TimeSpan>>? _parsedRates = null;
+    public Dictionary<string, Tuple<int, TimeSpan>> ParsedRates { get {
+        if(_parsedRates == null)
+        {
+            _parsedRates = new Dictionary<string, Tuple<int, TimeSpan>>();
+
+            foreach(var r in Rates)
+            {
+                var split = r.Value.Split(",".ToCharArray());
+                _parsedRates.Add(r.Key, Tuple.Create(int.Parse(split[0]), TimeSpan.FromSeconds(int.Parse(split[1]))));
+            }
+        }
+        return _parsedRates!;
+    }}
+
+    //{
+    //    //Means 5 allowed per 5 seconds. The 6th one will be rejected
+    //    {"write", "5,5"},
+    //    {"login","1,2"}
+    //};
 }
 
 [ApiController]
@@ -31,6 +60,9 @@ public class BaseController : Controller
     {
         this.services = services;
     }
+
+    public const string RateWrite = "write";
+    public const string RateLogin = "login";
 
     protected long? GetUserId() => services.authService.GetUserId(User.Claims);
     protected bool IsUserLoggedIn() => GetUserId() != null;
@@ -59,5 +91,20 @@ public class BaseController : Controller
             //Just rethrow if we couldn't figure out what it was.
             throw;
         }
+    }
+
+    protected void RateLimit(string thing)
+    {
+        var id = GetUserId()?.ToString() ?? "0";
+        var key = $"{thing}_{id}";
+
+        if(!services.rateConfig.ParsedRates.ContainsKey(thing))
+            throw new InvalidOperationException($"Missing rate limit configuration for {thing}");
+
+        var limit = services.rateConfig.ParsedRates[thing];
+        services.tracker.AddEvent(key);
+
+        if(services.tracker.CountEvents(key, limit.Item2) > limit.Item1)
+            throw new RateLimitException($"Rate limited: {limit.Item1} requests per {limit.Item2.TotalSeconds} seconds");
     }
 }
