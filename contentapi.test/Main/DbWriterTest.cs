@@ -83,6 +83,11 @@ public class DbWriterTest : ViewUnitTestBase, IClassFixture<DbUnitTestSearchFixt
         var ev = AssertEventMatchesBase(user.id, expected, userId, EventType.user);
     }
 
+    protected void AssertWatchEventMatches(WatchView watch, long userId, UserAction expected)
+    {
+        var ev = AssertEventMatchesBase(watch.id, expected, userId, EventType.watch);
+    }
+
 
     [Theory]
     [InlineData(0)]
@@ -1085,5 +1090,51 @@ public class DbWriterTest : ViewUnitTestBase, IClassFixture<DbUnitTestSearchFixt
         //BUT, attempting to add just ONE more should fail!
         var failPage = GetNewPageView();
         await Assert.ThrowsAnyAsync<InvalidOperationException>(() => writer.WriteAsync(failPage, uid));
+    }
+
+    public const long SuperUserId = 1 + (int)UserVariations.Super;
+    public const long NormalUserId = (int)UserVariations.Super;
+    public const long AllAccessContentId = 1 + (int)ContentVariations.AccessByAll;
+    public const long SuperAccessContentId = 1 + (int)ContentVariations.AccessBySupers;
+
+    [Theory]
+    [InlineData(NormalUserId, 0, false)]
+    [InlineData(NormalUserId, 9000, false)]
+    [InlineData(NormalUserId, AllAccessContentId, true)]
+    [InlineData(NormalUserId, SuperAccessContentId, false)]
+    [InlineData(SuperUserId, 0, false)]
+    [InlineData(SuperUserId, 9000, false)]
+    [InlineData(SuperUserId, AllAccessContentId, true)]
+    [InlineData(SuperUserId, SuperAccessContentId, true)]
+    public async Task WriteAsync_WatchBasic(long uid, long content, bool allowed)
+    {
+        //Also test to ensure the watch view auto-sets fields for us
+        var watch = new WatchView()
+        {
+            contentId = content,
+            userId = 999, //This should get reset.
+        };
+
+        WatchView writtenWatch = watch;
+
+        var writeWatch = new Func<Task>(async () => {
+            writtenWatch = await writer.WriteAsync(watch, uid);
+        });
+
+        if(allowed)
+        {
+            await writeWatch();
+            Assert.Equal(content, writtenWatch.contentId);
+            Assert.Equal(uid, writtenWatch.userId);
+            AssertWatchEventMatches(writtenWatch, uid, UserAction.create);
+        }
+        else if(content <= 0 || content >= 1000)
+        {
+            await Assert.ThrowsAnyAsync<NotFoundException>(writeWatch);
+        }
+        else
+        {
+            await Assert.ThrowsAnyAsync<ForbiddenException>(writeWatch);
+        }
     }
 }

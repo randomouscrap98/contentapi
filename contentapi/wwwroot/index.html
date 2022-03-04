@@ -17,6 +17,7 @@
             <a href="?t=user">User</a>
             <a href="?t=page&pid=0">Pages</a>
             <a href="?t=search">Search</a>
+            <a href="?t=notifications">Notifications</a>
         </header>
         <section id="main">
             <h1>ContentApi Default Implementation</h1>
@@ -169,6 +170,10 @@
                     <a href="#" id="search-down">Previous results</a>
                 </div>
             </div>
+            <div id="t_notifications">
+                <h3>Your notifications:</h3>
+                <div id="notifications-container"></div>
+            </div>
             <!-- The rest of this stuff are sort of "subtemplates", like little repeated items used within the page -->
             <div id="page_item" data-onload="page_item_onload">
                 <a data-title></a>
@@ -194,6 +199,13 @@
                 <span data-hash class="important"></span>
                 <time data-time class="annotation"></time>
                 <span data-private>🔒</span>
+            </div>
+            <div id="notification_item" data-onload="notification_item_onload">
+                <div data-pagedata></div>
+                <div data-notifications>
+                    <span>Comments: </span> <span data-commentcount></span>
+                    <span>Activity: </span> <span data-activitycount></span>
+                </div>
             </div>
             <div id="page_editor" data-onload="page_editor_onload">
                 <form onsubmit="return t_page_editor_submit(this)">

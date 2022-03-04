@@ -130,6 +130,8 @@ public class DbWriter : IDbWriter
                     throw new ForbiddenException($"User {requester.id} can't '{action}' content {cView.id}!");
             }
 
+            //WARN : NO PARENTID VALIDATION!
+
             //Now for general validation
             await ValidatePermissionFormat(cView.permissions);
 
@@ -139,9 +141,6 @@ public class DbWriter : IDbWriter
         else if(view is MessageView)
         {
             var cView = view as MessageView ?? throw new InvalidOperationException("Somehow, MessageView could not be cast to a MessageView");
-
-            //if(cView.module != null)
-            //    throw new ForbiddenException($"You cannot create or modify module messages!");
 
             //Modification actions
             if(action == UserAction.update || action == UserAction.delete)
@@ -157,18 +156,14 @@ public class DbWriter : IDbWriter
 
             //Create is special, because we need the parent create permission. We also check updates so users can't 
             //move a comment into an unusable room (if that ever gets allowed)
-            if(action == UserAction.create || action == UserAction.update)
+            if(action == UserAction.create)// || action == UserAction.update)
             {
-                //We DON'T perform this check ONLY IF the contentId is 0 AND the module is set
-                //if(!(cView.module != null && cView.contentId == 0))
-                //{
-                    //No orphaned comments, so the parent MUST exist! This is an easy check. You will get a "notfound" exception
-                    var parent = await searcher.GetById<ContentView>(RequestType.content, cView.contentId, true);
+                //No orphaned comments, so the parent MUST exist! This is an easy check. You will get a "notfound" exception
+                var parent = await searcher.GetById<ContentView>(RequestType.content, cView.contentId, true);
 
-                    //Can't post in invalid locations! So we check ANY contentId passed in, even if it's invalid
-                    if (!(await CanUserAsync(requester, action, cView.contentId)))
-                        throw new ForbiddenException($"User {requester.id} can't '{action}' comments in content {cView.contentId}!");
-                //}
+                //Can't post in invalid locations! So we check ANY contentId passed in, even if it's invalid
+                if (parent == null || !(await CanUserAsync(requester, action, cView.contentId)))
+                    throw new ForbiddenException($"User {requester.id} can't '{action}' comments in content {cView.contentId}!");
             }
 
             if(cView.deleted)
@@ -210,6 +205,20 @@ public class DbWriter : IDbWriter
 
             if(uView.deleted)
                 throw new RequestException("Don't delete users by setting the deleted flag!");
+        }
+        else if(view is WatchView)
+        {
+            var wView = (view as WatchView)!;
+
+            //Watch is fairly simple, because the fields do most of the work
+            if(action == UserAction.create)
+            {
+                //Just by searching, you will get the exceptions I hope for...
+                var content = await searcher.GetById<ContentView>(RequestType.content, wView.contentId, true);
+
+                if(content == null || !(await CanUserAsync(requester, UserAction.read, content.id)))
+                    throw new ForbiddenException($"You don't have access to content {wView.contentId}");
+            }
         }
         else 
         {
@@ -272,6 +281,10 @@ public class DbWriter : IDbWriter
         else if (view is UserView)
         {
             id = await DatabaseWork_User(new DbWorkUnit<UserView>((view as UserView)!, requester, typeInfo, action, existing as UserView, message));
+        }
+        else if (view is WatchView)
+        {
+            id = await DatabaseWork_Watch(new DbWorkUnit<WatchView>((view as WatchView)!, requester, typeInfo, action, existing as WatchView, message));
         }
         else
         {
@@ -597,6 +610,52 @@ public class DbWriter : IDbWriter
             await eventQueue.AddEventAsync(new LiveEvent(work.requester.id, work.action, EventType.message, work.view.id));
 
             logger.LogDebug($"User {work.requester.id} commented on {comment.contentId}"); //No admin log for comments, so have to construct the message ourselves
+
+            //NOTE: this is the newly computed id, we place it inside the view for safekeeping 
+            return work.view.id;
+        }
+    }
+
+    public async Task<long> DatabaseWork_Watch(DbWorkUnit<WatchView> work)
+    {
+        if(!work.typeInfo.type.IsAssignableTo(typeof(WatchView)))
+            throw new InvalidOperationException($"TypeInfo given in DatabaseWork was for type '{work.typeInfo.type}', not '{typeof(WatchView)}'");
+
+        //NOTE: As usual, validation is performed outside this function!
+        var watch = new Db.ContentWatch();
+        var unmapped = MapSimpleViewFields(work, watch); 
+
+        if(unmapped.Count > 0)
+            logger.LogWarning($"Fields '{string.Join(",", unmapped)}' not mapped in watch!");
+
+        //Need to update the edit history with the previous comment!
+        //Always need an ID to link to, so we actually need to create the content first and get the ID.
+        using(var tsx = dbcon.BeginTransaction())
+        {
+            if(work.action == UserAction.create)
+            {
+                //This doesn't need a history, so write it as-is
+                work.view.id = await dbcon.InsertAsync(watch, tsx);
+            }
+            else if(work.action == UserAction.update)
+            {
+                await dbcon.UpdateAsync(watch, tsx);
+            }
+            else if(work.action == UserAction.delete)
+            {
+                await dbcon.DeleteAsync(watch, tsx);
+            }
+            else 
+            {
+                throw new InvalidOperationException($"Can't perform action {work.action} in DatabaseWork_Watch!");
+            }
+
+            tsx.Commit();
+
+            await eventQueue.AddEventAsync(new LiveEvent(work.requester.id, work.action, EventType.watch, work.view.id));
+
+            //No admin log for watches, so have to construct the message ourselves
+            logger.LogDebug($"User {work.requester.id} watched {watch.contentId}"); 
 
             //NOTE: this is the newly computed id, we place it inside the view for safekeeping 
             return work.view.id;
