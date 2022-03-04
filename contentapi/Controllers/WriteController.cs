@@ -55,5 +55,7 @@ public class WriteController : BaseController
     public Task<ActionResult<UserView>> WriteUserAsync([FromBody]UserView user) =>
         MatchExceptions(async () => await writer.WriteAsync(user, GetUserIdStrict())); //message used for activity and such
 
-
+    [HttpPost("watch")]
+    public Task<ActionResult<WatchView>> WriteWatchAsync([FromBody]WatchView watch) =>
+        MatchExceptions(async () => await writer.WriteAsync(watch, GetUserIdStrict())); //message used for activity and such
 }

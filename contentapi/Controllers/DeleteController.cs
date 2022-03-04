@@ -31,4 +31,8 @@ public class DeleteController : BaseController
     [HttpPost("user/{id}")]
     public Task<ActionResult<UserView>> DeleteUserAsync([FromRoute]long id) =>
         MatchExceptions(async () => await writer.DeleteAsync<UserView>(id, GetUserIdStrict())); //message used for activity and such
+
+    [HttpPost("watch/{id}")]
+    public Task<ActionResult<WatchView>> DeleteWatchAsync([FromRoute]long id) =>
+        MatchExceptions(async () => await writer.DeleteAsync<WatchView>(id, GetUserIdStrict())); //message used for activity and such
 }
