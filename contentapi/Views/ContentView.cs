@@ -9,6 +9,7 @@ namespace contentapi.Views;
 public class ContentView : IIdView
 {
     public const string MessagesTable = "messages";
+    public const string VotesTable = "content_votes";
     public const string NaturalCommentQuery = "deleted = 0 and module IS NULL";
 
     [FieldSelect]

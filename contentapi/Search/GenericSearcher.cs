@@ -105,9 +105,12 @@ public class GenericSearcher : IGenericSearch
             const string valkey = nameof(ContentView.values);
             const string permkey = nameof(ContentView.permissions);
             const string votekey = nameof(ContentView.votes);
+            //const string yourvotekey = nameof(ContentView.yourVote);
             const string cidkey = nameof(Db.ContentKeyword.contentId); //WARN: assuming it's the same for all!
             var index = IndexResults(result);
             var ids = index.Keys.ToList();
+            
+            var voteinfo = typeService.GetTypeInfo<Db.ContentVote>();
 
             if(r.requestFields.Contains(keykey))
             {
@@ -144,7 +147,6 @@ public class GenericSearcher : IGenericSearch
             }
             if(r.requestFields.Contains(votekey))
             {
-                var voteinfo = typeService.GetTypeInfo<Db.ContentVote>();
                 var votes = await dbcon.QueryAsync($"select {cidkey}, vote, count(*) as count from {voteinfo.selfDbInfo?.modelTable} where {cidkey} in @ids group by {cidkey}, vote",
                     new { ids = ids });
                 var displayVotes = Enum.GetValues<VoteType>().Where(x => x != VoteType.none); 
@@ -162,6 +164,11 @@ public class GenericSearcher : IGenericSearch
                     c.Value[votekey] = cvotes;
                 }
             }
+            //if(r.requestFields.Contains(yourvotekey))
+            //{
+            //    var yourVote = await dbcon.QueryAsync($"select {cidkey}, vote from {voteinfo.selfDbInfo?.modelTable} where {cidkey} in @ids and userId = @uid",
+            //        new { ids = ids, uid = r.}
+            //}
         }
     }
 
@@ -331,7 +338,8 @@ public class GenericSearcher : IGenericSearch
             {
                 request.query = queryBuilder.CombineQueryClause(request.query, $"!permissionlimit(@{groupsKey}, id, R)");
             }
-            if(request.type == RequestType.message.ToString() || request.type == RequestType.activity.ToString() || request.type == RequestType.watch.ToString())
+            if(request.type == RequestType.message.ToString() || request.type == RequestType.activity.ToString() || 
+               request.type == RequestType.watch.ToString() || request.type == RequestType.vote.ToString())
             {
                 request.query = queryBuilder.CombineQueryClause(request.query, $"!permissionlimit(@{groupsKey}, contentId, R)");
             }
@@ -339,8 +347,9 @@ public class GenericSearcher : IGenericSearch
             {
                 request.query = queryBuilder.CombineQueryClause(request.query, $"!receiveuserlimit(@{requesterKey})");
             }
-            //Watches and variables are per-user!
-            if(request.type == RequestType.watch.ToString() || request.type == RequestType.uservariable.ToString())
+            //Watches and variables and votes are per-user!
+            if(request.type == RequestType.watch.ToString() || request.type == RequestType.uservariable.ToString() ||
+               request.type == RequestType.vote.ToString())
             {
                 request.query = queryBuilder.CombineQueryClause(request.query, $"userId = @{requesterKey}");
             }
