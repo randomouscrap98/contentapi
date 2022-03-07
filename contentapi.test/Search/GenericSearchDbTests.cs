@@ -17,7 +17,7 @@ namespace contentapi.test;
 //WARN: ALL TESTS THAT ACCESS THE SEARCHFIXTURE SHOULD GO IN HERE! Otherwise the database
 //will be created for EVERY class that uses the fixture, increasing the test time! Just
 //keep it together, even if the class gets large!
-public class GenericSearchDbTests : UnitTestBase, IClassFixture<DbUnitTestSearchFixture>
+public class GenericSearchDbTests : ViewUnitTestBase, IClassFixture<DbUnitTestSearchFixture>
 {
     //protected IDbConnection dbcon;
     protected GenericSearcher service;
@@ -1349,5 +1349,26 @@ public class GenericSearchDbTests : UnitTestBase, IClassFixture<DbUnitTestSearch
 
         //And finally, just make sure they were found exactly
         Assert.True(desiredMessages.Select(x => x.id).OrderBy(x => x).SequenceEqual(searchMessages.Select(x => x.id).OrderBy(x => x)));
+    }
+
+    [Theory]
+    [InlineData(NormalUserId)]
+    [InlineData(SuperUserId)]
+    public async Task SearchAsync_VotesOnlyForSelf(long uid)
+    {
+        //go try to get all the votes
+        var votes = await service.SearchSingleType<VoteView>(uid, new SearchRequest()
+        {
+            type = "vote",
+            fields = "*"
+        });
+
+        //Ensure they're ALL just for us, nobody else
+        Assert.All(votes, x => 
+        {
+            Assert.Equal(uid, x.userId);
+            Assert.True(x.contentId > 0);
+            Assert.NotEqual(VoteType.none, x.vote);
+        });
     }
 }

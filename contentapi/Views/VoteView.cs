@@ -13,6 +13,7 @@ public class VoteView
     public long id { get; set; }
 
     [FieldSelect]
+    [Writable(WriteRule.User, WriteRule.Preserve)]
     public long contentId { get; set; }
 
     [FieldSelect]
