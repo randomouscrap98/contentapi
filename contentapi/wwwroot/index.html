@@ -111,6 +111,10 @@
                 <h2 id="page-title"></h2>
                 <div id="page-content" title="This is raw markup" class="content"></div>
                 <table class="describe" id="page-table"></table>
+                <div id="page-interactions" data-pageid="">
+                    <button id="watch-page" hidden="" onclick="return t_page_watch(this, true)">Watch</button>
+                    <button id="unwatch-page" hidden="" onclick="return t_page_watch(this, false)">Unwatch</button>
+                </div>
                 <div id="page-edit-section" class="hidden">
                     <h3>Edit: <button id="page-edit-toggle"></button></h3>
                     <div id="page-edit-container"></div>
@@ -170,9 +174,13 @@
                     <a href="#" id="search-down">Previous results</a>
                 </div>
             </div>
-            <div id="t_notifications">
+            <div id="t_notifications" data-onload="notifications_onload">
                 <h3>Your notifications:</h3>
                 <div id="notifications-container"></div>
+                <div id="notifications-nav" class="nav">
+                    <a href="#" id="notifications-up">Older Notifications</a>
+                    <a href="#" id="notifications-down">Newer Notifications</a>
+                </div>
             </div>
             <!-- The rest of this stuff are sort of "subtemplates", like little repeated items used within the page -->
             <div id="page_item" data-onload="page_item_onload">
@@ -205,6 +213,7 @@
                 <div data-notifications>
                     <span>Comments: </span> <span data-commentcount></span>
                     <span>Activity: </span> <span data-activitycount></span>
+                    <button data-clear data-pageid="" onclick="return t_notification_item_clear(this)">Clear notifications</button>
                 </div>
             </div>
             <div id="page_editor" data-onload="page_editor_onload">

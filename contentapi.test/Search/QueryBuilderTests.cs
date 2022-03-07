@@ -168,4 +168,43 @@ public class QueryBuilderTests : UnitTestBase
             }
         }
     }
+
+    [Theory]
+    [InlineData("*", "id", true)]
+    [InlineData("*", "id_desc", true)]
+    [InlineData("*", "createUserId", true)]
+    [InlineData("*", "createUserId_desc", true)]
+    [InlineData("*", "id,createUserId", true)]
+    [InlineData("*", "id_desc,createUserId", true)]
+    [InlineData("*", "id_desc,createUserId_desc", true)]
+    [InlineData("*", "id,createUserId_desc", true)]
+    [InlineData("id", "createUserId", false)]
+    public void FullParseRequest_AllowedOrders(string fields, string order, bool allowed)
+    {
+        var request =new SearchRequest()
+        {
+            name = "contentTest",
+            type = "content",
+            fields = fields,
+            order = order
+        };
+
+        if(allowed)
+        {
+            var result = service.FullParseRequest(request, new Dictionary<string, object>());
+            Assert.NotEmpty(result.computedSql);
+        }
+        else
+        {
+            try
+            {
+                var result = service.FullParseRequest(request, new Dictionary<string, object>());
+                Assert.False(true, "FullParseRequest should've thrown an exception but did not!");
+            }
+            catch(ArgumentException)
+            {
+                //This is expected
+            }
+        }
+    }
 }

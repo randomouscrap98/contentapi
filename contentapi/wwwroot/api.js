@@ -192,7 +192,7 @@ function Api(url, tokenGet)
     };
 
     //The list of fields in ANY type of object that usually links to content (not exhaustive, probably)
-    this.contentAutoLinks = {
+    this.contentAutolinks = {
         contentId: "content",
         parendId: "parent"
     };
@@ -469,6 +469,24 @@ Api.prototype.UploadFile = function(fileUploadParam, handler)
     this.Raw("file", data, handler);
 };
 
+Api.prototype.WatchPage = function(pid, handler)
+{
+    //Just send SOMETHING in post, it actually doesn't matter what though
+    this.Raw(`shortcuts/watch/add/${pid}`, true, handler);
+};
+
+Api.prototype.UnwatchPage = function(pid, handler)
+{
+    //Just send SOMETHING in post, it actually doesn't matter what though
+    this.Raw(`shortcuts/watch/delete/${pid}`, true, handler);
+};
+
+Api.prototype.ClearNotifications = function(pid, handler)
+{
+    //Just send SOMETHING in post, it actually doesn't matter what though
+    this.Raw(`shortcuts/watch/clear/${pid}`, true, handler);
+};
+
 // -- Some simple, common use cases for accessing the search endpoint. --
 // NOTE: You do NOT need to directly use these, especially if they don't fit your needs. 
 // You can simply use them as a starting grounds for your own custom constructed searches if you want
@@ -506,7 +524,21 @@ Api.prototype.Search_BasicPageDisplay = function(id, subpagesPerPage, subpagePag
         //Subpages: we want most fields, but not SOME big/expensive fields. Hence ~
         new RequestSearchParameter("content", "~values,keywords,votes", "parentId = @pageid and !notdeleted() and contentType <> @filetype", "contentType,literalType,name", subpagesPerPage, subpagesPerPage * subpagePage, "subpages"),
         new RequestSearchParameter("message", "*", "contentId = @pageid and !notdeleted() and !null(module)", "id_desc", commentsPerPage, commentsPerPage * commentPage),
+        // We grab your personal watches specifically for the main page to see if you ARE watching it
+        new RequestSearchParameter("watch", "*", "contentId = @pageid"),
         new RequestSearchParameter("user", "*", "id in @message.createUserId or id in @content.createUserId or id in @subpages.createUserId"),
+    ]);
+
+    this.Search(search, handler);
+};
+
+// Get a list of your personal notification data + related content
+Api.prototype.Notifications = function(contentPerPage, page, handler)
+{
+    var search = new RequestParameter({ }, [
+        new RequestSearchParameter("watch", "*", "", "commentNotifications_desc,activityNotifications_desc", contentPerPage, contentPerPage * page), //all your personal watches
+        new RequestSearchParameter("content", "~values,keywords,votes", "id in @watch.contentId"),
+        new RequestSearchParameter("user", "*", "id in @content.createUserId"),
     ]);
 
     this.Search(search, handler);

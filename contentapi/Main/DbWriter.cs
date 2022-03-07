@@ -37,6 +37,10 @@ public class DbWriter : IDbWriter
 
     protected static readonly SemaphoreSlim hashLock = new SemaphoreSlim(1, 1);
 
+    public List<RequestType> TrueDeletes = new List<RequestType> {
+        RequestType.watch
+    };
+
     public DbWriter(ILogger<DbWriter> logger, IGenericSearch searcher, ContentApiDbConnection connection,
         IViewTypeInfoService typeInfoService, IMapper mapper, IHistoryConverter historyConverter,
         IPermissionService permissionService, ILiveEventQueue eventQueue, DbWriterConfig config,
@@ -312,7 +316,10 @@ public class DbWriter : IDbWriter
         }
 
         //The regardless, just go look up whatever work we just did, give the user the MOST up to date information, even if it's inefficient
-        return await searcher.GetById<T>(requestType, id);
+        if(action == UserAction.delete && TrueDeletes.Contains(requestType))
+            return view;
+        else
+            return await searcher.GetById<T>(requestType, id);
     }
 
     /// <summary>

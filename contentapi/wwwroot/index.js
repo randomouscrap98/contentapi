@@ -250,6 +250,8 @@ function page_onload(template, state)
     SetupPagination(template.querySelector("#page-subpageup"), template.querySelector("#page-subpagedown"), state, "sp");
     SetupPagination(template.querySelector("#page-commentup"), template.querySelector("#page-commentdown"), state, "cp");
 
+    template.querySelector("#page-interactions").setAttribute("data-pageid", state.pid);
+
     var table = template.querySelector("#page-table");
     var content = template.querySelector("#page-content");
     var title = template.querySelector("#page-title");
@@ -303,6 +305,12 @@ function page_onload(template, state)
             MakeTable(page, table);
 
             setupEditor("edit", originalPage);
+
+            //Display watch/unwatch based on if they're watching
+            if(d.result.data.watch.length)
+                template.querySelector("#unwatch-page").removeAttribute("hidden");
+            else
+                template.querySelector("#watch-page").removeAttribute("hidden");
         }
 
         //Waste a few cycles linking some stuff together!
@@ -319,6 +327,7 @@ function page_onload(template, state)
             var comment = LoadTemplate("comment_item", x);
             commentsElement.appendChild(comment);
         });
+
     }));
 }
 
@@ -422,6 +431,21 @@ function search_onload(template, state)
     }
 }
 
+function notifications_onload(template, state)
+{
+    var container = template.querySelector("#notifications-container");
+    SetupPagination(template.querySelector("#notifications-up"), template.querySelector("#notifications-down"), state, "np");
+
+    api.Notifications(SEARCHRESULTSPERPAGE, state.np, new ApiHandler(d => {
+        api.AutoLinkContent(d.result.data.watch, d.result.data.content);
+        console.log(d.result.data);
+        d.result.data.watch.forEach(x => {
+            var item = LoadTemplate(`notification_item`, x);
+            container.appendChild(item);
+        });
+    }));
+}
+
 // -- Loaders, but not for pages, just for little templates--
 
 function page_item_onload(template, state)
@@ -496,6 +520,29 @@ function file_item_onload(template, state)
 
     if(state.permissions[0] && state.permissions[0].indexOf("R") >= 0)
         private.style.display = "none";
+}
+
+function notification_item_onload(template, state)
+{
+    var pagedataelem = template.querySelector("[data-pagedata]");
+    var commentcountelem = template.querySelector("[data-commentcount]");
+    var activitycountelem = template.querySelector("[data-activitycount]");
+    var clearelem = template.querySelector("[data-clear]");
+
+    clearelem.setAttribute("data-pageid", state.contentId);
+
+    if(state.content)
+    {
+        var item = LoadTemplate("page_item", state.content);
+        pagedataelem.appendChild(item);
+    }
+    else
+    {
+        pagedataelem.textContent = "???";
+    }
+
+    commentcountelem.textContent = state.commentNotifications;
+    activitycountelem.textContent = state.activityNotifications;
 }
 
 function page_editor_onload(template, state)
@@ -637,4 +684,24 @@ function t_user_update_submit(form)
     }));
 
     return false;
+}
+
+function t_page_watch(button, watch)
+{
+    var pid = button.parentNode.getAttribute("data-pageid");
+
+    var handler = new ApiHandler(d => { location.reload(); })
+
+    if(watch)
+        api.WatchPage(pid, handler);
+    else
+        api.UnwatchPage(pid, handler);
+}
+
+function t_notification_item_clear(button)
+{
+    var pid = button.getAttribute("data-pageid");
+    api.ClearNotifications(pid, new ApiHandler(d => {
+        location.reload();
+    }));
 }

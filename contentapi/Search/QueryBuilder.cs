@@ -278,22 +278,22 @@ public class QueryBuilder : IQueryBuilder
     /// <param name="field"></param>
     /// <param name="request"></param>
     /// <returns></returns>
-    public string ParseField(string field, SearchRequestPlus request)
+    public string ParseField(string field, SearchRequestPlus request, string parseFor = "query")
     {
         //These special 'extraQueryFields' can be used regardless of any rules
         if(request.typeInfo.extraQueryFields.ContainsKey(field))
             return request.typeInfo.extraQueryFields[field];
 
         if(!request.typeInfo.fields.ContainsKey(field))
-            throw new ArgumentException($"Field '{field}' not found in type '{request.type}'({request.name})!");
+            throw new ArgumentException($"Field '{field}' not found in type '{request.type}'({request.name})! (in: {parseFor})");
 
         if(!request.typeInfo.fields[field].queryable)
-            throw new ArgumentException($"Field '{field}' not queryable in type '{request.type}'({request.name})!");
+            throw new ArgumentException($"Field '{field}' not queryable in type '{request.type}'({request.name})! (in: {parseFor})");
 
         //For now, we outright reject querying against fields you don't explicitly pull. This CAN be made better in the
         //future, but for now, I think this is a reasonable limitation to reduce potential bugs
         if(!request.requestFields.Contains(field))
-            throw new ArgumentException($"Can't query against field '{field}' without selecting it: Current query system requires fields to be selected in order to be used in the 'query' clause");
+            throw new ArgumentException($"Can't query against field '{field}' without selecting it (in: {parseFor}): Current query system requires fields to be selected in order to be used anywhere else");
 
         return field;
     }
@@ -470,15 +470,15 @@ public class QueryBuilder : IQueryBuilder
                 var order = orders[i];
                 var descending = false;
 
-                if (r.order.EndsWith(DescendingAppend))
+                if (order.EndsWith(DescendingAppend))
                 {
                     descending = true;
-                    order = r.order.Substring(0, r.order.Length - DescendingAppend.Length);
+                    order = order.Substring(0, order.Length - DescendingAppend.Length);
                 }
 
-                if (!r.typeInfo.fields.ContainsKey(order))
-                    throw new ArgumentException($"Unknown order field {order} for request {r.name}");
-                
+                //We don't need the result, just the checking
+                var parsedOrder = ParseField(order, r);
+
                 queryStr.Append(order);
 
                 if(r.typeInfo.fields[order].fieldType == typeof(string))

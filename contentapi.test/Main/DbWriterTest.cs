@@ -1280,4 +1280,27 @@ public class DbWriterTest : ViewUnitTestBase, IClassFixture<DbUnitTestSearchFixt
         Assert.Equal(SuperUserId, writtenWatch.userId);
     }
 
+    [Fact] //Watches are TRULY deleted, so we want to make sure it doesn't fail on delete end
+    public async Task DeleteAsync_WatchTrueDelete()
+    {
+        //Also test to ensure the watch view auto-sets fields for us
+        var watch = new WatchView()
+        {
+            contentId = AllAccessContentId,
+        };
+
+        var writtenWatch = await writer.WriteAsync(watch, NormalUserId);
+        Assert.Equal(AllAccessContentId, writtenWatch.contentId);
+        Assert.Equal(NormalUserId, writtenWatch.userId);
+
+        var deletedWatch = await writer.DeleteAsync<WatchView>(writtenWatch.id, NormalUserId);
+        //We don't really care what the watch looks like when it comes back right now, but 
+        //maybe someday... TODO
+        //Assert.Equal(AllAccessContentId, deletedWatch.contentId);
+        //Assert.Equal(NormalUserId, deletedWatch.userId);
+        //Assert.Equal(writtenWatch.id, deletedWatch.id);
+
+        await Assert.ThrowsAnyAsync<NotFoundException>(() => searcher.GetById<WatchView>(RequestType.watch, writtenWatch.id));
+    }
+
 }
