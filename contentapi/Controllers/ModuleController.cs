@@ -71,6 +71,7 @@ public class ModuleController : BaseController
     {
         return MatchExceptions(async () =>
         {
+            RateLimit(RateWrite);
             //Go find by name first
             var userId = GetUserIdStrict();
             var existing = await RefreshModule(module.name, userId); //services.searcher..FindByNameAsync(module.name);
@@ -99,11 +100,42 @@ public class ModuleController : BaseController
     {
         return MatchExceptions(async () =>
         {
+            RateLimit(RateModule);
             var requester = GetUserIdStrict();
             string result = "";
             //RunCommand should be thread safe, so just... run it async!
             await Task.Run(() => result = modService.RunCommand(name, arguments, requester, parentId));
             return result;
+        });
+    }
+
+    public class ModuleContentView : ContentView
+    {
+        public Dictionary<string, ModuleSubcommandInfo?> subcommands {get;set;} = new Dictionary<string, ModuleSubcommandInfo?>();
+    }
+
+    [HttpGet("allmodules")]
+    public Task<ActionResult<List<ModuleContentView>>> GetAllmodules()
+    {
+        return MatchExceptions(async () =>
+        {
+            var userId = GetUserIdStrict();
+            var modules = await services.searcher.SearchSingleType<ModuleContentView>(userId, new SearchRequest()
+            {
+                type = "content",
+                fields = "*",
+                query = "contentType = @type and !notdeleted()"
+            }, new Dictionary<string, object> {
+                { "type", Db.InternalContentType.module }
+            });
+
+            foreach(var m in modules)
+            {
+                var loaded = await RefreshModule(m.name, userId);
+                m.subcommands = loaded.subcommands;
+            }
+
+            return modules;
         });
     }
 }

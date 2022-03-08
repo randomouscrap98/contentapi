@@ -23,7 +23,7 @@ window.onload = function()
    var params = new URLSearchParams(location.search.substring(1));
 
    //Set up api
-   api = new Api(null, GetToken); //Just a global api object, whatever. Null means use the default endpoint (local to self)
+   api = new Api(null, getToken); //Just a global api object, whatever. Null means use the default endpoint (local to self)
    api.default_handler.error = e =>
    {
        alert(`Error ${e.status_code}: ${e.message}`);
@@ -50,6 +50,9 @@ window.onload = function()
    var debugbutton = document.getElementById("debugbutton");
    var debugoutput = document.getElementById("debugoutput");
 
+   api.AboutToken(new ApiHandler(d => {
+       document.getElementById("connectioninfo_uid").textContent = d.result.userId;
+   }));
    //var saveInputs = function()
    //{
    //   var data = {
@@ -76,7 +79,7 @@ window.onload = function()
    //Load inputs
    //loadInputs();
 
-   loadbutton.addEventListener("click", function()
+   /*loadbutton.addEventListener("click", function()
    {
       //var data = saveInputs();
       //var url = modend(data.endpoint) + "?names=" + data.modulename;
@@ -139,92 +142,93 @@ window.onload = function()
       nextListen(data.endpoint, data.token, {"lastId": 0}, document.getElementById("moduleoutput"));
    else
       console.log("Not running listener");
+      */
 };
 
-function findUsername(users, uid)
-{
-   for(var i = 0; i < users.length; i++)
-      if(users[i].id == uid)
-         return users[i].username;
-      
-   return "???";
-}
+//function findUsername(users, uid)
+//{
+//   for(var i = 0; i < users.length; i++)
+//      if(users[i].id == uid)
+//         return users[i].username;
+//      
+//   return "???";
+//}
+//
+//function nextListen(baseUrl, token, result, outputElement)
+//{
+//   //console.log(result);
+//   if(result && result.chains && result.chains.modulemessage)
+//   {
+//      console.log("Got module messages");
+//      for(var i = 0; i < result.chains.modulemessage.length; i++)
+//      {
+//         var m = result.chains.modulemessage[i];
+//         var elem = document.createElement("div");
+//         elem.className = "modulemessage";
+//         var elemmod = document.createElement("span");
+//         elemmod.className = "messagemodule";
+//         elemmod.textContent = "[" + m.module + "]";
+//         var elemmsg = document.createElement("span");
+//         elemmsg.className = "messagecontent";
+//         var msg = m.message;
+//         //This is BAD replacement: it will replace usernames with %id% repeatedly
+//         for(var j = 0; j < result.chains.user.length; j++)
+//            msg = msg.replace(new RegExp("%" + result.chains.user[j].id + "%","g"), result.chains.user[j].username);
+//         elemmsg.innerHTML = msg;
+//         var elemusr = document.createElement("span");
+//         elemusr.className = "messageuser";
+//         elemusr.textContent = "(" + findUsername(result.chains.user, m.sendUserId) + "->" + m.receiveUserId + ")";
+//         elem.appendChild(elemmod);
+//         elem.appendChild(elemmsg);
+//         elem.appendChild(elemusr);
+//         outputElement.insertBefore(elem, outputElement.childNodes[0]);
+//      }
+//      
+//      result.chains = false; //clear out the data for the next call
+//   }
+//   else
+//   {
+//      console.log("Module message timeout or re-call, polling again");
+//   }
+//
+//   var moduleListen = { "lastId" : result.lastId, "chains" :
+//      ["modulemessage.0id", "user.1usersInMessage.1sendUserId.1receiveUserId"]};
+//   var nextCall = function(r) { nextListen(baseUrl, token, r || result, outputElement); };
+//   quickAJAX(baseUrl + "/read/listen?actions="+encodeURIComponent(JSON.stringify(moduleListen)), 
+//      token, nextCall, function(e)
+//      {
+//         console.log("something errored out: ", e);
+//         setTimeout(nextCall, 5000);
+//      });
+//}
 
-function nextListen(baseUrl, token, result, outputElement)
-{
-   //console.log(result);
-   if(result && result.chains && result.chains.modulemessage)
-   {
-      console.log("Got module messages");
-      for(var i = 0; i < result.chains.modulemessage.length; i++)
-      {
-         var m = result.chains.modulemessage[i];
-         var elem = document.createElement("div");
-         elem.className = "modulemessage";
-         var elemmod = document.createElement("span");
-         elemmod.className = "messagemodule";
-         elemmod.textContent = "[" + m.module + "]";
-         var elemmsg = document.createElement("span");
-         elemmsg.className = "messagecontent";
-         var msg = m.message;
-         //This is BAD replacement: it will replace usernames with %id% repeatedly
-         for(var j = 0; j < result.chains.user.length; j++)
-            msg = msg.replace(new RegExp("%" + result.chains.user[j].id + "%","g"), result.chains.user[j].username);
-         elemmsg.innerHTML = msg;
-         var elemusr = document.createElement("span");
-         elemusr.className = "messageuser";
-         elemusr.textContent = "(" + findUsername(result.chains.user, m.sendUserId) + "->" + m.receiveUserId + ")";
-         elem.appendChild(elemmod);
-         elem.appendChild(elemmsg);
-         elem.appendChild(elemusr);
-         outputElement.insertBefore(elem, outputElement.childNodes[0]);
-      }
-      
-      result.chains = false; //clear out the data for the next call
-   }
-   else
-   {
-      console.log("Module message timeout or re-call, polling again");
-   }
-
-   var moduleListen = { "lastId" : result.lastId, "chains" :
-      ["modulemessage.0id", "user.1usersInMessage.1sendUserId.1receiveUserId"]};
-   var nextCall = function(r) { nextListen(baseUrl, token, r || result, outputElement); };
-   quickAJAX(baseUrl + "/read/listen?actions="+encodeURIComponent(JSON.stringify(moduleListen)), 
-      token, nextCall, function(e)
-      {
-         console.log("something errored out: ", e);
-         setTimeout(nextCall, 5000);
-      });
-}
-
-function quickAJAX(url, token, callback, error, postData)
-{
-   error = error || function(e) { alert("Error on " + url + ":\n" + e.status + " - " + e.responseText); };
-   var req = new XMLHttpRequest();
-   req.addEventListener("loadend", function()
-   {
-      if(req.status <= 299 && req.status >= 200)
-      {
-         if(callback)
-            callback(req.responseText ? JSON.parse(req.responseText) : null);
-         else
-            alert("Success: " + req.status + " - " + req.responseText);
-      }
-      else
-      {
-         error(req);
-      }
-   });
-   req.open(postData ? "POST" : "GET", url);
-   req.setRequestHeader("accept", "application/json");
-   req.setRequestHeader("Authorization", "Bearer " + token);
-   req.setRequestHeader("Content-Type", "application/json");
-   if(postData)
-      req.send(JSON.stringify(postData));
-   else
-      req.send();
-}
+//function quickAJAX(url, token, callback, error, postData)
+//{
+//   error = error || function(e) { alert("Error on " + url + ":\n" + e.status + " - " + e.responseText); };
+//   var req = new XMLHttpRequest();
+//   req.addEventListener("loadend", function()
+//   {
+//      if(req.status <= 299 && req.status >= 200)
+//      {
+//         if(callback)
+//            callback(req.responseText ? JSON.parse(req.responseText) : null);
+//         else
+//            alert("Success: " + req.status + " - " + req.responseText);
+//      }
+//      else
+//      {
+//         error(req);
+//      }
+//   });
+//   req.open(postData ? "POST" : "GET", url);
+//   req.setRequestHeader("accept", "application/json");
+//   req.setRequestHeader("Authorization", "Bearer " + token);
+//   req.setRequestHeader("Content-Type", "application/json");
+//   if(postData)
+//      req.send(JSON.stringify(postData));
+//   else
+//      req.send();
+//}
       </script>
       <style type="text/css">
 .expandowidth
@@ -272,6 +276,7 @@ function quickAJAX(url, token, callback, error, postData)
    font-size: 0.75em;
    color: #777;
    margin: 0 0.5em;
+   font-family: monospace;
 }
 #moduledebug
 {
@@ -294,6 +299,9 @@ function quickAJAX(url, token, callback, error, postData)
    left: 0;
    top: 0;
 }
+#loadsavecontrols { float: left; }
+#commandcontrols { clear: both; }
+#connectioninfo { float: right; }
       </style>
    </head>
    <body>
@@ -424,6 +432,11 @@ end
 
 --Extra information:
 
+-- CHANGE FROM OLD SYSTEM: You can no longer send messages directly to users
+-- outside of rooms! ALL module messages are now tied to a room. Sending to
+-- a specific user just limits who can read that particular message, which
+-- is very useful for personal games, help, status updates, etc.
+
 -- Modules are standard content, you just have to set the "contentType"
 -- appropriately (see /api/request/about). Managing modules themselves (not
 -- the messages) is done with all the rest of the content, but only super
@@ -445,36 +458,8 @@ end
 -- If a command has no extra arguments, you can simply post an empty body (I think)
 
 -- If you utilize the "subcommands" automatic parsing (please do), you ALSO get
--- access to the parsed subcommand info, available at /api/module/about. This way,
+-- access to the parsed subcommand info, available at /api/module/allmodules. This way,
 -- clients can auto-generate help for module commands
-
--- Module activity shows up in regular activity, you can chain to "module" to 
--- get the name/etc. Modules have associated values which can be read IN the
--- module itself, you can use these as constants to tweak your code without having
--- to actually change the code (think a config etc). Use "getvalue" to get
--- strings, you can use lua to convert to numbers etc.
-
--- Module messages are stored in the database and are part of the chainer. They
--- share the id space with comments. As such, you can chain "modulemessage" to
--- your actions listener to also get module messages. Modules can either send
--- messages directly to users, regardless of room (parentId will be 0), or send 
--- messages to all within a specific room (receiverId will be 0). You should
--- display module messages with a parentId in the appropriate rooms, but
--- messages directly to users is up to you. I personally display user-specific
--- messages in all rooms. Furthermore, accessing ANY module message endpoint
--- will give you BOTH direct user messages to you as well as all module messages
--- across all rooms. There is a parentId limiter if you want to use it, same as
--- comments, but you will still get your user-specific messages mixed in. To 
--- ONLY get room messages, set the "RecipientIds" array to contain some
--- impossible value, like -1 
--- Since module messages share the id space with all other actions, you can 
--- continue using lastId as usual on your listener endpoints. You may want to 
--- chain users to various fields in the module messages.
--- Example:
---   { "lastId" : 0, "chains" : ["modulemessage.0id", "user.1usersInMessage.1sendUserId" ] }
--- "usersInMessage" will be all the parsed %UID% found in the message, and you 
--- can also chain against "sendUserId" and "receiveUserId" (note that chaining
--- against 0 for broadcast messages shouldn't match anything... but I'm not sure)
 
 -- The "json" implementation in this lua library is broken for strings. If you
 -- want to encode your tables as json strings for storage, please use the
@@ -492,18 +477,16 @@ end
    </div>
    </body>
    <div id="controls">
-      <!--<div id="endpointcontrols">
-         <input id="endpoint" placeholder="API Endpoint">
-         <input id="token" placeholder="API token" type="password">
-         <span class="annotation">Set/Edit = restart required (sorry)</span>
-      </div>-->
+      <div id="connectioninfo" class="annotation">
+         <span>User:</span>
+         <span id="connectioninfo_uid"></span>
+      </div>
       <div id="loadsavecontrols">
          <input id="modulename" placeholder="Module name">
          <button id="loadbutton">Load</button>
          <button id="savebutton">Save</button>
       </div>
       <div id="commandcontrols">
-         <!--<input id="commandname" placeholder="command">-->
          <input id="commanddata" placeholder="module args">
          <button id="commandbutton">Send</button>
       </div>
