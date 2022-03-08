@@ -1,0 +1,512 @@
+<!DOCTYPE html>
+<html lang="en">
+   <head>
+      <title>New SBS Module Editor</title>
+      <link rel="icon" href="favicon.ico" type="image/x-icon">
+      <script src="ace-builds/src-min/ace.js" type="text/javascript" charset="utf-8"></script>
+      <script src="api.js"></script>
+      <script>
+
+const TOKENKEY = "contentapi_defimpl_userkey";
+function getToken() { return localStorage.getItem(TOKENKEY); }
+
+function getCurrentModuleName()
+{
+   var modulename = document.getElementById("modulename");
+   return modulename.value;
+}
+
+var api;
+
+window.onload = function()
+{
+   var params = new URLSearchParams(location.search.substring(1));
+
+   //Set up api
+   api = new Api(null, GetToken); //Just a global api object, whatever. Null means use the default endpoint (local to self)
+   api.default_handler.error = e =>
+   {
+       alert(`Error ${e.status_code}: ${e.message}`);
+       console.log("Error: ", e);
+   };
+
+   //Set up editor
+   var editor = ace.edit("editor");
+   editor.setTheme("ace/theme/" + (params.get("theme") || "chrome"));
+   editor.session.setMode("ace/mode/lua");
+   editor.setOptions({
+      showPrintMargin: false
+   });
+
+   if(params.get("keyboard"))
+      editor.setKeyboardHandler("ace/keyboard/" + params.get('keyboard'));
+
+   var editorelement = document.getElementById("editor");
+   //var endpoint = document.getElementById("endpoint");
+   //var token = document.getElementById("token");
+   var modulename = document.getElementById("modulename");
+   var loadbutton = document.getElementById("loadbutton");
+   var savebutton = document.getElementById("savebutton");
+   var commandbutton = document.getElementById("commandbutton");
+   //var commandname = document.getElementById("commandname");
+   var commanddata = document.getElementById("commanddata");
+   var debugbutton = document.getElementById("debugbutton");
+   var debugoutput = document.getElementById("debugoutput");
+
+   //var saveInputs = function()
+   //{
+   //   var data = {
+   //      "endpoint" : endpoint.value,
+   //      "modulename" : modulename.value,
+   //      "token" : token.value
+   //   };
+   //   console.log("Caching inputs");
+   //   window.localStorage.setItem("inputs", JSON.stringify(data));
+   //   return data;
+   //};
+
+   //var loadInputs = function()
+   //{
+   //   var data = window.localStorage.getItem("inputs");
+   //   if(!data) return;
+   //   console.log("Loading inputs from cache");
+   //   data = JSON.parse(data);
+   //   endpoint.value = data.endpoint;
+   //   modulename.value = data.modulename;
+   //   token.value = data.token;
+   //};
+
+   //Load inputs
+   //loadInputs();
+
+   loadbutton.addEventListener("click", function()
+   {
+      //var data = saveInputs();
+      //var url = modend(data.endpoint) + "?names=" + data.modulename;
+      var name = getCurrentModuleName();
+      if(confirm(`You will lose saved data. Are you sure you want to load module ${name}?`))
+      {
+         quickAJAX(url, data.token, function(d) 
+         { 
+            if(d.length) 
+               editor.setValue(d[0].code); 
+            else
+               alert("Couldn't find any module named " + data.modulename);
+         });
+      }
+   });
+   savebutton.addEventListener("click", function()
+   {
+      //var data = saveInputs();
+      //var url = modend(data.endpoint) + "/byname"; // + data.modulename;
+      var name = getCurrentModuleName();
+      if(confirm(`You will overwrite the module on the server. Are you sure you want to write as module ${name}?`))
+      {
+         quickAJAX(url, data.token, null, null, { "name" : data.modulename, "code" : editor.getValue() });
+      }
+   });
+   commandbutton.addEventListener("click", function()
+   {
+      //var data = saveInputs();
+      //var url = modend(data.endpoint) + "/" + data.modulename;// + "/" + commandname.value;
+      var name = getCurrentModuleName();
+      quickAJAX(url, data.token, function(d) 
+      { 
+         //commandname.value = "";
+         commanddata.value = "";
+         console.log(d); 
+         debugbutton.click();
+      }, null, commanddata.value || " ");
+   });
+   debugbutton.addEventListener("click", function()
+   {
+      //var data = saveInputs();
+      //var url = modend(data.endpoint) + "/debug/" + data.modulename;
+      var name = getCurrentModuleName();
+      quickAJAX(url, data.token, function(d)
+      {
+         console.log("loaded debug");
+         debugoutput.innerHTML = "";
+         for(var i = 0; i < d.length; i++)
+         {
+            var dbg = document.createElement("div");
+            dbg.className = "messagecontent";
+            dbg.textContent = d[i];
+            debugoutput.appendChild(dbg);
+         }
+      });
+   });
+
+   var data = saveInputs();
+   if(data.endpoint)
+      nextListen(data.endpoint, data.token, {"lastId": 0}, document.getElementById("moduleoutput"));
+   else
+      console.log("Not running listener");
+};
+
+function findUsername(users, uid)
+{
+   for(var i = 0; i < users.length; i++)
+      if(users[i].id == uid)
+         return users[i].username;
+      
+   return "???";
+}
+
+function nextListen(baseUrl, token, result, outputElement)
+{
+   //console.log(result);
+   if(result && result.chains && result.chains.modulemessage)
+   {
+      console.log("Got module messages");
+      for(var i = 0; i < result.chains.modulemessage.length; i++)
+      {
+         var m = result.chains.modulemessage[i];
+         var elem = document.createElement("div");
+         elem.className = "modulemessage";
+         var elemmod = document.createElement("span");
+         elemmod.className = "messagemodule";
+         elemmod.textContent = "[" + m.module + "]";
+         var elemmsg = document.createElement("span");
+         elemmsg.className = "messagecontent";
+         var msg = m.message;
+         //This is BAD replacement: it will replace usernames with %id% repeatedly
+         for(var j = 0; j < result.chains.user.length; j++)
+            msg = msg.replace(new RegExp("%" + result.chains.user[j].id + "%","g"), result.chains.user[j].username);
+         elemmsg.innerHTML = msg;
+         var elemusr = document.createElement("span");
+         elemusr.className = "messageuser";
+         elemusr.textContent = "(" + findUsername(result.chains.user, m.sendUserId) + "->" + m.receiveUserId + ")";
+         elem.appendChild(elemmod);
+         elem.appendChild(elemmsg);
+         elem.appendChild(elemusr);
+         outputElement.insertBefore(elem, outputElement.childNodes[0]);
+      }
+      
+      result.chains = false; //clear out the data for the next call
+   }
+   else
+   {
+      console.log("Module message timeout or re-call, polling again");
+   }
+
+   var moduleListen = { "lastId" : result.lastId, "chains" :
+      ["modulemessage.0id", "user.1usersInMessage.1sendUserId.1receiveUserId"]};
+   var nextCall = function(r) { nextListen(baseUrl, token, r || result, outputElement); };
+   quickAJAX(baseUrl + "/read/listen?actions="+encodeURIComponent(JSON.stringify(moduleListen)), 
+      token, nextCall, function(e)
+      {
+         console.log("something errored out: ", e);
+         setTimeout(nextCall, 5000);
+      });
+}
+
+function quickAJAX(url, token, callback, error, postData)
+{
+   error = error || function(e) { alert("Error on " + url + ":\n" + e.status + " - " + e.responseText); };
+   var req = new XMLHttpRequest();
+   req.addEventListener("loadend", function()
+   {
+      if(req.status <= 299 && req.status >= 200)
+      {
+         if(callback)
+            callback(req.responseText ? JSON.parse(req.responseText) : null);
+         else
+            alert("Success: " + req.status + " - " + req.responseText);
+      }
+      else
+      {
+         error(req);
+      }
+   });
+   req.open(postData ? "POST" : "GET", url);
+   req.setRequestHeader("accept", "application/json");
+   req.setRequestHeader("Authorization", "Bearer " + token);
+   req.setRequestHeader("Content-Type", "application/json");
+   if(postData)
+      req.send(JSON.stringify(postData));
+   else
+      req.send();
+}
+      </script>
+      <style type="text/css">
+.expandowidth
+{
+   width: 100%;
+   max-width: 80rem;
+   box-sizing: border-box;
+}
+#editor
+{
+   height: 70vh; /*50em;*/
+   min-height: 30em;
+   border: 1px solid rgba(0,0,50,0.1);
+}
+#moduleoutput
+{
+   margin-top: 0.2em;
+   background-color: #EEE;
+}
+.messagebox
+{
+   padding: 0.3em 0.5em;
+   font-family: monospace;
+   height: 6em;
+   overflow-y: scroll;
+   overflow-x: auto;
+}
+.messagecontent
+{
+   white-space: pre-wrap;
+}
+.messagemodule
+{
+   color: #05F;
+   margin-right: 0.5em;
+}
+.messageuser
+{
+   float: right;
+   font-size: 0.8em;
+   color: #777;
+}
+.annotation
+{
+   font-size: 0.75em;
+   color: #777;
+   margin: 0 0.5em;
+}
+#moduledebug
+{
+   position:relative;
+   background-color: #444;
+   color: #AAA;
+   font-size: 0.8em;
+
+}
+#debugbutton
+{
+   position: absolute;
+   right: 0;
+   top: 0;
+   z-index: 100;
+}
+#debugoutput
+{
+   position: absolute;
+   left: 0;
+   top: 0;
+}
+      </style>
+   </head>
+   <body>
+      <div id="editor" class="expandowidth">--Modules are written in Lua
+
+--"Unhandled" commands run through the "default" handler. Think "default" on
+--a switch statement. You get the command sender uid and the whole command line
+--sent on the API (which isn't supposed to include the module name)
+function default(uid, data)
+   sendmessage(uid, "You sent:" .. data) --sendmessage is a builtin, sends message to given uid
+end
+
+--If you want to handle all command parsing yourself, you can simply use the 
+--default handler. But, any command that you want parsed automatically can
+--be placed in the "subcommands" table, like what follows. The arguments are
+--in the format 'name_type', where the available types are 'user', 'word',
+--'int', and 'freeform'. Freeform arguments consume the rest of the argument 
+--list and must come at the end. Users are in the form "uid(username)", where 
+--username is optional. Word is a single word with no spaces.
+subcommands={
+   ["wow"]={
+      ["arguments"]={"first_user","second_word","third_freeform"},
+      ["description"]="The thing to display on help or something"
+   } 
+}
+
+--In the above example, your command may look like:
+-- /test wow 2(haloopdy) programs some really dumb stuff
+--Where 'wow' is the subcommand as we defined above, 2(haloopdy) is the user
+--(which doesn't require the userrname), 'programs' is the word, and the
+--rest goes into the final argument. By default, this command will be routed
+--to 'command_wow', but you can define the function by adding a 'function'
+--field to the subcommand. The names of the arguments in your defined function
+--don't matter, it just should match the amount of arguments. The system will
+--parse your command and handle errors for you automatically if you go this
+--route.
+function command_wow(uid, user, word, freeform)
+   --You have no access to usernames or any user data. However, %UID% will be 
+   --captured, and the listener endpoint can chain against the field called
+   --"usersInMessage". The listener must manually replace the UIDs though
+   --(this is done to allow many types of configuration, such as nicknames, 
+   -- titles, special formatting (like links to usernames), etc. I'm sorry
+   -- it's more work, but I think it's neat if usernames could be linked 
+   -- in module messages, and manual replacement allows that)
+
+   --NOTE: you can send messages directly to a user with "usermessage". These 
+   --don't have a room associated with them, and can be pulled from anywhere
+   usermessage(uid, "User %" .. user .. "% " .. word .. " " .. freeform)
+end
+
+--Now, let's define the rest of the subcommands. You don't normally have to
+--split this, it's just part of this example. You'll notice some don't 
+--define args, if no args are defined, the entire command line is sent
+--to the function, just like the 'default' function. Basically, you can
+--be as verbose or as sparse as you like, depending on how much you want
+--to let the system do
+subcommands["broadcast"]={}
+subcommands["store"]={}
+subcommands["read"]={}
+subcommands["getuid"]={["arguments"]={"uid_user"}}
+subcommands["alert"]={}
+subcommands["debug"]={}
+subcommands["checkroom"]={}
+
+--Broadcast messages are sent to everyone in the current room. The current
+--room is the one in which the module message was sent.
+function command_broadcast(uid, data)
+    broadcastmessage("The test module is broadcasting!")
+end
+
+--To read and write persistent data, use setdata and getdata. Data is string
+--only, but this version of lua is "moonsharp" and you have access to the 
+--functions "json.parse(string)" and "json.serialize(table)". It only works
+--for tables I believe. See: https://www.moonsharp.org/additions.html
+function command_store(uid, data)
+   setdata("somekey", data)
+   usermessage(uid, "Stored " .. data .. " in 'somekey'") -- .. is string concat
+end
+
+function command_read(uid, data)
+   usermessage(uid, "You stored: " .. getdata("somekey"))
+end
+
+--Special note about getdata: there's a "getalldata" version that accepts a
+--'like' key. For instance, getalldata("a%") will get you a table of values
+--from your storage where the key starts with 'a'.
+
+function command_getuid(uid, user)
+   usermessage(uid, "UID " .. user .. " is %" .. user .. "%")
+end
+
+--Any string you return from a function will be given as the result
+--text when POSTing the command. It should not be used to send messages
+function command_alert(uid, data)
+   usermessage(uid, "Returned data in the response")
+   return "The data was: " .. data
+end
+
+--You can log debug messages, which are viewable from /api/module/debug/{modname}
+function command_debug(uid, data)
+   prntdbg("This should show the user, command, and data")
+   usermessage(uid, "Check the debug logs!")
+end
+
+--There are times when you need the ID of the room the user is sending the
+--command in. For instance, if a user starts a game and you're broadcasting
+--messages, only the people in that room will see the game. It wouldn't make
+--sense for users outside that room to be able to join (in some cases). This
+--isn't necessary of course; it's up to you
+function command_checkroom(uid)
+   local currentroom = getbroadcastid()
+   local lastroom = tonumber(getdata(uid.."lastroom"))
+   local message = "Your room id is: "..currentroom.."\n"
+   if currentroom ~= lastroom then
+      message = message.."This is different than your last room!"
+      if lastroom ~= nil then message = message.." You were in "..lastroom end
+   end
+   usermessage(uid, message)
+   setdata(uid.."lastroom", currentroom)
+end
+
+--You can define your own functions as long as they don't start with command_
+function whatever()
+   return 4
+end
+
+
+--Extra information:
+
+-- Module endpoint is /api/module. Modules are standard objects like
+-- content/etc, except there are no permissions. You can search for modules to get
+-- the code, POST modules if you're a super user, and delete them (if you're super).
+-- You can also POST data to a command endpoint. To post a command such as:
+--   cgame draw 500
+-- in room 55, you would POST to endpoint (with body set to "500"):
+--  /api/module/cgame/draw/55
+-- Please note that module messages are room-aware, so you must always include
+-- the room id when sending commands. Broadcast messages performed during a
+-- command will use this id to send to everyone in that room.
+-- If a command has no extra arguments, you can simply post an empty body (I think)
+
+-- If you utilize the "subcommands" automatic parsing (please do), you ALSO get
+-- access to the parsed subcommand info when you search for modules. This way,
+-- clients can auto-generate help for module commands
+
+-- Module activity shows up in regular activity, you can chain to "module" to 
+-- get the name/etc. Modules have associated values which can be read IN the
+-- module itself, you can use these as constants to tweak your code without having
+-- to actually change the code (think a config etc). Use "getvalue" to get
+-- strings, you can use lua to convert to numbers etc.
+
+-- Module messages are stored in the database and are part of the chainer. They
+-- share the id space with comments. As such, you can chain "modulemessage" to
+-- your actions listener to also get module messages. Modules can either send
+-- messages directly to users, regardless of room (parentId will be 0), or send 
+-- messages to all within a specific room (receiverId will be 0). You should
+-- display module messages with a parentId in the appropriate rooms, but
+-- messages directly to users is up to you. I personally display user-specific
+-- messages in all rooms. Furthermore, accessing ANY module message endpoint
+-- will give you BOTH direct user messages to you as well as all module messages
+-- across all rooms. There is a parentId limiter if you want to use it, same as
+-- comments, but you will still get your user-specific messages mixed in. To 
+-- ONLY get room messages, set the "RecipientIds" array to contain some
+-- impossible value, like -1 
+-- Since module messages share the id space with all other actions, you can 
+-- continue using lastId as usual on your listener endpoints. You may want to 
+-- chain users to various fields in the module messages.
+-- Example:
+--   { "lastId" : 0, "chains" : ["modulemessage.0id", "user.1usersInMessage.1sendUserId" ] }
+-- "usersInMessage" will be all the parsed %UID% found in the message, and you 
+-- can also chain against "sendUserId" and "receiveUserId" (note that chaining
+-- against 0 for broadcast messages shouldn't match anything... but I'm not sure)
+
+-- The "json" implementation in this lua library is broken for strings. If you
+-- want to encode your tables as json strings for storage, please use the
+-- functions "b64encode" and "b64decode" on any string in your table. The
+-- strings NEED TO BE base64 before serialization in order to be stored 
+-- without error. And of course, decode them after loading from the storage.
+
+-- Additional functions available in lua and their implementations:
+--  https://github.com/randomouscrap98/contentapi/blob/e178850ac191b2a4a02101e9b9f3d6b7b5a4b6ae/contentapi/Services/Implementations/ModuleService.cs#L133
+
+-- Add "keyboard=vim" to set keybindings to vim. There may be other options
+-- too, lookup the ace editor for more details
+-- Add "theme=monokai" for a dark theme. There are other options (ace editor)
+
+   </div>
+   </body>
+   <div id="controls">
+      <!--<div id="endpointcontrols">
+         <input id="endpoint" placeholder="API Endpoint">
+         <input id="token" placeholder="API token" type="password">
+         <span class="annotation">Set/Edit = restart required (sorry)</span>
+      </div>-->
+      <div id="loadsavecontrols">
+         <input id="modulename" placeholder="Module name">
+         <button id="loadbutton">Load</button>
+         <button id="savebutton">Save</button>
+      </div>
+      <div id="commandcontrols">
+         <!--<input id="commandname" placeholder="command">-->
+         <input id="commanddata" placeholder="module args">
+         <button id="commandbutton">Send</button>
+      </div>
+   </div>
+   <div id="moduleoutput" class="messagebox expandowidth">
+   </div>
+   <div id="moduledebug" class="messagebox expandowidth">
+      <button id="debugbutton">Reload</button>
+      <div id="debugoutput">
+      </div>
+   </div>
+</html>
