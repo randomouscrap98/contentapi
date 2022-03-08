@@ -6,6 +6,7 @@ using System.Text.RegularExpressions;
 using System.Threading.Tasks;
 using AutoMapper;
 using contentapi.Db;
+using contentapi.Main;
 using contentapi.Search;
 using contentapi.Utilities;
 using contentapi.Views;
@@ -31,8 +32,6 @@ public class GenericSearchDbTests : ViewUnitTestBase, IClassFixture<DbUnitTestSe
             conWrap, fixture.GetService<IViewTypeInfoService>(), fixture.GetService<GenericSearcherConfig>(),
             fixture.GetService<IMapper>(), fixture.GetService<IQueryBuilder>(), 
             fixture.GetService<IPermissionService>());
-        //dbcon = conWrap.Connection;
-        //fixture.ResetDatabase();
     }
 
     [Fact]
@@ -1371,4 +1370,5 @@ public class GenericSearchDbTests : ViewUnitTestBase, IClassFixture<DbUnitTestSe
             Assert.NotEqual(VoteType.none, x.vote);
         });
     }
+
 }

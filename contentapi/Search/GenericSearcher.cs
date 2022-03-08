@@ -1,5 +1,6 @@
 using System.Data;
 using System.Diagnostics;
+using System.Text.RegularExpressions;
 using AutoMapper;
 using contentapi.Db;
 using contentapi.Utilities;
@@ -84,6 +85,8 @@ public class GenericSearcher : IGenericSearch
         {
             const string cidkey = nameof(Db.MessageValue.messageId);
             const string valkey = nameof(MessageView.values);
+            const string uidskey = nameof(MessageView.uidsInText);
+            const string textkey = nameof(MessageView.text);
             var index = IndexResults(result);
 
             if(r.requestFields.Contains(valkey))
@@ -96,6 +99,11 @@ public class GenericSearcher : IGenericSearch
 
                 foreach(var c in index) 
                     c.Value[valkey] = lookup.Contains(c.Key) ? lookup[c.Key].ToDictionary(x => x.key, y => JsonConvert.DeserializeObject(y.value)) : new Dictionary<string, object?>();
+            }
+            if(r.requestFields.Contains(uidskey) && r.requestFields.Contains(textkey))
+            {
+                foreach(var c in index)
+                    c.Value[uidskey] = Regex.Matches((string)c.Value[textkey], @"%(\d+)%").Select(x => long.Parse(x.Groups[1].Value)).ToList();
             }
         }
 

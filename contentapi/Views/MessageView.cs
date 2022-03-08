@@ -54,4 +54,8 @@ public class MessageView : IIdView
     [FieldSelect]
     [Writable(WriteRule.User, WriteRule.Preserve)] //Is this necessary?
     public long receiveUserId { get; set; } 
+
+    [NoQuery]
+    [Expensive(1)]
+    public List<long> uidsInText {get;set;} = new List<long>();
 }

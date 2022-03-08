@@ -1,3 +1,4 @@
+using System.Collections;
 using System.Data;
 using System.Runtime.CompilerServices;
 using System.Text;
@@ -338,7 +339,15 @@ public class QueryBuilder : IQueryBuilder
                 throw new ArgumentException($"Link result {resultName} has no field {resultField} for {value} in {request.name}");
 
             //OK we finally have it, let's go
-            parameters.Add(newName, valList.Select(x => x[resultField]).Where(x => x != null));
+            var fieldType = valList.First()[resultField]?.GetType();
+
+            if(fieldType != null && fieldType.IsAssignableTo(typeof(IEnumerable<long>)))
+                parameters.Add(newName, valList.SelectMany(x => (IEnumerable<long>)x[resultField]));
+            else if(fieldType != null && fieldType.IsAssignableTo(typeof(IEnumerable<string>)))
+                parameters.Add(newName, valList.SelectMany(x => (IEnumerable<string>)x[resultField]));
+            else
+                parameters.Add(newName, valList.Select(x => x[resultField]).Where(x => x != null));
+
             return $"@{newName}";
         }
         return value;

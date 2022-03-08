@@ -42,13 +42,10 @@ window.onload = function()
       editor.setKeyboardHandler("ace/keyboard/" + params.get('keyboard'));
 
    var editorelement = document.getElementById("editor");
-   //var endpoint = document.getElementById("endpoint");
-   //var token = document.getElementById("token");
    var modulename = document.getElementById("modulename");
    var loadbutton = document.getElementById("loadbutton");
    var savebutton = document.getElementById("savebutton");
    var commandbutton = document.getElementById("commandbutton");
-   //var commandname = document.getElementById("commandname");
    var commanddata = document.getElementById("commanddata");
    var debugbutton = document.getElementById("debugbutton");
    var debugoutput = document.getElementById("debugoutput");
@@ -306,7 +303,7 @@ function quickAJAX(url, token, callback, error, postData)
 --a switch statement. You get the command sender uid and the whole command line
 --sent on the API (which isn't supposed to include the module name)
 function default(uid, data)
-   sendmessage(uid, "You sent:" .. data) --sendmessage is a builtin, sends message to given uid
+   usermessage(uid, "You sent:" .. data) --usermessage is a builtin, sends message to given uid
 end
 
 --If you want to handle all command parsing yourself, you can simply use the 
@@ -335,15 +332,16 @@ subcommands={
 --route.
 function command_wow(uid, user, word, freeform)
    --You have no access to usernames or any user data. However, %UID% will be 
-   --captured, and the listener endpoint can chain against the field called
-   --"usersInMessage". The listener must manually replace the UIDs though
+   --captured, and request endpoints can query against the "uidsInText"
+   --field, if it was requested. The caller must manually replace the UIDs though
    --(this is done to allow many types of configuration, such as nicknames, 
    -- titles, special formatting (like links to usernames), etc. I'm sorry
    -- it's more work, but I think it's neat if usernames could be linked 
    -- in module messages, and manual replacement allows that)
 
    --NOTE: you can send messages directly to a user with "usermessage". These 
-   --don't have a room associated with them, and can be pulled from anywhere
+   --are STILL sent in the current room, and so only show up in requests for 
+   --that room.
    usermessage(uid, "User %" .. user .. "% " .. word .. " " .. freeform)
 end
 
@@ -426,20 +424,28 @@ end
 
 --Extra information:
 
--- Module endpoint is /api/module. Modules are standard objects like
--- content/etc, except there are no permissions. You can search for modules to get
--- the code, POST modules if you're a super user, and delete them (if you're super).
--- You can also POST data to a command endpoint. To post a command such as:
+-- Modules are standard content, you just have to set the "contentType"
+-- appropriately (see /api/request/about). Managing modules themselves (not
+-- the messages) is done with all the rest of the content, but only super
+-- users can create module types. Afterwards, the permissions set on the 
+-- module determine who can manage it. You can comment on modules and display
+-- them like pages, or do whatever you want with them. Discussions on modules
+-- seems like a viable thing to add to your frontend.
+
+-- There's a special endpoint for further management of modules at 
+-- /api/module, where you can get debug logging, post commands, and also
+-- more easily create or update modules by name.
+-- To post a command such as:
 --   cgame draw 500
--- in room 55, you would POST to endpoint (with body set to "500"):
---  /api/module/cgame/draw/55
+-- in room 55, you would POST to endpoint (with body set to "draw 500"):
+--  /api/module/cgame/55
 -- Please note that module messages are room-aware, so you must always include
 -- the room id when sending commands. Broadcast messages performed during a
 -- command will use this id to send to everyone in that room.
 -- If a command has no extra arguments, you can simply post an empty body (I think)
 
 -- If you utilize the "subcommands" automatic parsing (please do), you ALSO get
--- access to the parsed subcommand info when you search for modules. This way,
+-- access to the parsed subcommand info, available at /api/module/about. This way,
 -- clients can auto-generate help for module commands
 
 -- Module activity shows up in regular activity, you can chain to "module" to 
