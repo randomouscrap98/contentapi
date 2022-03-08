@@ -33,17 +33,14 @@ public class ModuleService : IModuleService
     protected ModuleServiceConfig config;
     protected ModuleMessageAdder addMessage;
     protected IGenericSearch searcher;
-    //protected UserViewSource userSource;
 
     public ModuleService(ModuleServiceConfig config, ILogger<ModuleService> logger, ModuleMessageAdder addMessage,
         IGenericSearch searcher)
-        //UserViewSource userSource)//Action<ModuleMessageView> addMessage)
     {
         this.config = config;
         this.logger = logger;
         this.addMessage = addMessage;
         this.searcher = searcher;
-        //this.userSource = userSource;
     }
 
     public LoadedModule? GetModule(string name)
@@ -91,8 +88,10 @@ public class ModuleService : IModuleService
     /// <returns></returns>
     public LoadedModule? UpdateModule(ContentView module, bool force = true)
     {
-        if(!force && loadedModules.ContainsKey(module.name))
+        if(!force && loadedModules.ContainsKey(module.name) && loadedModules[module.name].lastRevisionId == module.lastRevisionId)
             return null;
+        //if(!force && loadedModules.ContainsKey(module.name))
+        //    return null;
 
         var getValue = new Func<string, string?>((s) => 
         {
@@ -113,6 +112,8 @@ public class ModuleService : IModuleService
         var mod = new LoadedModule();
         mod.script = new Script();
         mod.script.DoString(module.text);     //This could take a LONG time.
+        mod.lastRevisionId = module.lastRevisionId;
+        mod.contentId = module.id;
 
         var getData = new Func<string, Dictionary<string, string?>>((k) =>
         {
@@ -219,14 +220,6 @@ public class ModuleService : IModuleService
             var base64EncodedBytes = System.Convert.FromBase64String(s.Replace('!', '/'));
             return System.Text.Encoding.UTF8.GetString(base64EncodedBytes);
         });
-        //mod.script.Globals["serializetable"] = new Func<Table, string>((t) =>
-        //{
-        //    return t.Serialize();
-        //});
-        //`mod.script.Globals["newtonjsondeserialize"] = new Func<string, Table>((s) =>
-        //`{
-        //`    return ;//Deserialize(); JsonConvert.DeserializeObject<Table>(o);
-        //`});
 
         mod.script.Globals["getbroadcastid"] = new Func<long>(() => mod.currentParentId);
 

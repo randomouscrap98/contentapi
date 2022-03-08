@@ -3,6 +3,7 @@ using contentapi.Main;
 using contentapi.Search;
 using contentapi.Security;
 using contentapi.Utilities;
+using contentapi.Views;
 using Microsoft.AspNetCore.Mvc;
 
 namespace contentapi.Controllers;
@@ -66,10 +67,17 @@ public class BaseController : Controller
     public const string RateLogin = "login";
     public const string RateInteract = "interact";
     public const string RateFile = "file";
+    public const string RateModule = "module";
 
     protected long? GetUserId() => services.authService.GetUserId(User.Claims);
     protected bool IsUserLoggedIn() => GetUserId() != null;
     protected long GetUserIdStrict() => services.authService.GetUserId(User.Claims) ?? throw new InvalidOperationException("User not logged in! Strict mode on: MUST be logged in for this call!");
+
+    protected async Task<UserView> GetUserViewStrictAsync()
+    {
+        var userId = GetUserIdStrict();
+        return await services.searcher.GetById<UserView>(RequestType.user, userId) ?? throw new RequestException($"Couldn't find user with id {userId}");
+    }
 
     protected async Task<ActionResult<T>> MatchExceptions<T>(Func<Task<T>> perform)
     {

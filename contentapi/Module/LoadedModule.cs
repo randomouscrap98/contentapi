@@ -10,12 +10,13 @@ public class LoadedModule
 {
     public Script script {get;set;} = new Script();
     public Dictionary<string, ModuleSubcommandInfo?> subcommands {get;set;} = new Dictionary<string, ModuleSubcommandInfo?>();
-    //= new Dictionary<string, ModuleSubcommandInfo>();
     public Queue<string> debug {get;set;} = new Queue<string>();
+    public long lastRevisionId = 0;
+    public long contentId = 0;
 
     public string? currentFunction = null;
     public string? currentArgs = null;
     public long currentUserId = 0;
     public long currentParentId = 0;
-    public SqliteConnection? dataConnection; // = new SqliteConnection(":memory:");
+    public SqliteConnection? dataConnection;
 }
