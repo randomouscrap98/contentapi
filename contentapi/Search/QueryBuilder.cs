@@ -22,6 +22,8 @@ public class QueryBuilder : IQueryBuilder
     {
         { "keywordlike", new MacroDescription("v", "KeywordLike", new List<RequestType> { RequestType.content }) },
         { "valuelike", new MacroDescription("vv", "ValueLike", new List<RequestType> { RequestType.content, RequestType.message }) }, 
+        { "keywordin", new MacroDescription("v", "KeywordIn", new List<RequestType> { RequestType.content }) },
+        { "valuein", new MacroDescription("vv", "ValueIn", new List<RequestType> { RequestType.content, RequestType.message }) }, 
         { "onlyparents", new MacroDescription("", "OnlyParents", new List<RequestType> { RequestType.content }) },
         { "basichistory", new MacroDescription("", "BasicHistory", new List<RequestType> { RequestType.activity }) },
         { "notdeleted", new MacroDescription("", "NotDeletedMacro", new List<RequestType> { RequestType.content, RequestType.message, RequestType.user }) }, 
@@ -68,28 +70,39 @@ public class QueryBuilder : IQueryBuilder
     // -- MACROS --
     // ------------
 
-    //NOTE: Even though these might say "0" references, they're all used by the macro system!
-    public string KeywordLike(SearchRequestPlus request, string value)
+    public string KeywordSearchGeneric(SearchRequestPlus request, string value, string op)
     {
         var typeInfo = typeService.GetTypeInfo<ContentKeyword>();
-        //TODO: don't hardcode the table names? does it matter?
         return $@"id in 
             (select {nameof(ContentKeyword.contentId)} 
              from {typeInfo.selfDbInfo?.modelTable}
-             where {nameof(ContentKeyword.value)} like {value}
+             where {nameof(ContentKeyword.value)} {op} {value}
             )";
     }
 
-    public string ValueLike(SearchRequestPlus request, string key, string value)
+    public string ValueSearchGeneric(SearchRequestPlus request, string key, string value, string op)
     {
         var typeInfo = typeService.GetTypeInfo<ContentValue>();
         return $@"id in 
             (select {nameof(ContentValue.contentId)} 
              from {typeInfo.selfDbInfo?.modelTable}
-             where {nameof(ContentValue.key)} like {key} 
-               and {nameof(ContentValue.value)} like {value}
+             where {nameof(ContentValue.key)} {op} {key} 
+               and {nameof(ContentValue.value)} {op} {value}
             )";
     }
+
+    //NOTE: Even though these might say "0" references, they're all used by the macro system!
+    public string KeywordLike(SearchRequestPlus request, string value) =>
+        KeywordSearchGeneric(request, value, "like");
+        
+    public string KeywordIn(SearchRequestPlus request, string value) =>
+        KeywordSearchGeneric(request, value, "in");
+
+    public string ValueLike(SearchRequestPlus request, string key, string value) =>
+        ValueSearchGeneric(request, key, value, "like");
+
+    public string ValueIn(SearchRequestPlus request, string key, string value) =>
+        ValueSearchGeneric(request, key, value, "in");
 
     public string OnlyParents(SearchRequestPlus request)
     {

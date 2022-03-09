@@ -975,6 +975,64 @@ public class GenericSearchDbTests : ViewUnitTestBase, IClassFixture<DbUnitTestSe
     }
 
     [Fact]
+    public async Task GenericSearch_Search_KeywordInMacro()
+    {
+        var values = new Dictionary<string, object> { 
+            { "search", new [] { "one", "two"}}
+        };
+        var search = new SearchRequest()
+        {
+            type = "content",
+            fields = "id,keywords",
+            query = "!keywordin(@search)"
+        };
+
+        var result = await service.SearchSingleTypeUnrestricted<ContentView>(search, values);
+
+        //At least half the content should have the "one" keyword, and they should all have
+        //an id with the keyword flag set
+        //Assert.Equal(fixture.ContentCount / 2, result.Count());
+        Assert.Contains(result, x => x.keywords.Contains("one") && x.keywords.Contains("two"));
+        Assert.All(result, x =>
+        {
+            Assert.True(x.keywords.Contains("one") || x.keywords.Contains("two"));
+        });
+    }
+
+    [Fact]
+    public async Task GenericSearch_Search_ValueInMacro()
+    {
+        var cid = (int)ContentVariations.Values + 1;
+        var keys = new List<string>{ $"contentval_0_{cid}", $"contentval_1_{cid}" };
+        var searches = new List<string>{ $"value_0", $"value_1" };
+        var values = new Dictionary<string, object> {
+            { "key", keys},
+            { "search", searches}
+        };
+        var search = new SearchRequest()
+        {
+            type = "content",
+            fields = "id,values",
+            query = "!valuein(@key, @search)"
+        };
+
+        var result = await service.SearchSingleTypeUnrestricted<ContentView>(search, values); //(await service.SearchUnrestricted(search)).data["valuemacro"];
+        //var castResult = service.ToStronglyTyped<ContentView>(result);
+
+        //At least half the content should have the "one" keyword, and they should all have
+        //an id with the keyword flag set
+        //Assert.Equal(fixture.ContentCount / 2, result.Count());
+        Assert.Contains(result, x => x.values.ContainsKey(keys[0]) && x.values.ContainsKey(keys[1]));
+        Assert.Contains(result, x => x.values.Values.Contains(searches[0]) && x.values.Values.Contains(searches[1]));
+        Assert.All(result, x =>
+        {
+            Assert.True(x.values.ContainsKey(keys[0]) || x.values.ContainsKey(keys[1]));
+            Assert.True(x.values.Values.Contains(searches[0]) || x.values.Values.Contains(searches[1]));
+            //Assert.True(((x.id - 1) & (int)ContentVariations.Values) > 0);
+        });
+    }
+
+    [Fact]
     public async Task GenericSearch_Search_OnlyParentsMacro()
     {
         var search = new SearchRequests();
