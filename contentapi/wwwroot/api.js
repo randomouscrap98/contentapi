@@ -270,7 +270,7 @@ Api.prototype.Raw = function(path, postData, handler, modifyRequest, parseData)
 
         if(request.status >= 200 && request.status <= 299)
         {
-            if(parseData)
+            if(parseData && request.responseText)
                 result.result = parseData(request.responseText);
             else
                 result.result = request.responseText;
@@ -324,7 +324,10 @@ Api.prototype.Raw = function(path, postData, handler, modifyRequest, parseData)
     }
 };
 
+
+// ---------------------------------------------------------------------------------
 // !! From here on out, these are the endpoints you will MOST LIKELY want to call !!
+// ---------------------------------------------------------------------------------
 
 Api.prototype.Login = function(loginData, handler)
 {
@@ -501,6 +504,12 @@ Api.prototype.SearchModules = function(name, fields, handler)
     this.Raw("module/search?" + params.toString(), undefined, handler);
 };
 
+// Get the debug logs (a list of strings) for the given module (no search options)
+Api.prototype.GetModuleDebugLog = function(name, handler)
+{
+    this.Raw(`module/debug/${name}`, undefined, handler);
+};
+
 //You don't need to specify name because it's part of the module
 Api.prototype.WriteModuleByName = function(module, handler)
 {
@@ -521,9 +530,18 @@ Api.prototype.WriteModuleByNameEasy = function(name, code, handler)
     this.Raw("module/byname", module, handler);
 };
 
+// EVERY module message needs a parent id to send in
+Api.prototype.WriteModuleMessage = function(module, parentId, command, handler)
+{
+    this.Raw(`module/${module}/${parentId}`, command, handler);
+};
+
+
+// ---------------------------------------------------------------------------------
 // -- Some simple, common use cases for accessing the search endpoint. --
 // NOTE: You do NOT need to directly use these, especially if they don't fit your needs. 
 // You can simply use them as a starting grounds for your own custom constructed searches if you want
+// ---------------------------------------------------------------------------------
 
 // Note: this could still return an empty list with "success", it's up to you to handle 
 // if the list is empty
@@ -578,6 +596,39 @@ Api.prototype.Notifications = function(contentPerPage, page, handler)
     this.Search(search, handler);
 };
 
+// Return a list of module messages PRE-linked to users. All parameters are optional.
+Api.prototype.GetModuleMessages = function(pageId, module, limit, handler)
+{
+    var moduleSearch = new RequestSearchParameter("message", "*", "!notnull(module)","id");
+    var values = {};
+    //var me = this;
+
+    if(limit) moduleSearch.limit = limit;
+    if(module) 
+    { 
+        moduleSearch.query += " and module=@name";
+        values.name = module;
+    }
+    if(pageId)
+    {
+        moduleSearch.query += " and contentId=@cid";
+        values.cid = pageId;
+    }
+
+    var search = new RequestParameter(values, [
+        moduleSearch,
+        new RequestSearchParameter("user", "*", "id in @message.uidsInText or id in @message.createUserId or id in @message.receiveUserId")
+    ]);
+
+    this.Search(search, handler); 
+    //new ApiHandler(d =>
+    //{
+    //    //Need to autolink the users. uidsInText must be done by you, however, because I don't
+    //    //know how you want those names displayed
+    //    me.AutoLinkUsers(d.result.data.message, d.result.data.user);
+    //    handler(d);
+    //}));
+};
 
 // -- Some helper functions which don't necessarily directly connect to the API --
 

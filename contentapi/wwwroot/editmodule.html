@@ -47,8 +47,11 @@ window.onload = function()
    var savebutton = document.getElementById("savebutton");
    var commandbutton = document.getElementById("commandbutton");
    var commanddata = document.getElementById("commanddata");
+   var commandroom = document.getElementById("commandroom");
    var debugbutton = document.getElementById("debugbutton");
-   var debugoutput = document.getElementById("debugoutput");
+   var outputbutton = document.getElementById("outputbutton");
+   var debugoutput = document.getElementById("moduledebug");
+   var moduleoutput = document.getElementById("moduleoutput");
 
    api.AboutToken(new ApiHandler(d => 
    {
@@ -79,82 +82,96 @@ window.onload = function()
             }));
          }
       });
-   }));
+      commandbutton.addEventListener("click", function()
+      {
+         var name = getCurrentModuleName();
+         var room = commandroom.value;
 
-   /*loadbutton.addEventListener("click", function()
-   {
-      //var data = saveInputs();
-      //var url = modend(data.endpoint) + "?names=" + data.modulename;
-      var name = getCurrentModuleName();
-      if(confirm(`You will lose saved data. Are you sure you want to load module ${name}?`))
-      {
-         quickAJAX(url, data.token, function(d) 
-         { 
-            if(d.length) 
-               editor.setValue(d[0].code); 
-            else
-               alert("Couldn't find any module named " + data.modulename);
-         });
-      }
-   });
-   savebutton.addEventListener("click", function()
-   {
-      //var data = saveInputs();
-      //var url = modend(data.endpoint) + "/byname"; // + data.modulename;
-      var name = getCurrentModuleName();
-      if(confirm(`You will overwrite the module on the server. Are you sure you want to write as module ${name}?`))
-      {
-         quickAJAX(url, data.token, null, null, { "name" : data.modulename, "code" : editor.getValue() });
-      }
-   });
-   commandbutton.addEventListener("click", function()
-   {
-      //var data = saveInputs();
-      //var url = modend(data.endpoint) + "/" + data.modulename;// + "/" + commandname.value;
-      var name = getCurrentModuleName();
-      quickAJAX(url, data.token, function(d) 
-      { 
-         //commandname.value = "";
-         commanddata.value = "";
-         console.log(d); 
-         debugbutton.click();
-      }, null, commanddata.value || " ");
-   });
-   debugbutton.addEventListener("click", function()
-   {
-      //var data = saveInputs();
-      //var url = modend(data.endpoint) + "/debug/" + data.modulename;
-      var name = getCurrentModuleName();
-      quickAJAX(url, data.token, function(d)
-      {
-         console.log("loaded debug");
-         debugoutput.innerHTML = "";
-         for(var i = 0; i < d.length; i++)
+         if(!room)
          {
-            var dbg = document.createElement("div");
-            dbg.className = "messagecontent";
-            dbg.textContent = d[i];
-            debugoutput.appendChild(dbg);
+            alert("You must set the room id!");
+            return;
          }
-      });
-   });
 
-   var data = saveInputs();
-   if(data.endpoint)
-      nextListen(data.endpoint, data.token, {"lastId": 0}, document.getElementById("moduleoutput"));
-   else
-      console.log("Not running listener");
-      */
+         api.WriteModuleMessage(name, room, commanddata.value, new ApiHandler(d =>
+         {
+            console.log(commanddata.value, `Command immediate output: ${d.result}`);
+            commanddata.value = "";
+            //Need to go out and refresh the log and commands
+            debugbutton.click();
+            outputbutton.click();
+         }));
+      });
+      debugbutton.addEventListener("click", function()
+      {
+         var name = getCurrentModuleName();
+         api.GetModuleDebugLog(name, new ApiHandler(d =>
+         {
+            console.log("loaded debug");
+            debugoutput.innerHTML = "";
+            for(var i = 0; i < d.result.length; i++)
+            {
+               var dbg = document.createElement("div");
+               dbg.className = "messagecontent";
+               dbg.textContent = d.result[i];
+               debugoutput.appendChild(dbg);
+            }
+         }));
+      });
+      outputbutton.addEventListener("click", function()
+      {
+         var name = getCurrentModuleName();
+         var room = commandroom.value;
+
+         if(!room)
+         {
+            alert("You must set the room id!");
+            return;
+         }
+
+         api.GetModuleMessages(room, name, 100, new ApiHandler(d =>
+         {
+            moduleoutput.innerHTML = "";
+            var messages = d.result.data.message;
+            var users = d.result.data.user;
+            api.AutoLinkUsers(messages, users); //d.result.data.message, d.result.data.user);
+            for(var i = messages.length - 1; i >= 0; i--) //reverse order
+            {
+               var m = messages[i];
+               var elem = document.createElement("div");
+               elem.className = "modulemessage";
+               var elemmod = document.createElement("span");
+               elemmod.className = "messagemodule";
+               elemmod.textContent = "[" + m.module + "]";
+               var elemmsg = document.createElement("span");
+               elemmsg.className = "messagecontent";
+               var msg = m.text;
+               //This is BAD replacement: it will replace usernames with %id% repeatedly
+               for(var j = 0; j < users.length; j++)
+                  msg = msg.replace(new RegExp("%" + users[j].id + "%","g"), users[j].username);
+               elemmsg.innerHTML = msg;
+               var elemusr = document.createElement("span");
+               elemusr.className = "messageuser";
+               elemusr.textContent = "(" + findUsername(users, m.createUserId) + "->" + findUsername(users, m.receiveUserId) + ")";
+               elem.appendChild(elemmod);
+               elem.appendChild(elemmsg);
+               elem.appendChild(elemusr);
+               //moduleoutput.insertBefore(elem, moduleoutput.childNodes[0]);
+               moduleoutput.appendChild(elem); //, moduleoutput.childNodes[0]);
+            }
+         }));
+      });
+   }));
 };
 
-//function findUsername(users, uid)
-//{
-//   for(var i = 0; i < users.length; i++)
-//      if(users[i].id == uid)
-//         return users[i].username;
-//      
-//   return "???";
-//}
+function findUsername(users, uid)
+{
+   for(var i = 0; i < users.length; i++)
+      if(users[i].id == uid)
+         return users[i].username;
+      
+   return "???";
+}
 //
 //function nextListen(baseUrl, token, result, outputElement)
 //{
@@ -203,34 +220,6 @@ window.onload = function()
 //         setTimeout(nextCall, 5000);
 //      });
 //}
-
-//function quickAJAX(url, token, callback, error, postData)
-//{
-//   error = error || function(e) { alert("Error on " + url + ":\n" + e.status + " - " + e.responseText); };
-//   var req = new XMLHttpRequest();
-//   req.addEventListener("loadend", function()
-//   {
-//      if(req.status <= 299 && req.status >= 200)
-//      {
-//         if(callback)
-//            callback(req.responseText ? JSON.parse(req.responseText) : null);
-//         else
-//            alert("Success: " + req.status + " - " + req.responseText);
-//      }
-//      else
-//      {
-//         error(req);
-//      }
-//   });
-//   req.open(postData ? "POST" : "GET", url);
-//   req.setRequestHeader("accept", "application/json");
-//   req.setRequestHeader("Authorization", "Bearer " + token);
-//   req.setRequestHeader("Content-Type", "application/json");
-//   if(postData)
-//      req.send(JSON.stringify(postData));
-//   else
-//      req.send();
-//}
       </script>
       <style type="text/css">
 .expandowidth
@@ -248,7 +237,7 @@ window.onload = function()
 #moduleoutput_container
 {
    margin-top: 0.2em;
-   background-color: #AAA;
+   background-color: #DDD;
    color: #444;
 }
 #moduledebug_container
@@ -304,6 +293,8 @@ window.onload = function()
 #loadsavecontrols { float: left; }
 #commandcontrols { clear: both; }
 #connectioninfo { float: right; }
+#commanddata { width: 15rem; }
+#commandroom { width: 5rem; }
       </style>
    </head>
    <body>
@@ -490,6 +481,7 @@ end
       </div>
       <div id="commandcontrols">
          <input id="commanddata" placeholder="module args">
+         <input id="commandroom" placeholder="room id">
          <button id="commandbutton">Send</button>
       </div>
    </div>
