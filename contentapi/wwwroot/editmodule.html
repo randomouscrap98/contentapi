@@ -245,13 +245,34 @@ window.onload = function()
    min-height: 30em;
    border: 1px solid rgba(0,0,50,0.1);
 }
-#moduleoutput
+#moduleoutput_container
 {
    margin-top: 0.2em;
-   background-color: #EEE;
+   background-color: #AAA;
+   color: #444;
+}
+#moduledebug_container
+{
+   background-color: #444;
+   color: #AAA;
+}
+.refreshbutton
+{
+   position: absolute;
+   right: 0;
+   top: 0;
+   z-index: 100;
+}
+.messageoutput
+{
+   position: absolute;
+   left: 0;
+   top: 0;
 }
 .messagebox
 {
+   font-size: 0.8em;
+   position:relative;
    padding: 0.3em 0.5em;
    font-family: monospace;
    height: 6em;
@@ -279,27 +300,6 @@ window.onload = function()
    color: #777;
    margin: 0 0.5em;
    font-family: monospace;
-}
-#moduledebug
-{
-   position:relative;
-   background-color: #444;
-   color: #AAA;
-   font-size: 0.8em;
-
-}
-#debugbutton
-{
-   position: absolute;
-   right: 0;
-   top: 0;
-   z-index: 100;
-}
-#debugoutput
-{
-   position: absolute;
-   left: 0;
-   top: 0;
 }
 #loadsavecontrols { float: left; }
 #commandcontrols { clear: both; }
@@ -493,11 +493,14 @@ end
          <button id="commandbutton">Send</button>
       </div>
    </div>
-   <div id="moduleoutput" class="messagebox expandowidth">
+   <div id="moduleoutput_container" class="messagebox expandowidth">
+      <button id="outputbutton" class="refreshbutton">Refresh Messages</button>
+      <div id="moduleoutput" class="messageoutput">
+      </div>
    </div>
-   <div id="moduledebug" class="messagebox expandowidth">
-      <button id="debugbutton">Reload</button>
-      <div id="debugoutput">
+   <div id="moduledebug_container" class="messagebox expandowidth">
+      <button id="debugbutton" class="refreshbutton">Refresh Log</button>
+      <div id="moduledebug" class="messageoutput">
       </div>
    </div>
 </html>
