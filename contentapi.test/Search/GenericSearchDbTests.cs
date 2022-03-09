@@ -1004,7 +1004,7 @@ public class GenericSearchDbTests : ViewUnitTestBase, IClassFixture<DbUnitTestSe
     {
         var cid = (int)ContentVariations.Values + 1;
         var keys = new List<string>{ $"contentval_0_{cid}", $"contentval_1_{cid}" };
-        var searches = new List<string>{ $"value_0", $"value_1" };
+        var searches = new List<string>{ @"""value_0""", @"""value_1""" };
         var values = new Dictionary<string, object> {
             { "key", keys},
             { "search", searches}
@@ -1022,12 +1022,13 @@ public class GenericSearchDbTests : ViewUnitTestBase, IClassFixture<DbUnitTestSe
         //At least half the content should have the "one" keyword, and they should all have
         //an id with the keyword flag set
         //Assert.Equal(fixture.ContentCount / 2, result.Count());
+        var searchesPrime = searches.Select(x => x.Trim('"')).ToList();
         Assert.Contains(result, x => x.values.ContainsKey(keys[0]) && x.values.ContainsKey(keys[1]));
-        Assert.Contains(result, x => x.values.Values.Contains(searches[0]) && x.values.Values.Contains(searches[1]));
+        Assert.Contains(result, x => x.values.Values.Contains(searchesPrime[0]) && x.values.Values.Contains(searchesPrime[1]));
         Assert.All(result, x =>
         {
             Assert.True(x.values.ContainsKey(keys[0]) || x.values.ContainsKey(keys[1]));
-            Assert.True(x.values.Values.Contains(searches[0]) || x.values.Values.Contains(searches[1]));
+            Assert.True(x.values.Values.Contains(searchesPrime[0]) || x.values.Values.Contains(searchesPrime[1]));
             //Assert.True(((x.id - 1) & (int)ContentVariations.Values) > 0);
         });
     }
