@@ -50,34 +50,36 @@ window.onload = function()
    var debugbutton = document.getElementById("debugbutton");
    var debugoutput = document.getElementById("debugoutput");
 
-   api.AboutToken(new ApiHandler(d => {
-       document.getElementById("connectioninfo_uid").textContent = d.result.userId;
+   api.AboutToken(new ApiHandler(d => 
+   {
+      document.getElementById("connectioninfo_uid").textContent = d.result.userId;
+
+      loadbutton.addEventListener("click", function () 
+      {
+         var name = getCurrentModuleName();
+         if (confirm(`You may lose saved data. Are you sure you want to load module ${name}?`)) 
+         {
+            api.SearchModules(name, undefined, new ApiHandler(d =>
+            {
+               if (d.result.length)
+                  editor.setValue(d.result[0].text);
+               else
+                  alert(`Couldn't find any module named ${name}!`);
+            }));
+         }
+      });
+      savebutton.addEventListener("click", function () 
+      {
+         var name = getCurrentModuleName();
+         if (confirm(`You will overwrite the module on the server. Are you sure you want to write as module ${name}?`)) 
+         {
+            api.WriteModuleByNameEasy(name, editor.getValue(), new ApiHandler(d =>
+            {
+               alert(`Successfully wrote module. ID: ${d.id}`)
+            }));
+         }
+      });
    }));
-   //var saveInputs = function()
-   //{
-   //   var data = {
-   //      "endpoint" : endpoint.value,
-   //      "modulename" : modulename.value,
-   //      "token" : token.value
-   //   };
-   //   console.log("Caching inputs");
-   //   window.localStorage.setItem("inputs", JSON.stringify(data));
-   //   return data;
-   //};
-
-   //var loadInputs = function()
-   //{
-   //   var data = window.localStorage.getItem("inputs");
-   //   if(!data) return;
-   //   console.log("Loading inputs from cache");
-   //   data = JSON.parse(data);
-   //   endpoint.value = data.endpoint;
-   //   modulename.value = data.modulename;
-   //   token.value = data.token;
-   //};
-
-   //Load inputs
-   //loadInputs();
 
    /*loadbutton.addEventListener("click", function()
    {

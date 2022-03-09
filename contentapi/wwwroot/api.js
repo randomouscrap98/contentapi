@@ -487,6 +487,40 @@ Api.prototype.ClearNotifications = function(pid, handler)
     this.Raw(`shortcuts/watch/clear/${pid}`, true, handler);
 };
 
+//You can ALSO get modules from the request/search endpoint, however you won't
+//get the special lua data necessary to generate help data/etc. Leave name
+//null to get all modules. You can exclude expensive fields if you want a faster
+//search with something like "~values,votes,permissions,keywords,text"
+Api.prototype.SearchModules = function(name, fields, handler)
+{
+    var params = new URLSearchParams();
+
+    if(name) params.set("name", name);
+    if(fields) params.set("fields", fields);
+
+    this.Raw("module/search?" + params.toString(), undefined, handler);
+};
+
+//You don't need to specify name because it's part of the module
+Api.prototype.WriteModuleByName = function(module, handler)
+{
+    this.Raw("module/byname", module, handler);
+};
+
+//If you don't care about the fields, let this function pick decent defaults
+Api.prototype.WriteModuleByNameEasy = function(name, code, handler)
+{
+    //FYI: if you don't make your module publicly readable, nobody can really
+    //use your module... plus open source is good
+    var module = {
+        name : name,
+        text : code,
+        permissions : { "0" : "CR" }
+    };
+
+    this.Raw("module/byname", module, handler);
+};
+
 // -- Some simple, common use cases for accessing the search endpoint. --
 // NOTE: You do NOT need to directly use these, especially if they don't fit your needs. 
 // You can simply use them as a starting grounds for your own custom constructed searches if you want

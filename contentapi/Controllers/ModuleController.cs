@@ -19,28 +19,6 @@ public class ModuleController : BaseController
         this.modService = moduleService;
     }
 
-    protected async Task<LoadedModule> RefreshModule(string name, long userId)
-    {
-        var modules = await services.searcher.SearchSingleType<ContentView>(userId, new SearchRequest()
-        {
-            type = "content",
-            fields = "~votes,permissions,keywords,values",
-            query = "name = @name and contentType = @type and !notdeleted()"
-        }, new Dictionary<string, object> {
-            { "name", name },
-            { "type", Db.InternalContentType.module }
-        });
-
-        var ourModule = modules.FirstOrDefault(x => x.name == name && x.contentType == Db.InternalContentType.module); 
-
-        if(ourModule == null)
-            throw new NotFoundException($"Couldn't find module {name}!");
-        
-        //Specifically FALSE for forcing: we don't want to update modules that are the same as before here...
-        return modService.UpdateModule(ourModule, false) ?? modService.GetModule(name) ?? 
-            throw new NotFoundException($"No module found with name {name}!");
-    }
-
     /// <summary>
     /// Modules can log debug information, useful for... well, debugging. Only supers can read these logs though!
     /// </summary>
@@ -55,7 +33,7 @@ public class ModuleController : BaseController
             var user = await GetUserViewStrictAsync();
             if(!user.super)
                 throw new ForbiddenException("Can't read debug information unless super!");
-            var modData = await RefreshModule(name, user.id);
+            var modData = await modService.RefreshModuleAsync(services.searcher, name, user.id);
             return modData.debug.ToList();
         });
     }
@@ -74,17 +52,19 @@ public class ModuleController : BaseController
             RateLimit(RateWrite);
             //Go find by name first
             var userId = GetUserIdStrict();
-            var existing = await RefreshModule(module.name, userId); //services.searcher..FindByNameAsync(module.name);
+            var existing = await services.searcher.GetModuleForSystemByNameAsync(module.name, userId);
 
             if(existing != null)
-                module.id = existing.contentId;
+                module.id = existing.id;
             else
                 module.id = 0;
             
             //Need to add this just in case they don't, since this is a SPECIFIC module endpoint
             module.contentType = Db.InternalContentType.module;
             
-            return await services.writer.WriteAsync(module, userId);
+            var result = await services.writer.WriteAsync(module, userId);
+            modService.RefreshModule(result); //Make it ready immediately, just in case.
+            return result;
         });
     }
 
@@ -114,24 +94,38 @@ public class ModuleController : BaseController
         public Dictionary<string, ModuleSubcommandInfo?> subcommands {get;set;} = new Dictionary<string, ModuleSubcommandInfo?>();
     }
 
-    [HttpGet("allmodules")]
-    public Task<ActionResult<List<ModuleContentView>>> GetAllmodules()
+    /// <summary>
+    /// This additional endpoint is required in order to get all the parsed data from lua/etc
+    /// </summary>
+    /// <returns></returns>
+    [HttpGet("search")]
+    public Task<ActionResult<List<ModuleContentView>>> SearchModules([FromQuery]string? name = null, [FromQuery]string? fields = "*")
     {
         return MatchExceptions(async () =>
         {
             var userId = GetUserIdStrict();
+            var values = new Dictionary<string, object> {
+                { "type", Db.InternalContentType.module },
+            };
+
+            var query = "contentType = @type and !notdeleted()";
+
+            if(name != null)
+            {
+                query += " and name like @name";
+                values.Add("name", name);
+            }
+
             var modules = await services.searcher.SearchSingleType<ModuleContentView>(userId, new SearchRequest()
             {
                 type = "content",
-                fields = "*",
-                query = "contentType = @type and !notdeleted()"
-            }, new Dictionary<string, object> {
-                { "type", Db.InternalContentType.module }
-            });
+                fields = fields ?? "*",
+                query = query
+            }, values);
 
             foreach(var m in modules)
             {
-                var loaded = await RefreshModule(m.name, userId);
+                var loaded = modService.RefreshModule(m);
                 m.subcommands = loaded.subcommands;
             }
 
