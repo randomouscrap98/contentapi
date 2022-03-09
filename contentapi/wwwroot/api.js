@@ -601,7 +601,6 @@ Api.prototype.GetModuleMessages = function(pageId, module, limit, handler)
 {
     var moduleSearch = new RequestSearchParameter("message", "*", "!notnull(module)","id");
     var values = {};
-    //var me = this;
 
     if(limit) moduleSearch.limit = limit;
     if(module) 
@@ -621,13 +620,6 @@ Api.prototype.GetModuleMessages = function(pageId, module, limit, handler)
     ]);
 
     this.Search(search, handler); 
-    //new ApiHandler(d =>
-    //{
-    //    //Need to autolink the users. uidsInText must be done by you, however, because I don't
-    //    //know how you want those names displayed
-    //    me.AutoLinkUsers(d.result.data.message, d.result.data.user);
-    //    handler(d);
-    //}));
 };
 
 // -- Some helper functions which don't necessarily directly connect to the API --

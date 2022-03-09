@@ -107,7 +107,6 @@ window.onload = function()
          var name = getCurrentModuleName();
          api.GetModuleDebugLog(name, new ApiHandler(d =>
          {
-            console.log("loaded debug");
             debugoutput.innerHTML = "";
             for(var i = 0; i < d.result.length; i++)
             {
@@ -134,7 +133,7 @@ window.onload = function()
             moduleoutput.innerHTML = "";
             var messages = d.result.data.message;
             var users = d.result.data.user;
-            api.AutoLinkUsers(messages, users); //d.result.data.message, d.result.data.user);
+            api.AutoLinkUsers(messages, users); 
             for(var i = messages.length - 1; i >= 0; i--) //reverse order
             {
                var m = messages[i];
@@ -156,8 +155,7 @@ window.onload = function()
                elem.appendChild(elemmod);
                elem.appendChild(elemmsg);
                elem.appendChild(elemusr);
-               //moduleoutput.insertBefore(elem, moduleoutput.childNodes[0]);
-               moduleoutput.appendChild(elem); //, moduleoutput.childNodes[0]);
+               moduleoutput.appendChild(elem); 
             }
          }));
       });
@@ -172,54 +170,6 @@ function findUsername(users, uid)
       
    return "???";
 }
-//
-//function nextListen(baseUrl, token, result, outputElement)
-//{
-//   //console.log(result);
-//   if(result && result.chains && result.chains.modulemessage)
-//   {
-//      console.log("Got module messages");
-//      for(var i = 0; i < result.chains.modulemessage.length; i++)
-//      {
-//         var m = result.chains.modulemessage[i];
-//         var elem = document.createElement("div");
-//         elem.className = "modulemessage";
-//         var elemmod = document.createElement("span");
-//         elemmod.className = "messagemodule";
-//         elemmod.textContent = "[" + m.module + "]";
-//         var elemmsg = document.createElement("span");
-//         elemmsg.className = "messagecontent";
-//         var msg = m.message;
-//         //This is BAD replacement: it will replace usernames with %id% repeatedly
-//         for(var j = 0; j < result.chains.user.length; j++)
-//            msg = msg.replace(new RegExp("%" + result.chains.user[j].id + "%","g"), result.chains.user[j].username);
-//         elemmsg.innerHTML = msg;
-//         var elemusr = document.createElement("span");
-//         elemusr.className = "messageuser";
-//         elemusr.textContent = "(" + findUsername(result.chains.user, m.sendUserId) + "->" + m.receiveUserId + ")";
-//         elem.appendChild(elemmod);
-//         elem.appendChild(elemmsg);
-//         elem.appendChild(elemusr);
-//         outputElement.insertBefore(elem, outputElement.childNodes[0]);
-//      }
-//      
-//      result.chains = false; //clear out the data for the next call
-//   }
-//   else
-//   {
-//      console.log("Module message timeout or re-call, polling again");
-//   }
-//
-//   var moduleListen = { "lastId" : result.lastId, "chains" :
-//      ["modulemessage.0id", "user.1usersInMessage.1sendUserId.1receiveUserId"]};
-//   var nextCall = function(r) { nextListen(baseUrl, token, r || result, outputElement); };
-//   quickAJAX(baseUrl + "/read/listen?actions="+encodeURIComponent(JSON.stringify(moduleListen)), 
-//      token, nextCall, function(e)
-//      {
-//         console.log("something errored out: ", e);
-//         setTimeout(nextCall, 5000);
-//      });
-//}
       </script>
       <style type="text/css">
 .expandowidth
