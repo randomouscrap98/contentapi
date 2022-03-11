@@ -49,7 +49,13 @@ public static class GeneralExtensions
             do
             {
                 result = await ws.ReceiveAsync(tempBuffer, realToken);
-                await realBuffer.WriteAsync(tempBuffer, 0, result.Count);
+
+                if(result.MessageType == WebSocketMessageType.Text) //If statement optimization, don't go checking the other paths
+                    await realBuffer.WriteAsync(tempBuffer, 0, result.Count);
+                else if(result.MessageType == WebSocketMessageType.Binary)
+                    throw new RequestException($"Client sent unsupported message type: binary");
+                else if(result.MessageType == WebSocketMessageType.Close)
+                    throw new ClosedException($"Client closed connection manually");
             }
             while(result.EndOfMessage != true);
 
