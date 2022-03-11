@@ -49,3 +49,13 @@ header {
     white-space: pre-wrap;
     margin: 0.5em;
 }
+
+.console {
+    background-color: #444;
+    color: #AAA;
+    font-family: monospace;
+    width: 100%;
+    height: 50vh;
+    overflow-x: auto;
+    overflow-y: scroll;
+}

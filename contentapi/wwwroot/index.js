@@ -446,6 +446,18 @@ function notifications_onload(template, state)
     }));
 }
 
+function websocket_onload(template, state)
+{
+    var connectButton = template.querySelector("#websocket_connect");
+    var ws = false;
+    connectButton.onclick = function()
+    {
+        ws = api.AutoWebsocket(false, false, false);
+        connectButton.setAttribute("disabled", "");
+        connectButton.textContent = "Connected (for now)";
+    };
+}
+
 // -- Loaders, but not for pages, just for little templates--
 
 function page_item_onload(template, state)

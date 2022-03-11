@@ -32,6 +32,7 @@
                 parameters involved.
             </p>
             <p><a href="editmodule.html">Module editor</a> (must be logged in)</p>
+            <p><a href="?t=websocket">Rudimentary websocket tester</a></p>
         </section>
         <!-- For simplicity, all pages are defined directly inside index.html. They are loaded on page load based on
              the t parameter in the URL -->
@@ -182,6 +183,15 @@
                     <a href="#" id="notifications-up">Older Notifications</a>
                     <a href="#" id="notifications-down">Newer Notifications</a>
                 </div>
+            </div>
+            <div id="t_websocket" data-onload="websocket_onload">
+                <h3>Websocket tester</h3>
+                <p>Please check console for information! Make sure you connect first!</p>
+                <button id="websocket_connect">Connect</button>
+                <input id="websocket_type" placeholder="Websocket request type">
+                <textarea id="websocket_data" placeholder="Websocket data"></textarea>
+                <button id="websocket_send">Send</button>
+                <div id="websocket_output" class="console"></div>
             </div>
             <!-- The rest of this stuff are sort of "subtemplates", like little repeated items used within the page -->
             <div id="page_item" data-onload="page_item_onload">
