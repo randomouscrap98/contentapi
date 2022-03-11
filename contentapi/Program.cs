@@ -123,6 +123,14 @@ app.UseStaticFiles(builder.Configuration.GetValue<string>("StaticPath"));
 app.UseAuthentication();
 app.UseAuthorization();
 
+//MUST COME BEFORE USE ENDPOINTS 
+//https://www.koskila.net/httpcontext-websockets-iswebsocketrequest-always-null-in-your-net-core-code/
+app.UseWebSockets(new WebSocketOptions()
+{
+    //Make this configurable later?
+    KeepAliveInterval = TimeSpan.FromSeconds(15)
+});
+
 app.MapControllers();
 
 app.Run();
