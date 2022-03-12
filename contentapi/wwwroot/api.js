@@ -557,12 +557,15 @@ Api.prototype.WriteModuleMessage = function(module, parentId, command, handler)
 // -------------------
 
 // Return a websocket instance already pointing to the appropriate endpoint
-Api.prototype.GetRawWebsocket = function()
+Api.prototype.GetRawWebsocket = function(insecure)
 {
-    var link = document.createElement("a");
-    link.href = this.url;
-    var realUrl = link.protocol+"//"+link.host+link.pathname+link.search+link.hash;
-    return new WebSocket(realUrl.replace("https://", "wss://") + "live/ws");
+    var realUrl = this.ResolveRelativeUrl(this.url)
+    if(insecure === "auto")
+        insecure = realUrl.indexOf("localhost") >= 0 || realUrl.indexOf("127.0.0.1") >= 0;
+    var wsurl = realUrl.replace("https://", insecure ? "ws://" : "wss://") + "live/ws";
+    var result = new WebSocket(wsurl);
+    console.debug("Opened API websocket at: " + wsurl);
+    return result;
 };
 
 // Send a request of the given type (with the given data/id) on the given websocket.
@@ -585,7 +588,7 @@ Api.prototype.AutoWebsocket = function(liveUpdatesHandler, errorEvent, intercept
     //TODO: ALSO TRACK LIVE UPDATES ID!!! AND HANDLE ERROR IF LIVE UPDATES CAN'T DO ANYTHING!
     reconnectInterval = reconnectInterval || 5000;
     var me = this;
-    var ws = me.GetRawWebsocket();
+    var ws = me.GetRawWebsocket("auto");
     ws.manualCloseRequested = false;
     ws.pendingRequests = {};
     ws.pendingSends = [];
@@ -595,6 +598,7 @@ Api.prototype.AutoWebsocket = function(liveUpdatesHandler, errorEvent, intercept
     ws.close = function() 
     {
         //A one time use thing! Is this OK???
+        console.log("User called websocket.close() manually");
         ws.manualCloseRequested = true;
         ws.close = oldClose;
         ws.close();
@@ -678,8 +682,15 @@ Api.prototype.AutoWebsocket = function(liveUpdatesHandler, errorEvent, intercept
             console.warn(`Websocket closed unexpectedly, attempting new connection in ${reconnectInterval} ms`);
             window.setTimeout(() =>
             {
-                var newWs = me.AutoWebsocket(liveUpdatesHandler, errorEvent, interceptResponseErrors, reconnectInterval);
-                newWs.errorEvent("Websocket closed unexpectedly", null, newWs);
+                if(ws.manualCloseRequested)
+                {
+                    console.warn("After unexpected websocket close, the websocket was closed manually. Reconnect attempts will halt");
+                }
+                else
+                {
+                    var newWs = me.AutoWebsocket(liveUpdatesHandler, errorEvent, interceptResponseErrors, reconnectInterval);
+                    newWs.errorEvent("Websocket closed unexpectedly", null, newWs);
+                }
             }, reconnectInterval);
         }
     };
@@ -879,4 +890,11 @@ Api.prototype.FillMarkupSelect = function(selector, modify)
         if(modify) modify(opt);
         selector.appendChild(opt);
     });
+};
+
+Api.prototype.ResolveRelativeUrl = function(url)
+{
+    var link = document.createElement("a");
+    link.href = url;
+    return link.protocol+"//"+link.host+link.pathname+link.search+link.hash;
 };

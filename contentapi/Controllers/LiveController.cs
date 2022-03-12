@@ -9,7 +9,6 @@ using Newtonsoft.Json;
 
 namespace contentapi.Controllers;
 
-[Authorize()]
 public class LiveController : BaseController
 {
     public LiveController(BaseControllerServices services) : base(services) 

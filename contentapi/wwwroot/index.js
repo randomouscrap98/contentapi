@@ -449,12 +449,37 @@ function notifications_onload(template, state)
 function websocket_onload(template, state)
 {
     var connectButton = template.querySelector("#websocket_connect");
+    var closeButton = template.querySelector("#websocket_close");
+    var output = template.querySelector("#websocket_output");
     var ws = false;
+    var wslog = function(message) {
+        var div = document.createElement("div");
+        div.textContent = message;
+        output.appendChild(div);
+    };
     connectButton.onclick = function()
     {
-        ws = api.AutoWebsocket(false, false, false);
-        connectButton.setAttribute("disabled", "");
-        connectButton.textContent = "Connected (for now)";
+        ws = api.AutoWebsocket(false, (message, response, newWs) =>
+        {
+            if(newWs)
+            {
+                console.debug("New websocket was created, tracking");
+                ws = newWs;
+            }
+        }, false);
+        wslog("Websocket connected! Maybe...");
+    };
+    closeButton.onclick = function()
+    {
+        if(ws)
+        {
+            ws.close();
+            wslog("Manually closed websocket, should not auto-reconnect anymore");
+        }
+        else
+        {
+            wslog("No websocket to close!");
+        }
     };
 }
 
