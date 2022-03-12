@@ -60,7 +60,7 @@ public static class GeneralExtensions
             while(result.EndOfMessage != true);
 
             realBuffer.Position = 0; 
-            using var reader = new StreamReader(realBuffer);
+            using var reader = new StreamReader(realBuffer, leaveOpen : true);
             var readString = await reader.ReadToEndAsync();
             return JsonConvert.DeserializeObject<T>(readString) ?? throw new RequestException($"Couldn't parse an object of type {typeof(T)}");
         }

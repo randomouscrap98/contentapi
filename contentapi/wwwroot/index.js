@@ -450,7 +450,10 @@ function websocket_onload(template, state)
 {
     var connectButton = template.querySelector("#websocket_connect");
     var closeButton = template.querySelector("#websocket_close");
+    var sendButton = template.querySelector("#websocket_send");
     var output = template.querySelector("#websocket_output");
+    var type = template.querySelector("#websocket_type");
+    var data = template.querySelector("#websocket_data");
     var ws = false;
     var wslog = function(message) {
         var div = document.createElement("div");
@@ -459,6 +462,12 @@ function websocket_onload(template, state)
     };
     connectButton.onclick = function()
     {
+        if(ws)
+        {
+            wslog("Websocket already open, close it first!");
+            return;
+        }
+
         ws = api.AutoWebsocket(false, (message, response, newWs) =>
         {
             if(newWs)
@@ -471,15 +480,42 @@ function websocket_onload(template, state)
     };
     closeButton.onclick = function()
     {
-        if(ws)
-        {
-            ws.close();
-            wslog("Manually closed websocket, should not auto-reconnect anymore");
-        }
-        else
+        if(!ws)
         {
             wslog("No websocket to close!");
+            return;
         }
+
+        ws.close();
+        wslog("Manually closed websocket, should not auto-reconnect anymore");
+        ws = null;
+    };
+    sendButton.onclick = function()
+    {
+        if(!ws)
+        {
+            wslog("Websocket not open, can't send!");
+            return;
+        }
+
+        var dataObject = null;
+
+        if(data.value)
+        {
+            try {
+                dataObject = JSON.parse(data.value);
+            }
+            catch (ex) {
+                wslog("Couldn't parse data, needs to be json!");
+                return;
+            }
+        }
+
+        ws.sendRequest(type.value, dataObject, x =>
+        {
+            console.log("Response data: ", x);
+            wslog(`RESPONSE FOR ${type.value}:\n` + JSON.stringify(x, null, 2));
+        });
     };
 }
 

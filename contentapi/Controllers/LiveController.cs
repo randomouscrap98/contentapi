@@ -58,7 +58,7 @@ public class LiveController : BaseController
                 {
                     var searchRequest = services.mapper.Map<SearchRequests>(receiveItem.data);
                     var searchResult = await services.searcher.Search(searchRequest, response.requestUserId);
-                    response.data = searchRequest;
+                    response.data = searchResult;
                 }
                 catch(Exception ex)
                 {

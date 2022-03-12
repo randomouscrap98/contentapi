@@ -58,4 +58,9 @@ header {
     height: 50vh;
     overflow-x: auto;
     overflow-y: scroll;
+    white-space: pre-wrap;
 }
+
+/*.console > * {
+    white-space: pre-wrap;
+}*/

@@ -557,12 +557,12 @@ Api.prototype.WriteModuleMessage = function(module, parentId, command, handler)
 // -------------------
 
 // Return a websocket instance already pointing to the appropriate endpoint
-Api.prototype.GetRawWebsocket = function(insecure)
+Api.prototype.GetRawWebsocket = function() //insecure)
 {
     var realUrl = this.ResolveRelativeUrl(this.url)
-    if(insecure === "auto")
-        insecure = realUrl.indexOf("localhost") >= 0 || realUrl.indexOf("127.0.0.1") >= 0;
-    var wsurl = realUrl.replace("https://", insecure ? "ws://" : "wss://") + "live/ws";
+    //if(insecure === "auto")
+    //    insecure = realUrl.indexOf("https://") < 0; //realUrl.indexOf("localhost") >= 0 || realUrl.indexOf("127.0.0.1") >= 0;
+    var wsurl = realUrl.replace(/^http/, "ws") + "live/ws"; //insecure ? "ws://" : "wss://") + "live/ws";
     var result = new WebSocket(wsurl);
     console.debug("Opened API websocket at: " + wsurl);
     return result;
@@ -583,12 +583,12 @@ Api.prototype.SendWebsocketRequest = function(websocket, type, data, id)
 // through your errorEvent function. Also, errors passed through "errorEvent" MAY have
 // a new websocket sent along with it, representing the automatic reconnect. If you need
 // to keep track of your websocket object, PLEASE listen for those!
-Api.prototype.AutoWebsocket = function(liveUpdatesHandler, errorEvent, interceptResponseErrors, reconnectInterval)
+Api.prototype.AutoWebsocket = function(liveUpdatesHandler, errorEvent, /*interceptResponseErrors,*/ reconnectInterval)
 {
     //TODO: ALSO TRACK LIVE UPDATES ID!!! AND HANDLE ERROR IF LIVE UPDATES CAN'T DO ANYTHING!
     reconnectInterval = reconnectInterval || 5000;
     var me = this;
-    var ws = me.GetRawWebsocket("auto");
+    var ws = me.GetRawWebsocket(); //"auto");
     ws.manualCloseRequested = false;
     ws.pendingRequests = {};
     ws.pendingSends = [];
@@ -624,7 +624,7 @@ Api.prototype.AutoWebsocket = function(liveUpdatesHandler, errorEvent, intercept
         }
         else
         {
-            var id = String(Math.random());
+            var id = String(Math.random()).substring(2);
             ws.pendingRequests[id] = handler;
             console.debug(`Sending websocket request '${type}':\"${id}\"`);
             me.SendWebsocketRequest(ws, type, data, id);
@@ -643,17 +643,23 @@ Api.prototype.AutoWebsocket = function(liveUpdatesHandler, errorEvent, intercept
         {
             var response = JSON.parse(event.data);
 
-            if(interceptResponseErrors && response.error)
-            {
-                ws.removePendingRequest(response.id);
-                ws.errorEvent(`Request error: ${response.error}`, response);
-            }
-            else if(response.type === "live")
+            //if(interceptResponseErrors && response.error)
+            //{
+            //    ws.removePendingRequest(response.id);
+            //    ws.errorEvent(`Request error: ${response.error}`, response);
+            //}
+            if(response.type === "live")
             {
                 if(ws.liveUpdatesHandler)
                     ws.liveUpdatesHandler(response);
                 else
                     console.warn("Receive live update from websocket but no handler set! Response:", response);
+            }
+            else if(response.type === "unexpected")
+            {
+                console.warn("Unexpected error from websocket: ", response);
+                ws.errorEvent("Unexpected error from websocket: " + response.error, response);
+                ws.close();
             }
             else if(ws.pendingRequests[response.id])
             {
@@ -688,7 +694,7 @@ Api.prototype.AutoWebsocket = function(liveUpdatesHandler, errorEvent, intercept
                 }
                 else
                 {
-                    var newWs = me.AutoWebsocket(liveUpdatesHandler, errorEvent, interceptResponseErrors, reconnectInterval);
+                    var newWs = me.AutoWebsocket(liveUpdatesHandler, errorEvent, /*interceptResponseErrors,*/ reconnectInterval);
                     newWs.errorEvent("Websocket closed unexpectedly", null, newWs);
                 }
             }, reconnectInterval);
