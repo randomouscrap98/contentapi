@@ -446,6 +446,9 @@ function notifications_onload(template, state)
     }));
 }
 
+// This function is an excellent example for auto websocket usage. This is the
+// onload function for the websocket tester page, and utilizes the basic features
+// of the auto websocket.
 function websocket_onload(template, state)
 {
     var connectButton = template.querySelector("#websocket_connect");
@@ -469,14 +472,31 @@ function websocket_onload(template, state)
             return;
         }
 
+        //To create an auto-managed websocket connection, simply call the function on the api. 
+        //It will do all the setup necessary and return an instantly usable websocket. You don't
+        //even have to wait for it to open, you can immediately start calling sendRequest. It is
+        //a standard javascript WebSocket object, but with additional functions added to it. You
+        //CAN use the standard "send" function, but if you're going for a manual approach, I would
+        //suggest against AutoWebsocket. Use GetRawWebsocket instead. The websocket it returns will
+        //auto-reconnect on any critical error. If you call .close(), it will no longer reconnect,
+        //and the websocket becomes unusable (like a normal javascript WebSocket object). The first
+        //parameter is the live updates handler, second is the error event handler, third is the
+        //interval between reconnect, defaulting to 5 seconds.
         ws = api.AutoWebsocket(false, (message, response, newWs) =>
         {
+            //This is the error "event". It's not a handler, but you can certain DO things with this error.
+            //Errors are automatically handled by the AutoWebsocket. However, you do NEED TO track changes
+            //in the websocket. I can't reuse closed websockets, so I have to create new ones each time. If you
+            //don't track when the new ones show up, your existing reference won't work anymore. If this system
+            //is undesired, we can come up with something else, but I think this is the easiest and most 
+            //configurable way, since it lets you do what you want with websocket updates.
             if(newWs)
             {
                 console.debug("New websocket was created, tracking");
                 ws = newWs;
             }
         }, false);
+
         wslog("Websocket connected! Maybe...");
     };
     closeButton.onclick = function()
@@ -512,6 +532,9 @@ function websocket_onload(template, state)
             }
         }
 
+        //When using the auto websocket, stick to sendRequest in order to make everything automatic.
+        //It automatically matches up requests with responses using automatically generated random IDS
+        //stamped on the messages, allowing you to set a handler per request just like regular http calls
         ws.sendRequest(type.value, dataObject, x =>
         {
             console.log("Response data: ", x);
