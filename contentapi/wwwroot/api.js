@@ -581,23 +581,39 @@ Api.prototype.SendWebsocketRequest = function(websocket, type, data, id)
 // through your errorEvent function. Also, errors passed through "errorEvent" MAY have
 // a new websocket sent along with it, representing the automatic reconnect. If you need
 // to keep track of your websocket object, PLEASE listen for those!
-Api.prototype.AutoWebsocket = function(liveUpdatesHandler, errorEvent, reconnectInterval)
+Api.prototype.AutoWebsocket = function(liveUpdatesHandler, errorEvent, reconnectIntervalGenerator, oldWs)
 {
     //TODO: ALSO TRACK LIVE UPDATES ID!!! AND HANDLE ERROR IF LIVE UPDATES CAN'T DO ANYTHING!
-    reconnectInterval = reconnectInterval || 5000;
+    reconnectIntervalGenerator = reconnectIntervalGenerator || (x => Math.min(30000, x * 500));
     var me = this;
     var ws = me.GetRawWebsocket(); 
+
     ws.manualCloseRequested = false;
-    ws.pendingRequests = {};
-    ws.pendingSends = [];
     ws.liveUpdatesHandler = liveUpdatesHandler;
     ws.isOpen = false;
+
+    if(oldWs)
+    {
+        ws.pendingRequests = oldWs.pendingRequests; // Bring over pending requests, probably while we were closed
+        ws.pendingSends = oldWs.pendingSends;
+        ws.currentReconnects = oldWs.currentReconnects;
+        ws.liveUpdatesId = oldWs.liveUpdatesId;
+    }
+    else
+    {
+        ws.pendingRequests = {};
+        ws.pendingSends = [];
+        ws.currentReconnects = 0;
+        ws.liveUpdatesId = 0;
+    }
+
     var oldClose = ws.close;
     ws.close = function() 
     {
         //A one time use thing! Is this OK???
         console.log("User called websocket.close() manually");
         ws.manualCloseRequested = true;
+        ws.isOpen = false; //A safety precaution
         ws.close = oldClose;
         ws.close();
     };
@@ -618,7 +634,7 @@ Api.prototype.AutoWebsocket = function(liveUpdatesHandler, errorEvent, reconnect
         if(!ws.isOpen)
         {
             console.debug(`Buffering request '${type}', websocket isn't open yet`);
-            pendingSends.push(function() { ws.sendRequest(type, data, handler) });
+            ws.pendingSends.push([type, data, handler]);
         }
         else
         {
@@ -632,8 +648,9 @@ Api.prototype.AutoWebsocket = function(liveUpdatesHandler, errorEvent, reconnect
     {
         console.debug("contentapi websocket is open!");
         ws.isOpen = true;
-        ws.pendingSends.forEach(x => x());
+        ws.pendingSends.forEach(x => ws.sendRequest(x[0], x[1], x[2]));
         ws.pendingSends = [];
+        ws.currentReconnects = 0;
     };
     ws.onmessage = function(event)
     {
@@ -672,12 +689,16 @@ Api.prototype.AutoWebsocket = function(liveUpdatesHandler, errorEvent, reconnect
     //ws.onerror = function() { }; //ws error is almost entirely useless because of CORS
     ws.onclose = function()
     {
+        //Ensure anything checking to see if we're open actually... thing.
+        ws.isOpen = false;
+
         if(ws.manualCloseRequested)
         {
             console.debug("User requested websocket close, actually closing");
         }
         else
         {
+            var reconnectInterval = reconnectIntervalGenerator(++ws.currentReconnects); //Another reconnection attempt. Only an open websocket will reset this
             console.warn(`Websocket closed unexpectedly, attempting new connection in ${reconnectInterval} ms`);
             window.setTimeout(() =>
             {
@@ -687,14 +708,14 @@ Api.prototype.AutoWebsocket = function(liveUpdatesHandler, errorEvent, reconnect
                 }
                 else
                 {
-                    var newWs = me.AutoWebsocket(liveUpdatesHandler, errorEvent, reconnectInterval);
-                    newWs.errorEvent("Websocket closed unexpectedly", null, newWs);
+                    var newWs = me.AutoWebsocket(liveUpdatesHandler, errorEvent, reconnectIntervalGenerator, ws);
+                    newWs.errorEvent("New websocket replacement after reconnect", null, newWs);
                 }
             }, reconnectInterval);
         }
     };
 
-    console.log("Successfully set up automatic websocket! Use .sendRequest(type, data) to send requests! You will automatically get live update data");
+    console.log("Successfully initialized automatic websocket (not necessarily open yet)! Use .sendRequest(type, data) to send requests! You will automatically get live update data");
 
     return ws;
 };
