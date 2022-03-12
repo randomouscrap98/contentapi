@@ -459,6 +459,7 @@ function websocket_onload(template, state)
         var div = document.createElement("div");
         div.textContent = message;
         output.appendChild(div);
+        output.scrollTop = output.scrollHeight;
     };
     connectButton.onclick = function()
     {

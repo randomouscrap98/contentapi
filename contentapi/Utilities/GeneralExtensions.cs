@@ -38,10 +38,12 @@ public static class GeneralExtensions
 
         try
         {
-            var tempBuffer = new byte[ReceiveObjectAsyncBufferSize];
+            var tempBuffer = new ArraySegment<byte>(new byte[ReceiveObjectAsyncBufferSize]);
+            //var tempBuffer = new byte[ReceiveObjectAsyncBufferSize];
             var realToken = token ?? CancellationToken.None;
 
             //Use the whole buffer! Hope you don't mind!
+            realBuffer.SetLength(0);
             realBuffer.Position = 0; 
 
             WebSocketReceiveResult result;
@@ -51,7 +53,7 @@ public static class GeneralExtensions
                 result = await ws.ReceiveAsync(tempBuffer, realToken);
 
                 if(result.MessageType == WebSocketMessageType.Text) //If statement optimization, don't go checking the other paths
-                    await realBuffer.WriteAsync(tempBuffer, 0, result.Count);
+                    await realBuffer.WriteAsync(tempBuffer.Array!, tempBuffer.Offset, result.Count);
                 else if(result.MessageType == WebSocketMessageType.Binary)
                     throw new RequestException($"Client sent unsupported message type: binary");
                 else if(result.MessageType == WebSocketMessageType.Close)
@@ -62,7 +64,12 @@ public static class GeneralExtensions
             realBuffer.Position = 0; 
             using var reader = new StreamReader(realBuffer, leaveOpen : true);
             var readString = await reader.ReadToEndAsync();
-            return JsonConvert.DeserializeObject<T>(readString) ?? throw new RequestException($"Couldn't parse an object of type {typeof(T)}");
+            try {
+                return JsonConvert.DeserializeObject<T>(readString) ?? throw new RequestException($"Couldn't parse an object of type {typeof(T)}");
+            }
+            catch(Exception ex) {
+                throw new RequestException($"Readstring failure, string = '{readString}'", ex);
+            }
         }
         finally
         {

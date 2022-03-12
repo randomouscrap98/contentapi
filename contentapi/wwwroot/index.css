@@ -60,7 +60,3 @@ header {
     overflow-y: scroll;
     white-space: pre-wrap;
 }
-
-/*.console > * {
-    white-space: pre-wrap;
-}*/
