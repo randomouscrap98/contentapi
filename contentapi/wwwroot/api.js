@@ -58,7 +58,7 @@ function WebsocketRequest(type, data, id, token)
     this.type = type;
     this.data = data;
     this.id = id;
-    this.token = token;
+    //this.token = token;
 }
 
 
@@ -557,13 +557,16 @@ Api.prototype.WriteModuleMessage = function(module, parentId, command, handler)
 // -------------------
 
 // Return a websocket instance already pointing to the appropriate endpoint.
-Api.prototype.GetRawWebsocket = function() //lastId)
+Api.prototype.GetRawWebsocket = function(lastId)
 {
-    lastId = lastId || 0;
     var realUrl = this.ResolveRelativeUrl(this.url)
-    var wsurl = realUrl.replace(/^http/, "ws") + `live/ws/`; //${lastId}`;
+    var endpoint = realUrl.replace(/^http/, "ws") + `live/ws/`;
+    var params = new URLSearchParams();
+    params.set("token", this.get_token())
+    if(lastId) params.set("lastId", lastId);
+    var wsurl = endpoint + "?" + params.toString();
     var result = new WebSocket(wsurl);
-    console.debug("Opened API websocket at: " + wsurl);
+    console.debug("Opened API websocket at endpoint: " + endpoint);
     return result;
 };
 
@@ -571,7 +574,7 @@ Api.prototype.GetRawWebsocket = function() //lastId)
 Api.prototype.SendWebsocketRequest = function(websocket, type, data, id)
 {
     var me = this;
-    websocket.send(JSON.stringify(new WebsocketRequest(type, data, id, me.get_token())));
+    websocket.send(JSON.stringify(new WebsocketRequest(type, data, id)));
 };
 
 // To make your life easier, call this function to create a websocket that will
@@ -587,7 +590,7 @@ Api.prototype.AutoWebsocket = function(liveUpdatesHandler, errorEvent, reconnect
     //TODO: ALSO TRACK LIVE UPDATES ID!!! AND HANDLE ERROR IF LIVE UPDATES CAN'T DO ANYTHING!
     reconnectIntervalGenerator = reconnectIntervalGenerator || (x => Math.min(30000, x * 500));
     var me = this;
-    var ws = me.GetRawWebsocket(); 
+    var ws = me.GetRawWebsocket(oldWs ? oldWs.liveUpdatesId : undefined); 
 
     ws.manualCloseRequested = false;
     ws.liveUpdatesHandler = liveUpdatesHandler;
@@ -609,6 +612,9 @@ Api.prototype.AutoWebsocket = function(liveUpdatesHandler, errorEvent, reconnect
     }
 
     var oldClose = ws.close;
+    //User calling manual close needs to be distinguished from some other error causing the websocket
+    //to close. We can't rely on "onerror" because websockets are so flaky about what events they "decide"
+    //to throw, so we can only rely on "onclose". So, if we reach onclose BECAUSE of this, we won't retry
     ws.close = function() 
     {
         //A one time use thing! Is this OK???
@@ -623,6 +629,9 @@ Api.prototype.AutoWebsocket = function(liveUpdatesHandler, errorEvent, reconnect
         if(ws.pendingRequests[id])
             delete ws.pendingRequests[id];
     };
+    // Error events are reported through here. You can't "handle" them per-se, because this is an 
+    // "automatic" system, however you can at least do things on your own end when errors occur.
+    // Also, this reports new websockets that are created due to reconnects, VERY important!
     ws.errorEvent = function(message, response, newWs)
     {
         if(errorEvent)
@@ -630,6 +639,9 @@ Api.prototype.AutoWebsocket = function(liveUpdatesHandler, errorEvent, reconnect
         else
             console.warn(`No error handler set for websocket, got error: ${message}, response:`, response);
     };
+    // Main send method, please use this over "send()". All websocket requests use a basic json format
+    // with a type to signify what you're sending, and data to send. The handler will be called when
+    // your response is received.
     ws.sendRequest = function(type, data, handler)
     {
         if(!ws.isOpen)
@@ -645,6 +657,8 @@ Api.prototype.AutoWebsocket = function(liveUpdatesHandler, errorEvent, reconnect
             me.SendWebsocketRequest(ws, type, data, id);
         }
     };
+    // When the websocket opens, we want to dump pending requests (since we weren't able to 
+    // process them on account of us not being connected and all). Also, set some tracking state.
     ws.onopen = function()
     {
         console.debug("contentapi websocket is open!");
@@ -653,6 +667,13 @@ Api.prototype.AutoWebsocket = function(liveUpdatesHandler, errorEvent, reconnect
         ws.pendingSends = [];
         ws.currentReconnects = 0;
     };
+    // The main message handler. This will redirect received responses to the appropriate handlers
+    // that you've set up. The websockets have both a live updates system where responses come in
+    // realtime as things happen on the website, and some "static" requests where every request
+    // elicits a single response. This function links those to the appropriate "sendRequest" handler
+    // by sending random ids along with the request and storing the handler for later, until the 
+    // response with the same id comes back. Ids are not necessary, but make the static system
+    // way easier to use, because you at least know which responses are for which requests.
     ws.onmessage = function(event)
     {
         try
@@ -672,6 +693,11 @@ Api.prototype.AutoWebsocket = function(liveUpdatesHandler, errorEvent, reconnect
                 ws.errorEvent("Unexpected error from websocket: " + response.error, response);
                 ws.close();
             }
+            else if(response.type === "badtoken")
+            {
+                ws.errorEvent("Bad token: " + response.error, response);
+                ws.close();
+            }
             else if(ws.pendingRequests[response.id])
             {
                 ws.pendingRequests[response.id](response);
@@ -679,15 +705,17 @@ Api.prototype.AutoWebsocket = function(liveUpdatesHandler, errorEvent, reconnect
             }
             else
             {
-                console.warn("Don't know how to handle websocket response! This is an internal API error! Response: ", response);
+                console.error("Don't know how to handle websocket response! This is an internal API error! Response: ", response);
             }
         }
         catch(ex)
         {
-            console.warn("Failed to handle message from websocket, this is an internal error!: ", event);
+            console.warn("Failed to handle message from websocket, dumping info: ", event, ex);
         }
     };
     //ws.onerror = function() { }; //ws error is almost entirely useless because of CORS
+    // ANY time the websocket loses connection for any reason (network, internal server error, user-requested),
+    // this event is called. We basically need to either reconect or let it go reliably.
     ws.onclose = function()
     {
         //Ensure anything checking to see if we're open actually... thing.

@@ -14,11 +14,6 @@ public class LiveController : BaseController
     { 
     }
 
-    //public class ConfigureLive
-    //{
-    //    public long lastId {get;set;} = 0;
-    //    public string token {get;set;} = "";
-    //}
 
     protected long ValidateToken(string token)
     {
@@ -38,33 +33,30 @@ public class LiveController : BaseController
         }
     }
 
-    protected async Task<string> WaitForToken(CancellationToken cancelToken, WebSocket socket)
-    {
-        var receiveItem = await socket.ReceiveObjectAsync<WebSocketRequest>(null, cancelToken);
+    //protected async Task<string> WaitForToken(CancellationToken cancelToken, WebSocket socket)
+    //{
+    //    var receiveItem = await socket.ReceiveObjectAsync<WebSocketRequest>(null, cancelToken);
 
-        if(receiveItem.type != "token")
-        {
-            throw new RequestException("In current version, you can't perform any actions until you send your user token in a 'token' type request!");
-            //response.error = "In current version, you can't perform any actions until you send your user token in a 'token' type request!";
-            //sendQueue.Post(response);
-            //return null;
-        }
-        else
-        {
-            var token = (string)(receiveItem.data ?? throw new RequestException("You must set the 'data' field to your token string!"));
-            var userId = ValidateToken(token);
+    //    if(receiveItem.type != "token")
+    //    {
+    //        throw new RequestException("In current version, you can't perform any actions until you send your user token in a 'token' type request!");
+    //    }
+    //    else
+    //    {
+    //        var token = (string)(receiveItem.data ?? throw new RequestException("You must set the 'data' field to your token string!"));
+    //        var userId = ValidateToken(token);
 
-            var response = new WebSocketResponse()
-            {
-                id = receiveItem.id,
-                type = receiveItem.type,
-                requestUserId = userId,
-                data = $"accepted: {userId}"
-            };
+    //        var response = new WebSocketResponse()
+    //        {
+    //            id = receiveItem.id,
+    //            type = "accepttoken",
+    //            requestUserId = userId,
+    //            data = $"accepted: {userId}"
+    //        };
 
-            return token; //Tuple.Create(token, userId);
-        }
-    }
+    //        return token;
+    //    }
+    //}
 
     protected async Task ReceiveLoop(CancellationToken cancelToken, WebSocket socket, BufferBlock<object> sendQueue, string token)
     {
@@ -121,14 +113,12 @@ public class LiveController : BaseController
         }
     }
 
-    [HttpGet("ws")] ///{lastId}")]
-    public Task<ActionResult<string>> WebSocketListenAsync([FromQuery]long? lastId = null) //long lastId)
+    [HttpGet("ws")]
+    public Task<ActionResult<string>> WebSocketListenAsync([FromQuery]string token, [FromQuery]long? lastId = null)
     {
         services.logger.LogDebug($"ws METHOD: {HttpContext.Request.Method}, HEADERS: " +
             JsonConvert.SerializeObject(HttpContext.Request.Headers, 
                 Formatting.None, new JsonSerializerSettings() { ReferenceLoopHandling = ReferenceLoopHandling.Ignore }));
-        
-        var realLastId = lastId ?? -1;
 
         return MatchExceptions(async () =>
         {
@@ -142,14 +132,14 @@ public class LiveController : BaseController
                 using var cancelSource = new CancellationTokenSource();
                 var sendQueue = new BufferBlock<object>();
 
-                //Now, just receive a normal string, it should fit in any normal buffer
-
                 try
                 {
-                    var tokenResult = await WaitForToken(cancelSource.Token, socket);
+                    //var tokenResult = await WaitForToken(cancelSource.Token, socket);
+                    var realLastId = lastId ?? -1;
+                    ValidateToken(token);
 
                     //Can send and receive at the same time, but CAN'T send/receive multiple at the same time.
-                    var receiveTask = ReceiveLoop(cancelSource.Token, socket, sendQueue, tokenResult);
+                    var receiveTask = ReceiveLoop(cancelSource.Token, socket, sendQueue, token);
                     var listenTask = Task.Delay(int.MaxValue, cancelSource.Token); //Don't even ask! Just spawn the listener!
                     var sendTask = SendLoop(cancelSource.Token, socket, sendQueue);
 
