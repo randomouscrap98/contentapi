@@ -3,7 +3,6 @@ using System.Threading.Tasks.Dataflow;
 using contentapi.Live;
 using contentapi.Search;
 using contentapi.Utilities;
-using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
 using Newtonsoft.Json;
 
@@ -21,36 +20,67 @@ public class LiveController : BaseController
     //    public string token {get;set;} = "";
     //}
 
-    protected async Task ReceiveLoop(CancellationToken token, WebSocket socket, BufferBlock<object> sendQueue)
+    protected long ValidateToken(string token)
     {
-        using var memStream = new MemoryStream();
-
-        while(!token.IsCancellationRequested)
+        try
         {
-            //NOTE: the ReceiveObjectAsync throws an exception on close
-            var receiveItem = await socket.ReceiveObjectAsync<WebSocketRequest>(memStream, token);
+            var claims = services.authService.ValidateToken(token) ?? throw new TokenException("Couldn't validate token!");
+            var userId = services.authService.GetUserId(claims.Claims) ?? throw new TokenException("No valid userID assigned to token! Is it expired?");
+            return userId;
+        }
+        catch(TokenException)
+        {
+            throw;
+        }
+        catch(Exception ex)
+        {
+            throw new TokenException("Error during token validation: " + ex.Message);
+        }
+    }
+
+    protected async Task<string> WaitForToken(CancellationToken cancelToken, WebSocket socket)
+    {
+        var receiveItem = await socket.ReceiveObjectAsync<WebSocketRequest>(null, cancelToken);
+
+        if(receiveItem.type != "token")
+        {
+            throw new RequestException("In current version, you can't perform any actions until you send your user token in a 'token' type request!");
+            //response.error = "In current version, you can't perform any actions until you send your user token in a 'token' type request!";
+            //sendQueue.Post(response);
+            //return null;
+        }
+        else
+        {
+            var token = (string)(receiveItem.data ?? throw new RequestException("You must set the 'data' field to your token string!"));
+            var userId = ValidateToken(token);
+
             var response = new WebSocketResponse()
             {
                 id = receiveItem.id,
-                type = receiveItem.type
+                type = receiveItem.type,
+                requestUserId = userId,
+                data = $"accepted: {userId}"
             };
 
-            //Go lookup the user that we think they are
-            try
+            return token; //Tuple.Create(token, userId);
+        }
+    }
+
+    protected async Task ReceiveLoop(CancellationToken cancelToken, WebSocket socket, BufferBlock<object> sendQueue, string token)
+    {
+        using var memStream = new MemoryStream();
+
+        while(!cancelToken.IsCancellationRequested)
+        {
+            //NOTE: the ReceiveObjectAsync throws an exception on close
+            var receiveItem = await socket.ReceiveObjectAsync<WebSocketRequest>(memStream, cancelToken);
+            var userId = ValidateToken(token); // Validate every time
+            var response = new WebSocketResponse()
             {
-                if (!string.IsNullOrWhiteSpace(receiveItem.token))
-                {
-                    var claims = services.authService.ValidateToken(receiveItem.token);
-                    var userId = services.authService.GetUserId(claims.Claims);
-                    response.requestUserId = userId ?? 0;
-                }
-            }
-            catch(Exception ex)
-            {
-                response.error = $"Token error: {ex.Message}";
-                sendQueue.Post(response);
-                continue;
-            }
+                id = receiveItem.id,
+                type = receiveItem.type,
+                requestUserId = userId
+            };
 
             if(receiveItem.type == "ping")
             {
@@ -63,31 +93,12 @@ public class LiveController : BaseController
                 try
                 {
                     var searchRequest = services.mapper.Map<SearchRequests>(receiveItem.data);
-                    var searchResult = await services.searcher.Search(searchRequest, response.requestUserId);
+                    var searchResult = await services.searcher.Search(searchRequest, userId);
                     response.data = searchResult;
                 }
                 catch(Exception ex)
                 {
                     response.error = $"Error during search: {ex.Message}";
-                }
-            }
-            //NOTES: it's far more complicated to CHANGE the live updates during runtime than to just... mmmm.
-            //But we want people to be able to update their user token without restarting the websocket? If so,
-            //then yes they WILL need to. But then they'll need to handle the error anyway, especially the token
-            //error in particular separately from the other errors
-            else if(receiveItem.type == "startlive")
-            {
-                try
-                {
-                    var lastId = (long)(receiveItem.data ?? -1);
-
-                    //For some reason, the system needs the user view rather than just the id.
-                    //ALSO, we need to check the listenUser in the 
-                    //var listenUser = 
-                }
-                catch(Exception ex)
-                {
-                    response.error = $"Error during live start: {ex.Message}";
                 }
             }
             else
@@ -111,11 +122,13 @@ public class LiveController : BaseController
     }
 
     [HttpGet("ws")] ///{lastId}")]
-    public Task<ActionResult<string>> WebSocketListenAsync() //long lastId)
+    public Task<ActionResult<string>> WebSocketListenAsync([FromQuery]long? lastId = null) //long lastId)
     {
         services.logger.LogDebug($"ws METHOD: {HttpContext.Request.Method}, HEADERS: " +
             JsonConvert.SerializeObject(HttpContext.Request.Headers, 
                 Formatting.None, new JsonSerializerSettings() { ReferenceLoopHandling = ReferenceLoopHandling.Ignore }));
+        
+        var realLastId = lastId ?? -1;
 
         return MatchExceptions(async () =>
         {
@@ -129,10 +142,14 @@ public class LiveController : BaseController
                 using var cancelSource = new CancellationTokenSource();
                 var sendQueue = new BufferBlock<object>();
 
+                //Now, just receive a normal string, it should fit in any normal buffer
+
                 try
                 {
+                    var tokenResult = await WaitForToken(cancelSource.Token, socket);
+
                     //Can send and receive at the same time, but CAN'T send/receive multiple at the same time.
-                    var receiveTask = ReceiveLoop(cancelSource.Token, socket, sendQueue);
+                    var receiveTask = ReceiveLoop(cancelSource.Token, socket, sendQueue, tokenResult);
                     var listenTask = Task.Delay(int.MaxValue, cancelSource.Token); //Don't even ask! Just spawn the listener!
                     var sendTask = SendLoop(cancelSource.Token, socket, sendQueue);
 
@@ -157,8 +174,8 @@ public class LiveController : BaseController
                     {
                         await socket.SendObjectAsync(new WebSocketResponse()
                         {
-                            type = "unexpected",
-                            error = $"Unhandled exception: {ex}"
+                            type = ex is TokenException ? "badtoken" : "unexpected",
+                            error = ex is TokenException ? ex.Message : $"Unhandled exception: {ex}"
                         });
 
                         //Do NOT close with error! We want to reserve websocket errors for network errors and whatever. If 
