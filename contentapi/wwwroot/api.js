@@ -560,7 +560,7 @@ Api.prototype.WriteModuleMessage = function(module, parentId, command, handler)
 Api.prototype.GetRawWebsocket = function(lastId)
 {
     var realUrl = this.ResolveRelativeUrl(this.url)
-    var endpoint = realUrl.replace(/^http/, "ws") + `live/ws/`;
+    var endpoint = realUrl.replace(/^http/, "ws") + `live/ws`;
     var params = new URLSearchParams();
     params.set("token", this.get_token())
     if(lastId) params.set("lastId", lastId);
@@ -682,6 +682,8 @@ Api.prototype.AutoWebsocket = function(liveUpdatesHandler, errorEvent, reconnect
 
             if(response.type === "live")
             {
+                ws.liveUpdatesId = response.data.lastId;
+
                 if(ws.liveUpdatesHandler)
                     ws.liveUpdatesHandler(response);
                 else

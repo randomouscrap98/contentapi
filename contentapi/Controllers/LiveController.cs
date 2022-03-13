@@ -3,6 +3,7 @@ using System.Threading.Tasks.Dataflow;
 using contentapi.Live;
 using contentapi.Search;
 using contentapi.Utilities;
+using contentapi.Views;
 using Microsoft.AspNetCore.Mvc;
 using Newtonsoft.Json;
 
@@ -10,8 +11,11 @@ namespace contentapi.Controllers;
 
 public class LiveController : BaseController
 {
-    public LiveController(BaseControllerServices services) : base(services) 
+    protected ILiveEventQueue eventQueue;
+
+    public LiveController(BaseControllerServices services, ILiveEventQueue eventQueue) : base(services) 
     { 
+        this.eventQueue = eventQueue;
     }
 
 
@@ -32,31 +36,6 @@ public class LiveController : BaseController
             throw new TokenException("Error during token validation: " + ex.Message);
         }
     }
-
-    //protected async Task<string> WaitForToken(CancellationToken cancelToken, WebSocket socket)
-    //{
-    //    var receiveItem = await socket.ReceiveObjectAsync<WebSocketRequest>(null, cancelToken);
-
-    //    if(receiveItem.type != "token")
-    //    {
-    //        throw new RequestException("In current version, you can't perform any actions until you send your user token in a 'token' type request!");
-    //    }
-    //    else
-    //    {
-    //        var token = (string)(receiveItem.data ?? throw new RequestException("You must set the 'data' field to your token string!"));
-    //        var userId = ValidateToken(token);
-
-    //        var response = new WebSocketResponse()
-    //        {
-    //            id = receiveItem.id,
-    //            type = "accepttoken",
-    //            requestUserId = userId,
-    //            data = $"accepted: {userId}"
-    //        };
-
-    //        return token;
-    //    }
-    //}
 
     protected async Task ReceiveLoop(CancellationToken cancelToken, WebSocket socket, BufferBlock<object> sendQueue, string token)
     {
@@ -102,6 +81,29 @@ public class LiveController : BaseController
         }
     }
 
+    protected async Task ListenLoop(CancellationToken cancelToken, int lastId, BufferBlock<object> sendQueue, string token)
+    {
+        var userId = ValidateToken(token);
+        var user = await services.searcher.GetById<UserView>(RequestType.user, userId, true);
+
+        while(!cancelToken.IsCancellationRequested)
+        {
+            //NOTE: the ReceiveObjectAsync throws an exception on close
+            var listenResult = await eventQueue.ListenAsync(user, lastId, cancelToken);//socket.ReceiveObjectAsync<WebSocketRequest>(memStream, cancelToken);
+            userId = ValidateToken(token); // Validate every time
+
+            var response = new WebSocketResponse()
+            {
+                type = "live",
+                data = listenResult,
+                requestUserId = userId
+            };
+
+            //At this point we're re-validated, so do whatever
+            sendQueue.Post(response);
+        }
+    }
+
     protected async Task SendLoop(CancellationToken token, WebSocket socket, BufferBlock<object> sendQueue)
     {
         while(!token.IsCancellationRequested)
@@ -114,7 +116,7 @@ public class LiveController : BaseController
     }
 
     [HttpGet("ws")]
-    public Task<ActionResult<string>> WebSocketListenAsync([FromQuery]string token, [FromQuery]long? lastId = null)
+    public Task<ActionResult<string>> WebSocketListenAsync([FromQuery]string token, [FromQuery]int? lastId = null)
     {
         services.logger.LogDebug($"ws METHOD: {HttpContext.Request.Method}, HEADERS: " +
             JsonConvert.SerializeObject(HttpContext.Request.Headers, 
@@ -134,13 +136,30 @@ public class LiveController : BaseController
 
                 try
                 {
-                    //var tokenResult = await WaitForToken(cancelSource.Token, socket);
-                    var realLastId = lastId ?? -1;
-                    ValidateToken(token);
+                    var userId = ValidateToken(token);
+                    int realLastId;
+
+                    if(lastId == null)
+                    {
+                        realLastId = eventQueue.GetCurrentLastId();
+
+                        var response = new WebSocketResponse()
+                        {
+                            type = "live",
+                            data = realLastId,
+                            requestUserId = userId
+                        };
+
+                        sendQueue.Post(response);
+                    }
+                    else
+                    {
+                        realLastId = lastId.Value;
+                    }
 
                     //Can send and receive at the same time, but CAN'T send/receive multiple at the same time.
                     var receiveTask = ReceiveLoop(cancelSource.Token, socket, sendQueue, token);
-                    var listenTask = Task.Delay(int.MaxValue, cancelSource.Token); //Don't even ask! Just spawn the listener!
+                    var listenTask = ListenLoop(cancelSource.Token, realLastId, sendQueue, token);
                     var sendTask = SendLoop(cancelSource.Token, socket, sendQueue);
 
                     try

@@ -13,4 +13,5 @@ public interface ICacheCheckpointTracker<T>
     Task<CacheCheckpointResult<T>> WaitForCheckpoint(string checkpointName, int lastSeen, CancellationToken cancelToken);
 
     int MinimumCacheCheckpoint(string checkpointName);
+    int MaximumCacheCheckpoint(string checkpointName);
 }

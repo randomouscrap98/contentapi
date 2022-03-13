@@ -79,11 +79,15 @@ public class CacheCheckpointTracker<T> : ICacheCheckpointTracker<T>
         }
     }
 
-    protected List<T> CacheAfter(CheckpointData checkpoint, int lastSeen)
+    protected CacheCheckpointResult<T> CacheAfter(CheckpointData checkpoint, int lastSeen)
     {
         lock(checkpoint.SignalLock)
         {
-            return checkpoint.Cache.Where(x => x.Key > lastSeen).Select(x => x.Value.data).ToList();
+            var cacheAfter = checkpoint.Cache.Where(x => x.Key > lastSeen);
+            return new CacheCheckpointResult<T> { 
+                LastId = cacheAfter.Count() == 0 ? Interlocked.CompareExchange(ref checkpoint.Checkpoint, 0, 0) : cacheAfter.Max(x => x.Key), 
+                Data = cacheAfter.Select(x => x.Value.data).ToList() 
+            }; 
         }
     }
 
@@ -98,6 +102,13 @@ public class CacheCheckpointTracker<T> : ICacheCheckpointTracker<T>
             else 
                 return -1;
         }
+    }
+
+    public int MaximumCacheCheckpoint(string checkpointName)
+    {
+        var thisCheckpoint = GetCheckpoint(checkpointName);
+        return Interlocked.CompareExchange (ref thisCheckpoint.Checkpoint, 0, 0);
+        //, Data = CacheAfter(thisCheckpoint, lastSeen) };
     }
 
     public async Task<CacheCheckpointResult<T>> WaitForCheckpoint(string checkpointName, int lastSeen, CancellationToken cancelToken)
@@ -122,7 +133,8 @@ public class CacheCheckpointTracker<T> : ICacheCheckpointTracker<T>
             //Easymode: done. Doesn't matter if the list is empty, we honor exactly what the checkpoint says. The caller has to decide
             //what to do when a list is empty.
             if(lastSeen < thisCheckpoint.Checkpoint)
-                return new CacheCheckpointResult<T> { LastId = thisCheckpoint.Checkpoint, Data = CacheAfter(thisCheckpoint, lastSeen) };
+                return CacheAfter(thisCheckpoint, lastSeen);
+                //return new CacheCheckpointResult<T> { LastId = thisCheckpoint.Checkpoint, Data = CacheAfter(thisCheckpoint, lastSeen) };
 
             //Oops now we wait, there was nothing.
             thisCheckpoint.Waiters.Add(watchSem);
@@ -131,6 +143,7 @@ public class CacheCheckpointTracker<T> : ICacheCheckpointTracker<T>
         await watchSem.WaitAsync(cancelToken);
 
         //We know that if we were released, SOMETHING must've been in here!
-        return new CacheCheckpointResult<T> { LastId = Interlocked.CompareExchange (ref thisCheckpoint.Checkpoint, 0, 0), Data = CacheAfter(thisCheckpoint, lastSeen) };
+        //var data = CacheAfter(thisCheckpoint, lastSeen);
+        return CacheAfter(thisCheckpoint, lastSeen);//new CacheCheckpointResult<T> { LastId = data.Item1, Data = data.Item2 }; //{ LastId = Interlocked.CompareExchange (ref thisCheckpoint.Checkpoint, 0, 0), Data = CacheAfter(thisCheckpoint, lastSeen) };
     }
 }

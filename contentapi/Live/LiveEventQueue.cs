@@ -373,4 +373,9 @@ public class LiveEventQueue : ILiveEventQueue
             return result;
         }
     }
+
+    public int GetCurrentLastId()
+    {
+        return eventTracker.MaximumCacheCheckpoint(MainCheckpointName);
+    }
 }

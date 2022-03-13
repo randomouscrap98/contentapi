@@ -17,6 +17,11 @@ public class FakeEventQueue : ILiveEventQueue
         return Task.FromResult(ReturnData);
     }
 
+    public int GetCurrentLastId()
+    {
+        throw new System.NotImplementedException();
+    }
+
     public Task<LiveData> ListenAsync(UserView listener, int lastId = -1, CancellationToken? token = null)
     {
         throw new System.NotImplementedException();
