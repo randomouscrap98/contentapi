@@ -145,7 +145,7 @@ public class LiveController : BaseController
 
                         var response = new WebSocketResponse()
                         {
-                            type = "live",
+                            type = "lastId",
                             data = realLastId,
                             requestUserId = userId
                         };

@@ -689,6 +689,11 @@ Api.prototype.AutoWebsocket = function(liveUpdatesHandler, errorEvent, reconnect
                 else
                     console.warn("Receive live update from websocket but no handler set! Response:", response);
             }
+            else if(response.type === "lastId")
+            {
+                console.debug("System reported the last event ID was " + response.data);
+                ws.liveUpdatesId = response.data;
+            }
             else if(response.type === "unexpected")
             {
                 console.warn("Unexpected error from websocket: ", response);

@@ -458,9 +458,10 @@ function websocket_onload(template, state)
     var type = template.querySelector("#websocket_type");
     var data = template.querySelector("#websocket_data");
     var ws = false;
-    var wslog = function(message) {
+    var wslog = function(message, className) {
         var div = document.createElement("div");
         div.textContent = message;
+        if (className) div.className = className;
         output.appendChild(div);
         output.scrollTop = output.scrollHeight;
     };
@@ -538,7 +539,7 @@ function websocket_onload(template, state)
         ws.sendRequest(type.value, dataObject, x =>
         {
             console.log("Response data: ", x);
-            wslog(`RESPONSE FOR ${type.value}:\n` + JSON.stringify(x, null, 2));
+            wslog(`RESPONSE FOR ${type.value}:\n` + JSON.stringify(x, null, 2), "successmsg");
         });
     };
 }

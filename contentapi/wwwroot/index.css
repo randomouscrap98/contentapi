@@ -19,6 +19,8 @@ header {
 
 .error { color: red; }
 .success { color: green; }
+.sysmsg { color: cornflowerblue; }
+.successmsg { color: darkseagreen; }
 .username::after { content: ":"; }
 
 .describe tr td:first-of-type {
