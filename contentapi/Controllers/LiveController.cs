@@ -15,6 +15,12 @@ public class LiveController : BaseController
     { 
     }
 
+    //public class ConfigureLive
+    //{
+    //    public long lastId {get;set;} = 0;
+    //    public string token {get;set;} = "";
+    //}
+
     protected async Task ReceiveLoop(CancellationToken token, WebSocket socket, BufferBlock<object> sendQueue)
     {
         using var memStream = new MemoryStream();
@@ -65,6 +71,25 @@ public class LiveController : BaseController
                     response.error = $"Error during search: {ex.Message}";
                 }
             }
+            //NOTES: it's far more complicated to CHANGE the live updates during runtime than to just... mmmm.
+            //But we want people to be able to update their user token without restarting the websocket? If so,
+            //then yes they WILL need to. But then they'll need to handle the error anyway, especially the token
+            //error in particular separately from the other errors
+            else if(receiveItem.type == "startlive")
+            {
+                try
+                {
+                    var lastId = (long)(receiveItem.data ?? -1);
+
+                    //For some reason, the system needs the user view rather than just the id.
+                    //ALSO, we need to check the listenUser in the 
+                    //var listenUser = 
+                }
+                catch(Exception ex)
+                {
+                    response.error = $"Error during live start: {ex.Message}";
+                }
+            }
             else
             {
                 response.error = $"Unknown request type {receiveItem.type}";
@@ -85,8 +110,8 @@ public class LiveController : BaseController
         }
     }
 
-    [HttpGet("ws")]
-    public Task<ActionResult<string>> WebSocketListenAsync()
+    [HttpGet("ws")] ///{lastId}")]
+    public Task<ActionResult<string>> WebSocketListenAsync() //long lastId)
     {
         services.logger.LogDebug($"ws METHOD: {HttpContext.Request.Method}, HEADERS: " +
             JsonConvert.SerializeObject(HttpContext.Request.Headers, 

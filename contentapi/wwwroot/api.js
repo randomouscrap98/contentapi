@@ -556,11 +556,12 @@ Api.prototype.WriteModuleMessage = function(module, parentId, command, handler)
 //   Websocket stuff 
 // -------------------
 
-// Return a websocket instance already pointing to the appropriate endpoint
-Api.prototype.GetRawWebsocket = function()
+// Return a websocket instance already pointing to the appropriate endpoint.
+Api.prototype.GetRawWebsocket = function() //lastId)
 {
+    lastId = lastId || 0;
     var realUrl = this.ResolveRelativeUrl(this.url)
-    var wsurl = realUrl.replace(/^http/, "ws") + "live/ws";
+    var wsurl = realUrl.replace(/^http/, "ws") + `live/ws/`; //${lastId}`;
     var result = new WebSocket(wsurl);
     console.debug("Opened API websocket at: " + wsurl);
     return result;
