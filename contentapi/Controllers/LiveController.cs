@@ -91,6 +91,7 @@ public class LiveController : BaseController
             //NOTE: the ReceiveObjectAsync throws an exception on close
             var listenResult = await eventQueue.ListenAsync(user, lastId, cancelToken);//socket.ReceiveObjectAsync<WebSocketRequest>(memStream, cancelToken);
             userId = ValidateToken(token); // Validate every time
+            lastId = listenResult.lastId;
 
             var response = new WebSocketResponse()
             {

@@ -19,7 +19,7 @@ header {
 
 .error { color: red; }
 .success { color: green; }
-.sysmsg { color: cornflowerblue; }
+.systemmsg { color: cornflowerblue; }
 .successmsg { color: darkseagreen; }
 .username::after { content: ":"; }
 

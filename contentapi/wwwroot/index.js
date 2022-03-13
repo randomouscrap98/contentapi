@@ -483,7 +483,10 @@ function websocket_onload(template, state)
         //and the websocket becomes unusable (like a normal javascript WebSocket object). The first
         //parameter is the live updates handler, second is the error event handler, third is the
         //interval between reconnect, defaulting to 5 seconds.
-        ws = api.AutoWebsocket(false, (message, response, newWs) =>
+        ws = api.AutoWebsocket(live =>
+        {
+            wslog("Live data: \n" + JSON.stringify(live.data, null, 2), "systemmsg");
+        }, (message, response, newWs) =>
         {
             //This is the error "event". It's not a handler, but you can certain DO things with this error.
             //Errors are automatically handled by the AutoWebsocket. However, you do NEED TO track changes
