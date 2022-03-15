@@ -108,9 +108,10 @@ public class UserStatusTracker : IUserStatusTracker
     /// </summary>
     /// <param name="trackerId"></param>
     /// <returns></returns>
-    public async Task RemoveStatusesByTrackerAsync(int trackerId)
+    public async Task<int> RemoveStatusesByTrackerAsync(int trackerId)
     {
         UserStatusCollection? statusCollection;
+        int removed = 0;
 
         foreach(var key in statuses.Keys.ToList())
         {
@@ -120,7 +121,7 @@ public class UserStatusTracker : IUserStatusTracker
 
                 try
                 {
-                    statusCollection!.Statuses.RemoveAll(x => x.trackerId == trackerId);
+                    removed += statusCollection!.Statuses.RemoveAll(x => x.trackerId == trackerId);
                 }
                 finally
                 {
@@ -128,5 +129,7 @@ public class UserStatusTracker : IUserStatusTracker
                 }
             }
         }
+
+        return removed;
     }
 }
