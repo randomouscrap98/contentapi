@@ -1,10 +1,11 @@
+using System.Collections.Concurrent;
+
 namespace contentapi.Live;
 
 public class UserStatusTracker : IUserStatusTracker
 {
     protected ILogger logger;
-    protected Dictionary<long, List<UserStatus>> statuses = new Dictionary<long, List<UserStatus>>();
-    protected readonly SemaphoreSlim statusLock = new SemaphoreSlim(1, 1);
+    protected ConcurrentDictionary<long, UserStatusCollection> statuses = new ConcurrentDictionary<long, UserStatusCollection>();
 
     public UserStatusTracker(ILogger<UserStatusTracker> logger)
     {
@@ -29,35 +30,82 @@ public class UserStatusTracker : IUserStatusTracker
             trackerId = trackerId
         };
 
-        await statusLock.WaitAsync();
+        var statusCollection = statuses.GetOrAdd(contentId, x => new UserStatusCollection());
+
+        await statusCollection.CollectionLock.WaitAsync();
 
         try
         {
-            if(!statuses.ContainsKey(contentId))
-                statuses.Add(contentId, new List<UserStatus>());
-            
             //Need to remove any old statuses only for OUR tracker
-            statuses[contentId].RemoveAll(x => x.userId == userId && x.trackerId == trackerId);
-            statuses[contentId].Add(userStatus); //Always adds to end
+            statusCollection.Statuses.RemoveAll(x => x.userId == userId && x.trackerId == trackerId);
+            statusCollection.Statuses.Add(userStatus); //Always adds to end
         }
         finally
         {
-            statusLock.Release();
+            statusCollection.CollectionLock.Release();
         }
     }
 
-    public Dictionary<long, Dictionary<long, string>> GetAllStatuses()
+    public async Task<Dictionary<long, Dictionary<long, string>>> GetAllStatusesAsync()
     {
-        throw new NotImplementedException();
+        var result = new Dictionary<long, Dictionary<long, string>>();
+
+        //Use tolist to ensure that the keys don't change from underneath us
+        foreach(var key in statuses.Keys.ToList())
+        {
+            var contentResult = await GetStatusForContentAsync(key);
+
+            if(contentResult.Count > 0)
+                result.Add(key, contentResult);
+        }
+
+        return result;
     }
 
-    public Dictionary<long, string> GetStatusForContent(long contentId)
+    public async Task<Dictionary<long, string>> GetStatusForContentAsync(long contentId)
     {
-        throw new NotImplementedException();
+        //Auto-adds the key no matter what!
+        var statusCollection = statuses.GetOrAdd(contentId, x => new UserStatusCollection());
+        var result = new Dictionary<long, string>();
+
+        await statusCollection.CollectionLock.WaitAsync();
+
+        try
+        {
+            //A VERY SIMPLE loop which ensures that the LAST status added is the one that
+            //is reported, because it goes in order! We might waste a lot of assignments,
+            //but heck it might actually be faster to do it this way than a smarter way in practice.
+            //No if statements is a powerful thing!
+            foreach(var status in statusCollection.Statuses)
+                result[status.userId] = status.status;
+        }
+        finally
+        {
+            statusCollection.CollectionLock.Release();
+        }
+
+        return result;
     }
 
-    public Task RemoveStatusesByTracker(int trackerId)
+    public async Task RemoveStatusesByTrackerAsync(int trackerId)
     {
-        throw new NotImplementedException();
+        UserStatusCollection? statusCollection;
+
+        foreach(var key in statuses.Keys.ToList())
+        {
+            if(statuses.TryGetValue(key, out statusCollection))
+            {
+                await statusCollection!.CollectionLock.WaitAsync();
+
+                try
+                {
+                    statusCollection!.Statuses.RemoveAll(x => x.trackerId == trackerId);
+                }
+                finally
+                {
+                    statusCollection!.CollectionLock.Release();
+                }
+            }
+        }
     }
 }

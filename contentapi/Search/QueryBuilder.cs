@@ -4,6 +4,7 @@ using System.Runtime.CompilerServices;
 using System.Text;
 using AutoMapper;
 using contentapi.Db;
+using contentapi.Live;
 
 namespace contentapi.Search;
 
@@ -595,6 +596,7 @@ public class QueryBuilder : IQueryBuilder
         result.codes.Add("ban_types", Enum.GetValues<BanType>().ToDictionary(x => (int)x, y => y.ToString("G")));
         result.codes.Add("admin_log_types", Enum.GetValues<AdminLogType>().ToDictionary(x => (int)x, y => y.ToString("G")));
         result.codes.Add("vote_types", Enum.GetValues<VoteType>().ToDictionary(x => (int)x, y => y.ToString("G")));
+        result.codes.Add("event_types", Enum.GetValues<EventType>().ToDictionary(x => (int)x, y => y.ToString("G")));
 
         return result;
     }

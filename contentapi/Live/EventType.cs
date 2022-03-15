@@ -6,5 +6,6 @@ public enum EventType : byte
     activity,
     watch,
     uservariable,
-    user
+    user,
+    userlist
 }
