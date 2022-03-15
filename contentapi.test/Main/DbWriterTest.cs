@@ -1303,4 +1303,49 @@ public class DbWriterTest : ViewUnitTestBase, IClassFixture<DbUnitTestSearchFixt
         await Assert.ThrowsAnyAsync<NotFoundException>(() => searcher.GetById<WatchView>(RequestType.watch, writtenWatch.id));
     }
 
+    [Fact]
+    public async Task CommentView_EditedField()
+    {
+        //Write two comments, both should have edited = false
+        var comment1 = GetNewCommentView(AllAccessContentId);
+        var comment2 = GetNewCommentView(AllAccessContentId);
+
+        var writtenComment1 = await writer.WriteAsync(comment1, NormalUserId);
+        var writtenComment2 = await writer.WriteAsync(comment2, NormalUserId);
+
+        Assert.False(writtenComment1.edited);
+        Assert.False(writtenComment2.edited);
+
+        writtenComment1.text = "this is definitely edited!";
+        writtenComment1 = await writer.WriteAsync(writtenComment1, NormalUserId);
+
+        Assert.True(writtenComment1.edited);
+
+        var values = new Dictionary<string, object> {
+            { "ids", new[] { writtenComment1.id, writtenComment2.id }}
+        };
+
+        var search = new SearchRequest()
+        {
+            type = "message",
+            fields = "*",
+            query = "id in @ids"
+        };
+
+        var comments = await searcher.SearchSingleType<MessageView>(NormalUserId, search, values);
+
+        Assert.True(comments.First(x => x.id == writtenComment1.id).edited);
+        Assert.False(comments.First(x => x.id == writtenComment2.id).edited);
+
+        writtenComment2.text = "this is definitely edited 2!";
+        writtenComment2 = await writer.WriteAsync(writtenComment2, NormalUserId);
+
+        Assert.True(writtenComment1.edited);
+
+        comments = await searcher.SearchSingleType<MessageView>(NormalUserId, search, values);
+
+        Assert.True(comments.First(x => x.id == writtenComment1.id).edited);
+        Assert.True(comments.First(x => x.id == writtenComment2.id).edited);
+    }
+
 }

@@ -1430,4 +1430,47 @@ public class GenericSearchDbTests : ViewUnitTestBase, IClassFixture<DbUnitTestSe
         });
     }
 
+    [Fact]
+    public async Task SearchAsync_ReusableSearchAndValues()
+    {
+        var search = new SearchRequest()
+        {
+            type = "message",
+            fields = "*",
+            query = "id > @minid",
+            limit = 10
+        };
+        var values = new Dictionary<string, object> {
+            { "minid", 5 }
+        };
+
+        //You should be able to reuse the search and values
+        var messages = await service.SearchSingleType<MessageView>(NormalUserId, search, values);
+        var messages2 = await service.SearchSingleType<MessageView>(NormalUserId, search, values);
+
+        Assert.NotEmpty(messages);
+        Assert.NotEmpty(messages2);
+    }
+
+    [Fact]
+    public async Task SearchAsyncUnrestricted_ReusableSearchAndValues()
+    {
+        var search = new SearchRequest()
+        {
+            type = "message",
+            fields = "*",
+            query = "id > @minid",
+            limit = 10
+        };
+        var values = new Dictionary<string, object> {
+            { "minid", 5 }
+        };
+
+        //You should be able to reuse the search and values
+        var messages = await service.SearchSingleTypeUnrestricted<MessageView>(search, values);
+        var messages2 = await service.SearchSingleTypeUnrestricted<MessageView>(search, values);
+
+        Assert.NotEmpty(messages);
+        Assert.NotEmpty(messages2);
+    }
 }

@@ -12,6 +12,11 @@ public class SearchRequest
     public string order {get;set;} = ""; //_desc for descending
     public int limit {get;set;} = -1;
     public int skip {get;set;}
+
+    public SearchRequest Copy()
+    {
+        return (SearchRequest)this.MemberwiseClone();
+    }
 }
 
 /// <summary>
@@ -21,4 +26,13 @@ public class SearchRequests
 {
     public Dictionary<string, object> values {get;set;} = new Dictionary<string, object>();
     public List<SearchRequest> requests {get;set;} = new List<SearchRequest>();
+
+    public SearchRequests Copy()
+    {
+        return new SearchRequests()
+        {
+            values = new Dictionary<string, object>(values),
+            requests = requests.Select(x => x.Copy()).ToList()
+        };
+    }
 }

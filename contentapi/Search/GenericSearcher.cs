@@ -299,9 +299,22 @@ public class GenericSearcher : IGenericSearch
         return ToStronglyTyped<T>(result);
     }
 
+    //public SearchRequests CopyRequests(SearchRequests requests)
+    //{
+    //    var newRequest = new SearchRequests()
+    //    {
+    //        values = new Dictionary<string, object>(requests.values),
+    //        requests = requests.requests.Select(x => mapper.Map<SearchRequest>(x)).ToList()
+    //    };
+
+    //    return newRequest;
+    //}
+
     //A restricted search doesn't allow you to retrieve results that the given request user can't read
     public async Task<GenericSearchResult> Search(SearchRequests requests, long requestUserId = 0)
     {
+        requests = requests.Copy();
+
         var globalId = Guid.NewGuid();
         UserView requester = new UserView() //This is a default user, make SURE all the relevant fields are set!
         {
@@ -375,7 +388,7 @@ public class GenericSearcher : IGenericSearch
     //This search is a plain search, no permission limits or user lookups.
     public async Task<GenericSearchResult> SearchUnrestricted(SearchRequests requests)
     {
-        return await SearchBase(requests, new Dictionary<string, object>(requests.values));
+        return await SearchBase(requests.Copy(), new Dictionary<string, object>(requests.values));
     }
 
     public List<T> ToStronglyTyped<T>(QueryResultSet singleResults)
