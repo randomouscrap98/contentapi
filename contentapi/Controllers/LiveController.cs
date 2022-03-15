@@ -12,6 +12,8 @@ namespace contentapi.Controllers;
 public class LiveController : BaseController
 {
     protected ILiveEventQueue eventQueue;
+    private static int nextId = 0;
+    protected int trackerId = Interlocked.Increment(ref nextId);
 
     public LiveController(BaseControllerServices services, ILiveEventQueue eventQueue) : base(services) 
     { 

@@ -42,6 +42,7 @@ public static class DefaultSetup
         services.AddSingleton<IPermissionService, PermissionService>();
         services.AddSingleton<ILiveEventQueue, LiveEventQueue>();
         services.AddSingleton<IEventTracker, EventTracker>();
+        services.AddSingleton<IUserStatusTracker, UserStatusTracker>();
 
         //This NEEDS to stay transient because it holds onto a DB connection! We want those recycled!
         services.AddTransient<IGenericSearch, GenericSearcher>();
