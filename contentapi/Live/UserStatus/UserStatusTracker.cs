@@ -46,6 +46,15 @@ public class UserStatusTracker : IUserStatusTracker
         }
     }
 
+    /// <summary>
+    /// Get ALL statuses regardless of permissions or anything, just literally all statuses for
+    /// all content that we're tracking. 
+    /// </summary>
+    /// <remarks>
+    /// Even if the API is running for a very long time, this should still be relatively small, 
+    /// since it should only represent the statuses for users currently connected.
+    /// </remarks>
+    /// <returns></returns>
     public async Task<Dictionary<long, Dictionary<long, string>>> GetAllStatusesAsync()
     {
         var result = new Dictionary<long, Dictionary<long, string>>();
@@ -62,6 +71,13 @@ public class UserStatusTracker : IUserStatusTracker
         return result;
     }
 
+    /// <summary>
+    /// Compute the apparent statuses for each user reported inside the given contentId. For this system,
+    /// the "apparent" status is the one added most recently. So, if two trackers add a status for a user,
+    /// the tracker that adds it last will get their status reported.
+    /// </summary>
+    /// <param name="contentId"></param>
+    /// <returns></returns>
     public async Task<Dictionary<long, string>> GetStatusForContentAsync(long contentId)
     {
         //Auto-adds the key no matter what!
@@ -87,6 +103,11 @@ public class UserStatusTracker : IUserStatusTracker
         return result;
     }
 
+    /// <summary>
+    /// Remove every single status reported by the given tracker across all rooms
+    /// </summary>
+    /// <param name="trackerId"></param>
+    /// <returns></returns>
     public async Task RemoveStatusesByTrackerAsync(int trackerId)
     {
         UserStatusCollection? statusCollection;
