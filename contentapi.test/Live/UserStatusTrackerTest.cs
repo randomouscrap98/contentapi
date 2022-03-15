@@ -36,4 +36,70 @@ public class UserStatusTrackerTest : UnitTestBase
         var result = await service.RemoveStatusesByTrackerAsync(999);
         Assert.Equal(0, result);
     }
+
+    [Fact]
+    public async Task AddStatusAsync_SimpleOK()
+    {
+        await service.AddStatusAsync(1, 2, "active", 1);
+        var result = await service.GetStatusForContentAsync(2);
+        Assert.Contains(1, result.Keys);
+        Assert.Equal("active", result[1]);
+    }
+
+    [Fact]
+    public async Task AddStatusAsync_GetAll()
+    {
+        await service.AddStatusAsync(1, 2, "active", 1);
+        await service.AddStatusAsync(1, 3, "inactive", 1);
+        var result = await service.GetAllStatusesAsync();
+        Assert.Contains(2, result.Keys);
+        Assert.Contains(3, result.Keys);
+        Assert.Equal("active", result[2][1]);
+        Assert.Equal("inactive", result[3][1]);
+    }
+
+    [Fact]
+    public async Task AddStatusAsync_OverwriteSameTracker()
+    {
+        await service.AddStatusAsync(1, 2, "active", 1);
+        await service.AddStatusAsync(1, 2, "inactive", 1);
+        var result = await service.GetStatusForContentAsync(2);
+        Assert.Equal("inactive", result[1]);
+    }
+
+    [Fact]
+    public async Task AddStatusAsync_OverwriteDifferentTracker()
+    {
+        await service.AddStatusAsync(1, 2, "active", 1);
+        await service.AddStatusAsync(1, 2, "inactive", 15);
+        var result = await service.GetStatusForContentAsync(2);
+        Assert.Equal("inactive", result[1]);
+    }
+
+    //NOTE: this ALSO tests whether empty status sets are not returned!
+    [Fact]
+    public async Task RemoveStatusesByTrackerAsync_SingleTracker()
+    {
+        await service.AddStatusAsync(1, 2, "active", 15);
+        await service.AddStatusAsync(1, 3, "inactive", 15);
+        var result = await service.GetAllStatusesAsync();
+        Assert.Equal(2, result.Count);
+        var removed = await service.RemoveStatusesByTrackerAsync(15);
+        Assert.Equal(2, removed);
+        result = await service.GetAllStatusesAsync();
+        Assert.Empty(result);
+    }
+
+    [Fact]
+    public async Task RemoveStatusesByTrackerAsync_DifferentTracker()
+    {
+        await service.AddStatusAsync(1, 2, "active", 15);
+        await service.AddStatusAsync(1, 2, "inactive", 16);
+        var result = await service.GetStatusForContentAsync(2);
+        Assert.Equal("inactive", result[1]);
+        var removed = await service.RemoveStatusesByTrackerAsync(16);
+        Assert.Equal(1, removed);
+        result = await service.GetStatusForContentAsync(2);
+        Assert.Equal("active", result[1]); //With the later one removed, status goes back
+    }
 }
