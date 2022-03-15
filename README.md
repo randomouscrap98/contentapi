@@ -17,9 +17,7 @@ There are a couple things to note:
    for running in VS Code (`contentapi/content.db`)
 2. Start debugging the app. Use defaults for launch settings in VS Code. 
    - Note that the included `appsettings.json` should be enough to get you going... most likely
-3. Navigate to wherever it tries to tell you the endpoint is and visit /status. You should see some server information in json form.
-
-If you have issues, please let me know. Open a github issue if you like, I want this to be easily runnable.
+3. Navigate to wherever it tries to tell you the endpoint is (probably localhost:someport) and visit /api/status. You should see some server information in json form.
 
 ### Publish to a server
 The most basic thing you can do is run `Deploy/publish.sh`. This will attempt to publish to OUR servers if you don't modify it.
@@ -45,9 +43,30 @@ enabling it.
 6. Check to make sure you have a `content.db` file in your server publish folder. Make sure the large amount of binaries are there. Make
    sure your appsettings.json and appsettings.Production.json (or whatever you're using) look fine. Then you can start your service
    with `sudo systemctl start contentapi`
-7. Check if it's running by going to your proxied (or whatever) endpoint and going to /status. You should see json output with information
+7. Check if it's running by going to your proxied (or whatever) endpoint and going to /api/status. You should see json output with information
    on the server.
 
 **To RE-publish:**
 1. Run the `Deploy/publish.sh` script
 2. `sudo systemctl restart contentapi`
+
+## Using the API
+Assuming you have it running, there's some neat stuff you can do:
+
+### Local Frontend
+Navigate to the root and go to `/api/run/index.html`. This is a rudimentary frontend that consumes the api. You can do almost anything from here, including registering an account. By default, running from vscode uses a "null" emailer, so any user accounts you create will need to use the "backdoor" functions to get the registration key. Backdoor functions are only enabled for the local service, and maybe not even that (let me know if you have trouble). You can find your registration key by searching through the emails at `/api/user/emaillog` (you can just visit it in your browser).
+
+The local frontend has VERY LITTLE error handling, and that's on purpose. I probably won't be adding it, even if issues are opened, because the point is to show you how to consume the api. Error handling muddies up the code examples.
+
+Feel free to sift through the frontend to get a feel for how the api is used. I think using the frontend is the best way to see what the api is meant for, and what it provides.
+
+#### api.js
+The local frontend ALSO has a highly useful api consumer called "api.js", which you can download and use in your own applications which consumes the api. This can be found at `/api/run/api.js`. I recommend using api.js as your means to communicate with the api, as it saves a lot of time and effort. 
+
+### Swagger
+The api also has a builtin api browser called "swagger" available at `/swagger/index.html`. It lists all available endpoints and even shows the required submission object formats and a bit of the probable output formats. If you want to authenticate as a particular user (required for many things), you'll need to get your token from the `/api/user/login` endpoint, then click the "Authorize" button at the top right of swagger and enter `Bearer your_key`. Make sure there's a space between Bearer and the key. Swagger will be authenticated until the page is reloaded.
+
+One of the first endpoints I'd recommend visiting is `/api/request/about`, as the "request" endpoint is how you get most of the data from the api. It allows you to make large requests and "chain" requests together by using data from previous requests. It allows SQL-like queries against the data, along with sorting / limits / field selection / etc. The request system requires its own documentation, so that will most likely all go inside of the `/api/request/about` endpoint.
+
+## Issues / bugs
+If you have issues, please let me know. Open a github issue if you like, I want this to be easily runnable.
