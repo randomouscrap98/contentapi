@@ -34,7 +34,7 @@ public class UserStatusTrackerTest : UnitTestBase
     {
         //Just make sure it doesn't throw?
         var result = await service.RemoveStatusesByTrackerAsync(999);
-        Assert.Equal(0, result);
+        Assert.Empty(result); //.Equal(0, result);
     }
 
     [Fact]
@@ -85,7 +85,9 @@ public class UserStatusTrackerTest : UnitTestBase
         var result = await service.GetAllStatusesAsync();
         Assert.Equal(2, result.Count);
         var removed = await service.RemoveStatusesByTrackerAsync(15);
-        Assert.Equal(2, removed);
+        Assert.Equal(2, removed.Count);
+        Assert.Equal(1, removed[2]);
+        Assert.Equal(1, removed[3]);
         result = await service.GetAllStatusesAsync();
         Assert.Empty(result);
     }
@@ -98,7 +100,8 @@ public class UserStatusTrackerTest : UnitTestBase
         var result = await service.GetStatusForContentAsync(2);
         Assert.Equal("inactive", result[1]);
         var removed = await service.RemoveStatusesByTrackerAsync(16);
-        Assert.Equal(1, removed);
+        Assert.Single(removed);
+        Assert.Equal(1, removed[2]);
         result = await service.GetStatusForContentAsync(2);
         Assert.Equal("active", result[1]); //With the later one removed, status goes back
     }

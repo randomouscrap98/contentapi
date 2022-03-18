@@ -65,7 +65,6 @@ public class LiveExtensionsTest : ViewUnitTestBase, IClassFixture<DbUnitTestSear
         Assert.Contains("content", result.data.Keys);
         Assert.Contains(result.data["content"], x => (long)x["id"] == AllAccessContentId);
         Assert.Contains(result.data["user"], x => (long)x["id"] == SuperUserId);
-        //Assert.Contains(result.data["user"], x => x["id"] == SuperUserId);
     }
 
     [Fact]
@@ -91,6 +90,5 @@ public class LiveExtensionsTest : ViewUnitTestBase, IClassFixture<DbUnitTestSear
         Assert.DoesNotContain(result.data["content"], x => (long)x["id"] == 0);
         Assert.Contains(result.data["user"], x => (long)x["id"] == SuperUserId);
         Assert.Contains(result.data["user"], x => (long)x["id"] == NormalUserId);
-        //Assert.Contains(result.data["user"], x => x["id"] == SuperUserId);
     }
 }

@@ -25,7 +25,7 @@ public interface IUserStatusTracker
     /// </summary>
     /// <param name="trackerId"></param>
     /// <returns></returns>
-    Task<int> RemoveStatusesByTrackerAsync(int trackerId);
+    Task<Dictionary<long, int>> RemoveStatusesByTrackerAsync(int trackerId);
 
     /// <summary>
     /// Get the statuses for a single room as given by contentId. 

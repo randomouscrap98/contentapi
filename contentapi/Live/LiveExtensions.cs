@@ -66,4 +66,39 @@ public static class LiveExtensions
             data = allSearch.data
         };
     }
+
+    public static async Task<int> AddStatusAsync(this IUserStatusTracker userStatuses, ILiveEventQueue queue, 
+        long uid, long contentId, string status, int trackerId)
+    {
+        var replaced = await userStatuses.AddStatusAsync(uid, contentId, status, trackerId);
+
+        //Regardless of the change (not optimized), create an event
+        await queue.AddEventAsync(new LiveEvent()
+        {
+            userId = uid,
+            type = EventType.userlist,
+            action = replaced == 0 ? Db.UserAction.create : Db.UserAction.update,
+            refId = contentId
+        });
+
+        return replaced;
+    }
+
+    public static async Task<Dictionary<long, int>> RemoveStatusesByTrackerAsync(this IUserStatusTracker userStatuses, long uid, int trackerId, ILiveEventQueue queue)
+    {
+        var removed = await userStatuses.RemoveStatusesByTrackerAsync(trackerId);
+
+        foreach(var contentId in removed.Keys.ToList())
+        {
+            await queue.AddEventAsync(new LiveEvent()
+            {
+                userId = uid,
+                type = EventType.userlist,
+                action = Db.UserAction.delete,
+                refId = contentId
+            });
+        }
+
+        return removed;
+    }
 }

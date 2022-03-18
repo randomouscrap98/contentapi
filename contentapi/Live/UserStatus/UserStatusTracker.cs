@@ -111,11 +111,11 @@ public class UserStatusTracker : IUserStatusTracker
     /// Remove every single status reported by the given tracker across all rooms
     /// </summary>
     /// <param name="trackerId"></param>
-    /// <returns></returns>
-    public async Task<int> RemoveStatusesByTrackerAsync(int trackerId)
+    /// <returns>The amount of statuses removed per content</returns>
+    public async Task<Dictionary<long, int>> RemoveStatusesByTrackerAsync(int trackerId)
     {
         UserStatusCollection? statusCollection;
-        int removed = 0;
+        Dictionary<long, int> removed = new Dictionary<long, int>();
 
         foreach(var key in statuses.Keys.ToList())
         {
@@ -125,7 +125,10 @@ public class UserStatusTracker : IUserStatusTracker
 
                 try
                 {
-                    removed += statusCollection!.Statuses.RemoveAll(x => x.trackerId == trackerId);
+                    var thisRemoved = statusCollection!.Statuses.RemoveAll(x => x.trackerId == trackerId);
+
+                    if(thisRemoved > 0)
+                        removed.Add(key, thisRemoved);
                 }
                 finally
                 {
