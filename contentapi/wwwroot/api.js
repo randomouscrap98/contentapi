@@ -61,6 +61,22 @@ function WebsocketRequest(type, data, id, token)
     //this.token = token;
 }
 
+//Due to safety, the defaults are generated in the auto websocket function call. This is
+//JUST a container
+function WebsocketAutoConfig(liveHandler, userlistUpdateHandler, errorEventListener, reconnectIntervalGenerator)
+{
+    //The handler for live updates, meaning realtime comments, content update, etc.
+    //Single parameter "response" represents all the data parsed from the websocket response
+    this.liveHandler = liveHandler;
+    //The handler for live userlist updates, as in an update to one or more rooms when
+    //someone enters/leaves/etc.
+    this.userlistUpdateHandler = userlistUpdateHandler;
+    // Error events are reported through here. You can't "handle" them per-se, because this is an 
+    // "automatic" system, however you can at least do things on your own end when errors occur.
+    // Also, this reports new websockets that are created due to reconnects, VERY important!
+    this.errorEventListener = errorEventListener;
+    this.reconnectIntervalGenerator = reconnectIntervalGenerator;
+}
 
 // -- API reference objects --
 // NOTE: These are here for reference. You CAN use them if you want, or you can simply ignore them
@@ -585,15 +601,23 @@ Api.prototype.SendWebsocketRequest = function(websocket, type, data, id)
 // through your errorEvent function. Also, errors passed through "errorEvent" MAY have
 // a new websocket sent along with it, representing the automatic reconnect. If you need
 // to keep track of your websocket object, PLEASE listen for those!
-Api.prototype.AutoWebsocket = function(liveUpdatesHandler, errorEvent, reconnectIntervalGenerator, oldWs)
+Api.prototype.AutoWebsocket = function(autoConfig, oldWs)
 {
-    //TODO: ALSO TRACK LIVE UPDATES ID!!! AND HANDLE ERROR IF LIVE UPDATES CAN'T DO ANYTHING!
-    reconnectIntervalGenerator = reconnectIntervalGenerator || (x => Math.min(30000, x * 500));
+    //Fix the autoconfig to have sane defaults if it has empty
+    autoConfig = autoConfig || {};
+    autoConfig.reconnectIntervalGenerator = autoConfig.reconnectIntervalGenerator || 
+        (x => Math.min(30000, x * 500));
+    autoConfig.liveHandler = autoConfig.liveHandler || 
+        (x => console.warn("Receive live update from websocket but no handler set! Response:", x));
+    autoConfig.errorEvent = autoConfig.errorEventListener || 
+        ((m,r,nws) => console.warn(`No error handler set for websocket, got error: ${m}, response:`, r));
+
     var me = this;
     var ws = me.GetRawWebsocket(oldWs ? oldWs.liveUpdatesId : undefined); 
 
     ws.manualCloseRequested = false;
-    ws.liveUpdatesHandler = liveUpdatesHandler;
+    ws.autoConfig = autoConfig;
+    //ws.liveUpdatesHandler = liveUpdatesHandler;
     ws.isOpen = false;
 
     if(oldWs)
@@ -629,16 +653,13 @@ Api.prototype.AutoWebsocket = function(liveUpdatesHandler, errorEvent, reconnect
         if(ws.pendingRequests[id])
             delete ws.pendingRequests[id];
     };
-    // Error events are reported through here. You can't "handle" them per-se, because this is an 
-    // "automatic" system, however you can at least do things on your own end when errors occur.
-    // Also, this reports new websockets that are created due to reconnects, VERY important!
-    ws.errorEvent = function(message, response, newWs)
-    {
-        if(errorEvent)
-            errorEvent(message, response, newWs);
-        else
-            console.warn(`No error handler set for websocket, got error: ${message}, response:`, response);
-    };
+    //ws.errorEvent = function(message, response, newWs)
+    //{
+    //    if(ws.autoConfigerrorEvent)
+    //        errorEvent(message, response, newWs);
+    //    else
+    //        console.warn(`No error handler set for websocket, got error: ${message}, response:`, response);
+    //};
     // Main send method, please use this over "send()". All websocket requests use a basic json format
     // with a type to signify what you're sending, and data to send. The handler will be called when
     // your response is received.
@@ -683,11 +704,11 @@ Api.prototype.AutoWebsocket = function(liveUpdatesHandler, errorEvent, reconnect
             if(response.type === "live")
             {
                 ws.liveUpdatesId = response.data.lastId;
-
-                if(ws.liveUpdatesHandler)
-                    ws.liveUpdatesHandler(response);
-                else
-                    console.warn("Receive live update from websocket but no handler set! Response:", response);
+                ws.autoConfig.liveHandler(response);
+            }
+            else if(response.type == "userlistupdate")
+            {
+                ws.autoConfig.userlistUpdateHandler(response);
             }
             else if(response.type === "lastId")
             {
@@ -697,12 +718,12 @@ Api.prototype.AutoWebsocket = function(liveUpdatesHandler, errorEvent, reconnect
             else if(response.type === "unexpected")
             {
                 console.warn("Unexpected error from websocket: ", response);
-                ws.errorEvent("Unexpected error from websocket: " + response.error, response);
+                ws.autoConfig.errorEventListener("Unexpected error from websocket: " + response.error, response);
                 ws.close();
             }
             else if(response.type === "badtoken")
             {
-                ws.errorEvent("Bad token: " + response.error, response);
+                ws.autoConfig.errorEventListener("Bad token: " + response.error, response);
                 ws.close();
             }
             else if(ws.pendingRequests[response.id])
@@ -734,7 +755,7 @@ Api.prototype.AutoWebsocket = function(liveUpdatesHandler, errorEvent, reconnect
         }
         else
         {
-            var reconnectInterval = reconnectIntervalGenerator(++ws.currentReconnects); //Another reconnection attempt. Only an open websocket will reset this
+            var reconnectInterval = ws.autoConfig.reconnectIntervalGenerator(++ws.currentReconnects); //Another reconnection attempt. Only an open websocket will reset this
             console.warn(`Websocket closed unexpectedly, attempting new connection in ${reconnectInterval} ms`);
             window.setTimeout(() =>
             {
@@ -744,8 +765,8 @@ Api.prototype.AutoWebsocket = function(liveUpdatesHandler, errorEvent, reconnect
                 }
                 else
                 {
-                    var newWs = me.AutoWebsocket(liveUpdatesHandler, errorEvent, reconnectIntervalGenerator, ws);
-                    newWs.errorEvent("New websocket replacement after reconnect", null, newWs);
+                    var newWs = me.AutoWebsocket(ws.autoConfig, ws);
+                    newWs.autoConfig.errorEventListener("New websocket replacement after reconnect", null, newWs);
                 }
             }, reconnectInterval);
         }

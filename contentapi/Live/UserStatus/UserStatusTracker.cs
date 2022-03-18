@@ -21,15 +21,8 @@ public class UserStatusTracker : IUserStatusTracker
     /// <param name="status"></param>
     /// <param name="trackerId"></param>
     /// <returns></returns>
-    public async Task<int> AddStatusAsync(long userId, long contentId, string status, int trackerId)
+    public async Task<int> AddStatusAsync(long userId, long contentId, string? status, int trackerId)
     {
-        var userStatus = new UserStatus()
-        {
-            userId = userId,
-            status = status,
-            trackerId = trackerId
-        };
-
         var statusCollection = statuses.GetOrAdd(contentId, x => new UserStatusCollection());
 
         await statusCollection.CollectionLock.WaitAsync();
@@ -40,7 +33,18 @@ public class UserStatusTracker : IUserStatusTracker
         {
             //Need to remove any old statuses only for OUR tracker
             removeCount = statusCollection.Statuses.RemoveAll(x => x.userId == userId && x.trackerId == trackerId);
-            statusCollection.Statuses.Add(userStatus); //Always adds to end
+
+            //This allows us to remove statuses by setting them to null or otherwise.
+            if(!string.IsNullOrWhiteSpace(status))
+            {
+                //Always add to end
+                statusCollection.Statuses.Add(new UserStatus()
+                {
+                    userId = userId,
+                    status = status,
+                    trackerId = trackerId
+                });
+            }
         }
         finally
         {
@@ -64,14 +68,16 @@ public class UserStatusTracker : IUserStatusTracker
         var result = new Dictionary<long, Dictionary<long, string>>();
 
         //If it's empty, get them all
-        var searchKeys = contentIds.Length > 0 ? statuses.Keys.Intersect(contentIds) : statuses.Keys.ToList();
+        var searchKeys = contentIds.Length > 0 ? contentIds.ToList() : statuses.Keys.ToList();
+        //var searchKeys = contentIds.Length > 0 ? statuses.Keys.Intersect(contentIds) : statuses.Keys.ToList();
 
         //Use tolist to ensure that the keys don't change from underneath us
         foreach(var key in searchKeys)
         {
             var contentResult = await GetStatusForContentAsync(key);
 
-            if(contentResult.Count > 0)
+            //if the user specified a specific list of contentids, always return SOMETHING on the list...
+            if(contentIds.Length > 0 || contentResult.Count > 0)
                 result.Add(key, contentResult);
         }
 

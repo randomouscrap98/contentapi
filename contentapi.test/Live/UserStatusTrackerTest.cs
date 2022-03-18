@@ -47,6 +47,29 @@ public class UserStatusTrackerTest : UnitTestBase
     }
 
     [Fact]
+    public async Task AddStatusAsync_NullOrEmptyNotAdded()
+    {
+        await service.AddStatusAsync(1, 2, "", 1);
+        var result = await service.GetUserStatusesAsync(2);
+        Assert.Contains(2, result.Keys);
+        Assert.Empty(result[2]);
+    }
+
+    [Theory]
+    [InlineData("")]
+    [InlineData(null)]
+    public async Task AddStatusAsync_NullOrEmptyRemoves(string? status)
+    {
+        await service.AddStatusAsync(1, 2, "here!", 1);
+        var result = await service.GetUserStatusesAsync(2);
+        Assert.Contains(2, result.Keys);
+        Assert.Equal("here!", result[2][1]);
+        await service.AddStatusAsync(1, 2, status, 1);
+        result = await service.GetUserStatusesAsync(2);
+        Assert.Empty(result[2]);
+    }
+
+    [Fact]
     public async Task AddStatusAsync_GetAll()
     {
         await service.AddStatusAsync(1, 2, "active", 1);
@@ -118,8 +141,9 @@ public class UserStatusTrackerTest : UnitTestBase
         Assert.Single(result);
         Assert.Equal("inactive", result[3][1]);
         result = await service.GetUserStatusesAsync(2,3,0);
-        Assert.Equal(2, result.Count);
+        Assert.Equal(3, result.Count);
         Assert.Equal("active", result[2][1]);
         Assert.Equal("inactive", result[3][1]);
+        Assert.Empty(result[0]);
     }
 }

@@ -81,12 +81,14 @@ public class LiveController : BaseController
             WebsocketListenerData? listener;
             if(currentListeners.TryGetValue(key, out listener))
             {
+                var statuses = await GetUserStatusesAsync(listener.userId, contentId);
+
                 //Note that the listener could be invalid here, but it's OK because after this, hopefully nothing will be 
                 //holding onto it or whatever.
                 var response = new WebSocketResponse()
                 {
                     type = "userlistupdate",
-                    data = await GetUserStatusesAsync(listener.userId, contentId)
+                    data = statuses
                 };
                 await listener.sendQueue.SendAsync(response);
             }
