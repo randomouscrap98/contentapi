@@ -13,7 +13,6 @@ using Xunit;
 
 namespace contentapi.test;
 
-//public class ModuleServiceTests : DbUnitTestBase //ServiceConfigTestBase<ModuleService, ModuleServiceConfig>
 public class ModuleServiceTests : ViewUnitTestBase, IClassFixture<DbUnitTestSearchFixture>
 {
     protected ModuleServiceConfig config;
@@ -21,12 +20,6 @@ public class ModuleServiceTests : ViewUnitTestBase, IClassFixture<DbUnitTestSear
     protected IDbWriter writer;
     protected ModuleService service;
     protected DbUnitTestSearchFixture fixture;
-    //protected ModuleMessageViewService moduleMessageService;
-    //protected UserViewService userService;
-
-    //protected ModuleServiceConfig myConfig = new ModuleServiceConfig() { 
-    //    ModuleDataConnectionString = "Data Source=moduledata;Mode=Memory;Cache=Shared"
-    //};
 
     protected SqliteConnection masterconnection;
 
@@ -45,8 +38,6 @@ public class ModuleServiceTests : ViewUnitTestBase, IClassFixture<DbUnitTestSear
         masterconnection.Open();
 
         fixture.ResetDatabase();
-        //moduleMessageService = CreateService<ModuleMessageViewService>();
-        //userService = CreateService<UserViewService>();
     }
 
     ~ModuleServiceTests()

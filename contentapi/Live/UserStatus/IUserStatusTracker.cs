@@ -10,8 +10,8 @@ public interface IUserStatusTracker
     /// <param name="contentId"></param>
     /// <param name="status"></param>
     /// <param name="trackerId"></param>
-    /// <returns></returns>
-    Task AddStatusAsync(long userId, long contentId, string status, int trackerId);
+    /// <returns>The amount of statuses this overwrote</returns>
+    Task<int> AddStatusAsync(long userId, long contentId, string status, int trackerId);
 
     /// <summary>
     /// Get the statuses for each user within each room. Outer dictionary key is contentId,

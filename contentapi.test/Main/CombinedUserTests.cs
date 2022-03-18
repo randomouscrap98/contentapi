@@ -30,9 +30,6 @@ public class CombinedUserTests : ViewUnitTestBase, IClassFixture<DbUnitTestSearc
         writer = fixture.GetService<IDbWriter>();
         service = fixture.GetService<IUserService>();
 
-        //UserService(fixture.GetService<ILogger<UserService>>(), searcher, fixture.GetService<IHashService>(), 
-        //    fixture.GetService<IAuthTokenService<long>>(), config, fixture.GetService<ContentApiDbConnection>());
-
         //Always want a fresh database!
         fixture.ResetDatabase();
     }

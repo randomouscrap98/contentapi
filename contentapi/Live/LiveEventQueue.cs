@@ -201,6 +201,15 @@ public class LiveEventQueue : ILiveEventQueue
         return Tuple.Create((long)content["id"], (Dictionary<long, string>)content[permKey]);
     }
 
+    public SearchRequest GetAutoContentRequest(string query)
+    {
+        return new SearchRequest {
+            type = RequestType.content.ToString(),
+            fields = "id,name,parentId,createDate,createUserId,deleted,permissions",
+            query = query
+        };
+    }
+
     /// <summary>
     /// Construct the searchrequest that will obtain the desired data for the given list of events. The events must ALL be the same type, otherwise a search
     /// request can't be constructed!
@@ -220,11 +229,6 @@ public class LiveEventQueue : ILiveEventQueue
             }
         };
 
-        var contentRequest = new Func<string, SearchRequest>(q => new SearchRequest {
-            type = RequestType.content.ToString(),
-            fields = "id,name,parentId,createDate,createUserId,deleted,permissions",
-            query = q
-        });
         var basicRequest = new Func<string, SearchRequest>(t => new SearchRequest {
             type = t,
             fields = "*",
@@ -234,7 +238,7 @@ public class LiveEventQueue : ILiveEventQueue
         if(first.type == EventType.message)
         {
             requests.requests.Add(basicRequest(RequestType.message.ToString())); 
-            requests.requests.Add(contentRequest("id in @message.contentId"));
+            requests.requests.Add(GetAutoContentRequest("id in @message.contentId"));
             requests.requests.Add(new SearchRequest()
             {
                 type = RequestType.user.ToString(),
@@ -245,7 +249,7 @@ public class LiveEventQueue : ILiveEventQueue
         else if(first.type == EventType.activity)
         {
             requests.requests.Add(basicRequest(RequestType.activity.ToString())); 
-            requests.requests.Add(contentRequest("id in @activity.contentId"));
+            requests.requests.Add(GetAutoContentRequest("id in @activity.contentId"));
             requests.requests.Add(new SearchRequest()
             {
                 type = RequestType.user.ToString(),
@@ -264,7 +268,7 @@ public class LiveEventQueue : ILiveEventQueue
         else if(first.type == EventType.watch) 
         {
             requests.requests.Add(basicRequest(RequestType.watch.ToString())); 
-            requests.requests.Add(contentRequest("id in @watch.contentId"));
+            requests.requests.Add(GetAutoContentRequest("id in @watch.contentId"));
         }
         else
         {

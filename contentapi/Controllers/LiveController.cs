@@ -1,5 +1,6 @@
 using System.Net.WebSockets;
 using System.Threading.Tasks.Dataflow;
+using System.Linq;
 using contentapi.Live;
 using contentapi.Search;
 using contentapi.Utilities;
@@ -12,14 +13,15 @@ namespace contentapi.Controllers;
 public class LiveController : BaseController
 {
     protected ILiveEventQueue eventQueue;
+    protected IUserStatusTracker userStatuses;
     private static int nextId = 0;
     protected int trackerId = Interlocked.Increment(ref nextId);
 
-    public LiveController(BaseControllerServices services, ILiveEventQueue eventQueue) : base(services) 
+    public LiveController(BaseControllerServices services, ILiveEventQueue eventQueue, IUserStatusTracker userStatuses) : base(services) 
     { 
         this.eventQueue = eventQueue;
+        this.userStatuses = userStatuses;
     }
-
 
     protected long ValidateToken(string token)
     {
@@ -37,6 +39,11 @@ public class LiveController : BaseController
         {
             throw new TokenException("Error during token validation: " + ex.Message);
         }
+    }
+
+    protected Task<UserlistResult> GetAllUserStatuses(long uid)
+    {
+        return userStatuses.GetAllStatusesAsync(services.searcher, uid, eventQueue.GetAutoContentRequest().fields, "*");
     }
 
     protected async Task ReceiveLoop(CancellationToken cancelToken, WebSocket socket, BufferBlock<object> sendQueue, string token)

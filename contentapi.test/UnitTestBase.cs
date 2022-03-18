@@ -1,5 +1,8 @@
 using System;
 using System.Threading;
+using AutoMapper;
+using contentapi.Db;
+using contentapi.Search;
 using contentapi.Setup;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Logging;
@@ -56,6 +59,14 @@ public class UnitTestBase
     {
         var dt2r = dt2 ?? DateTime.UtcNow;
         Assert.True(Math.Abs((dt1 - dt2r).TotalSeconds) < seconds, $"Dates were not within an acceptable closeness in range! DT1: {dt1}, DT2: {dt2r}");
+    }
+
+    public GenericSearcher GetGenericSearcher()
+    {
+        return new GenericSearcher(GetService<ILogger<GenericSearcher>>(), 
+            GetService<ContentApiDbConnection>(), GetService<IViewTypeInfoService>(), GetService<GenericSearcherConfig>(),
+            GetService<IMapper>(), GetService<IQueryBuilder>(), 
+            GetService<IPermissionService>());
     }
 
 }

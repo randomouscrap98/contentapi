@@ -21,7 +21,7 @@ public class UserStatusTracker : IUserStatusTracker
     /// <param name="status"></param>
     /// <param name="trackerId"></param>
     /// <returns></returns>
-    public async Task AddStatusAsync(long userId, long contentId, string status, int trackerId)
+    public async Task<int> AddStatusAsync(long userId, long contentId, string status, int trackerId)
     {
         var userStatus = new UserStatus()
         {
@@ -34,16 +34,20 @@ public class UserStatusTracker : IUserStatusTracker
 
         await statusCollection.CollectionLock.WaitAsync();
 
+        int removeCount = 0;
+
         try
         {
             //Need to remove any old statuses only for OUR tracker
-            statusCollection.Statuses.RemoveAll(x => x.userId == userId && x.trackerId == trackerId);
+            removeCount = statusCollection.Statuses.RemoveAll(x => x.userId == userId && x.trackerId == trackerId);
             statusCollection.Statuses.Add(userStatus); //Always adds to end
         }
         finally
         {
             statusCollection.CollectionLock.Release();
         }
+
+        return removeCount;
     }
 
     /// <summary>

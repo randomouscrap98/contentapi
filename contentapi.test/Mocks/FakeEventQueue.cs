@@ -2,6 +2,7 @@ using System.Collections.Generic;
 using System.Threading;
 using System.Threading.Tasks;
 using contentapi.Live;
+using contentapi.Search;
 using contentapi.Views;
 
 namespace contentapi.test.Mock;
@@ -15,6 +16,11 @@ public class FakeEventQueue : ILiveEventQueue
     {
         Events.Add(data);
         return Task.FromResult(ReturnData);
+    }
+
+    public SearchRequest GetAutoContentRequest(string query = "")
+    {
+        throw new System.NotImplementedException();
     }
 
     public int GetCurrentLastId()

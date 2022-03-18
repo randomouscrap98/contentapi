@@ -27,11 +27,12 @@ public class GenericSearchDbTests : ViewUnitTestBase, IClassFixture<DbUnitTestSe
     public GenericSearchDbTests(DbUnitTestSearchFixture fixture)
     {
         this.fixture = fixture;
-        var conWrap = fixture.GetService<ContentApiDbConnection>();
-        service = new GenericSearcher(fixture.GetService<ILogger<GenericSearcher>>(), 
-            conWrap, fixture.GetService<IViewTypeInfoService>(), fixture.GetService<GenericSearcherConfig>(),
-            fixture.GetService<IMapper>(), fixture.GetService<IQueryBuilder>(), 
-            fixture.GetService<IPermissionService>());
+        //var conWrap = fixture.GetService<ContentApiDbConnection>();
+        service = fixture.GetGenericSearcher();
+        //new GenericSearcher(fixture.GetService<ILogger<GenericSearcher>>(), 
+        //    conWrap, fixture.GetService<IViewTypeInfoService>(), fixture.GetService<GenericSearcherConfig>(),
+        //    fixture.GetService<IMapper>(), fixture.GetService<IQueryBuilder>(), 
+        //    fixture.GetService<IPermissionService>());
     }
 
     [Fact]
