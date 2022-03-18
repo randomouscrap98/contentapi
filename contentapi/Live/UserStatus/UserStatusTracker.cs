@@ -59,12 +59,15 @@ public class UserStatusTracker : IUserStatusTracker
     /// since it should only represent the statuses for users currently connected.
     /// </remarks>
     /// <returns></returns>
-    public async Task<Dictionary<long, Dictionary<long, string>>> GetAllStatusesAsync()
+    public async Task<Dictionary<long, Dictionary<long, string>>> GetUserStatusesAsync(params long[] contentIds) //IEnumerable<long>? contentIds = null)
     {
         var result = new Dictionary<long, Dictionary<long, string>>();
 
+        //If it's empty, get them all
+        var searchKeys = contentIds.Length > 0 ? statuses.Keys.Intersect(contentIds) : statuses.Keys.ToList();
+
         //Use tolist to ensure that the keys don't change from underneath us
-        foreach(var key in statuses.Keys.ToList())
+        foreach(var key in searchKeys)
         {
             var contentResult = await GetStatusForContentAsync(key);
 

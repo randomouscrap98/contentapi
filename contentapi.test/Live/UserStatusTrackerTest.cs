@@ -18,7 +18,7 @@ public class UserStatusTrackerTest : UnitTestBase
     [Fact]
     public async Task GetAllStatusesAsync_EmptyOk()
     {
-        var result = await service.GetAllStatusesAsync();
+        var result = await service.GetUserStatusesAsync();
         Assert.Empty(result);
     }
 
@@ -51,7 +51,7 @@ public class UserStatusTrackerTest : UnitTestBase
     {
         await service.AddStatusAsync(1, 2, "active", 1);
         await service.AddStatusAsync(1, 3, "inactive", 1);
-        var result = await service.GetAllStatusesAsync();
+        var result = await service.GetUserStatusesAsync();
         Assert.Contains(2, result.Keys);
         Assert.Contains(3, result.Keys);
         Assert.Equal("active", result[2][1]);
@@ -82,13 +82,13 @@ public class UserStatusTrackerTest : UnitTestBase
     {
         await service.AddStatusAsync(1, 2, "active", 15);
         await service.AddStatusAsync(1, 3, "inactive", 15);
-        var result = await service.GetAllStatusesAsync();
+        var result = await service.GetUserStatusesAsync();
         Assert.Equal(2, result.Count);
         var removed = await service.RemoveStatusesByTrackerAsync(15);
         Assert.Equal(2, removed.Count);
         Assert.Equal(1, removed[2]);
         Assert.Equal(1, removed[3]);
-        result = await service.GetAllStatusesAsync();
+        result = await service.GetUserStatusesAsync();
         Assert.Empty(result);
     }
 
@@ -104,5 +104,22 @@ public class UserStatusTrackerTest : UnitTestBase
         Assert.Equal(1, removed[2]);
         result = await service.GetStatusForContentAsync(2);
         Assert.Equal("active", result[1]); //With the later one removed, status goes back
+    }
+
+    [Fact]
+    public async Task GetUserStatusesAsync_SelectiveContent()
+    {
+        await service.AddStatusAsync(1, 2, "active", 1);
+        await service.AddStatusAsync(1, 3, "inactive", 1);
+        var result = await service.GetUserStatusesAsync(2);
+        Assert.Single(result);
+        Assert.Equal("active", result[2][1]);
+        result = await service.GetUserStatusesAsync(3);
+        Assert.Single(result);
+        Assert.Equal("inactive", result[3][1]);
+        result = await service.GetUserStatusesAsync(2,3,0);
+        Assert.Equal(2, result.Count);
+        Assert.Equal("active", result[2][1]);
+        Assert.Equal("inactive", result[3][1]);
     }
 }

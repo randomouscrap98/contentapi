@@ -7,6 +7,7 @@ using contentapi.Utilities;
 using contentapi.Views;
 using Microsoft.AspNetCore.Mvc;
 using Newtonsoft.Json;
+using System.Collections.Concurrent;
 
 namespace contentapi.Controllers;
 
@@ -14,13 +15,24 @@ public class LiveController : BaseController
 {
     protected ILiveEventQueue eventQueue;
     protected IUserStatusTracker userStatuses;
+    protected IPermissionService permissionService;
     private static int nextId = 0;
     protected int trackerId = Interlocked.Increment(ref nextId);
 
-    public LiveController(BaseControllerServices services, ILiveEventQueue eventQueue, IUserStatusTracker userStatuses) : base(services) 
+    protected static ConcurrentDictionary<int, WebsocketListenerData> currentListeners = new ConcurrentDictionary<int, WebsocketListenerData>();
+
+    protected class WebsocketListenerData
+    {
+        public long userId;
+        public BufferBlock<object> sendQueue = new BufferBlock<object>();
+    }
+
+    public LiveController(BaseControllerServices services, ILiveEventQueue eventQueue, IUserStatusTracker userStatuses,
+        IPermissionService permissionService) : base(services) 
     { 
         this.eventQueue = eventQueue;
         this.userStatuses = userStatuses;
+        this.permissionService = permissionService;
     }
 
     protected long ValidateToken(string token)
@@ -41,9 +53,20 @@ public class LiveController : BaseController
         }
     }
 
-    protected Task<UserlistResult> GetAllUserStatuses(long uid)
+    protected Task<UserlistResult> GetUserStatusesAsync(long uid, params long[] contentIds)
     {
-        return userStatuses.GetAllStatusesAsync(services.searcher, uid, eventQueue.GetAutoContentRequest().fields, "*");
+        return userStatuses.GetUserStatusesAsync(services.searcher, uid, eventQueue.GetAutoContentRequest().fields, "*", contentIds);
+    }
+
+    protected async Task AddUserStatusAsync(long userId, long contentId, string status)
+    {
+        //
+    }
+
+    protected async Task AlertUserlistUpdate(long contentId)
+    {
+        //Given a contentId, send out the latest userlist to all current listeners. Do a single permissions
+        //lookup to figure out who is allowed and who isn't.
     }
 
     protected async Task ReceiveLoop(CancellationToken cancelToken, WebSocket socket, BufferBlock<object> sendQueue, string token)
@@ -67,6 +90,29 @@ public class LiveController : BaseController
                 response.data = new {
                     serverTime = DateTime.UtcNow
                 };
+            }
+            else if(receiveItem.type == "userlist")
+            {
+                response.data = await GetUserStatusesAsync(userId);
+            }
+            else if(receiveItem.type == "setuserstatus")
+            {
+                try
+                {
+                    if(receiveItem.data == null)
+                        throw new RequestException("Must set data to a dictionary of contentId:status");
+
+                    var statuses = (Dictionary<long, string>)receiveItem.data;
+
+                    //TODO: this will need to do some magic to send the userlist to everyone. I suppose if I
+                    //had a list of all waiters and their send queues.... hmmmm that would actually just work.
+                    foreach(var status in statuses)
+                        await userStatuses.AddStatusAsync(userId, status.Key, status.Value, trackerId);
+                }
+                catch(Exception ex)
+                {
+                    response.error = $"Error while setting statuses: {ex.Message}";
+                }
             }
             else if(receiveItem.type == "request")
             {
@@ -126,18 +172,21 @@ public class LiveController : BaseController
     }
 
     [HttpGet("ws")]
-    public Task<ActionResult<string>> WebSocketListenAsync([FromQuery]string token, [FromQuery]int? lastId = null)
+    public async Task<ActionResult<string>> WebSocketListenAsync([FromQuery]string token, [FromQuery]int? lastId = null)
     {
-        services.logger.LogDebug($"ws METHOD: {HttpContext.Request.Method}, HEADERS: " +
-            JsonConvert.SerializeObject(HttpContext.Request.Headers, 
-                Formatting.None, new JsonSerializerSettings() { ReferenceLoopHandling = ReferenceLoopHandling.Ignore }));
-
-        return MatchExceptions(async () =>
+        try
         {
-            //I have NO idea if returning an action from a websocket request makes any sense, or 
-            //if the middleware gets completely wrecked or something!
-            if (HttpContext.WebSockets.IsWebSocketRequest)
+            services.logger.LogDebug($"ws METHOD: {HttpContext.Request.Method}, HEADERS: " +
+                JsonConvert.SerializeObject(HttpContext.Request.Headers,
+                    Formatting.None, new JsonSerializerSettings() { ReferenceLoopHandling = ReferenceLoopHandling.Ignore }));
+
+            return await MatchExceptions(async () =>
             {
+                //I have NO idea if returning an action from a websocket request makes any sense, or 
+                //if the middleware gets completely wrecked or something!
+                if (!HttpContext.WebSockets.IsWebSocketRequest)
+                    throw new RequestException("You must send a websocket request to this endpoint!");
+
                 services.logger.LogInformation("ws Websocket starting!");
 
                 using var socket = await HttpContext.WebSockets.AcceptWebSocketAsync();
@@ -149,7 +198,7 @@ public class LiveController : BaseController
                     var userId = ValidateToken(token);
                     int realLastId;
 
-                    if(lastId == null)
+                    if (lastId == null)
                     {
                         realLastId = eventQueue.GetCurrentLastId();
 
@@ -167,6 +216,9 @@ public class LiveController : BaseController
                         realLastId = lastId.Value;
                     }
 
+                    if(!currentListeners.TryAdd(trackerId, new WebsocketListenerData() { userId = userId, sendQueue = sendQueue }))
+                        throw new InvalidOperationException("INTERNAL ERROR: couldn't add you to the listener array!");
+
                     //Can send and receive at the same time, but CAN'T send/receive multiple at the same time.
                     var receiveTask = ReceiveLoop(cancelSource.Token, socket, sendQueue, token);
                     var listenTask = ListenLoop(cancelSource.Token, realLastId, sendQueue, token);
@@ -178,18 +230,21 @@ public class LiveController : BaseController
                     }
                     finally
                     {
+                        if(!currentListeners.TryRemove(trackerId, out _))
+                            services.logger.LogWarning($"Couldn't remove listener {trackerId}, this could be a serious error!");
+
                         //Clean up the tasks
                         cancelSource.Cancel();
                         await Task.WhenAll(receiveTask, sendTask, listenTask);
                     }
                 }
-                catch(Exception ex)
+                catch (Exception ex)
                 {
                     services.logger.LogError("Exception in websocket: " + ex.ToString());
 
                     //Yes, the websocket COULD close after this check, but it still saves us a LOT of hassle to skip the
                     //common cases of "the websocket is actually closed from the exception"
-                    if(socket.State == WebSocketState.Open)
+                    if (socket.State == WebSocketState.Open)
                     {
                         await socket.SendObjectAsync(new WebSocketResponse()
                         {
@@ -206,11 +261,12 @@ public class LiveController : BaseController
                 }
 
                 return "Socket closed on server successfully";
-            }
-            else
-            {
-                throw new RequestException("You must send a websocket request to this endpoint!");
-            }
-        });
+            });
+        }
+        finally
+        {
+            //This is SO IMPORTANT that I want to do it way out here!
+            await userStatuses.RemoveStatusesByTrackerAsync(trackerId);
+        }
     }
 }

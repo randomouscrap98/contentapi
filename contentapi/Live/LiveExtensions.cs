@@ -16,11 +16,11 @@ public static class LiveExtensions
     /// </summary>
     /// <param name="uid"></param>
     /// <returns></returns>
-    public static async Task<UserlistResult> GetAllStatusesAsync(this IUserStatusTracker userStatuses, 
-        IGenericSearch searcher, long uid, string contentFields = "*", string userFields = "*")
+    public static async Task<UserlistResult> GetUserStatusesAsync(this IUserStatusTracker userStatuses, 
+        IGenericSearch searcher, long uid, string contentFields = "*", string userFields = "*", params long[] contentIds)
     {
         //Always allow 0 in there FYI
-        var allStatuses = await userStatuses.GetAllStatusesAsync();
+        var allStatuses = await userStatuses.GetUserStatusesAsync(contentIds);
         var allIds = allStatuses.Keys.ToList();
 
         //Search content AS THE USER so they only get the content they're allowed to get. Hopefully
@@ -67,38 +67,38 @@ public static class LiveExtensions
         };
     }
 
-    public static async Task<int> AddStatusAsync(this IUserStatusTracker userStatuses, ILiveEventQueue queue, 
-        long uid, long contentId, string status, int trackerId)
-    {
-        var replaced = await userStatuses.AddStatusAsync(uid, contentId, status, trackerId);
+    //public static async Task<int> AddStatusAsync(this IUserStatusTracker userStatuses, ILiveEventQueue queue, 
+    //    long uid, long contentId, string status, int trackerId)
+    //{
+    //    var replaced = await userStatuses.AddStatusAsync(uid, contentId, status, trackerId);
 
-        //Regardless of the change (not optimized), create an event
-        await queue.AddEventAsync(new LiveEvent()
-        {
-            userId = uid,
-            type = EventType.userlist,
-            action = replaced == 0 ? Db.UserAction.create : Db.UserAction.update,
-            refId = contentId
-        });
+    //    //Regardless of the change (not optimized), create an event
+    //    await queue.AddEventAsync(new LiveEvent()
+    //    {
+    //        userId = uid,
+    //        type = EventType.userlist,
+    //        action = replaced == 0 ? Db.UserAction.create : Db.UserAction.update,
+    //        refId = contentId
+    //    });
 
-        return replaced;
-    }
+    //    return replaced;
+    //}
 
-    public static async Task<Dictionary<long, int>> RemoveStatusesByTrackerAsync(this IUserStatusTracker userStatuses, long uid, int trackerId, ILiveEventQueue queue)
-    {
-        var removed = await userStatuses.RemoveStatusesByTrackerAsync(trackerId);
+    //public static async Task<Dictionary<long, int>> RemoveStatusesByTrackerAsync(this IUserStatusTracker userStatuses, long uid, int trackerId, ILiveEventQueue queue)
+    //{
+    //    var removed = await userStatuses.RemoveStatusesByTrackerAsync(trackerId);
 
-        foreach(var contentId in removed.Keys.ToList())
-        {
-            await queue.AddEventAsync(new LiveEvent()
-            {
-                userId = uid,
-                type = EventType.userlist,
-                action = Db.UserAction.delete,
-                refId = contentId
-            });
-        }
+    //    foreach(var contentId in removed.Keys.ToList())
+    //    {
+    //        await queue.AddEventAsync(new LiveEvent()
+    //        {
+    //            userId = uid,
+    //            type = EventType.userlist,
+    //            action = Db.UserAction.delete,
+    //            refId = contentId
+    //        });
+    //    }
 
-        return removed;
-    }
+    //    return removed;
+    //}
 }

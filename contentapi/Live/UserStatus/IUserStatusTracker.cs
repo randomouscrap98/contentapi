@@ -18,7 +18,7 @@ public interface IUserStatusTracker
     /// inner dictionary are the statuses per user, key is userId
     /// </summary>
     /// <returns></returns>
-    Task<Dictionary<long, Dictionary<long, string>>> GetAllStatusesAsync();
+    Task<Dictionary<long, Dictionary<long, string>>> GetUserStatusesAsync(params long[] contentIds); //IEnumerable<long>? contentIds = null);
 
     /// <summary>
     /// Remove all statuses reported by the given tracker in all rooms
@@ -32,5 +32,5 @@ public interface IUserStatusTracker
     /// </summary>
     /// <param name="contentId"></param>
     /// <returns></returns>
-    Task<Dictionary<long, string>> GetStatusForContentAsync(long contentId);
+    //Task<Dictionary<long, string>> GetStatusForContentAsync(long contentId);
 }
