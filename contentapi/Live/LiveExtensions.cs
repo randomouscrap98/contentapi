@@ -49,9 +49,16 @@ public static class LiveExtensions
             }
         }, uid);
 
+        
         //Remove the statuses they can't see, meaning anything that's NOT in the allSearch set
         foreach(var id in allIds.Where(x => x != 0).Except(allSearch.data["content"].Select(x => (long)x["id"])))
+        {
             allStatuses.Remove(id);
+        }
+
+        //Don't leak information: remove users that aren't referenced
+        var allUsers = allStatuses.SelectMany(x => x.Value.Keys).Union(allSearch.data["content"].Select(x => (long)x["createUserId"]));
+        allSearch.data["user"] = allSearch.data["user"].Where(x => allUsers.Contains((long)x["id"]));
 
         return new UserlistResult()
         {
