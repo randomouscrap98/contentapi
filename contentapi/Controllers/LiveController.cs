@@ -128,12 +128,14 @@ public class LiveController : BaseController
                     if(receiveItem.data == null)
                         throw new RequestException("Must set data to a dictionary of contentId:status");
 
-                    var statuses = (Dictionary<long, string>)receiveItem.data;
+                    var statuses = services.mapper.Map<Dictionary<string, string>>(receiveItem.data)
+                        .ToDictionary(x => long.Parse(x.Key), y => y.Value);//(Dictionary<long, string>)receiveItem.data;
 
                     //TODO: this will need to do some magic to send the userlist to everyone. I suppose if I
                     //had a list of all waiters and their send queues.... hmmmm that would actually just work.
                     foreach(var status in statuses)
-                        await userStatuses.AddStatusAsync(userId, status.Key, status.Value, trackerId);
+                        await AddUserStatusAsync(userId, status.Key, status.Value);
+                        //await userStatuses.AddStatusAsync(userId, status.Key, status.Value, trackerId);
                 }
                 catch(Exception ex)
                 {

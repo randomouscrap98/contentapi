@@ -21,6 +21,7 @@ header {
 .success { color: green; }
 .systemmsg { color: cornflowerblue; }
 .successmsg { color: darkseagreen; }
+.userlistmsg { color: coral; }
 .username::after { content: ":"; }
 
 .describe tr td:first-of-type {

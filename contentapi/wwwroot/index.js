@@ -480,26 +480,35 @@ function websocket_onload(template, state)
         //CAN use the standard "send" function, but if you're going for a manual approach, I would
         //suggest against AutoWebsocket. Use GetRawWebsocket instead. The websocket it returns will
         //auto-reconnect on any critical error. If you call .close(), it will no longer reconnect,
-        //and the websocket becomes unusable (like a normal javascript WebSocket object). The first
-        //parameter is the live updates handler, second is the error event handler, third is the
-        //interval between reconnect, defaulting to 5 seconds.
-        ws = api.AutoWebsocket(live =>
-        {
-            wslog("Live data: \n" + JSON.stringify(live.data, null, 2), "systemmsg");
-        }, (message, response, newWs) =>
-        {
-            //This is the error "event". It's not a handler, but you can certain DO things with this error.
-            //Errors are automatically handled by the AutoWebsocket. However, you do NEED TO track changes
-            //in the websocket. I can't reuse closed websockets, so I have to create new ones each time. If you
-            //don't track when the new ones show up, your existing reference won't work anymore. If this system
-            //is undesired, we can come up with something else, but I think this is the easiest and most 
-            //configurable way, since it lets you do what you want with websocket updates.
-            if(newWs)
+        //and the websocket becomes unusable (like a normal javascript WebSocket object). 
+        ws = api.AutoWebsocket(new WebsocketAutoConfig(
+            live => {
+                wslog("Live data: \n" + JSON.stringify(live.data, null, 2), "systemmsg");
+            }, 
+            userlist => {
+                wslog("Userlist data : \n" + JSON.stringify(userlist.data, null, 2), "userlistmsg");
+            },
+            //The websocket state itself, as well as reconnects, are handled automatically. However,
+            //if you want to keep track of the errors going on so you can do your OWN things (not impacting
+            //the auto websocket, since it's automatic), you use this event tracker. It reports when a new
+            //websocket is created (check newWs for truthy value), and also when the error was severe enough
+            //to not attempt a reconnect (check closed for truthy value)
+            (message, response, newWs, closed) =>
             {
-                console.debug("New websocket was created, tracking");
-                ws = newWs;
+                console.warn("Websocket error: ", message, response);
+
+                if(closed)
+                {
+                    wslog("Websocket error forced a close, error: " + message, "error");
+                    ws = null;
+                }
+                else if(newWs)
+                {
+                    console.debug("New websocket was created, tracking");
+                    ws = newWs;
+                }
             }
-        }, false);
+        ));
 
         wslog("Websocket connected! Maybe...");
     };

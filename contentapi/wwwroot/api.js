@@ -53,7 +53,7 @@ function ApiHandler(success, error, always)
 // you get back is nearly identical, just with data set to whatever you requested rather
 // than what you sent. The ID is unnecessary, but I HIGHLY ENCOURAGE you to use it: your
 // response will have the same ID you sent, so it helps you keep track of things
-function WebsocketRequest(type, data, id, token)
+function WebsocketRequest(type, data, id) //, token)
 {
     this.type = type;
     this.data = data;
@@ -65,16 +65,18 @@ function WebsocketRequest(type, data, id, token)
 //JUST a container
 function WebsocketAutoConfig(liveHandler, userlistUpdateHandler, errorEventListener, reconnectIntervalGenerator)
 {
-    //The handler for live updates, meaning realtime comments, content update, etc.
-    //Single parameter "response" represents all the data parsed from the websocket response
+    // The handler for live updates, meaning realtime comments, content update, etc.
+    // Single parameter "response" represents all the data parsed from the websocket response
     this.liveHandler = liveHandler;
-    //The handler for live userlist updates, as in an update to one or more rooms when
-    //someone enters/leaves/etc.
+    // The handler for live userlist updates, as in an update to one or more rooms when
+    // someone enters/leaves/etc. Does NOT fire when you manually request the userlist, that 
     this.userlistUpdateHandler = userlistUpdateHandler;
     // Error events are reported through here. You can't "handle" them per-se, because this is an 
     // "automatic" system, however you can at least do things on your own end when errors occur.
     // Also, this reports new websockets that are created due to reconnects, VERY important!
     this.errorEventListener = errorEventListener;
+    // How long to wait for reconnect when it's the given amount of reconnects. Accepts the
+    // repeated reconnect count, should return ms to wait
     this.reconnectIntervalGenerator = reconnectIntervalGenerator;
 }
 
@@ -605,19 +607,20 @@ Api.prototype.AutoWebsocket = function(autoConfig, oldWs)
 {
     //Fix the autoconfig to have sane defaults if it has empty
     autoConfig = autoConfig || {};
+    autoConfig.liveHandler = autoConfig.liveHandler || 
+        (x => console.warn("Received live update from websocket but no handler set! Response:", x));
+    autoConfig.userlistUpdateHandler = autoConfig.userlistUpdateHandler || 
+        (x => console.warn("Received userlist update from websocket but no handler set! Response:", x));
+    autoConfig.errorEvent = autoConfig.errorEventListener || 
+        ((m,r,nws,close) => console.warn(`No error handler set for websocket, got error: ${m}, closing: ${close}, response:`, r));
     autoConfig.reconnectIntervalGenerator = autoConfig.reconnectIntervalGenerator || 
         (x => Math.min(30000, x * 500));
-    autoConfig.liveHandler = autoConfig.liveHandler || 
-        (x => console.warn("Receive live update from websocket but no handler set! Response:", x));
-    autoConfig.errorEvent = autoConfig.errorEventListener || 
-        ((m,r,nws) => console.warn(`No error handler set for websocket, got error: ${m}, response:`, r));
 
     var me = this;
     var ws = me.GetRawWebsocket(oldWs ? oldWs.liveUpdatesId : undefined); 
 
     ws.manualCloseRequested = false;
     ws.autoConfig = autoConfig;
-    //ws.liveUpdatesHandler = liveUpdatesHandler;
     ws.isOpen = false;
 
     if(oldWs)
@@ -653,13 +656,6 @@ Api.prototype.AutoWebsocket = function(autoConfig, oldWs)
         if(ws.pendingRequests[id])
             delete ws.pendingRequests[id];
     };
-    //ws.errorEvent = function(message, response, newWs)
-    //{
-    //    if(ws.autoConfigerrorEvent)
-    //        errorEvent(message, response, newWs);
-    //    else
-    //        console.warn(`No error handler set for websocket, got error: ${message}, response:`, response);
-    //};
     // Main send method, please use this over "send()". All websocket requests use a basic json format
     // with a type to signify what you're sending, and data to send. The handler will be called when
     // your response is received.
@@ -718,12 +714,12 @@ Api.prototype.AutoWebsocket = function(autoConfig, oldWs)
             else if(response.type === "unexpected")
             {
                 console.warn("Unexpected error from websocket: ", response);
-                ws.autoConfig.errorEventListener("Unexpected error from websocket: " + response.error, response);
+                ws.autoConfig.errorEventListener("Unexpected error from websocket: " + response.error, response, null, true);
                 ws.close();
             }
             else if(response.type === "badtoken")
             {
-                ws.autoConfig.errorEventListener("Bad token: " + response.error, response);
+                ws.autoConfig.errorEventListener("Bad token: " + response.error, response, null, true);
                 ws.close();
             }
             else if(ws.pendingRequests[response.id])
