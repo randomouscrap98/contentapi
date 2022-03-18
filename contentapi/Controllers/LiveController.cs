@@ -60,13 +60,37 @@ public class LiveController : BaseController
 
     protected async Task AddUserStatusAsync(long userId, long contentId, string status)
     {
-        //
+        await userStatuses.AddStatusAsync(userId, contentId, status, trackerId);
+        await AlertUserlistUpdate(contentId);
     }
 
+    protected async Task RemoveStatusesByTrackerAsync()
+    {
+        var removals = await userStatuses.RemoveStatusesByTrackerAsync(trackerId);
+
+        foreach(var contentId in removals.Keys)
+            await AlertUserlistUpdate(contentId);
+    }
+
+    //This is VERY inefficient, like oh my goodness, but until it becomes a problem, this is how it'll be.
+    //It's inefficient because each user does the status lookup and that's entirely unnecessary.
     protected async Task AlertUserlistUpdate(long contentId)
     {
-        //Given a contentId, send out the latest userlist to all current listeners. Do a single permissions
-        //lookup to figure out who is allowed and who isn't.
+        foreach(var key in currentListeners.Keys.ToList())
+        {
+            WebsocketListenerData? listener;
+            if(currentListeners.TryGetValue(key, out listener))
+            {
+                //Note that the listener could be invalid here, but it's OK because after this, hopefully nothing will be 
+                //holding onto it or whatever.
+                var response = new WebSocketResponse()
+                {
+                    type = "userlistupdate",
+                    data = await GetUserStatusesAsync(listener.userId, contentId)
+                };
+                await listener.sendQueue.SendAsync(response);
+            }
+        }
     }
 
     protected async Task ReceiveLoop(CancellationToken cancelToken, WebSocket socket, BufferBlock<object> sendQueue, string token)
@@ -266,7 +290,7 @@ public class LiveController : BaseController
         finally
         {
             //This is SO IMPORTANT that I want to do it way out here!
-            await userStatuses.RemoveStatusesByTrackerAsync(trackerId);
+            await RemoveStatusesByTrackerAsync();
         }
     }
 }
