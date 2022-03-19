@@ -1,0 +1,167 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+
+    <title>SBS Chat</title>
+    <link rel="icon" href="favicon.ico" type="image/x-icon">
+    <script src="api.js"></script>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width">
+    <meta name="rating" content="general">
+    <meta name="description" content="SBS default implementation chat">
+
+    <script>
+var api;
+var ws;
+
+//duplicate from index.js
+const TOKENKEY = "contentapi_defimpl_userkey";
+function GetToken() { return localStorage.getItem(TOKENKEY); }
+
+window.onload = function()
+{
+    //NOTE: there is no error checking in this frontend, because it is not meant to be used full time. Furthermore,
+    //I think it would distract from the ideas I'm trying to convey, which is just how the API is used to make
+    //a functioning website.
+
+    var parameters = new URLSearchParams(location.search);
+    var state = Object.fromEntries(parameters);
+
+    if(!parameters.has("pid")) //state
+    {
+        alert("No page id set! This chat only works with one room at a time");
+        return;
+    }
+
+    api = new Api(null, GetToken); //Just a global api object, whatever. Null means use the default endpoint (local to self)
+    api.default_handler.error = e =>
+    {
+        alert(`Error ${e.status_code}: ${e.message}`);
+        console.log("Error: ", e);
+    };
+
+    ws = api.AutoWebsocket(new WebsocketAutoConfig(
+        live => {
+            wslog("Live data: \n" + JSON.stringify(live.data, null, 2), "systemmsg");
+        }, 
+        userlist => {
+            wslog("Userlist data : \n" + JSON.stringify(userlist.data, null, 2), "userlistmsg");
+        },
+        //The websocket state itself, as well as reconnects, are handled automatically. However,
+        //if you want to keep track of the errors going on so you can do your OWN things (not impacting
+        //the auto websocket, since it's automatic), you use this event tracker. It reports when a new
+        //websocket is created (check newWs for truthy value), and also when the error was severe enough
+        //to not attempt a reconnect (check closed for truthy value)
+        (message, response, newWs, closed) =>
+        {
+            console.warn("Websocket error: ", message, response);
+
+            if(closed)
+            {
+                alert("Websocket error forced a close, error: " + message);
+                ws = null;
+            }
+            else if(newWs)
+            {
+                console.debug("New websocket was created, tracking");
+                ws = newWs;
+            }
+        }
+    ));
+};
+    </script>
+
+    <style>
+:root {
+    --rightpanewidth: 12rem;
+    --titleheight: 2rem;
+    --postareaheight: 6rem;
+    --stdborder: 1px solid #777;
+    --postsubmitwidth: 3rem;
+}
+body, div { padding: 0; margin: 0; box-sizing: border-box; overflow: hidden; }
+#main {
+    width: 100vw;
+    height: 100vh;
+    margin: 0;
+    padding: 0;
+    overflow: none;
+    position: relative;
+}
+#leftpane {
+    width: calc(100% - var(--rightpanewidth));
+    height: 100%;
+    position: absolute;
+    top: 0;
+    left: 0;
+}
+#rightpane {
+    width: var(--rightpanewidth);
+    height: 100%;
+    background-color: #EEE;
+    border-left: var(--stdborder);
+    overflow-y: auto;
+    position: absolute;
+    top: 0;
+    right: 0;
+}
+#titlearea {
+    width: 100%;
+    height: var(--titleheight);
+    background-color: #AAA;
+    border-bottom: var(--stdborder);
+}
+#postarea {
+    width: 100%;
+    height: var(--postareaheight);
+    border-top: var(--stdborder);
+    position: relative;
+}
+#postbox {
+    height: 100%;
+    width: calc(100% - var(--postsubmitwidth));
+    box-sizing: border-box;
+    position: absolute;
+    resize: none;
+    top: 0;
+    left: 0;
+}
+#postsubmit {
+    height: 100%;
+    width: var(--postsubmitwidth);
+    box-sizing: border-box;
+    position: absolute;
+    top: 0;
+    right: 0;
+    font-size: 1.5em;
+}
+#messagearea {
+    width: 100%;
+    overflow-y: scroll;
+    height: calc(100vh - var(--postareaheight) - var(--titleheight))
+}
+    </style>
+
+</head>
+
+<body class="">
+    <div id="main" class="">
+        <div id="leftpane" class="">
+            <div id="titlearea"></div>
+            <div id="messagearea"></div>
+            <div id="postarea">
+                <textarea id="postbox"></textarea>
+                <button id="postsubmit">&#x27a4;</button>
+            </div>
+        </div>
+        <div id="rightpane" class="">
+            <div id="rightpanecontent" class="">
+                <div id="userlist"></div>
+                <div id="activitylist"></div>
+            </div>
+        </div>
+    </div>
+</body>
+
+</html>
