@@ -251,6 +251,7 @@ function page_onload(template, state)
     SetupPagination(template.querySelector("#page-commentup"), template.querySelector("#page-commentdown"), state, "cp");
 
     template.querySelector("#page-interactions").setAttribute("data-pageid", state.pid);
+    template.querySelector("#page-chat-link").setAttribute("href", "chat.html?pid=" + state.pid);
 
     var table = template.querySelector("#page-table");
     var content = template.querySelector("#page-content");

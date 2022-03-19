@@ -12,8 +12,11 @@
     <meta name="description" content="SBS default implementation chat">
 
     <script>
+//NOTE: this file has nothing to do with index.html or any script/etc other than api.js
+//Use it as a starting point for a chat if you want.
 var api;
 var ws;
+var pid;
 
 //duplicate from index.js
 const TOKENKEY = "contentapi_defimpl_userkey";
@@ -34,6 +37,8 @@ window.onload = function()
         return;
     }
 
+    pid = Number(parameters.get("pid"));
+
     api = new Api(null, GetToken); //Just a global api object, whatever. Null means use the default endpoint (local to self)
     api.default_handler.error = e =>
     {
@@ -46,7 +51,9 @@ window.onload = function()
             wslog("Live data: \n" + JSON.stringify(live.data, null, 2), "systemmsg");
         }, 
         userlist => {
-            wslog("Userlist data : \n" + JSON.stringify(userlist.data, null, 2), "userlistmsg");
+            //Might want to do other things, so we call the function rather than pass it
+            setUserlist(userlist);
+            //wslog("Userlist data : \n" + JSON.stringify(userlist.data, null, 2), "userlistmsg");
         },
         //The websocket state itself, as well as reconnects, are handled automatically. However,
         //if you want to keep track of the errors going on so you can do your OWN things (not impacting
@@ -69,7 +76,57 @@ window.onload = function()
             }
         }
     ));
+
+    //Make the initial request of the content and the initial comments
+    ws.sendRequest("request", new RequestParameter({
+        "pid": pid
+    }, [
+        new RequestSearchParameter("content", "id, name", "id = @pid"),
+        new RequestSearchParameter("message", "*", "contentId = @pid and !notdeleted()", "id", 30),
+        new RequestSearchParameter("user", "*", "id in @message.createUserId")
+    ]), response =>
+    {
+        console.log(response);
+        document.getElementById("pagetitle").textContent = response.data.data.content[0].name;
+    });
+
+    //Also, say we're in the room
+    var statuses = {};
+    statuses[`${pid}`] = "active";
+    ws.sendRequest("setuserstatus", statuses, response => console.log("Successfully set user status"));
 };
+
+function createUserlistUser(user, status)
+{
+    var element = document.createElement("div");
+    element.textContent = user.username;
+    element.className = "user";
+    element.setAttribute("title", status);
+    return element;
+}
+
+function setUserlist(data)
+{
+    console.debug("SetUserList called with response: ", data);
+    var userlist = document.getElementById("userlist");
+
+    var usersById = api.KeyById(data.data.user);
+
+    //response should have statuses and data, always same format (assuming you get a single status)
+    //furthermore, the statuses are always a dictionary because it could have multiple content in it.
+    if(data.statuses[pid])
+    {
+        userlist.innerHTML = "";
+        Object.keys(data.statuses[pid]).forEach(x => {
+            userlist.appendChild(createUserlistUser(usersById[x], data.statuses[pid][x]))
+        });
+        //Need to get users and whatever!
+    }
+    else
+    {
+        console.debug(`No statuses found in content ${pid}, this is strange!`);
+    }
+}
     </script>
 
     <style>
@@ -141,6 +198,10 @@ body, div { padding: 0; margin: 0; box-sizing: border-box; overflow: hidden; }
     overflow-y: scroll;
     height: calc(100vh - var(--postareaheight) - var(--titleheight))
 }
+#userlist {
+    width: 100%;
+    border-bottom: var(--stdborder);
+}
     </style>
 
 </head>
@@ -148,7 +209,7 @@ body, div { padding: 0; margin: 0; box-sizing: border-box; overflow: hidden; }
 <body class="">
     <div id="main" class="">
         <div id="leftpane" class="">
-            <div id="titlearea"></div>
+            <div id="titlearea"><h2 id="pagetitle"></h2></div>
             <div id="messagearea"></div>
             <div id="postarea">
                 <textarea id="postbox"></textarea>
