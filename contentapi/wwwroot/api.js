@@ -63,7 +63,8 @@ function WebsocketRequest(type, data, id) //, token)
 
 //Due to safety, the defaults are generated in the auto websocket function call. This is
 //JUST a container
-function WebsocketAutoConfig(liveHandler, userlistUpdateHandler, errorEventListener, reconnectIntervalGenerator)
+function WebsocketAutoConfig(liveHandler, userlistUpdateHandler, errorEventListener, reconnectIntervalGenerator,
+    openListener, closeListener)
 {
     // The handler for live updates, meaning realtime comments, content update, etc.
     // Single parameter "response" represents all the data parsed from the websocket response
@@ -78,6 +79,13 @@ function WebsocketAutoConfig(liveHandler, userlistUpdateHandler, errorEventListe
     // How long to wait for reconnect when it's the given amount of reconnects. Accepts the
     // repeated reconnect count, should return ms to wait
     this.reconnectIntervalGenerator = reconnectIntervalGenerator;
+    // You don't NEED to listen for open for anything other than like... default messages or something?
+    // For instance, you don't need to wait for open to send anything, because messages are buffered.
+    // BUT, you can listen for open to send your user status, which we do on the local frontend
+    this.openListener = openListener;
+    // Again you don't need this, and I don't give you access to the real onclose because it's very
+    // particularly configured, but it's useful if you want to show a connection state
+    this.closeListener = closeListener;
 }
 
 // -- API reference objects --
@@ -615,6 +623,10 @@ Api.prototype.AutoWebsocket = function(autoConfig, oldWs)
         ((m,r,nws,close) => console.warn(`No error handler set for websocket, got error: ${m}, closing: ${close}, response:`, r));
     autoConfig.reconnectIntervalGenerator = autoConfig.reconnectIntervalGenerator || 
         (x => Math.min(30000, x * 500));
+    autoConfig.openListener = autoConfig.openListener || 
+        (x => console.info("Contentapi websocket opened successfully!"));
+    autoConfig.closeListener = autoConfig.closeListener ||
+        (x => console.debug("No close listener set (not necessary)"));
 
     var me = this;
     var ws = me.GetRawWebsocket(oldWs ? oldWs.liveUpdatesId : undefined); 
@@ -678,7 +690,7 @@ Api.prototype.AutoWebsocket = function(autoConfig, oldWs)
     // process them on account of us not being connected and all). Also, set some tracking state.
     ws.onopen = function()
     {
-        console.debug("contentapi websocket is open!");
+        console.debug("contentapi websocket tentatively connected (onopen)");
         ws.isOpen = true;
         ws.pendingSends.forEach(x => ws.sendRequest(x[0], x[1], x[2]));
         ws.pendingSends = [];
@@ -710,6 +722,7 @@ Api.prototype.AutoWebsocket = function(autoConfig, oldWs)
             {
                 console.debug("System reported the last event ID was " + response.data);
                 ws.liveUpdatesId = response.data;
+                ws.autoConfig.openListener(response);
             }
             else if(response.type === "unexpected")
             {
@@ -745,6 +758,9 @@ Api.prototype.AutoWebsocket = function(autoConfig, oldWs)
         //Ensure anything checking to see if we're open actually... thing.
         ws.isOpen = false;
 
+        try { ws.autoConfig.closeListener(); }
+        catch(ex) { console.warn("Close listener failed!", ex); }
+
         if(ws.manualCloseRequested)
         {
             console.debug("User requested websocket close, actually closing");
@@ -753,6 +769,7 @@ Api.prototype.AutoWebsocket = function(autoConfig, oldWs)
         {
             var reconnectInterval = ws.autoConfig.reconnectIntervalGenerator(++ws.currentReconnects); //Another reconnection attempt. Only an open websocket will reset this
             console.warn(`Websocket closed unexpectedly, attempting new connection in ${reconnectInterval} ms`);
+            //ws.autoConfig.errorEventListener("Websocket reconnecting", null);
             window.setTimeout(() =>
             {
                 if(ws.manualCloseRequested)

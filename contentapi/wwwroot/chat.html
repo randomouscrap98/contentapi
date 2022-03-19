@@ -82,6 +82,20 @@ window.onload = function()
                 console.debug("New websocket was created, tracking");
                 ws = newWs;
             }
+        },
+        false, //reconnect interval generator, just use whatever they have
+        openEvent =>
+        {
+            //Whenever the websocket newly opens (such as on reconnect), send the statuses. Your user status
+            //only persists per-connection
+            var statuses = {};
+            statuses[`${pid}`] = "active";
+            ws.sendRequest("setuserstatus", statuses, response => console.log("Successfully set user status"));
+            setConnectionStatus("connected");
+        },
+        closeEvent =>
+        {
+            setConnectionStatus("disconnected");
         }
     ));
 
@@ -98,15 +112,19 @@ window.onload = function()
         //context that gives lots of information, but then we're proxying that through the websocket,
         //which has its own context.
         console.log(response);
-        document.getElementById("pagetitle").textContent = response.data.data.content[0].name;
+        var pagetitle = document.getElementById("pagetitle");
+        pagetitle.textContent = response.data.data.content[0].name;
+        pagetitle.href = "index.html?t=page&pid=" + response.data.data.content[0].id;
+
         displayMessages(response.data.data);
     });
 
-    //Also, say we're in the room
-    var statuses = {};
-    statuses[`${pid}`] = "active";
-    ws.sendRequest("setuserstatus", statuses, response => console.log("Successfully set user status"));
 };
+
+function setConnectionStatus(status)
+{
+    document.getElementById("connectionstatus").className = status;
+}
 
 function createUserlistUser(user, status)
 {
@@ -199,17 +217,26 @@ function displayMessages(data)
         }
     };
 
+    var lastPostboxValue = "";
+
     //This doesn't let you use markup, so take that into account
     postsubmit.onclick = function()
     {
         if(!postbox.value)
             return;
 
+        lastPostboxValue = postbox.value;
+        postbox.value = "";
+
         //NOTE: if you want the avatar you used to comment with saved with the comment for posterity
         //(meaning searching for your old comment will show your original avatar when commenting and not
         // your current avatar), you can add your avatar to the metadata. 
-        api.WriteNewComment(new NewCommentParameter(postbox.value, pid), new ApiHandler(d => {
-            postbox.value = "";
+        api.WriteNewComment(new NewCommentParameter(lastPostboxValue, pid), new ApiHandler(d => {
+            if(d.error)
+            {
+                alert("Error on post: " + d.error)
+                postbox.value = lastPostboxValue;
+            }
         }));
     }
 }
@@ -273,15 +300,30 @@ body, div { padding: 0; margin: 0; box-sizing: border-box; overflow: hidden; }
     top: 0;
     right: 0;
 }
+#linkslist {
+    margin: 1em 0.5em;
+}
 #titlearea {
     width: 100%;
     height: var(--titleheight);
     background-color: #AAA;
     border-bottom: var(--stdborder);
+    position: relative;
 }
-#pagetitle {
+#titlearea .title {
     padding: 0.2em;
     margin: 0;
+}
+#connectionstatus {
+    position: absolute;
+    top: 0.1em;
+    right: 0.1em;
+    width: 0.5em;
+    height: 0.5em;
+    border: var(--stdborder);
+}
+#connectionstatus.connected {
+    background-color: lawngreen;
 }
 #postarea {
     width: 100%;
@@ -338,6 +380,23 @@ body, div { padding: 0; margin: 0; box-sizing: border-box; overflow: hidden; }
 .message time {
     float: right;
 }
+@media (max-width: 30rem)
+{
+    :root {
+        --rightpanewidth: 6rem;
+        --postareaheight: 4rem;
+    }
+    #rightpane {
+        font-size: 0.8em;
+    }
+    #titlearea .title {
+        font-size: 0.95em;
+        padding: 0.1em;
+    }
+    #messagelist {
+        font-size: 0.9em;
+    }
+}
     </style>
 
 </head>
@@ -345,7 +404,10 @@ body, div { padding: 0; margin: 0; box-sizing: border-box; overflow: hidden; }
 <body class="">
     <div id="main" class="">
         <div id="leftpane" class="">
-            <div id="titlearea"><h2 id="pagetitle"></h2></div>
+            <div id="titlearea">
+                <h2 class="title"><a id="pagetitle" href="#"></a></h2>
+                <div id="connectionstatus" class="disconnected"></div>
+            </div>
             <div id="messagearea">
                 <div id="messagelist"></div>
             </div>
@@ -358,6 +420,10 @@ body, div { padding: 0; margin: 0; box-sizing: border-box; overflow: hidden; }
             <div id="rightpanecontent" class="">
                 <div id="userlist"></div>
                 <div id="activitylist"></div>
+                <div id="linkslist">
+                    <a href="index.html">Home</a>
+                    <a href="index.html?t=login">Login</a>
+                </div>
             </div>
         </div>
     </div>
