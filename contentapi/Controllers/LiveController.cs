@@ -8,6 +8,7 @@ using contentapi.Views;
 using Microsoft.AspNetCore.Mvc;
 using Newtonsoft.Json;
 using System.Collections.Concurrent;
+using Newtonsoft.Json.Linq;
 
 namespace contentapi.Controllers;
 
@@ -146,7 +147,17 @@ public class LiveController : BaseController
             {
                 try
                 {
-                    var searchRequest = services.mapper.Map<SearchRequests>(receiveItem.data);
+                    if(receiveItem.data == null)
+                        throw new RequestException("Must provide search criteria for request!");
+
+                    var searchRequest = ((JObject)receiveItem.data).ToObject<SearchRequests>() ?? 
+                        throw new RequestException("Couldn't parse search criteria!");
+                    //services.mapper.Map<SearchRequests>(receiveItem.data);
+                    //Each value is really a jobject, so pull the real value out
+                    //foreach(var k in searchRequest.values.Keys)
+                    //{
+                    //    searchRequest.values[k] = ((JObject)searchRequest.values[k]); //.Value();
+                    //}
                     var searchResult = await services.searcher.Search(searchRequest, userId);
                     response.data = searchResult;
                 }

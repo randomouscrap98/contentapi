@@ -47,13 +47,21 @@ window.onload = function()
     };
 
     ws = api.AutoWebsocket(new WebsocketAutoConfig(
+        //NOTE: this doesn't handle edits or deletes just yet! You'll need to check the event
+        //type and action and edit/remove comments accordingly!
         live => {
-            wslog("Live data: \n" + JSON.stringify(live.data, null, 2), "systemmsg");
+            console.log(live);
+            //Note that live data is in a complex format, because the data related to the events
+            //is grouped by event type. For some reason, the API reports the event types as strings
+            //rather than as integers for the data, but reports as integers in the events. This is
+            //difficult to fix, so... I'm sorry. Also, use "live.data.events" to look at the 
+            //events for deleting/editing comments, among other things.
+            if(live.data.data.message && live.data.data.message.message)
+                displayMessages(live.data.data.message);
         }, 
         userlist => {
             //Might want to do other things, so we call the function rather than pass it
-            setUserlist(userlist);
-            //wslog("Userlist data : \n" + JSON.stringify(userlist.data, null, 2), "userlistmsg");
+            setUserlist(userlist.data);
         },
         //The websocket state itself, as well as reconnects, are handled automatically. However,
         //if you want to keep track of the errors going on so you can do your OWN things (not impacting
@@ -81,13 +89,17 @@ window.onload = function()
     ws.sendRequest("request", new RequestParameter({
         "pid": pid
     }, [
-        new RequestSearchParameter("content", "id, name", "id = @pid"),
+        new RequestSearchParameter("content", "id, name, permissions", "id = @pid"),
         new RequestSearchParameter("message", "*", "contentId = @pid and !notdeleted()", "id", 30),
         new RequestSearchParameter("user", "*", "id in @message.createUserId")
     ]), response =>
     {
+        //It's "data.data" because it's double wrapped: the data is already wrapped in the "request"
+        //context that gives lots of information, but then we're proxying that through the websocket,
+        //which has its own context.
         console.log(response);
         document.getElementById("pagetitle").textContent = response.data.data.content[0].name;
+        displayMessages(response.data.data);
     });
 
     //Also, say we're in the room
@@ -103,6 +115,94 @@ function createUserlistUser(user, status)
     element.className = "user";
     element.setAttribute("title", status);
     return element;
+}
+
+//Needs to be prelinked
+function createMessage(message)
+{
+    var container = document.createElement("div");
+    container.className = "message";
+    container.id = `message_${message.id}`;
+    container.setAttribute("data-module", message.module);
+    container.setAttribute("data-id", message.id);
+    var user = document.createElement("span");
+    user.className = "user";
+    user.textContent = message.createUser.username;
+    var content = document.createElement("span");
+    content.className = "content";
+    content.textContent = message.text;
+    var time = document.createElement("time");
+    time.setAttribute("time", message.createDate);
+    time.textContent = (new Date(message.createDate)).toLocaleString();
+    time.className = "annotation";
+
+    container.appendChild(user);
+    container.appendChild(content);
+    container.appendChild(time);
+
+    return container;
+}
+
+function displayMessages(data)
+{
+    //Link the data
+    api.AutoLinkUsers(data.message, data.user);
+    var messagearea = document.getElementById("messagearea");
+    var messagelist = document.getElementById("messagelist");
+    var postsubmit = document.getElementById("postsubmit");
+    var postbox = document.getElementById("postbox");
+    var addedMessages = 0;
+
+    data.message.forEach(x =>
+    {
+        //only process messages that are in this thing
+        if(x.contentId == pid)
+        {
+            var existing = document.getElementById(`message_${x.id}`);
+            if(existing)
+                existing.parentNode.removeChild(existing);
+            var element = createMessage(x);
+            var allMessages = [...messagelist.querySelectorAll(".message")];
+            var inserted = false;
+            for(var i = allMessages.length - 1; i >= 0; --i)
+            {
+                if(Number(allMessages[i].getAttribute("data-id")) < x.id)
+                {
+                    if(i === allMessages.length - 1)
+                        messagelist.appendChild(element);
+                    else
+                        messagelist.insertBefore(element, allMessages[i].nextSibling);
+                    break;
+                }
+            }
+            if(!inserted)
+                messagelist.appendChild(element);
+            addedMessages++;
+        }
+
+        if(addedMessages)
+            messagearea.scrollTop = messagearea.scrollHeight;
+    });
+
+    postbox.onkeyup = function(e)
+    {
+        if(e.key === "Enter" && !e.shiftKey)
+            postsubmit.click();
+    };
+
+    //This doesn't let you use markup, so take that into account
+    postsubmit.onclick = function()
+    {
+        if(!postbox.value)
+            return;
+
+        //NOTE: if you want the avatar you used to comment with saved with the comment for posterity
+        //(meaning searching for your old comment will show your original avatar when commenting and not
+        // your current avatar), you can add your avatar to the metadata. 
+        api.WriteNewComment(new NewCommentParameter(postbox.value, pid), new ApiHandler(d => {
+            postbox.value = "";
+        }));
+    }
 }
 
 function setUserlist(data)
@@ -145,6 +245,7 @@ body, div { padding: 0; margin: 0; box-sizing: border-box; overflow: hidden; }
     padding: 0;
     overflow: none;
     position: relative;
+    font-family: monospace;
 }
 #leftpane {
     width: calc(100% - var(--rightpanewidth));
@@ -168,6 +269,10 @@ body, div { padding: 0; margin: 0; box-sizing: border-box; overflow: hidden; }
     height: var(--titleheight);
     background-color: #AAA;
     border-bottom: var(--stdborder);
+}
+#pagetitle {
+    padding: 0.2em;
+    margin: 0;
 }
 #postarea {
     width: 100%;
@@ -198,9 +303,31 @@ body, div { padding: 0; margin: 0; box-sizing: border-box; overflow: hidden; }
     overflow-y: scroll;
     height: calc(100vh - var(--postareaheight) - var(--titleheight))
 }
+#messagelist {
+    width: 100%;
+    padding: 0.05em 0.1em;
+}
 #userlist {
     width: 100%;
     border-bottom: var(--stdborder);
+}
+.user {
+    font-weight: bold;
+    padding-right: 0.2em;
+    color: rebeccapurple;
+}
+#messagelist .user::after {
+    content: ":";
+}
+.message {
+    padding: 0.02em 0;
+}
+.annotation {
+    font-size: 0.8em;
+    color: #777;
+}
+.message time {
+    float: right;
 }
     </style>
 
@@ -210,7 +337,9 @@ body, div { padding: 0; margin: 0; box-sizing: border-box; overflow: hidden; }
     <div id="main" class="">
         <div id="leftpane" class="">
             <div id="titlearea"><h2 id="pagetitle"></h2></div>
-            <div id="messagearea"></div>
+            <div id="messagearea">
+                <div id="messagelist"></div>
+            </div>
             <div id="postarea">
                 <textarea id="postbox"></textarea>
                 <button id="postsubmit">&#x27a4;</button>

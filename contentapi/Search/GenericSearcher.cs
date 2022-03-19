@@ -32,6 +32,7 @@ public class GenericSearcher : IGenericSearch
     protected GenericSearcherConfig config;
     protected IMapper mapper;
     protected IQueryBuilder queryBuilder;
+    protected SemaphoreSlim queryLock = new SemaphoreSlim(1, 1);
 
     public GenericSearcher(ILogger<GenericSearcher> logger, ContentApiDbConnection connection,
         IViewTypeInfoService typeInfoService, GenericSearcherConfig config, IMapper mapper,
@@ -180,10 +181,18 @@ public class GenericSearcher : IGenericSearch
         }
     }
 
-    public Task<QueryResultSet> QueryRawAsync(string sql, Dictionary<string, object> values)
+    public async Task<QueryResultSet> QueryRawAsync(string sql, Dictionary<string, object> values)
     {
         var dp = new DynamicParameters(values);
-        return QueryAsyncCast(sql, dp);
+        await queryLock.WaitAsync();
+        try
+        {
+            return await QueryAsyncCast(sql, dp);
+        }
+        finally
+        {
+            queryLock.Release();
+        }
     }
 
     public string GetDatabaseForType<T>()
@@ -199,37 +208,40 @@ public class GenericSearcher : IGenericSearch
         Dictionary<string, object> parameterValues, 
         Dictionary<string, double>? timedic = null)
     {
-        //Need to limit the 'limit'!
-        var reqplus = queryBuilder.FullParseRequest(request, parameterValues);
-        logger.LogDebug($"Running SQL for {request.type}({request.name}): {reqplus.computedSql}");
+        await queryLock.WaitAsync();
 
-        //Warn: we repeatedly do this because the FullParseRequest CAN modify parameter values
-        var dp = new DynamicParameters(parameterValues);
+        try
+        {
+            //Need to limit the 'limit'!
+            var reqplus = queryBuilder.FullParseRequest(request, parameterValues);
+            logger.LogDebug($"Running SQL for {request.type}({request.name}): {reqplus.computedSql}");
 
-        var timer = new Stopwatch();
+            //Warn: we repeatedly do this because the FullParseRequest CAN modify parameter values
+            var dp = new DynamicParameters(parameterValues);
 
-        //To give it a fighting chance, here's the MOST RAW I can do.
-        //timer.Start();
-        //var whatever = dbcon.Execute(reqplus.computedSql, dp);
-        //timer.Stop();
-        //timedic?.Add(request.name + "_syncraw", timer.Elapsed.TotalMilliseconds);
+            var timer = new Stopwatch();
 
-        timer.Restart();
-        var qresult = await QueryAsyncCast(reqplus.computedSql, dp);
-        timer.Stop();
+            timer.Restart();
+            var qresult = await QueryAsyncCast(reqplus.computedSql, dp);
+            timer.Stop();
 
-        timedic?.Add(request.name, timer.Elapsed.TotalMilliseconds);
+            timedic?.Add(request.name, timer.Elapsed.TotalMilliseconds);
 
-        //We also want to time extra fields
-        timer.Restart();
-        //Just because we got the qresult doesn't mean we can stop! if it's content, we need
-        //to fill in the values, keywords, and permissions!
-        await AddExtraFields(reqplus, qresult);
-        timer.Stop();
+            //We also want to time extra fields
+            timer.Restart();
+            //Just because we got the qresult doesn't mean we can stop! if it's content, we need
+            //to fill in the values, keywords, and permissions!
+            await AddExtraFields(reqplus, qresult);
+            timer.Stop();
 
-        timedic?.Add($"{request.name}_extras", timer.Elapsed.TotalMilliseconds);
+            timedic?.Add($"{request.name}_extras", timer.Elapsed.TotalMilliseconds);
 
-        return qresult;
+            return qresult;
+        }
+        finally
+        {
+            queryLock.Release();
+        }
     }
 
     //A basic search doesn't have a concept of a "request user" or permissions, those are set up
@@ -298,17 +310,6 @@ public class GenericSearcher : IGenericSearch
 
         return ToStronglyTyped<T>(result);
     }
-
-    //public SearchRequests CopyRequests(SearchRequests requests)
-    //{
-    //    var newRequest = new SearchRequests()
-    //    {
-    //        values = new Dictionary<string, object>(requests.values),
-    //        requests = requests.requests.Select(x => mapper.Map<SearchRequest>(x)).ToList()
-    //    };
-
-    //    return newRequest;
-    //}
 
     //A restricted search doesn't allow you to retrieve results that the given request user can't read
     public async Task<GenericSearchResult> Search(SearchRequests requests, long requestUserId = 0)
