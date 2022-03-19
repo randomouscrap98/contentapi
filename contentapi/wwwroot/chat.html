@@ -21,6 +21,11 @@ var api;
 var ws;
 var pid;
 
+const FIRSTLOADMESSAGES = 30;
+const LOADMOREMESSAGES = 200;
+const AVATARSIZE = 30;
+const DEFAULTMARKUP = "12y";
+
 //duplicate from index.js
 const TOKENKEY = "contentapi_defimpl_userkey";
 function GetToken() { return localStorage.getItem(TOKENKEY); }
@@ -107,7 +112,7 @@ window.onload = function()
         "pid": pid
     }, [
         new RequestSearchParameter("content", "id, name, permissions", "id = @pid"),
-        new RequestSearchParameter("message", "*", "contentId = @pid and !notdeleted()", "id_desc", 30),
+        new RequestSearchParameter("message", "*", "contentId = @pid and !notdeleted()", "id_desc", FIRSTLOADMESSAGES),
         new RequestSearchParameter("user", "*", "id in @message.createUserId")
     ]), response =>
     {
@@ -122,7 +127,65 @@ window.onload = function()
         displayMessages(response.data.data);
     });
 
+    //General controls setup
+    var postbox = document.getElementById("postbox");
+    var loadolder = document.getElementById("loadoldermessages");
+    var postsubmit = document.getElementById("postsubmit");
+    var lastPostboxValue = "";
+
+    //Postbox setup
+    postbox.onkeyup = function(e)
+    {
+        if(e.key === "Enter" && !e.shiftKey)
+        {
+            e.preventDefault();
+            postsubmit.click();
+        }
+    };
+
+    //This doesn't let you use markup, so take that into account
+    postsubmit.onclick = function()
+    {
+        if(!postbox.value)
+            return;
+
+        lastPostboxValue = postbox.value;
+        postbox.value = "";
+
+        //NOTE: if you want the avatar you used to comment with saved with the comment for posterity
+        //(meaning searching for your old comment will show your original avatar when commenting and not
+        // your current avatar), you can add your avatar to the metadata. 
+        api.WriteNewComment(new NewCommentParameter(lastPostboxValue, pid, DEFAULTMARKUP), new ApiHandler(d => {
+            if(d.error)
+            {
+                alert("Error on post: " + d.error)
+                postbox.value = lastPostboxValue;
+            }
+        }));
+    };
+
+    loadolder.onclick = function()
+    {
+        //find the oldest comment id, that's our starting point. load 
+        var messages = getAllMessageElements();
+        var minId = Math.min(...messages.map(x => Number(x.getAttribute("data-id"))));
+        ws.sendRequest("request", new RequestParameter({ "pid": pid, "maxId" : minId }, 
+        [
+            new RequestSearchParameter("message", "*", "contentId = @pid and id < @maxId and !notdeleted()", "id_desc", LOADMOREMESSAGES),
+            new RequestSearchParameter("user", "*", "id in @message.createUserId")
+        ]), response =>
+        {
+            console.log(response);
+            displayMessages(response.data.data, true);
+        });
+    };
 };
+
+function getAllMessageElements()
+{
+    var messagelist = document.getElementById("messagelist");
+    return [...messagelist.querySelectorAll(".message")];
+}
 
 function setConnectionStatus(status)
 {
@@ -144,7 +207,6 @@ function createMessage(message)
     var container = document.createElement("div");
     container.className = "message";
     container.id = `message_${message.id}`;
-    container.setAttribute("data-module", message.module);
     container.setAttribute("data-id", message.id);
 
     var userInfo = document.createElement("div");
@@ -152,7 +214,7 @@ function createMessage(message)
     var avatar = document.createElement("img");
     avatar.className = "avatar";
     //You should use the metadata instead. This is the lazy version
-    avatar.src = api.GetFileUrl(message.createUser.avatar, new FileModifyParameter(30, true));
+    avatar.src = api.GetFileUrl(message.createUser.avatar, new FileModifyParameter(AVATARSIZE, true));
     var user = document.createElement("span");
     user.className = "user";
     user.textContent = message.createUser.username;
@@ -160,6 +222,15 @@ function createMessage(message)
     time.setAttribute("time", message.createDate);
     time.textContent = (new Date(message.createDate)).toLocaleString();
     time.className = "annotation";
+
+    if(message.module)
+    {
+        var moduleElement = document.createElement("span");
+        moduleElement.textContent = message.module;
+        moduleElement.className = "module";
+        container.setAttribute("data-module", message.module);
+        userInfo.appendChild(moduleElement);
+    }
 
     userInfo.appendChild(avatar);
     userInfo.appendChild(user);
@@ -175,16 +246,16 @@ function createMessage(message)
     return container;
 }
 
-function displayMessages(data)
+function displayMessages(data, keepScroll)
 {
     //Link the data
     api.AutoLinkUsers(data.message, data.user);
     api.AutoFixAllDates(data);
     var messagearea = document.getElementById("messagearea");
     var messagelist = document.getElementById("messagelist");
-    var postsubmit = document.getElementById("postsubmit");
-    var postbox = document.getElementById("postbox");
     var addedMessages = 0;
+    var oldScrollHeight = messagearea.scrollHeight;
+    var oldScrollTop = messagearea.scrollTop;
 
     data.message.forEach(x =>
     {
@@ -192,68 +263,52 @@ function displayMessages(data)
         if(x.contentId == pid)
         {
             var existing = document.getElementById(`message_${x.id}`);
-            if(existing)
-                existing.parentNode.removeChild(existing);
+            // This is just for edits or duplicate messages, don't want it duplicated
+            if(existing) existing.parentNode.removeChild(existing);
             var element = createMessage(x);
-            var allMessages = [...messagelist.querySelectorAll(".message")];
-            var inserted = false;
-            for(var i = allMessages.length - 1; i >= 0; --i)
+            var allMessages = getAllMessageElements();
+            var ids = allMessages.map(y => Number(y.getAttribute("data-id")));
+            //Check common cases. It's either a new message and goes at the end, oorrr it's an
+            //old message and it goes at the beginning
+            if(ids.length === 0 || x.id > Math.max(...ids))
             {
-                if(Number(allMessages[i].getAttribute("data-id")) < x.id)
-                {
-                    if(i === allMessages.length - 1)
-                        messagelist.appendChild(element);
-                    else
-                        messagelist.insertBefore(element, allMessages[i].nextSibling);
-                    inserted = true;
-                    break;
-                }
+                messagelist.appendChild(element);
             }
-            if(!inserted)
+            else if(ids.length && x.id < Math.min(...ids))
             {
-                if(allMessages.length)
-                    messagelist.insertBefore(element, messagelist.firstChild);
-                else
-                    messagelist.appendChild(element);
+                messagelist.insertBefore(element, messagelist.firstChild);
+            }
+            else
+            {
+                //This should ONLY happen on edit.
+                console.warn("Need to scan messagelist to insert message " + message.id);
+
+                //We know it's never going to be at the end, so just skip the last one
+                //so we can safely use "nextSibling"
+                for (var i = allMessages.length - 2; i >= 0; --i) 
+                {
+                    if (Number(allMessages[i].getAttribute("data-id")) < x.id) 
+                    {
+                        messagelist.insertBefore(element, allMessages[i].nextSibling);
+                        break;
+                    }
+                    else if(i === 0)
+                    {
+                        alert("Couldn't insert message " + message.id + ", no suitable position found!");
+                    }
+                }
             }
             addedMessages++;
         }
 
-        if(addedMessages)
+        if(addedMessages && !keepScroll)
             messagearea.scrollTop = messagearea.scrollHeight;
     });
 
-    //Postbox setup
-    postbox.onkeyup = function(e)
+    if(keepScroll)
     {
-        if(e.key === "Enter" && !e.shiftKey)
-        {
-            e.preventDefault();
-            postsubmit.click();
-        }
-    };
-
-    var lastPostboxValue = "";
-
-    //This doesn't let you use markup, so take that into account
-    postsubmit.onclick = function()
-    {
-        if(!postbox.value)
-            return;
-
-        lastPostboxValue = postbox.value;
-        postbox.value = "";
-
-        //NOTE: if you want the avatar you used to comment with saved with the comment for posterity
-        //(meaning searching for your old comment will show your original avatar when commenting and not
-        // your current avatar), you can add your avatar to the metadata. 
-        api.WriteNewComment(new NewCommentParameter(lastPostboxValue, pid, '12y'), new ApiHandler(d => {
-            if(d.error)
-            {
-                alert("Error on post: " + d.error)
-                postbox.value = lastPostboxValue;
-            }
-        }));
+        var heightDiff = messagearea.scrollHeight - oldScrollHeight;
+        messagearea.scrollTop = oldScrollTop + heightDiff;
     }
 }
 
@@ -417,6 +472,14 @@ body, div { padding: 0; margin: 0; box-sizing: border-box; overflow: hidden; }
     margin-right: 0.2em;
     border-radius: 5px;
 }
+.module {
+    margin-right: 0.5em;
+    font-style: italic;
+    color: darkcyan;
+}
+[data-module] .content { color: gray; }
+[data-module] .avatar { display: none; }
+[data-module] .user { text-decoration: none; }
 @media (max-width: 30rem)
 {
     :root {
@@ -446,6 +509,9 @@ body, div { padding: 0; margin: 0; box-sizing: border-box; overflow: hidden; }
                 <div id="connectionstatus" class="disconnected"></div>
             </div>
             <div id="messagearea">
+                <div id="messagecontrols">
+                    <button id="loadoldermessages">Load Older</button>
+                </div>
                 <div id="messagelist"></div>
             </div>
             <div id="postarea">
