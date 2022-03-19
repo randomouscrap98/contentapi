@@ -6,6 +6,9 @@
     <title>SBS Chat</title>
     <link rel="icon" href="favicon.ico" type="image/x-icon">
     <script src="api.js"></script>
+    <script src="https://12me21.github.io/sbs2-markup/parse.js"></script>
+    <script src="https://12me21.github.io/sbs2-markup/highlight.js"></script>
+    <script src="https://12me21.github.io/sbs2-markup/render.js"></script>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width">
     <meta name="rating" content="general">
@@ -143,20 +146,31 @@ function createMessage(message)
     container.id = `message_${message.id}`;
     container.setAttribute("data-module", message.module);
     container.setAttribute("data-id", message.id);
+
+    var userInfo = document.createElement("div");
+    userInfo.className = "userinfo";
+    var avatar = document.createElement("img");
+    avatar.className = "avatar";
+    //You should use the metadata instead. This is the lazy version
+    avatar.src = api.GetFileUrl(message.createUser.avatar, new FileModifyParameter(30, true));
     var user = document.createElement("span");
     user.className = "user";
     user.textContent = message.createUser.username;
-    var content = document.createElement("span");
-    content.className = "content";
-    content.textContent = message.text;
     var time = document.createElement("time");
     time.setAttribute("time", message.createDate);
     time.textContent = (new Date(message.createDate)).toLocaleString();
     time.className = "annotation";
 
-    container.appendChild(user);
+    userInfo.appendChild(avatar);
+    userInfo.appendChild(user);
+    userInfo.appendChild(time);
+
+    var content = document.createElement("div");
+    content.className = "content";
+    content.appendChild(Parse.parseLang(message.text, message.values.m || "plaintext"));
+
+    container.appendChild(userInfo);
     container.appendChild(content);
-    container.appendChild(time);
 
     return container;
 }
@@ -208,6 +222,7 @@ function displayMessages(data)
             messagearea.scrollTop = messagearea.scrollHeight;
     });
 
+    //Postbox setup
     postbox.onkeyup = function(e)
     {
         if(e.key === "Enter" && !e.shiftKey)
@@ -231,7 +246,7 @@ function displayMessages(data)
         //NOTE: if you want the avatar you used to comment with saved with the comment for posterity
         //(meaning searching for your old comment will show your original avatar when commenting and not
         // your current avatar), you can add your avatar to the metadata. 
-        api.WriteNewComment(new NewCommentParameter(lastPostboxValue, pid), new ApiHandler(d => {
+        api.WriteNewComment(new NewCommentParameter(lastPostboxValue, pid, '12y'), new ApiHandler(d => {
             if(d.error)
             {
                 alert("Error on post: " + d.error)
@@ -306,7 +321,7 @@ body, div { padding: 0; margin: 0; box-sizing: border-box; overflow: hidden; }
 #titlearea {
     width: 100%;
     height: var(--titleheight);
-    background-color: #AAA;
+    background-color: #CCC;
     border-bottom: var(--stdborder);
     position: relative;
 }
@@ -364,21 +379,41 @@ body, div { padding: 0; margin: 0; box-sizing: border-box; overflow: hidden; }
 }
 .user {
     font-weight: bold;
-    padding-right: 0.2em;
-    color: rebeccapurple;
+    color: darkblue;
 }
 #messagelist .user::after {
     content: ":";
 }
 .message {
     padding: 0.02em 0;
+    margin-bottom: 0.2em;
 }
 .annotation {
-    font-size: 0.8em;
-    color: #777;
+    font-size: 0.7em;
+    color: #999;
+    font-style: italic;
 }
-.message time {
-    float: right;
+.content {
+    margin-left: 18px;
+}
+.content img {
+    max-width: 80%;
+    max-height: 30vh;
+}
+.userinfo {
+    margin-bottom: 0.1em;
+}
+.userinfo * {
+    vertical-align: middle;
+}
+.userinfo .user {
+    margin-right: 0.75em;
+    text-decoration: underline;
+}
+.avatar {
+    width: 15px;
+    margin-right: 0.2em;
+    border-radius: 5px;
 }
 @media (max-width: 30rem)
 {
