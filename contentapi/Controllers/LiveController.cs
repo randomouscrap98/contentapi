@@ -179,23 +179,7 @@ public class LiveController : BaseController
             //NOTE: the ReceiveObjectAsync throws an exception on close
             LiveData listenResult;
 
-            //try
-            //{
-                listenResult = await eventQueue.ListenAsync(user, lastId, cancelToken);
-            //}
-            //catch(ExpiredCheckpointException ex)
-            //{
-            //    sendQueue.Post(new WebSocketResponse()
-            //    {
-            //        type = "expiredid",
-            //        data = lastId,
-            //        requestUserId = userId,
-            //        error = $"Your id is invalid/expired, you need to manually reconnect with a different lastId: {ex.Message}"
-            //    });
-            //    //This isn't guaranteed to work but...
-
-            //    throw;
-            //}
+            listenResult = await eventQueue.ListenAsync(user, lastId, cancelToken);
 
             userId = ValidateToken(token); // Validate every time
             lastId = listenResult.lastId;
@@ -278,26 +262,10 @@ public class LiveController : BaseController
                     runningTasks.Add(ReceiveLoop(cancelSource.Token, socket, sendQueue, token));
                     runningTasks.Add(ListenLoop(cancelSource.Token, realLastId, sendQueue, token));
                     runningTasks.Add(SendLoop(cancelSource.Token, socket, sendQueue));
-                    //var receiveTask = ReceiveLoop(cancelSource.Token, socket, sendQueue, token);
-                    //var listenTask = ListenLoop(cancelSource.Token, realLastId, sendQueue, token);
-                    //var sendTask = SendLoop(cancelSource.Token, socket, sendQueue);
 
                     var completedTask = await Task.WhenAny(runningTasks); //receiveTask, sendTask, listenTask);
                     runningTasks.Remove(completedTask);
                     await completedTask; //To throw the exception
-                    //try
-                    //{
-                    //    await Task.WhenAny(runningTasks); //receiveTask, sendTask, listenTask);
-                    //}
-                    //finally
-                    //{
-                    //    if(!currentListeners.TryRemove(trackerId, out _))
-                    //        services.logger.LogWarning($"Couldn't remove listener {trackerId}, this could be a serious error!");
-
-                    //    //Clean up the tasks
-                    //    cancelSource.Cancel();
-                    //    await Task.WhenAll(receiveTask, sendTask, listenTask);
-                    //}
                 }
                 catch (Exception ex)
                 {
@@ -305,8 +273,6 @@ public class LiveController : BaseController
 
                     //Yes, the websocket COULD close after this check, but it still saves us a LOT of hassle to skip the
                     //common cases of "the websocket is actually closed from the exception"
-                    //if (socket.State == WebSocketState.Open)
-                    //{
                     sendQueue.Post(new WebSocketResponse()
                     {
                         type = ex is TokenException ? "badtoken" : "unexpected",
@@ -319,9 +285,6 @@ public class LiveController : BaseController
                     //Do NOT close with error! We want to reserve websocket errors for network errors and whatever. If 
                     //the SYSTEM encounters an error, we will tell you about it!
                     await socket.CloseAsync(WebSocketCloseStatus.NormalClosure, ex.Message, CancellationToken.None);
-                    //}
-
-                    //return ex.Message;
                 }
                 finally
                 {
@@ -335,19 +298,12 @@ public class LiveController : BaseController
 
                         try
                         {
-                            await Task.WhenAll(runningTasks); //currentListeners.ToArray()); //receiveTask, sendTask, listenTask);
+                            await Task.WhenAll(runningTasks);
                         }
                         catch(ClosedException)
                         {
-                            services.logger.LogDebug($"Client closed connection manually, this is normal!");//all tasks complete: {runningTasks.All(x => x.is)}");
+                            services.logger.LogDebug($"Client closed connection manually, this is normal!");
                         }
-
-                        //try {
-                        //    await socket.CloseAsync(WebSocketCloseStatus.NormalClosure);
-                        //}
-                        //catch {
-
-                        //}
                     }
                 }
                 
