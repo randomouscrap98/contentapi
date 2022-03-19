@@ -118,6 +118,10 @@ public class CacheCheckpointTracker<T> : ICacheCheckpointTracker<T>
 
         lock(thisCheckpoint.SignalLock)
         {
+            //NOTE: need a test for lastSeen too high throwing correct exception
+            if(lastSeen > thisCheckpoint.Checkpoint)
+                throw new ExpiredCheckpointException($"LastSeen checkpoint too high! {lastSeen} vs {thisCheckpoint.Checkpoint}. Did you send a request after a server restart?");
+
             //The request is TOO OLD, it's beyond the end of the cache!
             if(lastSeen > 0)
             {
@@ -126,9 +130,6 @@ public class CacheCheckpointTracker<T> : ICacheCheckpointTracker<T>
                 else if(lastSeen < thisCheckpoint.Cache.Keys.Min())
                     throw new ExpiredCheckpointException($"Checkpoint {lastSeen} is too old! You will be missing cached data!");
             } 
-
-            if(lastSeen > thisCheckpoint.Checkpoint)
-                throw new ArgumentException($"LastSeen checkpoint too high! {lastSeen} vs {thisCheckpoint.Checkpoint}. Did you send a request after a server restart?");
 
             //Easymode: done. Doesn't matter if the list is empty, we honor exactly what the checkpoint says. The caller has to decide
             //what to do when a list is empty.

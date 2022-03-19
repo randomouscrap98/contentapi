@@ -90,7 +90,7 @@ window.onload = function()
         "pid": pid
     }, [
         new RequestSearchParameter("content", "id, name, permissions", "id = @pid"),
-        new RequestSearchParameter("message", "*", "contentId = @pid and !notdeleted()", "id", 30),
+        new RequestSearchParameter("message", "*", "contentId = @pid and !notdeleted()", "id_desc", 30),
         new RequestSearchParameter("user", "*", "id in @message.createUserId")
     ]), response =>
     {
@@ -172,11 +172,17 @@ function displayMessages(data)
                         messagelist.appendChild(element);
                     else
                         messagelist.insertBefore(element, allMessages[i].nextSibling);
+                    inserted = true;
                     break;
                 }
             }
             if(!inserted)
-                messagelist.appendChild(element);
+            {
+                if(allMessages.length)
+                    messagelist.insertBefore(element, messagelist.firstChild);
+                else
+                    messagelist.appendChild(element);
+            }
             addedMessages++;
         }
 
@@ -187,7 +193,10 @@ function displayMessages(data)
     postbox.onkeyup = function(e)
     {
         if(e.key === "Enter" && !e.shiftKey)
+        {
+            e.preventDefault();
             postsubmit.click();
+        }
     };
 
     //This doesn't let you use markup, so take that into account

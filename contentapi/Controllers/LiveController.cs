@@ -136,7 +136,6 @@ public class LiveController : BaseController
                     //had a list of all waiters and their send queues.... hmmmm that would actually just work.
                     foreach(var status in statuses)
                         await AddUserStatusAsync(userId, status.Key, status.Value);
-                        //await userStatuses.AddStatusAsync(userId, status.Key, status.Value, trackerId);
                 }
                 catch(Exception ex)
                 {
@@ -152,12 +151,7 @@ public class LiveController : BaseController
 
                     var searchRequest = ((JObject)receiveItem.data).ToObject<SearchRequests>() ?? 
                         throw new RequestException("Couldn't parse search criteria!");
-                    //services.mapper.Map<SearchRequests>(receiveItem.data);
-                    //Each value is really a jobject, so pull the real value out
-                    //foreach(var k in searchRequest.values.Keys)
-                    //{
-                    //    searchRequest.values[k] = ((JObject)searchRequest.values[k]); //.Value();
-                    //}
+
                     var searchResult = await services.searcher.Search(searchRequest, userId);
                     response.data = searchResult;
                 }
@@ -183,7 +177,26 @@ public class LiveController : BaseController
         while(!cancelToken.IsCancellationRequested)
         {
             //NOTE: the ReceiveObjectAsync throws an exception on close
-            var listenResult = await eventQueue.ListenAsync(user, lastId, cancelToken);//socket.ReceiveObjectAsync<WebSocketRequest>(memStream, cancelToken);
+            LiveData listenResult;
+
+            //try
+            //{
+                listenResult = await eventQueue.ListenAsync(user, lastId, cancelToken);
+            //}
+            //catch(ExpiredCheckpointException ex)
+            //{
+            //    sendQueue.Post(new WebSocketResponse()
+            //    {
+            //        type = "expiredid",
+            //        data = lastId,
+            //        requestUserId = userId,
+            //        error = $"Your id is invalid/expired, you need to manually reconnect with a different lastId: {ex.Message}"
+            //    });
+            //    //This isn't guaranteed to work but...
+
+            //    throw;
+            //}
+
             userId = ValidateToken(token); // Validate every time
             lastId = listenResult.lastId;
 
@@ -218,8 +231,10 @@ public class LiveController : BaseController
             services.logger.LogDebug($"ws METHOD: {HttpContext.Request.Method}, HEADERS: " +
                 JsonConvert.SerializeObject(HttpContext.Request.Headers,
                     Formatting.None, new JsonSerializerSettings() { ReferenceLoopHandling = ReferenceLoopHandling.Ignore }));
+            
+            bool completedNormally = false;
 
-            return await MatchExceptions(async () =>
+            var result = await MatchExceptions(async () =>
             {
                 //I have NO idea if returning an action from a websocket request makes any sense, or 
                 //if the middleware gets completely wrecked or something!
@@ -231,6 +246,7 @@ public class LiveController : BaseController
                 using var socket = await HttpContext.WebSockets.AcceptWebSocketAsync();
                 using var cancelSource = new CancellationTokenSource();
                 var sendQueue = new BufferBlock<object>();
+                List<Task> runningTasks = new List<Task>();
 
                 try
                 {
@@ -259,23 +275,29 @@ public class LiveController : BaseController
                         throw new InvalidOperationException("INTERNAL ERROR: couldn't add you to the listener array!");
 
                     //Can send and receive at the same time, but CAN'T send/receive multiple at the same time.
-                    var receiveTask = ReceiveLoop(cancelSource.Token, socket, sendQueue, token);
-                    var listenTask = ListenLoop(cancelSource.Token, realLastId, sendQueue, token);
-                    var sendTask = SendLoop(cancelSource.Token, socket, sendQueue);
+                    runningTasks.Add(ReceiveLoop(cancelSource.Token, socket, sendQueue, token));
+                    runningTasks.Add(ListenLoop(cancelSource.Token, realLastId, sendQueue, token));
+                    runningTasks.Add(SendLoop(cancelSource.Token, socket, sendQueue));
+                    //var receiveTask = ReceiveLoop(cancelSource.Token, socket, sendQueue, token);
+                    //var listenTask = ListenLoop(cancelSource.Token, realLastId, sendQueue, token);
+                    //var sendTask = SendLoop(cancelSource.Token, socket, sendQueue);
 
-                    try
-                    {
-                        await Task.WhenAny(receiveTask, sendTask, listenTask);
-                    }
-                    finally
-                    {
-                        if(!currentListeners.TryRemove(trackerId, out _))
-                            services.logger.LogWarning($"Couldn't remove listener {trackerId}, this could be a serious error!");
+                    var completedTask = await Task.WhenAny(runningTasks); //receiveTask, sendTask, listenTask);
+                    runningTasks.Remove(completedTask);
+                    await completedTask; //To throw the exception
+                    //try
+                    //{
+                    //    await Task.WhenAny(runningTasks); //receiveTask, sendTask, listenTask);
+                    //}
+                    //finally
+                    //{
+                    //    if(!currentListeners.TryRemove(trackerId, out _))
+                    //        services.logger.LogWarning($"Couldn't remove listener {trackerId}, this could be a serious error!");
 
-                        //Clean up the tasks
-                        cancelSource.Cancel();
-                        await Task.WhenAll(receiveTask, sendTask, listenTask);
-                    }
+                    //    //Clean up the tasks
+                    //    cancelSource.Cancel();
+                    //    await Task.WhenAll(receiveTask, sendTask, listenTask);
+                    //}
                 }
                 catch (Exception ex)
                 {
@@ -283,24 +305,60 @@ public class LiveController : BaseController
 
                     //Yes, the websocket COULD close after this check, but it still saves us a LOT of hassle to skip the
                     //common cases of "the websocket is actually closed from the exception"
-                    if (socket.State == WebSocketState.Open)
+                    //if (socket.State == WebSocketState.Open)
+                    //{
+                    sendQueue.Post(new WebSocketResponse()
                     {
-                        await socket.SendObjectAsync(new WebSocketResponse()
-                        {
-                            type = ex is TokenException ? "badtoken" : "unexpected",
-                            error = ex is TokenException ? ex.Message : $"Unhandled exception: {ex}"
-                        });
+                        type = ex is TokenException ? "badtoken" : "unexpected",
+                        error = ex is TokenException ? ex.Message : $"Unhandled exception: {ex}"
+                    });
 
-                        //Do NOT close with error! We want to reserve websocket errors for network errors and whatever. If 
-                        //the SYSTEM encounters an error, we will tell you about it!
-                        await socket.CloseAsync(WebSocketCloseStatus.NormalClosure, ex.Message, CancellationToken.None);
-                    }
+                    //Give it enough time, it's not fully necessary to close immediately... maybe
+                    await Task.Delay(2000);
 
-                    return ex.Message;
+                    //Do NOT close with error! We want to reserve websocket errors for network errors and whatever. If 
+                    //the SYSTEM encounters an error, we will tell you about it!
+                    await socket.CloseAsync(WebSocketCloseStatus.NormalClosure, ex.Message, CancellationToken.None);
+                    //}
+
+                    //return ex.Message;
                 }
+                finally
+                {
+                    if(runningTasks.Count > 0)
+                    {
+                        if(!currentListeners.TryRemove(trackerId, out _))
+                            services.logger.LogWarning($"Couldn't remove listener {trackerId}, this could be a serious error!");
 
+                        //Clean up the tasks. Also, cancelling SHOULD (I believe) close the websocket
+                        cancelSource.Cancel();
+
+                        try
+                        {
+                            await Task.WhenAll(runningTasks); //currentListeners.ToArray()); //receiveTask, sendTask, listenTask);
+                        }
+                        catch(ClosedException)
+                        {
+                            services.logger.LogDebug($"Client closed connection manually, this is normal!");//all tasks complete: {runningTasks.All(x => x.is)}");
+                        }
+
+                        //try {
+                        //    await socket.CloseAsync(WebSocketCloseStatus.NormalClosure);
+                        //}
+                        //catch {
+
+                        //}
+                    }
+                }
+                
+                completedNormally = true;
                 return "Socket closed on server successfully";
             });
+
+            if(completedNormally)
+                return new EmptyResult();
+            else
+                return result;
         }
         finally
         {
