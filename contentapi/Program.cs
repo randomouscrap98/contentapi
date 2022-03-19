@@ -1,3 +1,4 @@
+using contentapi;
 using contentapi.Controllers;
 using contentapi.Db;
 using contentapi.Main;
@@ -7,6 +8,7 @@ using contentapi.Utilities;
 using Microsoft.AspNetCore.Authentication.JwtBearer;
 using Microsoft.Data.Sqlite;
 using Microsoft.OpenApi.Models;
+using Newtonsoft.Json;
 using Newtonsoft.Json.Converters;
 
 var builder = WebApplication.CreateBuilder(args);
@@ -55,10 +57,19 @@ builder.Services.AddAuthentication(x =>
     x.TokenValidationParameters = validationParameters; 
 });
 
-// System.Text STILL does not do what I want it to do
-builder.Services.AddControllers().AddNewtonsoftJson(opts => {
-    opts.SerializerSettings.Converters.Add(new StringEnumConverter());
-});
+Action<Newtonsoft.Json.JsonSerializerSettings> setupJsonOptions = opts =>
+{
+    opts.Converters.Add(new CustomDateTimeConverter());
+    opts.Converters.Add(new StringEnumConverter());
+};
+JsonConvert.DefaultSettings = () => {
+    var settings = new JsonSerializerSettings();
+    setupJsonOptions(settings);
+    return settings;
+};
+
+//// System.Text STILL does not do what I want it to do
+builder.Services.AddControllers().AddNewtonsoftJson(options => setupJsonOptions(options.SerializerSettings));
 builder.Services.AddEndpointsApiExplorer();
 
 //This section sets up JWT to be used in swagger

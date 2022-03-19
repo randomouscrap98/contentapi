@@ -237,6 +237,8 @@ function Api(url, tokenGet)
         contentId: "content",
         parendId: "parent"
     };
+
+    this.dateAutoFormats = [ "createDate", "editDate" ];
 }
 
 //Find the error handler function within the handler field, if it exists. This is because the error handler
@@ -946,6 +948,30 @@ Api.prototype.AutoLinkUsers = function(data, userlist)
 Api.prototype.AutoLinkContent = function(data, contentList)
 {
     this.AutoLinkGeneric(data, contentList, this.contentAutolinks);
+};
+
+Api.prototype.AutoFixDates = function(data)
+{
+    var me = this;
+    data.forEach(x =>
+    {
+        me.dateAutoFormats.forEach(f =>
+        {
+            if(x[f])
+            {
+                x[f] = x[f].replace(" ", "T");
+
+                if(x[f].indexOf("Z") < 0) 
+                    x[f] += "Z";
+            }
+        });
+    });
+};
+
+Api.prototype.AutoFixAllDates = function(data)
+{
+    var me = this;
+    Object.keys(data).forEach(x => me.AutoFixDates(data[x]));
 };
 
 // Given one of the type descriptions from the "details" resultset of "AboutSearch", returns

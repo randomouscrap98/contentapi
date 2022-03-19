@@ -179,6 +179,7 @@ function displayMessages(data)
 {
     //Link the data
     api.AutoLinkUsers(data.message, data.user);
+    api.AutoFixAllDates(data);
     var messagearea = document.getElementById("messagearea");
     var messagelist = document.getElementById("messagelist");
     var postsubmit = document.getElementById("postsubmit");
@@ -261,6 +262,7 @@ function setUserlist(data)
     console.debug("SetUserList called with response: ", data);
     var userlist = document.getElementById("userlist");
 
+    api.AutoFixAllDates(data.data);
     var usersById = api.KeyById(data.data.user);
 
     //response should have statuses and data, always same format (assuming you get a single status)
