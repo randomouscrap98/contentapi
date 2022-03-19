@@ -273,17 +273,24 @@ public class LiveController : BaseController
 
                     //Yes, the websocket COULD close after this check, but it still saves us a LOT of hassle to skip the
                     //common cases of "the websocket is actually closed from the exception"
-                    sendQueue.Post(new WebSocketResponse()
+                    var errorResponse = new WebSocketResponse()
                     {
                         type = ex is TokenException ? "badtoken" : "unexpected",
                         error = ex is TokenException ? ex.Message : $"Unhandled exception: {ex}"
-                    });
+                    };
+
+                    //If we HAVE the tasks, then send it on the queue to ensure thread safety. Otherwise, send it directly
+                    if(runningTasks.Count > 0)
+                        sendQueue.Post(errorResponse);
+                    else
+                        await socket.SendObjectAsync(errorResponse);
 
                     //Give it enough time, it's not fully necessary to close immediately... maybe
                     await Task.Delay(2000);
 
                     //Do NOT close with error! We want to reserve websocket errors for network errors and whatever. If 
                     //the SYSTEM encounters an error, we will tell you about it!
+                    completedNormally = true;
                     await socket.CloseAsync(WebSocketCloseStatus.NormalClosure, ex.Message, CancellationToken.None);
                 }
                 finally
@@ -295,6 +302,7 @@ public class LiveController : BaseController
 
                         //Clean up the tasks. Also, cancelling SHOULD (I believe) close the websocket
                         cancelSource.Cancel();
+                        completedNormally = true;
 
                         try
                         {
@@ -307,7 +315,6 @@ public class LiveController : BaseController
                     }
                 }
                 
-                completedNormally = true;
                 return "Socket closed on server successfully";
             });
 
