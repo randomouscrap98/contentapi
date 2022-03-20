@@ -238,22 +238,19 @@ public class LiveController : BaseController
                     int realLastId;
 
                     if (lastId == null)
-                    {
                         realLastId = eventQueue.GetCurrentLastId();
-
-                        var response = new WebSocketResponse()
-                        {
-                            type = "lastId",
-                            data = realLastId,
-                            requestUserId = userId
-                        };
-
-                        sendQueue.Post(response);
-                    }
                     else
-                    {
                         realLastId = lastId.Value;
-                    }
+
+                    //ALWAYS send the lastId message, it's basically our "this is the websocket and you're connected"
+                    var response = new WebSocketResponse()
+                    {
+                        type = "lastId",
+                        data = realLastId,
+                        requestUserId = userId
+                    };
+
+                    sendQueue.Post(response);
 
                     if(!currentListeners.TryAdd(trackerId, new WebsocketListenerData() { userId = userId, sendQueue = sendQueue }))
                         throw new InvalidOperationException("INTERNAL ERROR: couldn't add you to the listener array!");
