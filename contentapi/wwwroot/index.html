@@ -111,12 +111,17 @@
             </div>
             <div id="t_page" data-onload="page_onload">
                 <h2 id="page-title"></h2>
-                <a href="#" id="page-chat-link">Go to chat for this page</a>
+                <a href="#" id="page-chat-link" hidden="">Go to chat for this page</a>
                 <div id="page-content" title="This is raw markup" class="content"></div>
                 <table class="describe" id="page-table"></table>
                 <div id="page-interactions" data-pageid="">
                     <button id="watch-page" hidden="" onclick="return t_page_watch(this, true)">Watch</button>
                     <button id="unwatch-page" hidden="" onclick="return t_page_watch(this, false)">Unwatch</button>
+                    <div id="current-vote-container-page" hidden="">Current vote: <span id="current-vote-page"></span></div>
+                    <div id="vote-submit-page" hidden="">
+                        <select id="vote-options-page"></select>
+                        <button id="vote-page">Submit vote</button>
+                    </div>
                 </div>
                 <div id="page-edit-section" class="hidden">
                     <h3>Edit: <button id="page-edit-toggle"></button></h3>

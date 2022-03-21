@@ -533,6 +533,12 @@ Api.prototype.ClearNotifications = function(pid, handler)
     this.Raw(`shortcuts/watch/clear/${pid}`, true, handler);
 };
 
+Api.prototype.VoteOnPage = function(pid, vote, handler)
+{
+    //I believe "vote" can be either the string or the code...
+    this.Raw(`shortcuts/vote/set/${pid}`, vote, handler);
+};
+
 //You can ALSO get modules from the request/search endpoint, however you won't
 //get the special lua data necessary to generate help data/etc. Leave name
 //null to get all modules. You can exclude expensive fields if you want a faster
@@ -832,8 +838,10 @@ Api.prototype.Search_BasicPageDisplay = function(id, subpagesPerPage, subpagePag
         //Subpages: we want most fields, but not SOME big/expensive fields. Hence ~
         new RequestSearchParameter("content", "~values,keywords,votes", "parentId = @pageid and !notdeleted() and contentType <> @filetype", "contentType,literalType,name", subpagesPerPage, subpagesPerPage * subpagePage, "subpages"),
         new RequestSearchParameter("message", "*", "contentId = @pageid and !notdeleted() and !null(module)", "id_desc", commentsPerPage, commentsPerPage * commentPage),
-        // We grab your personal watches specifically for the main page to see if you ARE watching it
-        new RequestSearchParameter("watch", "*", "contentId = @pageid"),
+        // We grab your personal watches/votes/etc specifically for the main page to see if you ARE watching it
+        new RequestSearchParameter("watch", "*", "contentId = @pageid"),    //This is YOUR watch (the requester)
+        new RequestSearchParameter("vote", "*", "contentId = @pageid"),     //This is YOUR vote (the requester)
+        // And then users in everything
         new RequestSearchParameter("user", "*", "id in @message.createUserId or id in @content.createUserId or id in @subpages.createUserId"),
     ]);
 

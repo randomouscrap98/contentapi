@@ -258,6 +258,7 @@ function page_onload(template, state)
     var title = template.querySelector("#page-title");
     var subpagesElement = template.querySelector("#page-subpages");
     var commentsElement = template.querySelector("#page-comments");
+    var voteOptionsElement = template.querySelector("#vote-options-page");
 
     var setupEditor = function(type, page)
     {
@@ -306,12 +307,44 @@ function page_onload(template, state)
             MakeTable(page, table);
 
             setupEditor("edit", originalPage);
+            template.querySelector("#page-chat-link").removeAttribute("hidden");
 
             //Display watch/unwatch based on if they're watching
             if(d.result.data.watch.length)
                 template.querySelector("#unwatch-page").removeAttribute("hidden");
             else
                 template.querySelector("#watch-page").removeAttribute("hidden");
+            
+            //Need to get some information to fill out the vote selector. You COULD hardcode it, it's probably fine...
+            //NOTE: It's of course much slower to ask for the about AFTER the page completes, but it lets us display the 
+            //user vote appropriately, as most codes are returned from the database raw. As I said, you COULD hardcode these
+            //so don't worry about doing it this way. I just think this is a good example just in case, AND it keeps me from
+            //having to maintain the vote system if I change it.
+            api.AboutSearch(new ApiHandler(dd =>
+            {
+                var voteCodes = dd.result.details.codes.vote_types;
+                Object.keys(voteCodes).forEach(k =>
+                {
+                    var option = document.createElement("option");
+                    option.textContent = voteCodes[k];
+                    option.value = k;
+                    voteOptionsElement.appendChild(option);
+                });
+                template.querySelector("#vote-page").onclick = function()
+                {
+                    api.VoteOnPage(state.pid, voteOptionsElement.value, new ApiHandler(ddd =>
+                    {
+                        location.reload();
+                    }));
+                };
+                template.querySelector("#vote-submit-page").removeAttribute("hidden");
+
+                if(d.result.data.vote.length)
+                {
+                    template.querySelector("#current-vote-page").textContent = voteCodes[d.result.data.vote[0].vote];
+                    template.querySelector("#current-vote-container-page").removeAttribute("hidden");
+                }
+            }));
         }
 
         //Waste a few cycles linking some stuff together!
