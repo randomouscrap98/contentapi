@@ -72,4 +72,14 @@ public class WriteController : BaseController
             return await writer.WriteAsync(watch, GetUserIdStrict()); //message used for activity and such
         });
     }
+
+    [HttpPost("vote")]
+    public Task<ActionResult<VoteView>> WriteVoteAsync([FromBody]VoteView vote)
+    {
+        return MatchExceptions(async () => 
+        {
+            RateLimit(RateInteract); //A different rate for watches
+            return await writer.WriteAsync(vote, GetUserIdStrict()); //message used for activity and such
+        });
+    }
 }

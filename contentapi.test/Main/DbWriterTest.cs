@@ -1134,38 +1134,102 @@ public class DbWriterTest : ViewUnitTestBase, IClassFixture<DbUnitTestSearchFixt
         }
     }
 
-    [Fact]
-    public async Task WriteAsync_WatchEdit()
+    [Theory]
+    [InlineData(NormalUserId, 0, false)]
+    [InlineData(NormalUserId, 9000, false)]
+    [InlineData(NormalUserId, AllAccessContentId, true)]
+    [InlineData(NormalUserId, SuperAccessContentId, false)]
+    [InlineData(SuperUserId, 0, false)]
+    [InlineData(SuperUserId, 9000, false)]
+    [InlineData(SuperUserId, AllAccessContentId, true)]
+    [InlineData(SuperUserId, SuperAccessContentId, true)]
+    public async Task WriteAsync_VoteBasic(long uid, long content, bool allowed)
     {
         //Also test to ensure the watch view auto-sets fields for us
-        var normalWatch = new WatchView() { contentId = AllAccessContentId };
-        var superWatch = new WatchView() { contentId = AllAccessContentId };
+        var vote = new VoteView()
+        {
+            contentId = content,
+            userId = 999, //This should get reset.
+            vote = VoteType.ok
+        };
 
-        normalWatch = await writer.WriteAsync(new WatchView() { contentId = AllAccessContentId }, NormalUserId);
-        superWatch = await writer.WriteAsync(new WatchView() { contentId = AllAccessContentId }, SuperUserId);
+        VoteView writtenVote = vote;
+
+        var writeVote = new Func<Task>(async () => {
+            writtenVote = await writer.WriteAsync(vote, uid);
+        });
+
+        if(allowed)
+        {
+            await writeVote();
+            Assert.True(writtenVote.id > 0);
+            Assert.Equal(content, writtenVote.contentId);
+            Assert.Equal(uid, writtenVote.userId);
+            Assert.Empty(events.Events); //There should be NO events for votes right now!
+            //AssertWatchEventMatches(writtenWatch, uid, UserAction.create);
+        }
+        else if(content <= 0 || content >= 1000)
+        {
+            await Assert.ThrowsAnyAsync<NotFoundException>(writeVote);
+        }
+        else
+        {
+            await Assert.ThrowsAnyAsync<ForbiddenException>(writeVote);
+        }
+    }
+
+    public async Task WriteAsync_ContentUserRelationEdit<T>(Func<T, object> getEditField, Action<T, int> setEditField) where T : class, IContentUserRelatedView, new()
+    {
+        //Also test to ensure the watch view auto-sets fields for us
+        var normalItem = new T() { contentId = AllAccessContentId };
+        var superItem = new T() { contentId = AllAccessContentId };
+
+        setEditField(normalItem, 0);
+        setEditField(normalItem, 1);
+
+        normalItem = await writer.WriteAsync(new T() { contentId = AllAccessContentId }, NormalUserId);
+        superItem = await writer.WriteAsync(new T() { contentId = AllAccessContentId }, SuperUserId);
 
         //Both should be able to edit themselves, but not edit the other's
-        normalWatch.lastActivityId = 555;
-        superWatch.lastActivityId = 999;
+        setEditField(normalItem, 2);
+        setEditField(normalItem, 3);
+        //normalItem.lastActivityId = 555;
+        //superItem.lastActivityId = 999;
 
-        var normalWatchUpdated = await writer.WriteAsync(normalWatch, NormalUserId);
-        var superWatchUpdated = await writer.WriteAsync(superWatch, SuperUserId);
+        var normalItemUpdated = await writer.WriteAsync(normalItem, NormalUserId);
+        var superItemUpdated = await writer.WriteAsync(superItem, SuperUserId);
 
-        Assert.Equal(normalWatch.lastActivityId, normalWatchUpdated.lastActivityId);
-        Assert.Equal(superWatch.lastActivityId, superWatchUpdated.lastActivityId);
-        Assert.Equal(normalWatch.id, normalWatchUpdated.id);
-        Assert.Equal(superWatch.id, superWatchUpdated.id);
+        Assert.Equal(getEditField(normalItem), getEditField(normalItemUpdated));
+        Assert.Equal(getEditField(superItem), getEditField(superItemUpdated));
+        Assert.Equal(normalItem.id, normalItemUpdated.id);
+        Assert.Equal(superItem.id, superItemUpdated.id);
 
-        await Assert.ThrowsAnyAsync<ForbiddenException>(() => writer.WriteAsync(normalWatchUpdated, SuperUserId));
-        await Assert.ThrowsAnyAsync<ForbiddenException>(() => writer.WriteAsync(superWatchUpdated, NormalUserId));
+        await Assert.ThrowsAnyAsync<ForbiddenException>(() => writer.WriteAsync(normalItemUpdated, SuperUserId));
+        await Assert.ThrowsAnyAsync<ForbiddenException>(() => writer.WriteAsync(superItemUpdated, NormalUserId));
 
         //Neither should be able to delete the others too
-        await Assert.ThrowsAnyAsync<ForbiddenException>(() => writer.DeleteAsync<WatchView>(normalWatchUpdated.id, SuperUserId));
-        await Assert.ThrowsAnyAsync<ForbiddenException>(() => writer.DeleteAsync<WatchView>(superWatchUpdated.id, NormalUserId));
+        await Assert.ThrowsAnyAsync<ForbiddenException>(() => writer.DeleteAsync<T>(normalItemUpdated.id, SuperUserId));
+        await Assert.ThrowsAnyAsync<ForbiddenException>(() => writer.DeleteAsync<T>(superItemUpdated.id, NormalUserId));
 
         //But these should be fine
-        var normalWatchDeleted = writer.DeleteAsync<WatchView>(normalWatchUpdated.id, NormalUserId);
-        var superWatchDeleted = writer.DeleteAsync<WatchView>(superWatchUpdated.id, SuperUserId);
+        var normalWatchDeleted = writer.DeleteAsync<T>(normalItemUpdated.id, NormalUserId);
+        var superWatchDeleted = writer.DeleteAsync<T>(superItemUpdated.id, SuperUserId);
+    }
+
+    [Fact]
+    public async Task WriteAsync_SimpleWatchEdit()
+    {
+        var values = new List<long> { 222, 333, 555, 999 };
+        await WriteAsync_ContentUserRelationEdit<WatchView>(
+            x => x.lastActivityId, (x,i) => x.lastActivityId = values[i]);
+    }
+
+    [Fact]
+    public async Task WriteAsync_SimpleVoteEdit()
+    {
+        var values = new List<VoteType> { VoteType.ok, VoteType.bad, VoteType.good, VoteType.ok };
+        await WriteAsync_ContentUserRelationEdit<VoteView>(
+            x => x.vote, (x,i) => x.vote = values[i]);
     }
 
     //A bad bug where permissions would take on whoever was WRITING, very bad!

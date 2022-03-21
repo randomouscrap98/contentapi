@@ -59,4 +59,22 @@ public class ShortcutsService
         
         return watches.First();
     }
+
+    public async Task<VoteView> LookupVoteByContentIdAsync(long uid, long contentId)
+    {
+        var votes = await search.SearchSingleType<VoteView>(uid, new SearchRequest()
+        {
+            type = "vote",
+            fields = "*",
+            query = "userId = @me and contentId = @cid"
+        }, new Dictionary<string, object> {
+            { "me", uid },
+            { "cid", contentId }
+        });
+
+        if (votes.Count == 0)
+            throw new NotFoundException($"Content {contentId} not found for vote!");
+        
+        return votes.First();
+    }
 }

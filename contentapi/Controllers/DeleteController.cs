@@ -52,4 +52,14 @@ public class DeleteController : BaseController
             return await services.writer.DeleteAsync<WatchView>(id, GetUserIdStrict()); //message used for activity and such
         });
     }
+
+    [HttpPost("vote/{id}")]
+    public Task<ActionResult<VoteView>> DeleteVoteAsync([FromRoute]long id)
+    {
+        return MatchExceptions(async () => 
+        {
+            RateLimit(RateInteract); //watches are different I guess?
+            return await services.writer.DeleteAsync<VoteView>(id, GetUserIdStrict()); //message used for activity and such
+        });
+    }
 }
