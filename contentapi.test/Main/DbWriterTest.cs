@@ -408,7 +408,7 @@ public class DbWriterTest : ViewUnitTestBase, IClassFixture<DbUnitTestSearchFixt
     [InlineData(1+ (int)UserVariations.Super, -1)] //this is super
     public async Task DeleteAsync_DumbId(long uid, long contentId)
     {
-        await Assert.ThrowsAnyAsync<ArgumentException>(async () =>
+        await Assert.ThrowsAnyAsync<NotFoundException>(async () =>
         {
             await writer.DeleteAsync<ContentView>(contentId, uid);
         });

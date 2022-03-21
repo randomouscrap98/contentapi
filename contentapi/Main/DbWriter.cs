@@ -94,7 +94,11 @@ public class DbWriter : IDbWriter
 
     public virtual async Task<T> DeleteAsync<T>(long id, long requestUserId, string? message = null) where T : class, IIdView, new()
     {
-        return await GenericWorkAsync(new T() { id = id }, await GetRequestUser(requestUserId), UserAction.delete, message);
+        //To properly delete, you actually need to lookup the view
+        var tInfo = typeInfoService.GetTypeInfo<T>();
+        var requestType = tInfo.requestType ?? throw new InvalidOperationException($"Tried to delete type {typeof(T)} but type had no request type for searching!");
+        return await GenericWorkAsync(await searcher.GetById<T>(requestType , id, true), await GetRequestUser(requestUserId), UserAction.delete, message);
+        //return await GenericWorkAsync(new T() { id = id }, await GetRequestUser(requestUserId), UserAction.delete, message);
     }
 
     /// <summary>
@@ -590,10 +594,6 @@ public class DbWriter : IDbWriter
         if(unmapped.Count > 0)
             logger.LogWarning($"Fields '{string.Join(",", unmapped)}' not mapped in comment!");
 
-        //Always ensure these fields are like this for comments
-        //comment.module = null;
-        //comment.receiveUserId = 0;
-
         //Clear out fields and junk on delete
         if(work.action == UserAction.delete)
         {
@@ -601,7 +601,7 @@ public class DbWriter : IDbWriter
             comment.text = "deleted_comment";
             comment.createUserId = 0;
             comment.editUserId = 0;
-            comment.contentId = 0;
+            //comment.contentId = 0; //Specifically do NOT remove the parent! We need it for permissions!!
             comment.deleted = true;
         }
 

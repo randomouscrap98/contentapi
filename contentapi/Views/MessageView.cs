@@ -43,7 +43,7 @@ public class MessageView : IIdView
     [Writable(WriteRule.Preserve, WriteRule.AutoUserId)]
     public long? editUserId {get;set;}
 
-    [FieldSelect("history IS NOT NULL")]
+    [FieldSelect("history IS NOT NULL AND editUserId != 0")]
     public bool edited {get;set;}
 
     [FieldSelect]

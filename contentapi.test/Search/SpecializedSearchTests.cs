@@ -92,4 +92,25 @@ public class SpecializedSearchTests : ViewUnitTestBase, IClassFixture<DbUnitTest
         Assert.Contains(NormalUserId, users.Select(x => x.id ));
         Assert.Contains(SuperUserId, users.Select(x => x.id ));
     }
+
+    //This regression test needs a standard configured dbwriter, which didn't really fit anywhere else but here
+    [Fact]
+    public async Task Regression_CommentDeleteEventNoFail()
+    {
+        //write a simple comment
+        var comment = GetNewCommentView(AllAccessContentId);
+        var writtenComment = await writer.WriteAsync(comment, NormalUserId);
+
+        Assert.NotEqual(0, writtenComment.id);
+        Assert.NotEqual(0, writtenComment.contentId);
+
+        //Now delete it
+        var deletedComment = await writer.DeleteAsync<MessageView>(writtenComment.id, NormalUserId);
+
+        //That's the test, we just failed entirely before. We already know it's being reported
+        //as an event from previous tests, so we're just making sure integration doesn't break it
+        Assert.True(deletedComment.deleted);
+        Assert.NotEqual(0, deletedComment.contentId);
+        Assert.False(deletedComment.edited);
+    }
 }
