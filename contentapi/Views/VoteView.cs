@@ -7,7 +7,7 @@ namespace contentapi.Views;
 [ResultFor(RequestType.vote)]
 [SelectFrom("content_votes")]
 [WriteAs(typeof(Db.ContentVote))]
-public class VoteView
+public class VoteView : IContentUserRelatedView
 {
     [FieldSelect]
     public long id { get; set; }

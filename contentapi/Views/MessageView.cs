@@ -5,7 +5,7 @@ namespace contentapi.Views;
 [ResultFor(RequestType.message)]
 [SelectFrom("messages")]
 [WriteAs(typeof(Db.Message))]
-public class MessageView : IIdView
+public class MessageView : IContentRelatedView
 {
     [FieldSelect]
     //[Writable(WriteRule.Preserve, WriteRule.Preserve)] //Why preserve? So it's forced to be 0

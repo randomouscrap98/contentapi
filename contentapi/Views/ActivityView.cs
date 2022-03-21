@@ -5,7 +5,7 @@ namespace contentapi.Views;
 
 [ResultFor(RequestType.activity)]
 [SelectFrom("content_history")]
-public class ActivityView : IIdView
+public class ActivityView : IContentUserRelatedView
 {
     [FieldSelect]
     public long id { get; set; }

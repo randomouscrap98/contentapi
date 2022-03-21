@@ -6,7 +6,7 @@ namespace contentapi.Views;
 [ResultFor(RequestType.watch)]
 [SelectFrom("content_watches as main")]
 [WriteAs(typeof(Db.ContentWatch))]
-public class WatchView : IIdView
+public class WatchView : IContentUserRelatedView
 {
     public const string MessageTable = "messages";
 

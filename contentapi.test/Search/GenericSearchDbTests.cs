@@ -20,19 +20,13 @@ namespace contentapi.test;
 //keep it together, even if the class gets large!
 public class GenericSearchDbTests : ViewUnitTestBase, IClassFixture<DbUnitTestSearchFixture>
 {
-    //protected IDbConnection dbcon;
     protected GenericSearcher service;
     protected DbUnitTestSearchFixture fixture;
 
     public GenericSearchDbTests(DbUnitTestSearchFixture fixture)
     {
         this.fixture = fixture;
-        //var conWrap = fixture.GetService<ContentApiDbConnection>();
         service = fixture.GetGenericSearcher();
-        //new GenericSearcher(fixture.GetService<ILogger<GenericSearcher>>(), 
-        //    conWrap, fixture.GetService<IViewTypeInfoService>(), fixture.GetService<GenericSearcherConfig>(),
-        //    fixture.GetService<IMapper>(), fixture.GetService<IQueryBuilder>(), 
-        //    fixture.GetService<IPermissionService>());
     }
 
     [Fact]

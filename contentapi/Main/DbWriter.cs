@@ -38,7 +38,8 @@ public class DbWriter : IDbWriter
     protected static readonly SemaphoreSlim hashLock = new SemaphoreSlim(1, 1);
 
     public List<RequestType> TrueDeletes = new List<RequestType> {
-        RequestType.watch
+        RequestType.watch,
+        RequestType.vote
     };
 
     public DbWriter(ILogger<DbWriter> logger, IGenericSearch searcher, ContentApiDbConnection connection,
@@ -98,7 +99,6 @@ public class DbWriter : IDbWriter
         var tInfo = typeInfoService.GetTypeInfo<T>();
         var requestType = tInfo.requestType ?? throw new InvalidOperationException($"Tried to delete type {typeof(T)} but type had no request type for searching!");
         return await GenericWorkAsync(await searcher.GetById<T>(requestType , id, true), await GetRequestUser(requestUserId), UserAction.delete, message);
-        //return await GenericWorkAsync(new T() { id = id }, await GetRequestUser(requestUserId), UserAction.delete, message);
     }
 
     /// <summary>
@@ -216,42 +216,63 @@ public class DbWriter : IDbWriter
         }
         else if(view is WatchView)
         {
-            var wView = (view as WatchView)!;
-            var exView = existing as WatchView;
-
-            //Watch is fairly simple, because the fields do most of the work
-            if(action == UserAction.create)
-            {
-                //Just by searching, you will get the exceptions I hope for...
-                var content = await searcher.GetById<ContentView>(RequestType.content, wView.contentId, true);
-
-                if(content == null || !(await CanUserAsync(requester, UserAction.read, content.id)))
-                    throw new ForbiddenException($"You don't have access to content {wView.contentId}");
-
-                //Also, ensure we're not adding a second watch for the same content
-                var dupeWatch = await searcher.SearchSingleTypeUnrestricted<WatchView>(new SearchRequest()
-                {
-                    type = "watch",
-                    fields = "*",
-                    query = "userId = @me and contentId = @cid"
-                }, new Dictionary<string, object> {
-                    { "me", requester.id },
-                    { "cid", wView.contentId }
-                });
-
-                if(dupeWatch.Count > 0)
-                    throw new RequestException($"Duplicate watch for content {wView.contentId}");
-            }
-            else if(action == UserAction.update || action == UserAction.delete)
-            {
-                if(exView?.userId != requester.id)
-                    throw new ForbiddenException("You can only modify your own watches!");
-            }
+            await ValidateContentUserRelatedView<WatchView>((view as WatchView)!, existing as WatchView, requester, action);
+        }
+        else if(view is VoteView)
+        {
+            await ValidateContentUserRelatedView<VoteView>((view as VoteView)!, existing as VoteView, requester, action);
         }
         else 
         {
             //Be SAFER than sorry! All views when created are by default NOT writable!
             throw new ForbiddenException($"View of type {view.GetType().Name} cannot be user-modified!");
+        }
+    }
+
+    /// <summary>
+    /// Validation for most (all?) db objects that are user generated related to content operate with the 
+    /// same rules: you can't add duplicates, the content must exist, you must have read permissions. When
+    /// modifying or deleting, you can only do so to your own objects
+    /// </summary>
+    /// <param name="view"></param>
+    /// <param name="existing"></param>
+    /// <param name="requester"></param>
+    /// <param name="action"></param>
+    /// <typeparam name="T"></typeparam>
+    /// <returns></returns>
+    public async Task ValidateContentUserRelatedView<T>(T view, T? existing, UserView requester, UserAction action) 
+        where T : class, IContentUserRelatedView, new()
+    {
+        var typeInfo = typeInfoService.GetTypeInfo<T>();
+        var requestType = typeInfo.requestType ?? throw new InvalidOperationException($"Tried to validate content related view {typeof(T)} but it had no requestType!");
+
+        //Watch is fairly simple, because the fields do most of the work
+        if(action == UserAction.create)
+        {
+            //Just by searching, you will get the exceptions I hope for...
+            var content = await searcher.GetById<ContentView>(RequestType.content, view.contentId, true);
+
+            if(content == null || !(await CanUserAsync(requester, UserAction.read, content.id)))
+                throw new ForbiddenException($"You don't have access to content {view.contentId}");
+
+            //Also, ensure we're not adding a second watch for the same content
+            var dupeThing = await searcher.SearchSingleTypeUnrestricted<T>(new SearchRequest()
+            {
+                type = requestType.ToString(),
+                fields = "*",
+                query = "userId = @me and contentId = @cid"
+            }, new Dictionary<string, object> {
+                { "me", requester.id },
+                { "cid", view.contentId }
+            });
+
+            if(dupeThing.Count > 0)
+                throw new RequestException($"Duplicate {requestType} for content {view.contentId}");
+        }
+        else if(action == UserAction.update || action == UserAction.delete)
+        {
+            if(existing?.userId != requester.id)
+                throw new ForbiddenException($"You can only modify your own {requestType}!");
         }
     }
 
@@ -300,19 +321,30 @@ public class DbWriter : IDbWriter
         //Ok at this point, we know everything is good to go, there shouldn't be ANY MORE checks required past here!
         if(view is ContentView)
         {
-            id = await DatabaseWork_Content(new DbWorkUnit<ContentView>((view as ContentView)!, requester, typeInfo, action, existing as ContentView, message));
+            id = await DatabaseWork_Content(
+                new DbWorkUnit<ContentView>((view as ContentView)!, requester, typeInfo, action, existing as ContentView, message));
         }
         else if(view is MessageView)
         {
-            id = await DatabaseWork_Message(new DbWorkUnit<MessageView>((view as MessageView)!, requester, typeInfo, action, existing as MessageView, message));
+            id = await DatabaseWork_Message(
+                new DbWorkUnit<MessageView>((view as MessageView)!, requester, typeInfo, action, existing as MessageView, message));
         }
         else if (view is UserView)
         {
-            id = await DatabaseWork_User(new DbWorkUnit<UserView>((view as UserView)!, requester, typeInfo, action, existing as UserView, message));
+            id = await DatabaseWork_User(
+                new DbWorkUnit<UserView>((view as UserView)!, requester, typeInfo, action, existing as UserView, message));
         }
         else if (view is WatchView)
         {
-            id = await DatabaseWork_Watch(new DbWorkUnit<WatchView>((view as WatchView)!, requester, typeInfo, action, existing as WatchView, message));
+            id = await DatabaseWork_ContentUserRelated<WatchView, Db.ContentWatch>(
+                new DbWorkUnit<WatchView>((view as WatchView)!, requester, typeInfo, action, existing as WatchView, message),
+                EventType.watch);
+        }
+        else if (view is VoteView)
+        {
+            id = await DatabaseWork_ContentUserRelated<VoteView, Db.ContentVote>(
+                new DbWorkUnit<VoteView>((view as VoteView)!, requester, typeInfo, action, existing as VoteView, message),
+                EventType.none);
         }
         else
         {
@@ -645,17 +677,28 @@ public class DbWriter : IDbWriter
         }
     }
 
-    public async Task<long> DatabaseWork_Watch(DbWorkUnit<WatchView> work)
+    /// <summary>
+    /// The database work for most (all?) user related objects for content are the same: a simple insert, update, or delete. We do
+    /// a pure delete on all IContentUserRelatedViews. Also, unfortunately, dapper requires a solid type when calling Insert/etc,
+    /// so even though the write type is described in an attribute on the view, you still need to pass the compile-time type here
+    /// </summary>
+    /// <typeparam name="long"></typeparam>
+    public async Task<long> DatabaseWork_ContentUserRelated<T,V>(DbWorkUnit<T> work, EventType evType) 
+        where T : class, IContentUserRelatedView, new()
+        where V : class, new()
     {
-        if(!work.typeInfo.type.IsAssignableTo(typeof(WatchView)))
-            throw new InvalidOperationException($"TypeInfo given in DatabaseWork was for type '{work.typeInfo.type}', not '{typeof(WatchView)}'");
+        if(!work.typeInfo.type.IsAssignableTo(typeof(T)))
+            throw new InvalidOperationException($"TypeInfo given in DatabaseWork was for type '{work.typeInfo.type}', not '{typeof(T)}'");
+
+        var type = work.typeInfo.requestType ?? throw new InvalidOperationException($"Tried to do database work for {typeof(T)} but it had no requestType!");
+        //var dbType = work.typeInfo.writeAsInfo?.modelType ?? throw new InvalidOperationException($"Tried to do database work for {type} but it had no writeAsInfo!");
 
         //NOTE: As usual, validation is performed outside this function!
-        var watch = new Db.ContentWatch();
-        var unmapped = MapSimpleViewFields(work, watch); 
+        var dbItem = Activator.CreateInstance<V>() ?? throw new InvalidOperationException($"Tried to create instance of db write object for {type} but it returned null!"); //new Db.ContentWatch();
+        var unmapped = MapSimpleViewFields(work, dbItem); 
 
         if(unmapped.Count > 0)
-            logger.LogWarning($"Fields '{string.Join(",", unmapped)}' not mapped in watch!");
+            logger.LogWarning($"Fields '{string.Join(",", unmapped)}' not mapped in {type}!");
 
         //Need to update the edit history with the previous comment!
         //Always need an ID to link to, so we actually need to create the content first and get the ID.
@@ -664,27 +707,29 @@ public class DbWriter : IDbWriter
             if(work.action == UserAction.create)
             {
                 //This doesn't need a history, so write it as-is
-                work.view.id = await dbcon.InsertAsync(watch, tsx);
+                work.view.id = await dbcon.InsertAsync(dbItem, tsx);
             }
             else if(work.action == UserAction.update)
             {
-                await dbcon.UpdateAsync(watch, tsx);
+                await dbcon.UpdateAsync(dbItem, tsx);
             }
             else if(work.action == UserAction.delete)
             {
-                await dbcon.DeleteAsync(watch, tsx);
+                await dbcon.DeleteAsync(dbItem, tsx);
             }
             else 
             {
-                throw new InvalidOperationException($"Can't perform action {work.action} in DatabaseWork_Watch!");
+                throw new InvalidOperationException($"Can't perform action {work.action} in DatabaseWork_ContentUserRelated!");
             }
 
             tsx.Commit();
 
-            await eventQueue.AddEventAsync(new LiveEvent(work.requester.id, work.action, EventType.watch, work.view.id));
+            if(evType != EventType.none)
+                await eventQueue.AddEventAsync(new LiveEvent(work.requester.id, work.action, evType, work.view.id));
 
-            //No admin log for watches, so have to construct the message ourselves
-            logger.LogDebug($"User {work.requester.id} watched {watch.contentId}"); 
+            //No admin log for contentuserrelated, so have to construct the message ourselves
+            var actionWord = work.action == UserAction.create ? "added" : work.action == UserAction.update ? "modified" : "deleted";
+            logger.LogDebug($"User {work.requester.id} {actionWord} {type} for {work.view.contentId}"); 
 
             //NOTE: this is the newly computed id, we place it inside the view for safekeeping 
             return work.view.id;
