@@ -259,7 +259,7 @@ public class UserService : IUserService
         
         //This could also be done with an auto-mapper but
         result.email = castResult.First().email;
-        result.hideList = castResult.First().hideListParsed;
+        //result.hideList = castResult.First().hideListParsed;
 
         return result;
     }
@@ -283,8 +283,8 @@ public class UserService : IUserService
             sets.Add("email", data.email);
         }
 
-        if(data.hideList != null) //TODO: maybe move the parsing/generation code for hidelists out of the user data object
-            sets.Add("hidelist", User.HideListToString(data.hideList));
+        //if(data.hideList != null) //TODO: maybe move the parsing/generation code for hidelists out of the user data object
+        //    sets.Add("hidelist", User.HideListToString(data.hideList));
 
         //They didn't appear to add any data!
         if(sets.Count == 0)

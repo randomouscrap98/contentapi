@@ -19,16 +19,16 @@ namespace contentapi.Db
         public DateTime createDate { get; set; }
         public DateTime editDate { get; set; }
         public string email { get; set; } = "";
-        public string hidelist { get; set; } //Hidelist is nullable!
+        //public string hidelist { get; set; } //Hidelist is nullable!
         public string password { get; set; } = ""; //Don't worry, just the salted hash
         public string salt { get; set; } = "";
         public string registrationKey { get; set; } //Registration key is nullable!
 
-        [Write(false)]
-        public List<long> hideListParsed
-        {
-            get { return StringToHideList(hidelist); }
-        }
+        //[Write(false)]
+        //public List<long> hideListParsed
+        //{
+        //    get { return StringToHideList(hidelist); }
+        //}
 
         //Why are these in here? Eh... it doesn't matter much I guess.
         public static string HideListToString(List<long> hidelist) => string.Join(",", hidelist);

@@ -835,7 +835,7 @@ public class DbWriter : IDbWriter
             user.salt = "";
             user.email = "";
             user.special = "";
-            user.hidelist = "";
+            //user.hidelist = "";
             user.super = false;
             user.deleted = true;
         }
@@ -845,7 +845,7 @@ public class DbWriter : IDbWriter
             //we've had so much validation before we get here.
             var original = searcher.ToStronglyTyped<User>(await searcher.QueryRawAsync($"select * from users where id = @id", new Dictionary<string, object> {{"id", work.view.id}})).First();
             user.registrationKey = original.registrationKey;
-            user.hidelist = original.hidelist;
+            //user.hidelist = original.hidelist;
             user.password = original.password;
             user.salt = original.salt;
             user.editDate = DateTime.UtcNow;

@@ -205,8 +205,8 @@ public class UserServiceTests : UnitTestBase, IClassFixture<DbUnitTestBase>
         var privateData = await service.GetPrivateData(user.id);
 
         Assert.Equal("email@email.com", privateData.email);
-        Assert.NotNull(privateData.hideList);
-        Assert.Empty(privateData.hideList);
+        //Assert.NotNull(privateData.hideList);
+        //Assert.Empty(privateData.hideList);
     }
 
     //Set some data
@@ -261,20 +261,20 @@ public class UserServiceTests : UnitTestBase, IClassFixture<DbUnitTestBase>
         }
     }
 
-    [Fact]
-    public async Task SetPrivateData_Hidelist()
-    {
-        //Assume this goes OK
-        var user = await service.CreateNewUser("hello", "short", "email@email.com");
-        var token = await service.CompleteRegistration(user.id, service.RegistrationLog[user.id]);
+    //[Fact]
+    //public async Task SetPrivateData_Hidelist()
+    //{
+    //    //Assume this goes OK
+    //    var user = await service.CreateNewUser("hello", "short", "email@email.com");
+    //    var token = await service.CompleteRegistration(user.id, service.RegistrationLog[user.id]);
 
-        var newHidelist = new List<long> {5, 10} ;
+    //    var newHidelist = new List<long> {5, 10} ;
 
-        //Now go update the hidelist
-        await service.SetPrivateData(user.id, new UserSetPrivateData() { hideList = newHidelist });
-        var privateData = await service.GetPrivateData(user.id);
+    //    //Now go update the hidelist
+    //    await service.SetPrivateData(user.id, new UserSetPrivateData() { hideList = newHidelist });
+    //    var privateData = await service.GetPrivateData(user.id);
 
-        Assert.True(newHidelist.SequenceEqual(privateData.hideList!));
-    }
+    //    Assert.True(newHidelist.SequenceEqual(privateData.hideList!));
+    //}
 
 }

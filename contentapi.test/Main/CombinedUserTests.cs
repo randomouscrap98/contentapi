@@ -133,11 +133,11 @@ public class CombinedUserTests : ViewUnitTestBase, IClassFixture<DbUnitTestSearc
         //Then get the user's private data. it should all be fine.
         var privateData = await service.GetPrivateData(user.id);
         Assert.Equal("email@email.com", privateData.email);
-        Assert.Empty(privateData.hideList);
+        //Assert.Empty(privateData.hideList);
 
-        //Now set the hidelist
-        var newHidelist = new List<long> {5, 10} ;
-        await service.SetPrivateData(user.id, new UserSetPrivateData() { hideList = newHidelist });
+        //Now set the email 
+        //var newHidelist = new List<long> {5, 10} ;
+        await service.SetPrivateData(user.id, new UserSetPrivateData() { email = "somethingelse@email.com" });
 
         //And then update the user AGAIN
         user.special = "amazing";
@@ -145,8 +145,8 @@ public class CombinedUserTests : ViewUnitTestBase, IClassFixture<DbUnitTestSearc
 
         //Finally, make sure the private data is fine.
         privateData = await service.GetPrivateData(user.id);
-        Assert.Equal("email@email.com", privateData.email);
-        Assert.True(newHidelist.SequenceEqual(privateData.hideList!));
+        Assert.Equal("somethingelse@email.com", privateData.email);
+        //Assert.True(newHidelist.SequenceEqual(privateData.hideList!));
     }
 
     [Theory]

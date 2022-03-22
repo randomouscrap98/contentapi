@@ -6,7 +6,7 @@ namespace contentapi.Main;
 public class UserGetPrivateData
 {
     public string? email {get;set;}
-    public List<long>? hideList {get;set;}
+    //public List<long>? hideList {get;set;}
 }
 
 /// <summary>
