@@ -362,4 +362,55 @@ public class EventQueueTest : ViewUnitTestBase, IClassFixture<DbUnitTestSearchFi
             Assert.DoesNotContain(events.events, x => x.type == EventType.watch && x.refId == watch.id);
         }
     }
+
+    [Fact]
+    public async Task ListenAsync_UserVariable_Privacy()
+    {
+        //First, set up two listeners
+        var ourUser = await searcher.GetById<UserView>(RequestType.user, NormalUserId, true);
+        var otherUser = await searcher.GetById<UserView>(RequestType.user, SuperUserId, true);
+
+        var ourListener = queue.ListenAsync(ourUser, -1, safetySource.Token);
+        var otherListener = queue.ListenAsync(otherUser, -1, safetySource.Token);
+
+        //Now, write a variable for our user
+        var variable = new UserVariableView()
+        {
+            key = "somekey",
+            value = "trash"
+        };
+
+        var writtenVariable = await writer.WriteAsync(variable, ourUser.id);
+
+        var result = await ourListener;
+        Assert.Contains(result.events, x => x.refId == writtenVariable.id && x.userId == ourUser.id);
+        Assert.Contains(EventType.uservariable, result.data.Keys);
+        Assert.Contains("uservariable", result.data[EventType.uservariable].Keys);
+        Assert.Contains(result.data[EventType.uservariable]["uservariable"], x => (long)x["id"] == writtenVariable.id && (string)x["key"] == "somekey");
+
+        Assert.False(otherListener.Wait(10));
+        safetySource.Cancel();
+
+        try { await otherListener; }
+        catch(TaskCanceledException) {}
+        catch(OperationCanceledException) {}
+    }
+
+    [Theory]
+    [InlineData(0)]
+    [InlineData(-1)]
+    [InlineData(-23)]
+    [InlineData(null)]
+    public async Task Regression_ListenAsync_NoInstantComplete(int? id)
+    {
+        var user = new UserView() { id = NormalUserId };
+        Task<LiveData> waiter = id == null ? queue.ListenAsync(user, token : safetySource.Token) : queue.ListenAsync(user, id.Value, safetySource.Token);
+        Assert.False(waiter.Wait(10));
+
+        safetySource.Cancel();
+
+        try { await waiter; }
+        catch(TaskCanceledException) {}
+        catch(OperationCanceledException) {}
+    }
 }

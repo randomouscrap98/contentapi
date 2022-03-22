@@ -112,4 +112,46 @@ public class ShortcutsController : BaseController
             return await services.writer.DeleteAsync<VoteView>(vote.id, uid); //message used for activity and such
         });
     }
+
+    [HttpGet("uservariable/{key}")]
+    public Task<ActionResult<string>> GetUserVariable([FromRoute]string key)
+    {
+        return MatchExceptions(async () =>
+        {
+            var uid = GetUserIdStrict();
+            var variable = await shortcuts.LookupVariableByKeyAsync(uid, key);
+
+            return variable.value;
+        });
+    }
+
+    [HttpPost("uservariable/{key}")]
+    public Task<ActionResult<UserVariableView>> SetUserVariable([FromRoute]string key, [FromBody]string value)
+    {
+        return MatchExceptions(async () =>
+        {
+            RateLimit(RateUserVariable);
+
+            var uid = GetUserIdStrict();
+
+            UserVariableView variable;
+
+            try
+            {
+                //Get existing variable, set value
+                variable = await shortcuts.LookupVariableByKeyAsync(uid, key);
+                variable.value = value;
+            }
+            catch(NotFoundException)
+            {
+                //Make new variable, set value/key
+                variable = new UserVariableView() {
+                    key = key,
+                    value = value
+                };
+            }
+
+            return await services.writer.WriteAsync(variable, uid);
+        });
+    }
 }

@@ -111,6 +111,20 @@ public class CacheCheckpointTracker<T> : ICacheCheckpointTracker<T>
         //, Data = CacheAfter(thisCheckpoint, lastSeen) };
     }
 
+    /// <summary>
+    /// 
+    /// </summary>
+    /// <remarks>
+    /// This function USED to have a sort of "backdoor" to get the current checkpoint by asking for a negative 
+    /// lastSeen. This was really only useful for testing though, as you would ALSO get all the cache, which isn't
+    /// particularly fast or desirable and also, that hides the checkpoint value behind an await. We now have 
+    /// "MaximumCacheCheckpoint", which does the same thing. Strong recommendation against returning this feature
+    /// just for the sake of testing; make up a different way to reliably test this endpoint.
+    /// </remarks>
+    /// <param name="checkpointName"></param>
+    /// <param name="lastSeen"></param>
+    /// <param name="cancelToken"></param>
+    /// <returns></returns>
     public async Task<CacheCheckpointResult<T>> WaitForCheckpoint(string checkpointName, int lastSeen, CancellationToken cancelToken)
     {
         var thisCheckpoint = GetCheckpoint(checkpointName);
@@ -131,11 +145,10 @@ public class CacheCheckpointTracker<T> : ICacheCheckpointTracker<T>
                     throw new ExpiredCheckpointException($"Checkpoint {lastSeen} is too old! You will be missing cached data!");
             } 
 
-            //Easymode: done. Doesn't matter if the list is empty, we honor exactly what the checkpoint says. The caller has to decide
-            //what to do when a list is empty.
-            if(lastSeen < thisCheckpoint.Checkpoint)
+            //Must see if checkpoint even is anything before doing the easy route. If not, you CAN return an empty list for the weird
+            //special case of negatives, which I don't want.
+            if(lastSeen < thisCheckpoint.Checkpoint && thisCheckpoint.Checkpoint > 0)
                 return CacheAfter(thisCheckpoint, lastSeen);
-                //return new CacheCheckpointResult<T> { LastId = thisCheckpoint.Checkpoint, Data = CacheAfter(thisCheckpoint, lastSeen) };
 
             //Oops now we wait, there was nothing.
             thisCheckpoint.Waiters.Add(watchSem);

@@ -25,10 +25,10 @@ public class CacheCheckpointTrackerTest : UnitTestBase
     }
 
     [Fact]
-    public async Task WaitForCheckpoint_EmptyNoWait()
+    public void MaximumCacheChecpoint_Empty()
     {
-        var result = await tracker.WaitForCheckpoint("something", -1, safetySource.Token);
-        Assert.Equal(0, result.LastId);
+        var result = tracker.MaximumCacheCheckpoint("something"); //tracker.WaitForCheckpoint("something", -1, safetySource.Token);
+        Assert.Equal(0, result); //result.LastId);
     }
 
     [Fact]
