@@ -53,12 +53,11 @@ function ApiHandler(success, error, always)
 // you get back is nearly identical, just with data set to whatever you requested rather
 // than what you sent. The ID is unnecessary, but I HIGHLY ENCOURAGE you to use it: your
 // response will have the same ID you sent, so it helps you keep track of things
-function WebsocketRequest(type, data, id) //, token)
+function WebsocketRequest(type, data, id)
 {
     this.type = type;
     this.data = data;
     this.id = id;
-    //this.token = token;
 }
 
 //Due to safety, the defaults are generated in the auto websocket function call. This is
@@ -274,7 +273,7 @@ Api.prototype.HandleError = function(handler, error)
 
 //Access any endpoint in the API. "path" is appended to whatever url we're using as the base for the API, and the call 
 //is by default GET unless "postData" is set, in which case it is POST. The API uses no other verbs.
-Api.prototype.Raw = function(path, postData, handler, modifyRequest, parseData) 
+Api.prototype.Raw = function(path, postData, handler, forceMethod, modifyRequest, parseData)
 {
     var me = this;
 
@@ -284,7 +283,7 @@ Api.prototype.Raw = function(path, postData, handler, modifyRequest, parseData)
     var success = handler.success || me.default_handler.success;
 
     var request = new XMLHttpRequest();
-    var method = postData ? "POST" : "GET";
+    var method = forceMethod ? forceMethod : postData ? "POST" : "GET";
     var url = me.url + path; //Path can include query parameters if you want
 
     //This is a silly way of doing this, but to the end user, they won't really see it...
@@ -374,19 +373,19 @@ Api.prototype.Raw = function(path, postData, handler, modifyRequest, parseData)
 
 Api.prototype.Login = function(loginData, handler)
 {
-    this.Raw("user/login", loginData, handler);
+    this.Raw("user/login", loginData, handler, "POST");
 };
 
 // registerData is "RegisterParameter"
 Api.prototype.Register = function(registerData, handler)
 {
-    this.Raw("user/register", registerData, handler);
+    this.Raw("user/register", registerData, handler, "POST");
 };
 
 // email is literally just the email string
 Api.prototype.SendRegistrationEmail = function(email, handler)
 {
-    this.Raw("user/sendregistrationcode", email, handler);
+    this.Raw("user/sendregistrationcode", email, handler, "POST");
 };
 
 // To register, you actually need to call two endpoints, as the standard registration
@@ -417,7 +416,7 @@ Api.prototype.RegisterAndEmail = function(registerData, handler)
 // confirmData should be a ConfirmRegistrationParameter
 Api.prototype.ConfirmRegistration = function(confirmData, handler)
 {
-    this.Raw(`user/confirmregistration`, confirmData, handler);
+    this.Raw(`user/confirmregistration`, confirmData, handler, "POST");
 };
 
 Api.prototype.About = function(handler)
@@ -437,7 +436,7 @@ Api.prototype.AboutToken = function(handler)
 // This is your main source for all data on the website, excluding live updates.
 Api.prototype.Search = function(request, handler)
 {
-    this.Raw("request", request, handler);
+    this.Raw("request", request, handler, "POST");
 };
 
 // This is your go-to resource to see all the available search fields, types, and the 
@@ -454,7 +453,14 @@ Api.prototype.AboutSearch = function(handler)
 // "you". Writes will always fail if you're not logged in (or should, at least)
 Api.prototype.WriteType = function(type, object, handler)
 {
-    this.Raw("write/" + type.replace(/[^a-zA-Z]+/g, "").toLowerCase(), object, handler);
+    this.Raw("write/" + type.replace(/[^a-zA-Z]+/g, "").toLowerCase(), object, handler, "POST");
+};
+
+// Some types are not deleted permanently when deleted, such as content/etc. But, for all
+// intents and purposes, they are removed from the website/API anyway.
+Api.prototype.DeleteType = function(type, id, handler)
+{
+    this.Raw("delete/" + type.replace(/[^a-zA-Z]+/g, "").toLowerCase() + `/${id}`, null, handler, "POST");
 };
 
 // This is just a simplified shortcut for writing NEW comments. For updating existing 
@@ -512,32 +518,48 @@ Api.prototype.UploadFile = function(fileUploadParam, handler)
         data.set("globalPerms", "."); 
     }
 
-    this.Raw("file", data, handler);
+    this.Raw("file", data, handler, "POST");
 };
 
 Api.prototype.WatchPage = function(pid, handler)
 {
-    //Just send SOMETHING in post, it actually doesn't matter what though
-    this.Raw(`shortcuts/watch/add/${pid}`, true, handler);
+    this.Raw(`shortcuts/watch/add/${pid}`, null, handler, "POST");
 };
 
 Api.prototype.UnwatchPage = function(pid, handler)
 {
     //Just send SOMETHING in post, it actually doesn't matter what though
-    this.Raw(`shortcuts/watch/delete/${pid}`, true, handler);
+    this.Raw(`shortcuts/watch/delete/${pid}`, null, handler, "POST");
 };
 
 Api.prototype.ClearNotifications = function(pid, handler)
 {
     //Just send SOMETHING in post, it actually doesn't matter what though
-    this.Raw(`shortcuts/watch/clear/${pid}`, true, handler);
+    this.Raw(`shortcuts/watch/clear/${pid}`, null, handler, "POST");
 };
 
 Api.prototype.VoteOnPage = function(pid, vote, handler)
 {
     //I believe "vote" can be either the string or the code...
-    this.Raw(`shortcuts/vote/set/${pid}`, vote, handler);
+    this.Raw(`shortcuts/vote/set/${pid}`, vote, handler, "POST");
 };
+
+Api.prototype.GetUserVariable = function(key, handler)
+{
+    this.Raw(`shortcuts/uservariable/${key}`, null, handler);
+};
+
+Api.prototype.SetUserVariable = function(key, value, handler)
+{
+    this.Raw(`shortcuts/uservariable/${key}`, value, handler, "POST");
+};
+
+Api.prototype.DeleteUserVariable = function(key, handler)
+{
+    //Need it to be post, so send whatever data
+    this.Raw(`shortcuts/uservariable/delete/${key}`, null, handler, "POST");
+};
+
 
 //You can ALSO get modules from the request/search endpoint, however you won't
 //get the special lua data necessary to generate help data/etc. Leave name
@@ -562,7 +584,7 @@ Api.prototype.GetModuleDebugLog = function(name, handler)
 //You don't need to specify name because it's part of the module
 Api.prototype.WriteModuleByName = function(module, handler)
 {
-    this.Raw("module/byname", module, handler);
+    this.Raw("module/byname", module, handler, "POST");
 };
 
 //If you don't care about the fields, let this function pick decent defaults
@@ -576,13 +598,13 @@ Api.prototype.WriteModuleByNameEasy = function(name, code, handler)
         permissions : { "0" : "CR" }
     };
 
-    this.Raw("module/byname", module, handler);
+    this.Raw("module/byname", module, handler, "POST");
 };
 
 // EVERY module message needs a parent id to send in
 Api.prototype.WriteModuleMessage = function(module, parentId, command, handler)
 {
-    this.Raw(`module/${module}/${parentId}`, command, handler);
+    this.Raw(`module/${module}/${parentId}`, command, handler, "POST");
 };
 
 

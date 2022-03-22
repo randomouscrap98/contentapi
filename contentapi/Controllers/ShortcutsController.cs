@@ -125,6 +125,17 @@ public class ShortcutsController : BaseController
         });
     }
 
+    [HttpPost("uservariable/delete/{key}")]
+    public Task<ActionResult<UserVariableView>> DeleteUserVariable([FromRoute]string key)
+    {
+        return MatchExceptions(async () =>
+        {
+            var uid = GetUserIdStrict();
+            var variable = await shortcuts.LookupVariableByKeyAsync(uid, key);
+            return await services.writer.DeleteAsync<UserVariableView>(variable.id, uid);
+        });
+    }
+
     [HttpPost("uservariable/{key}")]
     public Task<ActionResult<UserVariableView>> SetUserVariable([FromRoute]string key, [FromBody]string value)
     {

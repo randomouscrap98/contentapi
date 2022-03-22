@@ -182,7 +182,9 @@ function SetupPagination(linkUp, linkDown, state, field)
 }
 
 
+// -----------------------------------------
 // -- The individual page setup functions --
+// -----------------------------------------
 
 function confirmregister_onload(template, state)
 {
@@ -480,6 +482,11 @@ function notifications_onload(template, state)
     }));
 }
 
+function uservariables_onload(template, state)
+{
+
+}
+
 // This function is an excellent example for auto websocket usage. This is the
 // onload function for the websocket tester page, and utilizes the basic features
 // of the auto websocket.
@@ -590,7 +597,10 @@ function websocket_onload(template, state)
     };
 }
 
+
+// ----------------------------------------------------------
 // -- Loaders, but not for pages, just for little templates--
+// ----------------------------------------------------------
 
 function page_item_onload(template, state)
 {
@@ -843,6 +853,14 @@ function t_page_watch(button, watch)
 }
 
 function t_notification_item_clear(button)
+{
+    var pid = button.getAttribute("data-pageid");
+    api.ClearNotifications(pid, new ApiHandler(d => {
+        location.reload();
+    }));
+}
+
+function t_uservariable_submit(form)
 {
     var pid = button.getAttribute("data-pageid");
     api.ClearNotifications(pid, new ApiHandler(d => {

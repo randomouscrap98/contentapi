@@ -69,6 +69,7 @@
                 <img src="" id="user-avatar">
                 <table class="describe" id="user-table"></table>
                 <button onclick="t_user_logout()">Logout</button>
+                <a href="?t=uservariables">Manage user variables</a>
                 <div id="user-update">
                     <h3>Update: <button id="user-update-toggle"></button></h3>
                     <form id="user-update-form" onsubmit="return t_user_update_submit(this)">
@@ -189,6 +190,22 @@
                     <a href="#" id="notifications-up">Older Notifications</a>
                     <a href="#" id="notifications-down">Newer Notifications</a>
                 </div>
+            </div>
+            <div id="t_uservariables" data-onload="uservariables_onload">
+                <h3>Your variables:</h3>
+                <div id="uservariables-container"></div>
+                <div id="uservariables-nav" class="nav">
+                    <a href="#" id="uservariables-up">More</a>
+                    <a href="#" id="uservariables-down">Back</a>
+                </div>
+                <form onsubmit="return t_uservariable_submit(this)">
+                    <h3>Add variable:</h3>
+                    <label for="uservariables-key">Key:</label>
+                    <input id="uservariables-key" required="">
+                    <label for="uservariables-value">Value:</label>
+                    <textarea id="uservariables-value"></textarea>
+                    <input type="submit" value="Add variable">
+                </form>
             </div>
             <div id="t_websocket" data-onload="websocket_onload">
                 <h3>Websocket tester</h3>
