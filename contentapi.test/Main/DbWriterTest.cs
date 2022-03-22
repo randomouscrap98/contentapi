@@ -1178,17 +1178,17 @@ public class DbWriterTest : ViewUnitTestBase, IClassFixture<DbUnitTestSearchFixt
         }
     }
 
-    public async Task WriteAsync_ContentUserRelationEdit<T>(Func<T, object> getEditField, Action<T, int> setEditField) where T : class, IContentUserRelatedView, new()
+    public async Task WriteAsync_ConstrictedUserEdit<T>(Func<T> makeNewItem, Func<T, object> getEditField, Action<T, int> setEditField) where T : class, IIdView, new()
     {
         //Also test to ensure the watch view auto-sets fields for us
-        var normalItem = new T() { contentId = AllAccessContentId };
-        var superItem = new T() { contentId = AllAccessContentId };
+        var normalItem = makeNewItem(); //new T() { contentId = AllAccessContentId };
+        var superItem = makeNewItem(); //new T() { contentId = AllAccessContentId };
 
         setEditField(normalItem, 0);
         setEditField(normalItem, 1);
 
-        normalItem = await writer.WriteAsync(new T() { contentId = AllAccessContentId }, NormalUserId);
-        superItem = await writer.WriteAsync(new T() { contentId = AllAccessContentId }, SuperUserId);
+        normalItem = await writer.WriteAsync(normalItem, NormalUserId);
+        superItem = await writer.WriteAsync(superItem, SuperUserId);
 
         //Both should be able to edit themselves, but not edit the other's
         setEditField(normalItem, 2);
@@ -1220,16 +1220,69 @@ public class DbWriterTest : ViewUnitTestBase, IClassFixture<DbUnitTestSearchFixt
     public async Task WriteAsync_SimpleWatchEdit()
     {
         var values = new List<long> { 222, 333, 555, 999 };
-        await WriteAsync_ContentUserRelationEdit<WatchView>(
-            x => x.lastActivityId, (x,i) => x.lastActivityId = values[i]);
+        await WriteAsync_ConstrictedUserEdit<WatchView>(
+            () => new WatchView() { contentId = AllAccessContentId }, x => x.lastActivityId, (x,i) => x.lastActivityId = values[i]);
     }
 
     [Fact]
     public async Task WriteAsync_SimpleVoteEdit()
     {
         var values = new List<VoteType> { VoteType.ok, VoteType.bad, VoteType.good, VoteType.ok };
-        await WriteAsync_ContentUserRelationEdit<VoteView>(
-            x => x.vote, (x,i) => x.vote = values[i]);
+        await WriteAsync_ConstrictedUserEdit<VoteView>(
+            () => new VoteView() { contentId = AllAccessContentId }, x => x.vote, (x,i) => x.vote = values[i]);
+    }
+
+    [Fact]
+    public async Task WriteAsync_SimpleUserVariableEdit()
+    {
+        var values = new List<string> { "a", "b", "c", "d" };
+        await WriteAsync_ConstrictedUserEdit<UserVariableView>(
+            () => new UserVariableView() { key = rng.GetAlphaSequence(5), value = rng.GetAlphaSequence(2) }, 
+            x => x.value, (x,i) => x.value = values[i]);
+    }
+
+    [Theory]
+    [InlineData(NormalUserId, "junk", "other", true)]
+    [InlineData(SuperUserId, "junk", "other", true)] 
+    [InlineData(NormalUserId, "junk", "junk", false)]
+    [InlineData(SuperUserId, "junk", "junk", false)] 
+    public async Task WriteAsync_UserVariableBasic(long uid, string firstKey, string secondKey, bool allowed)
+    {
+        //Also test to ensure the watch view auto-sets fields for us
+        var variable = new UserVariableView()
+        {
+            userId = 999, //This should get reset.
+            key = firstKey,
+            value = "whatever" 
+        };
+
+        UserVariableView writtenVariable = await writer.WriteAsync(variable, uid);
+
+        Assert.True(writtenVariable.id > 0);
+        Assert.Equal(uid, writtenVariable.userId);
+        Assert.Equal(firstKey, writtenVariable.key);
+        Assert.Equal("whatever", writtenVariable.value);
+        AssertEventMatchesBase(writtenVariable.id, UserAction.create, uid, EventType.uservariable);
+
+        //Now, try to write the second variable
+        var secondVariable = new UserVariableView()
+        {
+            key = secondKey,
+            value = "whatever" //We already test lots of unique values, now I want to see same
+        };
+
+        if(allowed)
+        {
+            writtenVariable = await writer.WriteAsync(secondVariable, uid);
+            Assert.Equal(uid, writtenVariable.userId);
+            Assert.Equal(secondKey, writtenVariable.key);
+            Assert.Equal("whatever", writtenVariable.value);
+            AssertEventMatchesBase(writtenVariable.id, UserAction.create, uid, EventType.uservariable);
+        }
+        else
+        {
+            await Assert.ThrowsAnyAsync<RequestException>(() => writer.WriteAsync(secondVariable, uid));
+        }
     }
 
     //A bad bug where permissions would take on whoever was WRITING, very bad!

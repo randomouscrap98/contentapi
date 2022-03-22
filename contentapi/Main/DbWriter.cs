@@ -39,7 +39,8 @@ public class DbWriter : IDbWriter
 
     public List<RequestType> TrueDeletes = new List<RequestType> {
         RequestType.watch,
-        RequestType.vote
+        RequestType.vote,
+        RequestType.uservariable
     };
 
     public DbWriter(ILogger<DbWriter> logger, IGenericSearch searcher, ContentApiDbConnection connection,
@@ -222,6 +223,33 @@ public class DbWriter : IDbWriter
         {
             await ValidateContentUserRelatedView<VoteView>((view as VoteView)!, existing as VoteView, requester, action);
         }
+        else if(view is UserVariableView)
+        {
+            var uvView = (view as UserVariableView)!;
+            var exView = existing as UserVariableView;
+
+            if(action == UserAction.create)
+            {
+                //Also, ensure we're not adding a second watch for the same content
+                var dupeVariable = await searcher.SearchSingleTypeUnrestricted<T>(new SearchRequest()
+                {
+                    type = "uservariable",
+                    fields = "*",
+                    query = "userId = @me and key = @key"
+                }, new Dictionary<string, object> {
+                    { "me", requester.id },
+                    { "key", uvView.key }
+                });
+
+                if(dupeVariable.Count > 0)
+                    throw new RequestException($"Duplicate variable name {uvView.key}!");
+            }
+            else
+            {
+                if(exView?.userId != requester.id)
+                    throw new ForbiddenException($"You can only modify your own variables!");
+            }
+        }
         else 
         {
             //Be SAFER than sorry! All views when created are by default NOT writable!
@@ -345,6 +373,11 @@ public class DbWriter : IDbWriter
             id = await DatabaseWork_ContentUserRelated<VoteView, Db.ContentVote>(
                 new DbWorkUnit<VoteView>((view as VoteView)!, requester, typeInfo, action, existing as VoteView, message),
                 EventType.none);
+        }
+        else if (view is UserVariableView)
+        {
+            id = await DatabaseWork_UserVariable(
+                new DbWorkUnit<UserVariableView>((view as UserVariableView)!, requester, typeInfo, action, existing as UserVariableView, message));
         }
         else
         {
@@ -704,23 +737,15 @@ public class DbWriter : IDbWriter
         //Always need an ID to link to, so we actually need to create the content first and get the ID.
         using(var tsx = dbcon.BeginTransaction())
         {
+            //This doesn't need a history, so write it as-is
             if(work.action == UserAction.create)
-            {
-                //This doesn't need a history, so write it as-is
                 work.view.id = await dbcon.InsertAsync(dbItem, tsx);
-            }
             else if(work.action == UserAction.update)
-            {
                 await dbcon.UpdateAsync(dbItem, tsx);
-            }
             else if(work.action == UserAction.delete)
-            {
                 await dbcon.DeleteAsync(dbItem, tsx);
-            }
             else 
-            {
                 throw new InvalidOperationException($"Can't perform action {work.action} in DatabaseWork_ContentUserRelated!");
-            }
 
             tsx.Commit();
 
@@ -730,6 +755,43 @@ public class DbWriter : IDbWriter
             //No admin log for contentuserrelated, so have to construct the message ourselves
             var actionWord = work.action == UserAction.create ? "added" : work.action == UserAction.update ? "modified" : "deleted";
             logger.LogDebug($"User {work.requester.id} {actionWord} {type} for {work.view.contentId}"); 
+
+            //NOTE: this is the newly computed id, we place it inside the view for safekeeping 
+            return work.view.id;
+        }
+    }
+
+    public async Task<long> DatabaseWork_UserVariable(DbWorkUnit<UserVariableView> work)
+    {
+        if(!work.typeInfo.type.IsAssignableTo(typeof(UserVariableView)))
+            throw new InvalidOperationException($"TypeInfo given in DatabaseWork was for type '{work.typeInfo.type}', not '{typeof(UserVariableView)}'");
+
+        //NOTE: As usual, validation is performed outside this function!
+        var dbItem = new UserVariable();
+        var unmapped = MapSimpleViewFields(work, dbItem); 
+
+        if(unmapped.Count > 0)
+            logger.LogWarning($"Fields '{string.Join(",", unmapped)}' not mapped in uservariable!");
+
+        //Need to update the edit history with the previous comment!
+        //Always need an ID to link to, so we actually need to create the content first and get the ID.
+        using(var tsx = dbcon.BeginTransaction())
+        {
+            //This doesn't need a history, so write it as-is
+            if(work.action == UserAction.create)
+                work.view.id = await dbcon.InsertAsync(dbItem, tsx);
+            else if(work.action == UserAction.update)
+                await dbcon.UpdateAsync(dbItem, tsx);
+            else if(work.action == UserAction.delete)
+                await dbcon.DeleteAsync(dbItem, tsx);
+            else 
+                throw new InvalidOperationException($"Can't perform action {work.action} in DatabaseWork_UserVariable!");
+
+            tsx.Commit();
+
+            await eventQueue.AddEventAsync(new LiveEvent(work.requester.id, work.action, EventType.uservariable, work.view.id));
+
+            logger.LogDebug($"User {work.requester.id} did '{work.action}' on variable {work.view.key}"); 
 
             //NOTE: this is the newly computed id, we place it inside the view for safekeeping 
             return work.view.id;

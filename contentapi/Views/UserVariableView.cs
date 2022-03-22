@@ -25,7 +25,7 @@ public class UserVariableView : IIdView
 
     [FieldSelect]
     [Writable(WriteRule.Preserve, WriteRule.Increment)]
-    public long editCount { get; set; }
+    public int editCount { get; set; }
 
     [FieldSelect]
     [Writable(WriteRule.User, WriteRule.Preserve)]
