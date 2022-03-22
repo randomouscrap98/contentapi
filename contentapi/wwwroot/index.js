@@ -484,7 +484,18 @@ function notifications_onload(template, state)
 
 function uservariables_onload(template, state)
 {
+    var container = template.querySelector("#uservariables-container");
+    SetupPagination(template.querySelector("#uservariables-up"), template.querySelector("#uservariables-down"), state, "uvp");
 
+    api.Search_AllByType("uservariable", "key,value,userId", "key", SEARCHRESULTSPERPAGE, state.uvp, new ApiHandler(d =>
+    {
+        console.log(d.result.data);
+        d.result.data.uservariable.forEach(x =>
+        {
+            var item = LoadTemplate(`uservariable_item`, x);
+            container.appendChild(item);
+        });
+    }));
 }
 
 // This function is an excellent example for auto websocket usage. This is the
@@ -699,6 +710,25 @@ function notification_item_onload(template, state)
     activitycountelem.textContent = state.activityNotifications;
 }
 
+function uservariable_item_onload(template, state)
+{
+    var keyelem = template.querySelector("[data-key]");
+    var valueelem = template.querySelector("[data-value]");
+    var editelem = template.querySelector("[data-edit]");
+    var deleteelem = template.querySelector("[data-delete]");
+
+    keyelem.textContent = state.key;
+    valueelem.value = state.value;
+
+    editelem.onclick = function() {
+        api.SetUserVariable(state.key, valueelem.value, new ApiHandler(d => { location.reload(); }));
+    };
+
+    deleteelem.onclick = function() {
+        api.DeleteUserVariable(state.key, new ApiHandler(d => { location.reload(); }));
+    };
+}
+
 function page_editor_onload(template, state)
 {
     //state is going to be the page IN the format from the api itself.
@@ -862,8 +892,11 @@ function t_notification_item_clear(button)
 
 function t_uservariable_submit(form)
 {
-    var pid = button.getAttribute("data-pageid");
-    api.ClearNotifications(pid, new ApiHandler(d => {
+    var key = form.querySelector("#uservariables-key");
+    var value = form.querySelector("#uservariables-value");
+    api.SetUserVariable(key.value, value.value, new ApiHandler(d => {
         location.reload();
     }));
+
+    return false;
 }

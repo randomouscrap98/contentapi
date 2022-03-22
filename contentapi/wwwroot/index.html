@@ -251,6 +251,12 @@
                     <button data-clear data-pageid="" onclick="return t_notification_item_clear(this)">Clear notifications</button>
                 </div>
             </div>
+            <div id="uservariable_item" data-onload="uservariable_item_onload">
+                <h3 data-key></h3>
+                <textarea data-value></textarea>
+                <button data-edit>Edit</button>
+                <button data-delete>Remove variable</button>
+            </div>
             <div id="page_editor" data-onload="page_editor_onload">
                 <form onsubmit="return t_page_editor_submit(this)">
                     <input type="hidden" id="page-editor-id" value="0">
