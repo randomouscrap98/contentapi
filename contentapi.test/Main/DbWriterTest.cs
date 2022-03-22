@@ -25,6 +25,7 @@ public class DbWriterTest : ViewUnitTestBase, IClassFixture<DbUnitTestSearchFixt
     protected DbWriterConfig config;
     protected Random random = new Random();
     protected RandomGenerator rng;
+    protected IViewTypeInfoService typeInfoService;
 
 
     public DbWriterTest(DbUnitTestSearchFixture fixture)
@@ -34,8 +35,9 @@ public class DbWriterTest : ViewUnitTestBase, IClassFixture<DbUnitTestSearchFixt
         this.events= new FakeEventQueue();
         this.config = new DbWriterConfig();
         this.rng = new RandomGenerator();
+        this.typeInfoService = fixture.GetService<IViewTypeInfoService>();
         writer = new DbWriter(fixture.GetService<ILogger<DbWriter>>(), fixture.GetService<IGenericSearch>(),
-            fixture.GetService<Db.ContentApiDbConnection>(), fixture.GetService<IViewTypeInfoService>(), fixture.GetService<IMapper>(),
+            fixture.GetService<Db.ContentApiDbConnection>(), typeInfoService, fixture.GetService<IMapper>(),
             fixture.GetService<Db.History.IHistoryConverter>(), fixture.GetService<IPermissionService>(),
             events, config, rng);
         searcher = fixture.GetService<IGenericSearch>();
@@ -1178,69 +1180,6 @@ public class DbWriterTest : ViewUnitTestBase, IClassFixture<DbUnitTestSearchFixt
         }
     }
 
-    public async Task WriteAsync_ConstrictedUserEdit<T>(Func<T> makeNewItem, Func<T, object> getEditField, Action<T, int> setEditField) where T : class, IIdView, new()
-    {
-        //Also test to ensure the watch view auto-sets fields for us
-        var normalItem = makeNewItem(); //new T() { contentId = AllAccessContentId };
-        var superItem = makeNewItem(); //new T() { contentId = AllAccessContentId };
-
-        setEditField(normalItem, 0);
-        setEditField(normalItem, 1);
-
-        normalItem = await writer.WriteAsync(normalItem, NormalUserId);
-        superItem = await writer.WriteAsync(superItem, SuperUserId);
-
-        //Both should be able to edit themselves, but not edit the other's
-        setEditField(normalItem, 2);
-        setEditField(normalItem, 3);
-        //normalItem.lastActivityId = 555;
-        //superItem.lastActivityId = 999;
-
-        var normalItemUpdated = await writer.WriteAsync(normalItem, NormalUserId);
-        var superItemUpdated = await writer.WriteAsync(superItem, SuperUserId);
-
-        Assert.Equal(getEditField(normalItem), getEditField(normalItemUpdated));
-        Assert.Equal(getEditField(superItem), getEditField(superItemUpdated));
-        Assert.Equal(normalItem.id, normalItemUpdated.id);
-        Assert.Equal(superItem.id, superItemUpdated.id);
-
-        await Assert.ThrowsAnyAsync<ForbiddenException>(() => writer.WriteAsync(normalItemUpdated, SuperUserId));
-        await Assert.ThrowsAnyAsync<ForbiddenException>(() => writer.WriteAsync(superItemUpdated, NormalUserId));
-
-        //Neither should be able to delete the others too
-        await Assert.ThrowsAnyAsync<ForbiddenException>(() => writer.DeleteAsync<T>(normalItemUpdated.id, SuperUserId));
-        await Assert.ThrowsAnyAsync<ForbiddenException>(() => writer.DeleteAsync<T>(superItemUpdated.id, NormalUserId));
-
-        //But these should be fine
-        var normalWatchDeleted = writer.DeleteAsync<T>(normalItemUpdated.id, NormalUserId);
-        var superWatchDeleted = writer.DeleteAsync<T>(superItemUpdated.id, SuperUserId);
-    }
-
-    [Fact]
-    public async Task WriteAsync_SimpleWatchEdit()
-    {
-        var values = new List<long> { 222, 333, 555, 999 };
-        await WriteAsync_ConstrictedUserEdit<WatchView>(
-            () => new WatchView() { contentId = AllAccessContentId }, x => x.lastActivityId, (x,i) => x.lastActivityId = values[i]);
-    }
-
-    [Fact]
-    public async Task WriteAsync_SimpleVoteEdit()
-    {
-        var values = new List<VoteType> { VoteType.ok, VoteType.bad, VoteType.good, VoteType.ok };
-        await WriteAsync_ConstrictedUserEdit<VoteView>(
-            () => new VoteView() { contentId = AllAccessContentId }, x => x.vote, (x,i) => x.vote = values[i]);
-    }
-
-    [Fact]
-    public async Task WriteAsync_SimpleUserVariableEdit()
-    {
-        var values = new List<string> { "a", "b", "c", "d" };
-        await WriteAsync_ConstrictedUserEdit<UserVariableView>(
-            () => new UserVariableView() { key = rng.GetAlphaSequence(5), value = rng.GetAlphaSequence(2) }, 
-            x => x.value, (x,i) => x.value = values[i]);
-    }
-
     [Theory]
     [InlineData(NormalUserId, "junk", "other", true)]
     [InlineData(SuperUserId, "junk", "other", true)] 
@@ -1283,6 +1222,74 @@ public class DbWriterTest : ViewUnitTestBase, IClassFixture<DbUnitTestSearchFixt
         {
             await Assert.ThrowsAnyAsync<RequestException>(() => writer.WriteAsync(secondVariable, uid));
         }
+    }
+
+    public async Task WriteAsync_ConstrictedUserEdit<T>(Func<T> makeNewItem, Func<T, object> getEditField, Action<T, int> setEditField) where T : class, IIdView, new()
+    {
+        //Also test to ensure the watch view auto-sets fields for us
+        var normalItem = makeNewItem(); 
+        var superItem = makeNewItem(); 
+
+        var typeInfo = typeInfoService.GetTypeInfo<T>();
+        var requestType = typeInfo.requestType ?? throw new InvalidOperationException("No request type in test!");
+
+        setEditField(normalItem, 0);
+        setEditField(normalItem, 1);
+
+        normalItem = await writer.WriteAsync(normalItem, NormalUserId);
+        superItem = await writer.WriteAsync(superItem, SuperUserId);
+
+        //Both should be able to edit themselves, but not edit the other's
+        setEditField(normalItem, 2);
+        setEditField(normalItem, 3);
+
+        var normalItemUpdated = await writer.WriteAsync(normalItem, NormalUserId);
+        var superItemUpdated = await writer.WriteAsync(superItem, SuperUserId);
+
+        Assert.Equal(getEditField(normalItem), getEditField(normalItemUpdated));
+        Assert.Equal(getEditField(superItem), getEditField(superItemUpdated));
+        Assert.Equal(normalItem.id, normalItemUpdated.id);
+        Assert.Equal(superItem.id, superItemUpdated.id);
+
+        await Assert.ThrowsAnyAsync<ForbiddenException>(() => writer.WriteAsync(normalItemUpdated, SuperUserId));
+        await Assert.ThrowsAnyAsync<ForbiddenException>(() => writer.WriteAsync(superItemUpdated, NormalUserId));
+
+        //Neither should be able to delete the others too
+        await Assert.ThrowsAnyAsync<ForbiddenException>(() => writer.DeleteAsync<T>(normalItemUpdated.id, SuperUserId));
+        await Assert.ThrowsAnyAsync<ForbiddenException>(() => writer.DeleteAsync<T>(superItemUpdated.id, NormalUserId));
+
+        //But these should be fine
+        var normalWatchDeleted = writer.DeleteAsync<T>(normalItemUpdated.id, NormalUserId);
+        var superWatchDeleted = writer.DeleteAsync<T>(superItemUpdated.id, SuperUserId);
+
+        //As a nice final test, ensure they're actually deleted
+        await Assert.ThrowsAnyAsync<NotFoundException>(() => searcher.GetById<T>(requestType, normalItemUpdated.id, true));
+        await Assert.ThrowsAnyAsync<NotFoundException>(() => searcher.GetById<T>(requestType, superItemUpdated.id, true));
+    }
+
+    [Fact]
+    public async Task WriteAsync_SimpleWatchEdit()
+    {
+        var values = new List<long> { 222, 333, 555, 999 };
+        await WriteAsync_ConstrictedUserEdit<WatchView>(
+            () => new WatchView() { contentId = AllAccessContentId }, x => x.lastActivityId, (x,i) => x.lastActivityId = values[i]);
+    }
+
+    [Fact]
+    public async Task WriteAsync_SimpleVoteEdit()
+    {
+        var values = new List<VoteType> { VoteType.ok, VoteType.bad, VoteType.good, VoteType.ok };
+        await WriteAsync_ConstrictedUserEdit<VoteView>(
+            () => new VoteView() { contentId = AllAccessContentId }, x => x.vote, (x,i) => x.vote = values[i]);
+    }
+
+    [Fact]
+    public async Task WriteAsync_SimpleUserVariableEdit()
+    {
+        var values = new List<string> { "a", "b", "c", "d" };
+        await WriteAsync_ConstrictedUserEdit<UserVariableView>(
+            () => new UserVariableView() { key = rng.GetAlphaSequence(5), value = rng.GetAlphaSequence(2) }, 
+            x => x.value, (x,i) => x.value = values[i]);
     }
 
     //A bad bug where permissions would take on whoever was WRITING, very bad!
