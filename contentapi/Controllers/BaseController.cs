@@ -68,6 +68,7 @@ public class BaseController : Controller
     public const string RateInteract = "interact";
     public const string RateFile = "file";
     public const string RateModule = "module";
+    public const string RateUserVariable = "uservariable";
 
     protected long? GetUserId() => services.authService.GetUserId(User.Claims);
     protected bool IsUserLoggedIn() => GetUserId() != null;

@@ -82,4 +82,14 @@ public class WriteController : BaseController
             return await writer.WriteAsync(vote, GetUserIdStrict()); //message used for activity and such
         });
     }
+
+    [HttpPost("uservariable")]
+    public Task<ActionResult<UserVariableView>> WriteUserVariableAsync([FromBody]UserVariableView variable)
+    {
+        return MatchExceptions(async () => 
+        {
+            RateLimit(RateUserVariable);
+            return await writer.WriteAsync(variable, GetUserIdStrict()); //message used for activity and such
+        });
+    }
 }

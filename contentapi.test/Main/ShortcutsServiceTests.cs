@@ -71,4 +71,48 @@ public class ShortcutsServiceTests : ViewUnitTestBase, IClassFixture<DbUnitTestS
         Assert.Equal(watch.lastCommentId, lookupWatch.lastCommentId);
         Assert.Equal(watch.lastActivityId, lookupWatch.lastActivityId);
     }
+
+    [Theory]
+    [InlineData(NormalUserId, AllAccessContentId)]
+    [InlineData(SuperUserId, AllAccessContentId)]
+    public async Task LookupVoteByContentId_Simple(long uid, long cid)
+    {
+        //Shouldn't exist at first... we hope?
+        await Assert.ThrowsAnyAsync<NotFoundException>(() => service.LookupVoteByContentIdAsync(uid, cid));
+
+        var vote =  new VoteView() { contentId = cid, vote = Db.VoteType.ok };
+        var writtenVote = await writer.WriteAsync(vote, uid);
+
+        Assert.Equal(vote.vote, writtenVote.vote);
+        Assert.Equal(vote.contentId, writtenVote.contentId);
+
+        //now go look it up
+        var lookupVote = await service.LookupVoteByContentIdAsync(uid, cid);
+
+        Assert.Equal(uid, lookupVote.userId);
+        Assert.Equal(cid, lookupVote.contentId);
+        Assert.Equal(vote.vote, lookupVote.vote);
+    }
+
+    [Theory]
+    [InlineData(NormalUserId, "whateverkey")]
+    [InlineData(SuperUserId, "whateverkey")]
+    public async Task LookupVariableByKey_Simple(long uid, string key)
+    {
+        //Shouldn't exist at first... we hope?
+        await Assert.ThrowsAnyAsync<NotFoundException>(() => service.LookupVariableByKeyAsync(uid, key));
+
+        var variable = new UserVariableView() { key = key, value = "heck" };
+        var writtenVariable = await writer.WriteAsync(variable, uid);
+
+        Assert.Equal(variable.value, writtenVariable.value);
+        Assert.Equal(variable.key, writtenVariable.key);
+
+        //now go look it up
+        var lookupVariable = await service.LookupVariableByKeyAsync(uid, key);
+
+        Assert.Equal(uid, lookupVariable.userId);
+        Assert.Equal(key, lookupVariable.key);
+        Assert.Equal(writtenVariable.value, lookupVariable.value);
+    }
 }

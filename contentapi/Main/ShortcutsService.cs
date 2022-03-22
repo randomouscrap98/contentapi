@@ -77,4 +77,22 @@ public class ShortcutsService
         
         return votes.First();
     }
+
+    public async Task<UserVariableView> LookupVariableByKeyAsync(long uid, string key)
+    {
+        var variables = await search.SearchSingleType<UserVariableView>(uid, new SearchRequest()
+        {
+            type = "uservariable",
+            fields = "*",
+            query = "userId = @me and key = @key"
+        }, new Dictionary<string, object> {
+            { "me", uid },
+            { "key", key }
+        });
+
+        if (variables.Count == 0)
+            throw new NotFoundException($"Variable {key} not found!");
+        
+        return variables.First();
+    }
 }
