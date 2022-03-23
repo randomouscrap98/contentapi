@@ -17,6 +17,7 @@ public class LiveController : BaseController
     protected ILiveEventQueue eventQueue;
     protected IUserStatusTracker userStatuses;
     protected IPermissionService permissionService;
+    protected IHostApplicationLifetime appLifetime;
     private static int nextId = 0;
     protected int trackerId = Interlocked.Increment(ref nextId);
 
@@ -29,11 +30,12 @@ public class LiveController : BaseController
     }
 
     public LiveController(BaseControllerServices services, ILiveEventQueue eventQueue, IUserStatusTracker userStatuses,
-        IPermissionService permissionService) : base(services) 
+        IPermissionService permissionService, IHostApplicationLifetime appLifetime) : base(services) 
     { 
         this.eventQueue = eventQueue;
         this.userStatuses = userStatuses;
         this.permissionService = permissionService;
+        this.appLifetime = appLifetime;
     }
 
     protected long ValidateToken(string token)
@@ -198,12 +200,12 @@ public class LiveController : BaseController
 
     protected async Task SendLoop(CancellationToken token, WebSocket socket, BufferBlock<object> sendQueue)
     {
+        //The only exception this will throw is if they disconnect or something. On disconnect, we'll
+        //exit the loop and most likely throw some ClosedException
         while(!token.IsCancellationRequested)
         {
             var sendItem = await sendQueue.ReceiveAsync(token);
             await socket.SendObjectAsync(sendItem, WebSocketMessageType.Text, token);
-            //The only exception this will throw is if they disconnect or something. On disconnect, we'll
-            //exit the loop and 
         }
     }
 
@@ -215,115 +217,112 @@ public class LiveController : BaseController
             services.logger.LogDebug($"ws METHOD: {HttpContext.Request.Method}, HEADERS: " +
                 JsonConvert.SerializeObject(HttpContext.Request.Headers,
                     Formatting.None, new JsonSerializerSettings() { ReferenceLoopHandling = ReferenceLoopHandling.Ignore }));
+
+            if (!HttpContext.WebSockets.IsWebSocketRequest)
+                return BadRequest("You must send a websocket request to this endpoint!");
             
-            bool completedNormally = false;
+            //None of these will throw exceptions that we can match anyway, so they'll bubble up accordingly...
+            //well that might not be entirely true if we're returning 500 errors specifically but... change it if you need.
+            using var cancelSource = new CancellationTokenSource();
+            using var dualCancel = CancellationTokenSource.CreateLinkedTokenSource(cancelSource.Token, appLifetime.ApplicationStopping, appLifetime.ApplicationStopped);
+            var sendQueue = new BufferBlock<object>();
+            List<Task> runningTasks = new List<Task>();
+            //Task sendTask = Task.CompletedTask;
+            long userId = 0;
+            int realLastId = lastId == null ? eventQueue.GetCurrentLastId() : lastId.Value;
 
-            var result = await MatchExceptions(async () =>
+            services.logger.LogInformation($"Websocket starting for {userId}");
+            using var socket = await HttpContext.WebSockets.AcceptWebSocketAsync();
+
+            try
             {
-                //I have NO idea if returning an action from a websocket request makes any sense, or 
-                //if the middleware gets completely wrecked or something!
-                if (!HttpContext.WebSockets.IsWebSocketRequest)
-                    throw new RequestException("You must send a websocket request to this endpoint!");
+                //ALWAYS add the sendloop first so we can process outgoing messages
+                runningTasks.Add(SendLoop(dualCancel.Token, socket, sendQueue));
 
-                services.logger.LogInformation("ws Websocket starting!");
+                //You want to keep this validation token thing inside the main exception handler, as ANY of the 
+                //below tasks could throw the token validation exception!
+                userId = ValidateToken(token);
 
-                using var socket = await HttpContext.WebSockets.AcceptWebSocketAsync();
-                using var cancelSource = new CancellationTokenSource();
-                var sendQueue = new BufferBlock<object>();
-                List<Task> runningTasks = new List<Task>();
-
-                try
+                //ALWAYS send the lastId message, it's basically our "this is the websocket and you're connected"
+                var response = new WebSocketResponse()
                 {
-                    var userId = ValidateToken(token);
-                    int realLastId;
+                    type = "lastId",
+                    data = realLastId,
+                    requestUserId = userId
+                };
 
-                    if (lastId == null)
-                        realLastId = eventQueue.GetCurrentLastId();
-                    else
-                        realLastId = lastId.Value;
+                sendQueue.Post(response);
 
-                    //ALWAYS send the lastId message, it's basically our "this is the websocket and you're connected"
-                    var response = new WebSocketResponse()
-                    {
-                        type = "lastId",
-                        data = realLastId,
-                        requestUserId = userId
-                    };
+                if(!currentListeners.TryAdd(trackerId, new WebsocketListenerData() { userId = userId, sendQueue = sendQueue }))
+                    throw new InvalidOperationException("INTERNAL ERROR: couldn't add you to the listener array!");
 
-                    sendQueue.Post(response);
+                //Can send and receive at the same time, but CAN'T send/receive multiple at the same time.
+                runningTasks.Add(ReceiveLoop(dualCancel.Token, socket, sendQueue, token));
+                runningTasks.Add(ListenLoop(dualCancel.Token, realLastId, sendQueue, token));
 
-                    if(!currentListeners.TryAdd(trackerId, new WebsocketListenerData() { userId = userId, sendQueue = sendQueue }))
-                        throw new InvalidOperationException("INTERNAL ERROR: couldn't add you to the listener array!");
+                var completedTask = await Task.WhenAny(runningTasks);
+                runningTasks.Remove(completedTask);
+                await completedTask; //To throw the exception, if there is one
+            }
+            catch(OperationCanceledException ex)
+            {
+                services.logger.LogDebug($"Websocket was cancelled by system, we're probably shutting down: {ex.Message}");
 
-                    //Can send and receive at the same time, but CAN'T send/receive multiple at the same time.
-                    runningTasks.Add(ReceiveLoop(cancelSource.Token, socket, sendQueue, token));
-                    runningTasks.Add(ListenLoop(cancelSource.Token, realLastId, sendQueue, token));
-                    runningTasks.Add(SendLoop(cancelSource.Token, socket, sendQueue));
-
-                    var completedTask = await Task.WhenAny(runningTasks); //receiveTask, sendTask, listenTask);
-                    runningTasks.Remove(completedTask);
-                    await completedTask; //To throw the exception
-                }
-                catch (Exception ex)
+                // ALL should output an operation cancel exception but 
+                // I'm ASSUMING that this will specifically not exit until they're ALL done...
+                try { await Task.WhenAll(runningTasks); }
+                catch (OperationCanceledException) { } //Fine
+                catch (Exception exi) { services.logger.LogError($"CRITICAL: EXCEPTION THROWN FROM CANCELED WEBSOCKET WAS UNEXPECTED TYPE: {exi}"); }
+                finally { runningTasks.Clear(); }
+            }
+            catch(TokenException ex)
+            {
+                //Note: it is OK to use sendQueue even if the sender loop isn't started, because we dump the
+                //remaining queue anyway in the finalizer
+                services.logger.LogError($"Token exception in websocket: {ex}");
+                sendQueue.Post(new WebSocketResponse() { type = "badtoken", error = ex.Message });
+            }
+            catch(Utilities.ClosedException ex)
+            {
+                services.logger.LogDebug($"User {userId} closed websocket on their end, this is normal: {ex.Message}");
+            }
+            //ALl other unhandled exceptions
+            catch (Exception ex)
+            {
+                services.logger.LogError("Unhandled dxception in websocket: " + ex.ToString());
+                sendQueue.Post(new WebSocketResponse() { type = "unexpected", error = $"Unhandled exception: {ex}" });
+            }
+            finally
+            {
+                if(runningTasks.Count > 0)
                 {
-                    services.logger.LogError("Exception in websocket: " + ex.ToString());
+                    //Cause the cancel source to close naturally after 2 seconds, giving us enough time to send
+                    //out remaining messages, but also allowing us to close immediately if everything was already completed
+                    //(because we wait on the tasks themselves, which could complete earlier than the cancel)
+                    cancelSource.CancelAfter(2000);
 
-                    //Yes, the websocket COULD close after this check, but it still saves us a LOT of hassle to skip the
-                    //common cases of "the websocket is actually closed from the exception"
-                    var errorResponse = new WebSocketResponse()
-                    {
-                        type = ex is TokenException ? "badtoken" : "unexpected",
-                        error = ex is TokenException ? ex.Message : $"Unhandled exception: {ex}"
-                    };
-
-                    //If we HAVE the tasks, then send it on the queue to ensure thread safety. Otherwise, send it directly
-                    if(runningTasks.Count > 0)
-                        sendQueue.Post(errorResponse);
-                    else
-                        await socket.SendObjectAsync(errorResponse);
-
-                    //Give it enough time, it's not fully necessary to close immediately... maybe
-                    await Task.Delay(2000);
-
-                    //Do NOT close with error! We want to reserve websocket errors for network errors and whatever. If 
-                    //the SYSTEM encounters an error, we will tell you about it!
-                    completedNormally = true;
-                    await socket.CloseAsync(WebSocketCloseStatus.NormalClosure, ex.Message, CancellationToken.None);
+                    try { await Task.WhenAll(runningTasks); }
+                    catch(ClosedException ex) { services.logger.LogDebug($"Client closed connection manually, this is normal!: {ex.Message}"); }
+                    catch(OperationCanceledException ex) { services.logger.LogDebug($"Websocket task cancelled, this is normal: {ex.Message}"); }
+                    catch(Exception ex) { services.logger.LogError($"WEBSOCKET CRITICAL: UNHANDLED EXCEPTION DURING CANCEL: {ex}"); }
                 }
-                finally
-                {
-                    if(runningTasks.Count > 0)
-                    {
-                        if(!currentListeners.TryRemove(trackerId, out _))
-                            services.logger.LogWarning($"Couldn't remove listener {trackerId}, this could be a serious error!");
 
-                        //Clean up the tasks. Also, cancelling SHOULD (I believe) close the websocket
-                        cancelSource.Cancel();
-                        completedNormally = true;
+                if(currentListeners.ContainsKey(trackerId) && !currentListeners.TryRemove(trackerId, out _))
+                    services.logger.LogDebug($"Couldn't remove listener {trackerId}, this could be a serious error!");
 
-                        try
-                        {
-                            await Task.WhenAll(runningTasks);
-                        }
-                        catch(ClosedException)
-                        {
-                            services.logger.LogDebug($"Client closed connection manually, this is normal!");
-                        }
-                    }
-                }
+                //This won't catch errors in every case but do it anyway
+                if(socket.State == WebSocketState.Open)
+                    await socket.CloseAsync(WebSocketCloseStatus.NormalClosure, "Force closing due to end of task", dualCancel.Token);
+            }
                 
-                return "Socket closed on server successfully";
-            });
-
-            if(completedNormally)
-                return new EmptyResult();
-            else
-                return result;
+            //Just return an empty result if we get all the way to the end. This shouldn't happen but...
+            return new EmptyResult();
         }
         finally
         {
             //This is SO IMPORTANT that I want to do it way out here!
             await RemoveStatusesByTrackerAsync();
         }
+
     }
 }
