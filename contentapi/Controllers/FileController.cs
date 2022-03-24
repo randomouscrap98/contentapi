@@ -180,10 +180,11 @@ public class FileController : BaseController
 
          try
          {
-            dynamic meta = new {
-               size = imageByteCount, 
-               width = width, 
-               height = height, 
+            var meta = new Dictionary<string, object> ()
+            {
+               { "size", imageByteCount },
+               { "width", width },
+               { "height", height }
             };
 
             //OK the quantization step. This SHOULD modify the view for us!
@@ -191,7 +192,7 @@ public class FileController : BaseController
                trueQuantize = await TryQuantize(model.quantize, newView, tempLocation);
             
             if(trueQuantize > 0)
-               meta.quantize = trueQuantize;
+               meta["quantize"] = trueQuantize;
 
             //We now have the metadata
             newView.meta = JsonConvert.SerializeObject(meta);
