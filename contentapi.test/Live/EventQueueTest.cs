@@ -413,4 +413,22 @@ public class EventQueueTest : ViewUnitTestBase, IClassFixture<DbUnitTestSearchFi
         catch(TaskCanceledException) {}
         catch(OperationCanceledException) {}
     }
+
+    [Fact]
+    public async Task Regression_ListenAsync_UidsInTextMessage()
+    {
+        var message = GetNewCommentView(AllAccessContentId);
+        message.text = $"%{(int)UserVariations.Special + 1}% is not %{(int)UserVariations.Special + 2}%'s friend";
+        var writtenMessage = await writer.WriteAsync(message, NormalUserId);
+
+        //And now, the event should be there AND the data should include those two users
+        var eventData = await queue.ListenAsync(new UserView() { id = NormalUserId }, 0, safetySource.Token);
+
+        Assert.Contains(eventData.events, x => x.refId == writtenMessage.id && x.action == UserAction.create);
+        Assert.Contains(EventType.message, eventData.data.Keys);
+        Assert.Contains("user", eventData.data[EventType.message].Keys);
+
+        Assert.Contains(eventData.data[EventType.message]["user"], x => (long)x["id"] == (int)UserVariations.Special + 1);
+        Assert.Contains(eventData.data[EventType.message]["user"], x => (long)x["id"] == (int)UserVariations.Special + 2);
+    }
 }

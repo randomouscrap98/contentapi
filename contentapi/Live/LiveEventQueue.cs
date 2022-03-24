@@ -243,7 +243,7 @@ public class LiveEventQueue : ILiveEventQueue
             {
                 type = RequestType.user.ToString(),
                 fields = "*",
-                query = "id in @content.createUserId or id in @message.createUserId or id in @message.editUserId"
+                query = "id in @content.createUserId or id in @message.createUserId or id in @message.editUserId or id in @message.uidsInText"
             });
         }
         else if(first.type == EventType.activity)

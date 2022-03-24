@@ -289,7 +289,7 @@ public class LiveController : BaseController
             //ALl other unhandled exceptions
             catch (Exception ex)
             {
-                services.logger.LogError("Unhandled dxception in websocket: " + ex.ToString());
+                services.logger.LogError("Unhandled exception in websocket: " + ex.ToString());
                 sendQueue.Post(new WebSocketResponse() { type = "unexpected", error = $"Unhandled exception: {ex}" });
             }
             finally
