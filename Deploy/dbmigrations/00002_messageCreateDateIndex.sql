@@ -1,0 +1,1 @@
+create index if not exists idx_message_createDate on messages(createDate, deleted);

@@ -909,6 +909,52 @@ Api.prototype.GetModuleMessages = function(pageId, module, limit, handler)
     this.Search(search, handler); 
 };
 
+//Start hour should be 0-23, for midnight through 11pm. Num hours is how far back to search.
+//You can optionally give the date to start at, in simple "YYYY-mm-dd" format
+Api.prototype.GetHourlyAggregate = function(startHour, numHours, date, handler)
+{
+    if(startHour === undefined) startHour = 23;
+    numHours = numHours || 24;
+    date = date || new Date().toISOString().substring(0, 10);
+    var hourString = String(startHour).padStart(2, "0");
+
+    var values = {};
+    var requests = [];
+
+    var startDate = new Date(`${date}T${hourString}:00:00`);
+    console.log(`Start date: ${startDate}`);
+
+    var userSearch = new RequestSearchParameter("user", "*", "");
+    var queryUserIns = [];
+    var commentKey = x => `cag${x}`;
+    var activityKey = x => `aag${x}`;
+    var dateKey = x => `date${x}`;
+
+    //The EQUALS is super important, because these are date RANGES
+    for(var i = 0; i <= numHours; i++)
+    {
+        var thisDateKey = dateKey(i);
+        var lastDateKey = dateKey(i - 1);
+        values[thisDateKey] = startDate.setHours(startDate.getHours() - i);
+
+        if(i > 0)
+        {
+            requests.push(new RequestSearchParameter("message_aggregate", "*", `createDate >= @${lastDateKey} and createDate < @${thisDateKey}`, 
+                undefined, -1, -1, commentKey(i)))
+            requests.push(new RequestSearchParameter("activity_aggregate", "*", `createDate >= @${lastDateKey} and createDate < @${thisDateKey}`, 
+                undefined, -1, -1, activityKey(i)))
+            queryUserIns.push(`id in @${commentKey(i)}`);
+            queryUserIns.push(`id in @${activityKey(i)}`);
+        }
+    }
+
+    requests.push(userSearch);
+
+    var request = new RequestParameter(values, requests);
+
+    this.Search(request, handler);
+};
+
 // -- Some helper functions which don't necessarily directly connect to the API --
 
 // Return the URL for a file based on its public hash. This accepts just the hash
