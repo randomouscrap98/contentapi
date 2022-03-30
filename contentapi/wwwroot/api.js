@@ -913,7 +913,7 @@ Api.prototype.GetModuleMessages = function(pageId, module, limit, handler)
 //You can optionally give the date to start at, in simple "YYYY-mm-dd" format
 Api.prototype.GetHourlyAggregate = function(startHour, numHours, date, handler)
 {
-    if(startHour === undefined) startHour = 23;
+    startHour = startHour || 0;
     numHours = numHours || 24;
     date = date || new Date().toISOString().substring(0, 10);
     var hourString = String(startHour).padStart(2, "0");
@@ -925,7 +925,9 @@ Api.prototype.GetHourlyAggregate = function(startHour, numHours, date, handler)
     console.log(`Start date: ${startDate}`);
 
     var userSearch = new RequestSearchParameter("user", "*", "");
+    var contentSearch = new RequestSearchParameter("content", "id,name,createDate,permissions,createUserId,deleted,parentId", "");
     var queryUserIns = [];
+    var queryContentIns = [];
     var commentKey = x => `cag${x}`;
     var activityKey = x => `aag${x}`;
     var dateKey = x => `date${x}`;
@@ -939,16 +941,23 @@ Api.prototype.GetHourlyAggregate = function(startHour, numHours, date, handler)
 
         if(i > 0)
         {
-            requests.push(new RequestSearchParameter("message_aggregate", "*", `createDate >= @${lastDateKey} and createDate < @${thisDateKey}`, 
+            //Remember we go BACKWARDS, so the last date key is always GREATER, or our UPPER bound
+            requests.push(new RequestSearchParameter("message_aggregate", "*", `createDate >= @${thisDateKey} and createDate < @${lastDateKey}`, 
                 undefined, -1, -1, commentKey(i)))
-            requests.push(new RequestSearchParameter("activity_aggregate", "*", `createDate >= @${lastDateKey} and createDate < @${thisDateKey}`, 
+            requests.push(new RequestSearchParameter("activity_aggregate", "*", `createDate >= @${thisDateKey} and createDate < @${lastDateKey}`, 
                 undefined, -1, -1, activityKey(i)))
-            queryUserIns.push(`id in @${commentKey(i)}`);
-            queryUserIns.push(`id in @${activityKey(i)}`);
+            queryUserIns.push(`id in @${commentKey(i)}.createUserId`);
+            queryUserIns.push(`id in @${activityKey(i)}.createUserId`);
+            queryContentIns.push(`id in @${commentKey(i)}.contentId`);
+            queryContentIns.push(`id in @${activityKey(i)}.contentId`);
         }
     }
 
+    userSearch.query = queryUserIns.join(" or ");
+    contentSearch.query = queryContentIns.join(" or ");
+
     requests.push(userSearch);
+    requests.push(contentSearch);
 
     var request = new RequestParameter(values, requests);
 

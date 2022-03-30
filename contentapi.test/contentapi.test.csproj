@@ -26,8 +26,10 @@
     <ProjectReference Include="..\contentapi.db\contentapi.db.csproj" />
   </ItemGroup>
 
-  <Target Name="CopyFiles" BeforeTargets="AfterBuild">
-    <Exec Command="xcopy ..\Deploy\dbmigrations &quot;$(OutDir)\dbMigrations\&quot; /s /d /y" />
-  </Target>
+  <ItemGroup>
+    <!-- SUPER NOTE: This is just how you have to copy directories in a csproj-only way. DON'T use exec, because
+         that's not system agnostic / portable! -->
+    <None Include="..\Deploy\dbmigrations\**" CopyToOutputDirectory="Always" LinkBase="dbmigrations\"/>
+  </ItemGroup>
 
 </Project>

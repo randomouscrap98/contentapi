@@ -361,7 +361,8 @@ public class GenericSearcher : IGenericSearch
                 request.query = queryBuilder.CombineQueryClause(request.query, $"!permissionlimit(@{groupsKey}, id, R)");
             }
             if(request.type == RequestType.message.ToString() || request.type == RequestType.activity.ToString() || 
-               request.type == RequestType.watch.ToString() || request.type == RequestType.vote.ToString())
+               request.type == RequestType.watch.ToString() || request.type == RequestType.vote.ToString() ||
+               request.type == RequestType.message_aggregate.ToString() || request.type == RequestType.activity_aggregate.ToString())
             {
                 request.query = queryBuilder.CombineQueryClause(request.query, $"!permissionlimit(@{groupsKey}, contentId, R)");
             }
