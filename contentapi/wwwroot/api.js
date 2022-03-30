@@ -922,6 +922,7 @@ Api.prototype.GetHourlyAggregate = function(startHour, numHours, date, handler)
     var requests = [];
 
     var startDate = new Date(`${date}T${hourString}:00:00`);
+    startDate.setHours(startDate.getHours() + 24);
     console.log(`Start date: ${startDate}`);
 
     var userSearch = new RequestSearchParameter("user", "*", "");
@@ -937,7 +938,7 @@ Api.prototype.GetHourlyAggregate = function(startHour, numHours, date, handler)
     {
         var thisDateKey = dateKey(i);
         var lastDateKey = dateKey(i - 1);
-        values[thisDateKey] = startDate.setHours(startDate.getHours() - i);
+        values[thisDateKey] = startDate.toISOString().substring(0, 13).replace("T", " ");
 
         if(i > 0)
         {
@@ -951,6 +952,8 @@ Api.prototype.GetHourlyAggregate = function(startHour, numHours, date, handler)
             queryContentIns.push(`id in @${commentKey(i)}.contentId`);
             queryContentIns.push(`id in @${activityKey(i)}.contentId`);
         }
+
+        startDate.setHours(startDate.getHours() - 1);
     }
 
     userSearch.query = queryUserIns.join(" or ");

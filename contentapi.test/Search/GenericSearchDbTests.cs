@@ -1322,6 +1322,32 @@ public class GenericSearchDbTests : ViewUnitTestBase, IClassFixture<DbUnitTestSe
         });
     }
 
+    [Fact]
+    public async Task Regression_MessageAggregatePrivacy()
+    {
+        var results = await service.SearchSingleType<MessageAggregateView>(NormalUserId, new SearchRequest()
+        {
+            type = "message_aggregate",
+            fields = "*"
+        });
+
+        Assert.DoesNotContain(results, x => x.contentId == SuperAccessContentId);
+        Assert.Contains(results, x => x.contentId == AllAccessContentId);
+    }
+
+    [Fact]
+    public async Task Regression_ActivityAggregatePrivacy()
+    {
+        var results = await service.SearchSingleType<ActivityAggregateView>(NormalUserId, new SearchRequest()
+        {
+            type = "activity_aggregate",
+            fields = "*"
+        });
+
+        Assert.DoesNotContain(results, x => x.contentId == SuperAccessContentId);
+        Assert.Contains(results, x => x.contentId == AllAccessContentId);
+    }
+
     //This test may seem superfluous, but it's important to me, because I need to ensure that
     //comments and module messages make sense together and don't overlap, and that the system
     //(which includes weird stuff like receiveUserId filtering) isn't doing something nuts
