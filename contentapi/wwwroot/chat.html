@@ -263,13 +263,32 @@ function createMessage(message)
     return container;
 }
 
+function createNotification(content)
+{
+    var container = document.createElement("div");
+    var title = document.createElement("a");
+    var count = document.createElement("span");
+    title.href = `?pid=${content.id}`;
+    title.textContent = content.name;
+    title.className = "content_title";
+    count.className = "notification_bubble";
+    count.textContent = "0";
+    count.onclick = () => { container.parentNode.removeChild(container); };
+    container.appendChild(count);
+    container.appendChild(title);
+    container.id = `notification_${content.id}`;
+    return container;
+}
+
 function displayMessages(data, keepScroll)
 {
     //Link the data
     api.AutoLinkUsers(data.message, data.user);
+    api.AutoLinkContent(data.message, data.content);
     api.AutoFixAllDates(data);
     var messagearea = document.getElementById("messagearea");
     var messagelist = document.getElementById("messagelist");
+    var activitylist = document.getElementById("activitylist");
     var addedMessages = 0;
     var oldScrollHeight = messagearea.scrollHeight;
     var oldScrollTop = messagearea.scrollTop;
@@ -316,6 +335,24 @@ function displayMessages(data, keepScroll)
                 }
             }
             addedMessages++;
+        }
+        // This is NOT the current room, so display it on the sidebar
+        else
+        {
+            var existing = document.getElementById(`notification_${x.contentId}`);
+
+            //Need to add the thing
+            if(!existing)
+            {
+                existing = createNotification(x.content);
+            }
+
+            var notification = existing.querySelector(".notification_bubble");
+            notification.textContent = String(Number(notification.textContent) + 1);
+            notification.title = new Date(x.createDate).toLocaleString();
+
+            //This will move it to the bottom
+            activitylist.appendChild(existing);
         }
 
         if(addedMessages && !keepScroll)
@@ -447,7 +484,7 @@ body, div { padding: 0; margin: 0; box-sizing: border-box; overflow: hidden; }
     width: 100%;
     padding: 0.05em 0.1em;
 }
-#userlist {
+#userlist, #activitylist {
     width: 100%;
     border-bottom: var(--stdborder);
 }
@@ -493,6 +530,13 @@ body, div { padding: 0; margin: 0; box-sizing: border-box; overflow: hidden; }
     margin-right: 0.5em;
     font-style: italic;
     color: darkcyan;
+}
+.notification_bubble {
+    padding: 0.25em;
+    background-color: salmon;
+    border-radius: 0.2em;
+    margin: 0 0.5em;
+    cursor: pointer;
 }
 [data-module] .content { color: gray; }
 [data-module] .avatar { display: none; }
@@ -540,6 +584,10 @@ body, div { padding: 0; margin: 0; box-sizing: border-box; overflow: hidden; }
             <div id="rightpanecontent" class="">
                 <div id="userlist"></div>
                 <div id="activitylist"></div>
+                <!--<div id="activitycontrols">
+                    <button></button>
+                    <button>clear</button>
+                </div>-->
                 <div id="linkslist">
                     <a href="index.html">Home</a>
                     <a href="index.html?t=login">Login</a>
