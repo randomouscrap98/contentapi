@@ -360,7 +360,7 @@ function displayMessages(data, keepScroll)
     //This manages aggregate data, if we happen to get any. This is generally for the first load "not really" notifications
     if(data.message_aggregate)
     {
-        data.message_aggregate.sort((a,b) => a.count - b.count);
+        data.message_aggregate.sort((a,b) => a.maxCreateDate > b.maxCreateDate ? 1 : -1);
         data.message_aggregate.forEach(x => {
             var existing = getOrCreateNotification(x.content);
             updateNotification(existing, x.count, x.maxCreateDate);
@@ -381,7 +381,6 @@ function getOrCreateNotification(content)
 
 function updateNotification(existing, addCount, createDate, doAlert)
 {
-    console.log("CREATEDATE:", createDate);
     var notification = existing.querySelector(".notification_bubble");
     var oldAlerts = Number(notification.textContent);
     if(doAlert)
@@ -435,13 +434,8 @@ function setUserlist(data)
     --postsubmitwidth: 3rem;
 }
 body, div { padding: 0; margin: 0; box-sizing: border-box; overflow: hidden; }
-#main {
-    width: 100vw;
-    height: 100vh;
-    margin: 0;
-    padding: 0;
-    overflow: none;
-    position: relative;
+html, body { position: fixed; overflow: auto; top: 0; bottom: 0; left: 0; right: 0; }
+body {
     font-family: monospace;
 }
 #leftpane {
@@ -514,7 +508,7 @@ body, div { padding: 0; margin: 0; box-sizing: border-box; overflow: hidden; }
 #messagearea {
     width: 100%;
     overflow-y: scroll;
-    height: calc(100vh - var(--postareaheight) - var(--titleheight))
+    height: calc(100% - var(--postareaheight) - var(--titleheight))
 }
 #messagelist {
     width: 100%;
@@ -609,34 +603,32 @@ body, div { padding: 0; margin: 0; box-sizing: border-box; overflow: hidden; }
 </head>
 
 <body class="">
-    <div id="main" class="">
-        <div id="leftpane" class="">
-            <div id="titlearea">
-                <h2 class="title"><a id="pagetitle" href="#"></a></h2>
-                <div id="connectionstatus" class="disconnected"></div>
-            </div>
-            <div id="messagearea">
-                <div id="messagecontrols">
-                    <button id="loadoldermessages">Load Older</button>
-                </div>
-                <div id="messagelist"></div>
-            </div>
-            <div id="postarea">
-                <textarea id="postbox"></textarea>
-                <button id="postsubmit">&#x27a4;</button>
-            </div>
+    <div id="leftpane" class="">
+        <div id="titlearea">
+            <h2 class="title"><a id="pagetitle" href="#"></a></h2>
+            <div id="connectionstatus" class="disconnected"></div>
         </div>
-        <div id="rightpane" class="">
-            <div id="rightpanecontent" class="">
-                <div id="userlist"></div>
-                <div id="activitylist"></div>
-                <div><label><input id="autoscroll" type="checkbox" checked="">Autoscroll</label></div>
-                <div id="linkslist">
-                    <a href="index.html">Home</a>
-                    <a href="index.html?t=login">Login</a>
-                </div>
-                <iframe id="imagemini" src="imagemini.html"></iframe>
+        <div id="messagearea">
+            <div id="messagecontrols">
+                <button id="loadoldermessages">Load Older</button>
             </div>
+            <div id="messagelist"></div>
+        </div>
+        <div id="postarea">
+            <textarea id="postbox"></textarea>
+            <button id="postsubmit">&#x27a4;</button>
+        </div>
+    </div>
+    <div id="rightpane" class="">
+        <div id="rightpanecontent" class="">
+            <div id="userlist"></div>
+            <div id="activitylist"></div>
+            <div><label><input id="autoscroll" type="checkbox" checked="">Autoscroll</label></div>
+            <div id="linkslist">
+                <a href="index.html">Home</a>
+                <a href="index.html?t=login">Login</a>
+            </div>
+            <iframe id="imagemini" src="imagemini.html"></iframe>
         </div>
     </div>
 </body>
