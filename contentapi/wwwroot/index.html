@@ -1,284 +1,291 @@
 <html lang="en">
-    <head>
-        <meta charset="UTF-8">
-        <meta name="viewport" content="width=device-width">
-        <meta name="rating" content="general">
-        <meta name="description" content="SBS default implementation">
-        <link rel="icon" href="favicon.ico" type="image/x-icon">
-        <script src="api.js"></script>
-        <script src="index.js"></script>
-        <link rel="stylesheet" href="index.css">
-    </head>
-    <body>
-        <header>
-            <a href="?">Home</a>
-            <a href="?t=login">Login</a>
-            <a href="?t=register">Register</a>
-            <a href="?t=user">User</a>
-            <a href="?t=page&pid=0">Pages</a>
-            <a href="?t=search">Search</a>
-            <a href="?t=notifications">Notifications</a>
-        </header>
-        <section id="main">
-            <h1>ContentApi Default Implementation</h1>
-            <p>
-                This <em>extremely rough around the edges</em> page is the example implementation for a frontend which consumes
-                contentapi. It has enough features to be functional, but nothing more. It has essentially NO error handling; this is
-                done on purpose so you can more easily see the functionality within the code. 
-            </p>
-            <p>
-                The heart of this implementation is <a href="api.js">api.js</a>, which you can also use for your own frontends. It
-                provides a simple javascript interface to the API, and includes some (hopefully helpful) notes about the usage and
-                parameters involved.
-            </p>
-            <p><a href="editmodule.html">Module editor</a> (must be logged in)</p>
-            <p><a href="?t=websocket">Rudimentary websocket tester</a></p>
-        </section>
-        <!-- For simplicity, all pages are defined directly inside index.html. They are loaded on page load based on
-             the t parameter in the URL -->
-        <template id="templates">
-            <div id="t_login">
-                <form data-loginform onsubmit="return t_login_submit(this)">
-                    <label for="login-username">Username:</label>
-                    <input id="login-username" name="username" required="">
-                    <label for="login-password">Password:</label>
-                    <input id="login-password" name="password" type="password" required="">
-                    <input type="submit" value="Login">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width">
+    <meta name="rating" content="general">
+    <meta name="description" content="SBS default implementation">
+    <link rel="icon" href="favicon.ico" type="image/x-icon">
+    <script src="api.js"></script>
+    <!-- These are required for the 12y parser (markup) -->
+    <script src="https://12me21.github.io/sbs2-markup/parse.js"></script>
+    <script src="https://12me21.github.io/sbs2-markup/highlight.js"></script>
+    <script src="https://12me21.github.io/sbs2-markup/render.js"></script>
+    <script src="index.js"></script>
+    <link rel="stylesheet" href="index.css">
+</head>
+
+<body>
+    <header>
+        <a href="?">Home</a>
+        <a href="?t=login">Login</a>
+        <a href="?t=register">Register</a>
+        <a href="?t=user">User</a>
+        <a href="?t=page&pid=0">Pages</a>
+        <a href="?t=search">Search</a>
+        <a href="?t=notifications">Notifications</a>
+    </header>
+    <section id="main">
+        <h1>ContentApi Default Implementation</h1>
+        <p>
+            This <em>extremely rough around the edges</em> page is the example implementation for a frontend which consumes
+            contentapi. It has enough features to be functional, but nothing more. It has essentially NO error handling; this is
+            done on purpose so you can more easily see the functionality within the code. 
+        </p>
+        <p>
+            The heart of this implementation is <a href="api.js">api.js</a>, which you can also use for your own frontends. It
+            provides a simple javascript interface to the API, and includes some (hopefully helpful) notes about the usage and
+            parameters involved.
+        </p>
+        <p><a href="editmodule.html">Module editor</a> (must be logged in)</p>
+        <p><a href="?t=websocket">Rudimentary websocket tester</a></p>
+    </section>
+    <!-- For simplicity, all pages are defined directly inside index.html. They are loaded on page load based on
+            the t parameter in the URL -->
+    <template id="templates">
+        <div id="t_login">
+            <form data-loginform onsubmit="return t_login_submit(this)">
+                <label for="login-username">Username:</label>
+                <input id="login-username" name="username" required="">
+                <label for="login-password">Password:</label>
+                <input id="login-password" name="password" type="password" required="">
+                <input type="submit" value="Login">
+            </form>
+        </div>
+        <div id="t_register">
+            <form data-registerform onsubmit="return t_register_submit(this)">
+                <label for="register-username">Username:</label>
+                <input id="register-username" name="username" required="">
+                <label for="register-email">Email:</label>
+                <input id="register-email" name="email" type="email" required="">
+                <label for="register-password">Password:</label>
+                <input id="register-password" name="password" type="password" required="">
+                <input type="submit" value="Register">
+            </form>
+        </div>
+        <div id="t_confirmregister" data-onload="confirmregister_onload">
+            <form data-confirmregisterform onsubmit="return t_confirmregister_submit(this)">
+                <label for="confirmregister-key">Registration code (look for email):</label>
+                <input id="confirmregister-key" name="key" required="">
+                <input id="confirmregister-email" type="hidden" name="email" value="">
+                <input type="submit" value="Confirm">
+            </form>
+        </div>
+        <div id="t_user" data-onload="user_onload">
+            <img src="" id="user-avatar">
+            <table class="describe" id="user-table"></table>
+            <button onclick="t_user_logout()">Logout</button>
+            <a href="?t=uservariables">Manage user variables</a>
+            <div id="user-update">
+                <h3>Update: <button id="user-update-toggle"></button></h3>
+                <form id="user-update-form" onsubmit="return t_user_update_submit(this)">
+                    <input type="hidden" id="user-update-id" value="0">
+                    <label for="user-update-username">Username (limited changes?):<label>
+                    <input type="text" id="user-update-username">
+                    <label for="user-update-avatar">Avatar (hash/pubId):<label>
+                    <input type="text" id="user-update-avatar">
+                    <label for="user-update-special">Special (unused?):<label>
+                    <input type="text" id="user-update-special">
+                    <label for="user-update-groups">Groups (space separated):<label>
+                    <input type="text" id="user-update-groups">
+                    <label for="user-update-super">Super (probably can't set):<label>
+                    <input type="text" id="user-update-super">
+                    <input type="submit" value="Update">
                 </form>
             </div>
-            <div id="t_register">
-                <form data-registerform onsubmit="return t_register_submit(this)">
-                    <label for="register-username">Username:</label>
-                    <input id="register-username" name="username" required="">
-                    <label for="register-email">Email:</label>
-                    <input id="register-email" name="email" type="email" required="">
-                    <label for="register-password">Password:</label>
-                    <input id="register-password" name="password" type="password" required="">
-                    <input type="submit" value="Register">
+            <div id="user-files">
+                <h3>Upload new file: <button id="user-file-upload-toggle"></button></h3>
+                <form id="user-file-upload" name="user-file-upoad" onsubmit="return t_user_files_submit(this)">
+                    <label for="user-files-file">Select file:</label>
+                    <input type="file" name="file" id="user-files-file" accept="image/*" required="">
+                    <label for="user-files-name">Name (optional):</label>
+                    <input type="text" name="name" id="user-files-name">
+                    <label for="user-files-quantize">Quantize (png only, optional):</label>
+                    <input type="number" name="quantize" id="user-files-quantize" value="-1">
+                    <label for="user-files-globalperms">Global permissions (optional):</label>
+                    <input type="text" name="globalPerms" id="user-files-globalperms" value="CR">
+                    <label for="user-files-tryresize">Try resize (auto resize too-large images):</label>
+                    <input type="checkbox" name="tryResize" id="user-files-tryresize" checked="true" value="true">
+                    <input type="submit" value="Upload">
+                </form>
+                <h2>Your files:</h2>
+                <div id="user-files-container"></div>
+                <div id="user-files-nav" class="nav">
+                    <a href="#" id="user-files-pagedown">Newer files</a>
+                    <a href="#" id="user-files-pageup">Older files</a>
+                </div>
+            </div>
+        </div>
+        <div id="t_page" data-onload="page_onload">
+            <h2 id="page-title"></h2>
+            <a href="#" id="page-chat-link" hidden="">Go to chat for this page</a>
+            <div id="page-content" title="This is lightly-rendered markup" class="content"></div>
+            <table class="describe" id="page-table"></table>
+            <div id="page-interactions" data-pageid="">
+                <button id="watch-page" hidden="" onclick="return t_page_watch(this, true)">Watch</button>
+                <button id="unwatch-page" hidden="" onclick="return t_page_watch(this, false)">Unwatch</button>
+                <div id="current-vote-container-page" hidden="">Current vote: <span id="current-vote-page"></span></div>
+                <div id="vote-submit-page" hidden="">
+                    <select id="vote-options-page"></select>
+                    <button id="vote-page">Submit vote</button>
+                </div>
+            </div>
+            <div id="page-edit-section" class="hidden">
+                <h3>Edit: <button id="page-edit-toggle"></button></h3>
+                <div id="page-edit-container"></div>
+            </div>
+            <!-- The editor goes here (in this container) -->
+            <h3>New Page Here: <button id="page-submit-toggle"></button></h3>
+            <div id="page-submit-container"></div>
+            <h3>Subpages:</h3>
+            <div id="page-subpages" class="results"></div>
+            <div id="page-subpages-nav" class="nav">
+                <a href="#" id="page-subpageup">Next Subpages</a>
+                <a href="#" id="page-subpagedown">Previous Subpages</a>
+            </div>
+            <h3>Comments:</h3>
+            <div id="comment-submit-container">
+                <form onsubmit="return t_comment_submit_submit(this)">
+                    <label for="comment-submit-text">New comment:</label>
+                    <textarea id="comment-submit-text" required=""></textarea>
+                    <label for="comment-submit-markup">Markup:</label>
+                    <select id="comment-submit-markup"></select>
+                    <input type="hidden" id="comment-submit-contentid" value="">
+                    <input type="submit" value="Add Comment">
                 </form>
             </div>
-            <div id="t_confirmregister" data-onload="confirmregister_onload">
-                <form data-confirmregisterform onsubmit="return t_confirmregister_submit(this)">
-                    <label for="confirmregister-key">Registration code (look for email):</label>
-                    <input id="confirmregister-key" name="key" required="">
-                    <input id="confirmregister-email" type="hidden" name="email" value="">
-                    <input type="submit" value="Confirm">
-                </form>
+            <div id="page-comments" class="results"></div>
+            <div id="page-comments-nav" class="nav">
+                <a href="#" id="page-commentup">Older Comments</a>
+                <a href="#" id="page-commentdown">Newer Comments</a>
             </div>
-            <div id="t_user" data-onload="user_onload">
-                <img src="" id="user-avatar">
-                <table class="describe" id="user-table"></table>
-                <button onclick="t_user_logout()">Logout</button>
-                <a href="?t=uservariables">Manage user variables</a>
-                <div id="user-update">
-                    <h3>Update: <button id="user-update-toggle"></button></h3>
-                    <form id="user-update-form" onsubmit="return t_user_update_submit(this)">
-                        <input type="hidden" id="user-update-id" value="0">
-                        <label for="user-update-username">Username (limited changes?):<label>
-                        <input type="text" id="user-update-username">
-                        <label for="user-update-avatar">Avatar (hash/pubId):<label>
-                        <input type="text" id="user-update-avatar">
-                        <label for="user-update-special">Special (unused?):<label>
-                        <input type="text" id="user-update-special">
-                        <label for="user-update-groups">Groups (space separated):<label>
-                        <input type="text" id="user-update-groups">
-                        <label for="user-update-super">Super (probably can't set):<label>
-                        <input type="text" id="user-update-super">
-                        <input type="submit" value="Update">
-                    </form>
-                </div>
-                <div id="user-files">
-                    <h3>Upload new file: <button id="user-file-upload-toggle"></button></h3>
-                    <form id="user-file-upload" name="user-file-upoad" onsubmit="return t_user_files_submit(this)">
-                        <label for="user-files-file">Select file:</label>
-                        <input type="file" name="file" id="user-files-file" accept="image/*" required="">
-                        <label for="user-files-name">Name (optional):</label>
-                        <input type="text" name="name" id="user-files-name">
-                        <label for="user-files-quantize">Quantize (png only, optional):</label>
-                        <input type="number" name="quantize" id="user-files-quantize" value="-1">
-                        <label for="user-files-globalperms">Global permissions (optional):</label>
-                        <input type="text" name="globalPerms" id="user-files-globalperms" value="CR">
-                        <label for="user-files-tryresize">Try resize (auto resize too-large images):</label>
-                        <input type="checkbox" name="tryResize" id="user-files-tryresize" checked="true" value="true">
-                        <input type="submit" value="Upload">
-                    </form>
-                    <h2>Your files:</h2>
-                    <div id="user-files-container"></div>
-                    <div id="user-files-nav" class="nav">
-                        <a href="#" id="user-files-pagedown">Newer files</a>
-                        <a href="#" id="user-files-pageup">Older files</a>
-                    </div>
-                </div>
+        </div>
+        <div id="t_search" data-onload="search_onload">
+            <form id="search-form"> <!-- onsubmit="return t_search_submit(this)">-->
+                <input name="t" type="hidden" value="search">
+                <label for="search-type">Type:</label>
+                <!-- NORMALLY, we'd want to just pull these from the "about", but I have only a few options I want available anyway -->
+                <select id="search-type" name="type">
+                    <option>page</option>
+                    <option>file</option>
+                    <option>user</option>
+                    <option>comment</option>
+                </select>
+                <label for="search-text">Search:</label>
+                <input id="search-text" name="search">
+                <label for="search-field">Field:</label>
+                <!--<input id="search-field" list="search-field-options" name="field" required="">-->
+                <select id="search-field" name="field"></select>
+                <label for="search-sort">Sort:</label>
+                <!--<input id="search-sort" list="search-sort-options" name="sort">
+                <datalist id="search-sort-options"></datalist>-->
+                <select id="search-sort" name="sort"></select>
+                <input type="submit" value="Search">
+            </form>
+            <div id="search-about" class="annotation"></div>
+            <div id="search-results" class="results"></div>
+            <div id="search-results-nav" class="nav">
+                <a href="#" id="search-up">Next results</a>
+                <a href="#" id="search-down">Previous results</a>
             </div>
-            <div id="t_page" data-onload="page_onload">
-                <h2 id="page-title"></h2>
-                <a href="#" id="page-chat-link" hidden="">Go to chat for this page</a>
-                <div id="page-content" title="This is raw markup" class="content"></div>
-                <table class="describe" id="page-table"></table>
-                <div id="page-interactions" data-pageid="">
-                    <button id="watch-page" hidden="" onclick="return t_page_watch(this, true)">Watch</button>
-                    <button id="unwatch-page" hidden="" onclick="return t_page_watch(this, false)">Unwatch</button>
-                    <div id="current-vote-container-page" hidden="">Current vote: <span id="current-vote-page"></span></div>
-                    <div id="vote-submit-page" hidden="">
-                        <select id="vote-options-page"></select>
-                        <button id="vote-page">Submit vote</button>
-                    </div>
-                </div>
-                <div id="page-edit-section" class="hidden">
-                    <h3>Edit: <button id="page-edit-toggle"></button></h3>
-                    <div id="page-edit-container"></div>
-                </div>
-                <!-- The editor goes here (in this container) -->
-                <h3>New Page Here: <button id="page-submit-toggle"></button></h3>
-                <div id="page-submit-container"></div>
-                <h3>Subpages:</h3>
-                <div id="page-subpages" class="results"></div>
-                <div id="page-subpages-nav" class="nav">
-                    <a href="#" id="page-subpageup">Next Subpages</a>
-                    <a href="#" id="page-subpagedown">Previous Subpages</a>
-                </div>
-                <h3>Comments:</h3>
-                <div id="comment-submit-container">
-                    <form onsubmit="return t_comment_submit_submit(this)">
-                        <label for="comment-submit-text">New comment:</label>
-                        <textarea id="comment-submit-text" required=""></textarea>
-                        <label for="comment-submit-markup">Markup:</label>
-                        <select id="comment-submit-markup"></select>
-                        <input type="hidden" id="comment-submit-contentid" value="">
-                        <input type="submit" value="Add Comment">
-                    </form>
-                </div>
-                <div id="page-comments" class="results"></div>
-                <div id="page-comments-nav" class="nav">
-                    <a href="#" id="page-commentup">Older Comments</a>
-                    <a href="#" id="page-commentdown">Newer Comments</a>
-                </div>
+        </div>
+        <div id="t_notifications" data-onload="notifications_onload">
+            <h3>Your notifications:</h3>
+            <div id="notifications-container"></div>
+            <div id="notifications-nav" class="nav">
+                <a href="#" id="notifications-up">Older Notifications</a>
+                <a href="#" id="notifications-down">Newer Notifications</a>
             </div>
-            <div id="t_search" data-onload="search_onload">
-                <form id="search-form"> <!-- onsubmit="return t_search_submit(this)">-->
-                    <input name="t" type="hidden" value="search">
-                    <label for="search-type">Type:</label>
-                    <!-- NORMALLY, we'd want to just pull these from the "about", but I have only a few options I want available anyway -->
-                    <select id="search-type" name="type">
-                        <option>page</option>
-                        <option>file</option>
-                        <option>user</option>
-                        <option>comment</option>
-                    </select>
-                    <label for="search-text">Search:</label>
-                    <input id="search-text" name="search">
-                    <label for="search-field">Field:</label>
-                    <!--<input id="search-field" list="search-field-options" name="field" required="">-->
-                    <select id="search-field" name="field"></select>
-                    <label for="search-sort">Sort:</label>
-                    <!--<input id="search-sort" list="search-sort-options" name="sort">
-                    <datalist id="search-sort-options"></datalist>-->
-                    <select id="search-sort" name="sort"></select>
-                    <input type="submit" value="Search">
-                </form>
-                <div id="search-about" class="annotation"></div>
-                <div id="search-results" class="results"></div>
-                <div id="search-results-nav" class="nav">
-                    <a href="#" id="search-up">Next results</a>
-                    <a href="#" id="search-down">Previous results</a>
-                </div>
+        </div>
+        <div id="t_uservariables" data-onload="uservariables_onload">
+            <h3>Your variables:</h3>
+            <div id="uservariables-container"></div>
+            <div id="uservariables-nav" class="nav">
+                <a href="#" id="uservariables-up">More</a>
+                <a href="#" id="uservariables-down">Back</a>
             </div>
-            <div id="t_notifications" data-onload="notifications_onload">
-                <h3>Your notifications:</h3>
-                <div id="notifications-container"></div>
-                <div id="notifications-nav" class="nav">
-                    <a href="#" id="notifications-up">Older Notifications</a>
-                    <a href="#" id="notifications-down">Newer Notifications</a>
-                </div>
+            <form onsubmit="return t_uservariable_submit(this)">
+                <h3>Add variable:</h3>
+                <label for="uservariables-key">Key:</label>
+                <input id="uservariables-key" required="">
+                <label for="uservariables-value">Value:</label>
+                <textarea id="uservariables-value"></textarea>
+                <input type="submit" value="Add variable">
+            </form>
+        </div>
+        <div id="t_websocket" data-onload="websocket_onload">
+            <h3>Websocket tester</h3>
+            <p>Please check console for information! Make sure you connect first!</p>
+            <button id="websocket_connect">Connect</button>
+            <button id="websocket_close">Close</button>
+            <input id="websocket_type" placeholder="Websocket request type">
+            <textarea id="websocket_data" placeholder="Websocket data"></textarea>
+            <button id="websocket_send">Send</button>
+            <div id="websocket_output" class="console"></div>
+        </div>
+        <!-- The rest of this stuff are sort of "subtemplates", like little repeated items used within the page -->
+        <div id="page_item" data-onload="page_item_onload">
+            <a data-title></a>
+            <span data-type></span>
+            <time data-time class="annotation"></time>
+            <span data-private>🔒</span>
+        </div>
+        <div id="comment_item" data-onload="comment_item_onload">
+            <img data-avatar>
+            <span data-username class="important username"></span>
+            <span data-comment></span>
+            <time data-time class="annotation"></time>
+            <span data-contentid class="annotation"></span>
+        </div>
+        <div id="user_item" data-onload="user_item_onload">
+            <img data-avatar>
+            <span data-username class="important username"></span>
+            <time data-time class="annotation"></time>
+            <span data-super>⭐</span>
+        </div>
+        <div id="file_item" data-onload="file_item_onload">
+            <a data-filelink><img data-file></a>
+            <span data-hash class="important"></span>
+            <time data-time class="annotation"></time>
+            <span data-private>🔒</span>
+        </div>
+        <div id="notification_item" data-onload="notification_item_onload">
+            <div data-pagedata></div>
+            <div data-notifications>
+                <span>Comments: </span> <span data-commentcount></span>
+                <span>Activity: </span> <span data-activitycount></span>
+                <button data-clear data-pageid="" onclick="return t_notification_item_clear(this)">Clear notifications</button>
             </div>
-            <div id="t_uservariables" data-onload="uservariables_onload">
-                <h3>Your variables:</h3>
-                <div id="uservariables-container"></div>
-                <div id="uservariables-nav" class="nav">
-                    <a href="#" id="uservariables-up">More</a>
-                    <a href="#" id="uservariables-down">Back</a>
-                </div>
-                <form onsubmit="return t_uservariable_submit(this)">
-                    <h3>Add variable:</h3>
-                    <label for="uservariables-key">Key:</label>
-                    <input id="uservariables-key" required="">
-                    <label for="uservariables-value">Value:</label>
-                    <textarea id="uservariables-value"></textarea>
-                    <input type="submit" value="Add variable">
-                </form>
-            </div>
-            <div id="t_websocket" data-onload="websocket_onload">
-                <h3>Websocket tester</h3>
-                <p>Please check console for information! Make sure you connect first!</p>
-                <button id="websocket_connect">Connect</button>
-                <button id="websocket_close">Close</button>
-                <input id="websocket_type" placeholder="Websocket request type">
-                <textarea id="websocket_data" placeholder="Websocket data"></textarea>
-                <button id="websocket_send">Send</button>
-                <div id="websocket_output" class="console"></div>
-            </div>
-            <!-- The rest of this stuff are sort of "subtemplates", like little repeated items used within the page -->
-            <div id="page_item" data-onload="page_item_onload">
-                <a data-title></a>
-                <span data-type></span>
-                <time data-time class="annotation"></time>
-                <span data-private>🔒</span>
-            </div>
-            <div id="comment_item" data-onload="comment_item_onload">
-                <img data-avatar>
-                <span data-username class="important username"></span>
-                <span data-comment></span>
-                <time data-time class="annotation"></time>
-                <span data-contentid class="annotation"></span>
-            </div>
-            <div id="user_item" data-onload="user_item_onload">
-                <img data-avatar>
-                <span data-username class="important username"></span>
-                <time data-time class="annotation"></time>
-                <span data-super>⭐</span>
-            </div>
-            <div id="file_item" data-onload="file_item_onload">
-                <a data-filelink><img data-file></a>
-                <span data-hash class="important"></span>
-                <time data-time class="annotation"></time>
-                <span data-private>🔒</span>
-            </div>
-            <div id="notification_item" data-onload="notification_item_onload">
-                <div data-pagedata></div>
-                <div data-notifications>
-                    <span>Comments: </span> <span data-commentcount></span>
-                    <span>Activity: </span> <span data-activitycount></span>
-                    <button data-clear data-pageid="" onclick="return t_notification_item_clear(this)">Clear notifications</button>
-                </div>
-            </div>
-            <div id="uservariable_item" data-onload="uservariable_item_onload">
-                <h3 data-key></h3>
-                <textarea data-value></textarea>
-                <button data-edit>Edit</button>
-                <button data-delete>Remove variable</button>
-            </div>
-            <div id="page_editor" data-onload="page_editor_onload">
-                <form onsubmit="return t_page_editor_submit(this)">
-                    <input type="hidden" id="page-editor-id" value="0">
-                    <!-- 1 is page! -->
-                    <input type="hidden" id="page-editor-contenttype" value="1">
-                    <label for="page-editor-name">Title:</label>
-                    <input type="text" id="page-editor-name">
-                    <label for="page-editor-text">Text (raw):</label>
-                    <textarea id="page-editor-text"></textarea>
-                    <label for="page-editor-type">Type:</label>
-                    <input type="text" id="page-editor-type">
-                    <label for="page-editor-permissions">Permissions (comma separated, "UID":"CRUD"):</label>
-                    <input type="text" id="page-editor-permissions" value='"0":"CR"'>
-                    <label for="page-editor-values">Values (comma separated, "key":"value"):</label>
-                    <input type="text" id="page-editor-values" value='"test":"abc"'>
-                    <label for="page-editor-keywords">Keywords (space separated):</label>
-                    <input type="text" id="page-editor-keywords">
-                    <!-- permissions, values, keywords -->
-                    <input type="hidden" id="page-editor-parentid" value="0">
-                    <input type="submit" value="Submit page">
-                </form>
-            </div>
-        </template>
-    </body>
+        </div>
+        <div id="uservariable_item" data-onload="uservariable_item_onload">
+            <h3 data-key></h3>
+            <textarea data-value></textarea>
+            <button data-edit>Edit</button>
+            <button data-delete>Remove variable</button>
+        </div>
+        <div id="page_editor" data-onload="page_editor_onload">
+            <form onsubmit="return t_page_editor_submit(this)">
+                <input type="hidden" id="page-editor-id" value="0">
+                <!-- 1 is page! -->
+                <input type="hidden" id="page-editor-contenttype" value="1">
+                <label for="page-editor-name">Title:</label>
+                <input type="text" id="page-editor-name">
+                <label for="page-editor-text">Text (raw):</label>
+                <textarea id="page-editor-text"></textarea>
+                <label for="page-editor-type">Type:</label>
+                <input type="text" id="page-editor-type">
+                <label for="page-editor-permissions">Permissions (comma separated, "UID":"CRUD"):</label>
+                <input type="text" id="page-editor-permissions" value='"0":"CR"'>
+                <label for="page-editor-values">Values (comma separated, "key":"value"):</label>
+                <input type="text" id="page-editor-values" value='"test":"abc"'>
+                <label for="page-editor-keywords">Keywords (space separated):</label>
+                <input type="text" id="page-editor-keywords">
+                <!-- permissions, values, keywords -->
+                <input type="hidden" id="page-editor-parentid" value="0">
+                <input type="submit" value="Submit page">
+            </form>
+        </div>
+    </template>
+</body>
+
 </html>
