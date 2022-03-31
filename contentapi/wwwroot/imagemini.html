@@ -1,0 +1,125 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<!-- A very tiny page meant to go in an iframe -->
+<head>
+    <script src="api.js"></script>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width">
+    <script>
+var api;
+
+//Constants for our page runtime, you don't necessarily need these
+const LOADIMAGES = 50;
+const IMAGESIZE = 40;
+
+//duplicate from index.js
+const TOKENKEY = "contentapi_defimpl_userkey";
+function GetToken() { return localStorage.getItem(TOKENKEY); }
+
+window.onload = function()
+{
+    // You should try to create only one API object for your entire application (or at least, one per session)
+    api = new Api(null, GetToken); //Just a global api object, whatever. Null means use the default endpoint (local to self)
+    // Set the default error handler for all REGULAR requests (not websocket) to show an alert to the user.
+    api.default_handler.error = e =>
+    {
+        alert(`Error ${e.status_code}: ${e.message}`);
+        console.log("Error: ", e);
+    };
+
+    var search = new RequestParameter({ type : 3 }, [
+        new RequestSearchParameter("content", "id,contentType,hash,permissions,name,createDate,createUserId", "contentType = @type", "id_desc", LOADIMAGES, 0)
+    ]);
+
+    api.Search(search, new ApiHandler(dd =>
+    {
+        dd.result.data.content.forEach(x => {
+            imagelist.appendChild(createImage(x));
+        });
+    }));
+
+    document.addEventListener('paste', (event)=>
+    {
+        console.log("PASTING EVENT");
+        let data = event.clipboardData;
+        if (data && data.files) 
+        {
+            let file = data.files[0];
+            if (file && (/^image\//).test(file.type))
+            {
+                console.log("PASTE WAS FILE, UPLOADING...");
+                var form = new FormData();
+                form.append("file", file);
+                if(quantize.value)
+                    form.append("quantize", quantize.value);
+                api.UploadFile(form, new ApiHandler(d => {
+                    console.log("Upload successful. ID: " + d.result.id);
+                    location.reload();
+                }));
+            }
+        }
+    });
+};
+
+function createImage(content)
+{
+    var container = document.createElement("a");
+    var image = document.createElement("img");
+    image.src = api.ResolveRelativeUrl(api.GetFileUrl(content.hash, new FileModifyParameter(IMAGESIZE)));
+    container.href = api.ResolveRelativeUrl(api.GetFileUrl(content.hash));
+    container.append(image);
+    container.target="_blank";
+    return container;
+}
+    </script>
+
+    <style>
+body, div { 
+    padding: 0; 
+    margin: 0; 
+    box-sizing: border-box; 
+    overflow: hidden; 
+    font-size: 0.75rem; 
+    font-family: monospace;
+}
+body {
+    width: 100%;
+    height: 100vh;
+    overflow-y: scroll;
+}
+#imagelist a {
+    display: inline-block;
+}
+@media (max-width: 30rem)
+{
+    :root {
+        --rightpanewidth: 6rem;
+        --postareaheight: 4rem;
+    }
+    #rightpane {
+        font-size: 0.8em;
+    }
+    #titlearea .title {
+        font-size: 0.95em;
+        padding: 0.1em;
+    }
+    #messagelist {
+        font-size: 0.9em;
+    }
+}
+    </style>
+
+</head>
+
+<body>
+    <div id="main">
+        <span>paste image anywhere</span>
+        <input id="quantize" placeholder="quantize" autocomplete="on">
+        <div id="imagelist">
+
+        </div>
+    </div>
+</body>
+
+</html>
