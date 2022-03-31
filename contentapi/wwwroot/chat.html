@@ -3,20 +3,22 @@
 
 <head>
 
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width">
+    <meta name="rating" content="general">
+    <meta name="description" content="SBS default implementation chat">
+
     <title>SBS Chat</title>
     <link rel="icon" href="favicon.ico" type="image/x-icon">
     <!-- The MAIN api consumer script, it comes with most things you need to work with the API. 
         In particular, it has an auto websocket manager for building quick chatrooms -->
     <script src="api.js"></script>
-    <link rel="stylesheet" href="markup.css">
     <!-- These are required for the 12y parser (markup) -->
     <script src="https://12me21.github.io/sbs2-markup/parse.js"></script>
     <script src="https://12me21.github.io/sbs2-markup/highlight.js"></script>
     <script src="https://12me21.github.io/sbs2-markup/render.js"></script>
-    <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width">
-    <meta name="rating" content="general">
-    <meta name="description" content="SBS default implementation chat">
+    <script src="markup.js"></script>
+    <link rel="stylesheet" href="markup.css">
 
     <script>
 //NOTE: this file has nothing to do with index.html or any script/etc other than api.js
@@ -202,17 +204,20 @@ window.onload = function()
     };
 };
 
+//Go discover all message elements, which helps us find all the ids and also determine where to put NEW elements
 function getAllMessageElements()
 {
     var messagelist = document.getElementById("messagelist");
     return [...messagelist.querySelectorAll(".message")];
 }
 
+//Set the connection status to the given string, assuming something like "connected" or "error" etc
 function setConnectionStatus(status)
 {
     document.getElementById("connectionstatus").className = status;
 }
 
+//Create a single user element which may be placed in the userlist
 function createUserlistUser(user, status)
 {
     var element = document.createElement("div");
@@ -222,7 +227,8 @@ function createUserlistUser(user, status)
     return element;
 }
 
-//Needs to be prelinked
+//Create a single message element (full element, no merging) from the given message data.
+//Will also create module messages. Message data needs to be prelinked
 function createMessage(message)
 {
     var container = document.createElement("div");
@@ -267,6 +273,8 @@ function createMessage(message)
     return container;
 }
 
+// Create a single new "notification" element, which consists of a link to the content and a counter
+// (may be expanded upon later)
 function createNotification(content)
 {
     var container = document.createElement("div");
@@ -284,13 +292,15 @@ function createNotification(content)
     return container;
 }
 
+//A big function to do essentially all of the display work based on data received from the websocket,
+//whether that be live updates OR a manual request. Also does processing for the notifications
+//area, again whether live or manual.
 function displayMessages(data, keepScroll)
 {
-    //Link the data
+    //Prelink the data all at the start so we only do it once and have proper data throughout
     api.AutoLinkUsers(data.message, data.user);
-    //Sometimes, there is no content
     if(data.content)
-    {
+    {   //Sometimes, there is no content
         api.AutoLinkContent(data.message, data.content);
         if(data.message_aggregate)
             api.AutoLinkContent(data.message_aggregate, data.content);
@@ -303,6 +313,9 @@ function displayMessages(data, keepScroll)
     var oldScrollHeight = messagearea.scrollHeight;
     var oldScrollTop = messagearea.scrollTop;
 
+    //Process all the messages that were received in the data (could be in our own room OR
+    //in other rooms). Messages for the current room are displayed in the messagelist, but 
+    //messages from other rooms are displayed as created or updated "notifications"
     data.message.forEach(x =>
     {
         //only process messages that are in this thing
@@ -367,6 +380,8 @@ function displayMessages(data, keepScroll)
         })
     }
 
+    //Preserve the APPARENT location you were at before inserting messages. This is useful for keeping your spot when
+    //older messages are loaded, but not useful for live updates...
     if(keepScroll)
     {
         var heightDiff = messagearea.scrollHeight - oldScrollHeight;
