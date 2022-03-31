@@ -428,16 +428,14 @@ function setUserlist(data)
     <style>
 :root {
     --rightpanewidth: 12rem;
-    --titleheight: 2rem;
+    --titleheight: 2.8rem;
     --postareaheight: 6rem;
     --stdborder: 1px solid #777;
     --postsubmitwidth: 3rem;
 }
 body, div { padding: 0; margin: 0; box-sizing: border-box; overflow: hidden; }
-html, body { position: fixed; overflow: auto; top: 0; bottom: 0; left: 0; right: 0; }
-body {
-    font-family: monospace;
-}
+html, body { position: fixed; overflow: auto; top: 0; bottom: 0; left: 0; right: 0; font-family: monospace;}
+input, textarea { font-size: 1em; }
 #leftpane {
     width: calc(100% - var(--rightpanewidth));
     height: 100%;
@@ -469,6 +467,8 @@ body {
 #titlearea .title {
     padding: 0.2em;
     margin: 0;
+    overflow-y: auto;
+    height: 100%;
 }
 #connectionstatus {
     position: absolute;
@@ -584,11 +584,12 @@ body {
 @media (max-width: 30rem)
 {
     :root {
-        --rightpanewidth: 6rem;
+        --rightpanewidth: 8rem;
         --postareaheight: 4rem;
+        --titleheight: 1.7rem;
     }
     #rightpane {
-        font-size: 0.8em;
+        font-size: 0.7em;
     }
     #titlearea .title {
         font-size: 0.95em;
