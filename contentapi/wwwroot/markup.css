@@ -1,0 +1,66 @@
+html {
+	color-scheme: light;
+	--border-color: gray;
+	--bar-bg: #EEE;
+	--spoiler-bg: #F7F7F7;
+	--bgred: #FCC;
+	--bgorange: #FEA;
+	--bgyellow: #FF8;
+	--bggreen: #CFC;
+	--bgblue: #CEF;
+	--bgpurple: #ECF;
+	--bggray: #DDD;
+}
+
+.content blockquote {
+	padding: 0.3em;
+	padding-left: 0.5em;
+	background: var(--bar-bg);
+	margin-block: 1px;
+}
+.content blockquote > cite {
+	margin-left: -1em;
+}
+
+.spoilerButton:not([data-show]) + .spoiler {
+	display: none;
+}
+.content .spoiler {
+	padding: 0.5em;
+	background: var(--spoiler-bg);
+	margin-bottom: 1px;
+}
+
+.content [data-bgcolor="red"] { background-color: var(--bgred); }
+.content [data-bgcolor="green"] { background-color: var(--bggreen); }
+.content [data-bgcolor="yellow"] { background-color: var(--bgyellow); }
+.content [data-bgcolor="orange"] { background-color: var(--bgorange); }
+.content [data-bgcolor="blue"] { background-color: var(--bgblue); }
+.content [data-bgcolor="purple"] { background-color: var(--bgpurple); }
+.content [data-bgcolor="gray"] { background-color: var(--bggray); }
+
+.content pre {
+	background-color: #000;
+	color: #EEE;
+}
+.content pre * {
+	background-color: transparent;
+}
+.content pre .name { color: #7FF5EF; }
+.content pre .string { color: #59EE79; }
+.content pre .number { color: #f359ab; }
+.content pre .keyword {
+	font-weight: bold;
+	color: #2494f0;
+}
+.content pre .comment { color: #a1f198; }
+.content pre .variable { color: #fbf4cb; }
+.content pre .function { color: #8d7ff5; }
+.content pre .statement { color: #7ff5ef; }
+.content pre .backslash { color: #777; }
+.content pre .operator { color: #EEE; }
+.content pre .equals { color: #EEE; }
+.content pre .label { color: #f4963e; }
+.content pre .word-operator { color: #2494f0; }
+.content pre .to-step { color: #2494f0; }
+.content pre .constant { color: #aeb5c2; }

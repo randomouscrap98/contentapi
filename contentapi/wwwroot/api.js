@@ -237,7 +237,7 @@ function Api(url, tokenGet)
         parendId: "parent"
     };
 
-    this.dateAutoFormats = [ "createDate", "editDate" ];
+    this.dateAutoFormats = [ "createDate", "editDate", "maxCreateDate", "minCreateDate" ];
 }
 
 //Find the error handler function within the handler field, if it exists. This is because the error handler
@@ -1102,4 +1102,14 @@ Api.prototype.ResolveRelativeUrl = function(url)
     var link = document.createElement("a");
     link.href = url;
     return link.protocol+"//"+link.host+link.pathname+link.search+link.hash;
+};
+
+//Generate a date useful for searching (using greater/less than etc) in the query field for the date
+//that is the given amount of hours BACK from today, or from the given date.
+Api.prototype.GetSearchBackDate = function(hours, date)
+{
+    hours = hours || 0;
+    back = date || new Date;
+    back.setHours(back.getHours() - hours);
+    return back.toISOString().substring(0, 13).replace("T", " ");
 };

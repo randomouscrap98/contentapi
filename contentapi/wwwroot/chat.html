@@ -8,6 +8,7 @@
     <!-- The MAIN api consumer script, it comes with most things you need to work with the API. 
         In particular, it has an auto websocket manager for building quick chatrooms -->
     <script src="api.js"></script>
+    <link rel="stylesheet" href="markup.css">
     <!-- These are required for the 12y parser (markup) -->
     <script src="https://12me21.github.io/sbs2-markup/parse.js"></script>
     <script src="https://12me21.github.io/sbs2-markup/highlight.js"></script>
@@ -126,9 +127,11 @@ window.onload = function()
 
     //Make the initial request of the content and the initial comments
     ws.sendRequest("request", new RequestParameter({
-        "pid": pid
+        "pid": pid,
+        "yesterday" : api.GetSearchBackDate(24)
     }, [
-        new RequestSearchParameter("content", "id, name, permissions", "id = @pid"),
+        new RequestSearchParameter("message_aggregate", "contentId,count,maxId,minId,createUserId,maxCreateDate", "createDate > @yesterday"),
+        new RequestSearchParameter("content", "id, name, permissions", "id = @pid or id in @message_aggregate.contentId"),
         new RequestSearchParameter("message", "*", "contentId = @pid and !notdeleted()", "id_desc", FIRSTLOADMESSAGES),
         new RequestSearchParameter("user", "*", "id in @message.createUserId")
     ]), response =>
@@ -137,9 +140,10 @@ window.onload = function()
         //context that gives lots of information, but then we're proxying that through the websocket,
         //which has its own context.
         console.log(response);
+        var sortedContent = api.KeyById(response.data.data.content)
         var pagetitle = document.getElementById("pagetitle");
-        pagetitle.textContent = response.data.data.content[0].name;
-        pagetitle.href = "index.html?t=page&pid=" + response.data.data.content[0].id;
+        pagetitle.textContent = sortedContent[pid].name;
+        pagetitle.href = "index.html?t=page&pid=" + sortedContent[pid].id;
 
         displayMessages(response.data.data);
     });
@@ -285,7 +289,12 @@ function displayMessages(data, keepScroll)
     //Link the data
     api.AutoLinkUsers(data.message, data.user);
     //Sometimes, there is no content
-    if(data.content) api.AutoLinkContent(data.message, data.content);
+    if(data.content)
+    {
+        api.AutoLinkContent(data.message, data.content);
+        if(data.message_aggregate)
+            api.AutoLinkContent(data.message_aggregate, data.content);
+    } 
     api.AutoFixAllDates(data);
     var messagearea = document.getElementById("messagearea");
     var messagelist = document.getElementById("messagelist");
@@ -340,31 +349,56 @@ function displayMessages(data, keepScroll)
         // This is NOT the current room, so display it on the sidebar
         else
         {
-            var existing = document.getElementById(`notification_${x.contentId}`);
-
-            //Need to add the thing
-            if(!existing)
-            {
-                existing = createNotification(x.content);
-            }
-
-            var notification = existing.querySelector(".notification_bubble");
-            notification.textContent = String(Number(notification.textContent) + 1);
-            notification.title = new Date(x.createDate).toLocaleString();
-
-            //This will move it to the bottom
-            activitylist.appendChild(existing);
+            var existing = getOrCreateNotification(x.content);
+            updateNotification(existing, 1, x.createDate, true);
         }
 
         if(addedMessages && !keepScroll && autoscroll.checked)
             messagearea.scrollTop = messagearea.scrollHeight;
     });
 
+    //This manages aggregate data, if we happen to get any. This is generally for the first load "not really" notifications
+    if(data.message_aggregate)
+    {
+        data.message_aggregate.sort((a,b) => a.count - b.count);
+        data.message_aggregate.forEach(x => {
+            var existing = getOrCreateNotification(x.content);
+            updateNotification(existing, x.count, x.maxCreateDate);
+        })
+    }
+
     if(keepScroll)
     {
         var heightDiff = messagearea.scrollHeight - oldScrollHeight;
         messagearea.scrollTop = oldScrollTop + heightDiff;
     }
+}
+
+function getOrCreateNotification(content)
+{
+    return document.getElementById(`notification_${content.id}`) || createNotification(content);
+}
+
+function updateNotification(existing, addCount, createDate, doAlert)
+{
+    console.log("CREATEDATE:", createDate);
+    var notification = existing.querySelector(".notification_bubble");
+    var oldAlerts = Number(notification.textContent);
+    if(doAlert)
+    {
+        //If we aren't already a notification, start from 0, because we're overwriting the "not alert" number
+        if(notification.className.indexOf("notification_alert") < 0)
+            oldAlerts = 0;
+        notification.className += " notification_alert";
+    }
+    notification.textContent = String(oldAlerts + addCount);
+    var oldDate = notification.getAttribute("data-date") || "";
+    if (createDate > oldDate)
+        notification.title = new Date(createDate).toLocaleString();
+    notification.setAttribute("data-date", createDate);
+    //This will move it to the top
+    var activitylist = document.getElementById("activitylist");
+    activitylist.insertBefore(existing, activitylist.firstChild);
 }
 
 function setUserlist(data)
@@ -542,10 +576,13 @@ body, div { padding: 0; margin: 0; box-sizing: border-box; overflow: hidden; }
 }
 .notification_bubble {
     padding: 0.25em;
-    background-color: salmon;
+    background-color: gainsboro;
     border-radius: 0.2em;
     margin: 0 0.5em;
     cursor: pointer;
+}
+.notification_alert {
+    background-color: salmon;
 }
 [data-module] .content { color: gray; }
 [data-module] .avatar { display: none; }
