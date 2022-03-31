@@ -284,7 +284,8 @@ function displayMessages(data, keepScroll)
 {
     //Link the data
     api.AutoLinkUsers(data.message, data.user);
-    api.AutoLinkContent(data.message, data.content);
+    //Sometimes, there is no content
+    if(data.content) api.AutoLinkContent(data.message, data.content);
     api.AutoFixAllDates(data);
     var messagearea = document.getElementById("messagearea");
     var messagelist = document.getElementById("messagelist");
@@ -355,7 +356,7 @@ function displayMessages(data, keepScroll)
             activitylist.appendChild(existing);
         }
 
-        if(addedMessages && !keepScroll)
+        if(addedMessages && !keepScroll && autoscroll.checked)
             messagearea.scrollTop = messagearea.scrollHeight;
     });
 
@@ -428,6 +429,7 @@ body, div { padding: 0; margin: 0; box-sizing: border-box; overflow: hidden; }
 }
 #linkslist {
     margin: 1em 0.5em;
+    margin-top: 0.7em;
 }
 #titlearea {
     width: 100%;
@@ -591,10 +593,7 @@ body, div { padding: 0; margin: 0; box-sizing: border-box; overflow: hidden; }
             <div id="rightpanecontent" class="">
                 <div id="userlist"></div>
                 <div id="activitylist"></div>
-                <!--<div id="activitycontrols">
-                    <button></button>
-                    <button>clear</button>
-                </div>-->
+                <div><label><input id="autoscroll" type="checkbox" checked="">Autoscroll</label></div>
                 <div id="linkslist">
                     <a href="index.html">Home</a>
                     <a href="index.html?t=login">Login</a>

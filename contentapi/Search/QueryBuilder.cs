@@ -25,6 +25,8 @@ public class QueryBuilder : IQueryBuilder
         { "valuelike", new MacroDescription("vv", "ValueLike", new List<RequestType> { RequestType.content, RequestType.message }) }, 
         { "keywordin", new MacroDescription("v", "KeywordIn", new List<RequestType> { RequestType.content }) },
         { "valuein", new MacroDescription("vv", "ValueIn", new List<RequestType> { RequestType.content, RequestType.message }) }, 
+        { "valuekeynotin", new MacroDescription("v", "ValueKeyNotIn", new List<RequestType> { RequestType.content, RequestType.message }) }, 
+        { "valuekeynotlike", new MacroDescription("v", "ValueKeyNotLike", new List<RequestType> { RequestType.content, RequestType.message }) }, 
         { "onlyparents", new MacroDescription("", "OnlyParents", new List<RequestType> { RequestType.content }) },
         { "basichistory", new MacroDescription("", "BasicHistory", new List<RequestType> { RequestType.activity }) },
         { "notdeleted", new MacroDescription("", "NotDeletedMacro", new List<RequestType> { RequestType.content, RequestType.message, RequestType.user }) }, 
@@ -71,20 +73,20 @@ public class QueryBuilder : IQueryBuilder
     // -- MACROS --
     // ------------
 
-    public string KeywordSearchGeneric(SearchRequestPlus request, string value, string op)
+    public string KeywordSearchGeneric(SearchRequestPlus request, string value, string op, string contentop)
     {
         var typeInfo = typeService.GetTypeInfo<ContentKeyword>();
-        return $@"id in 
+        return $@"id {contentop}
             (select {nameof(ContentKeyword.contentId)} 
              from {typeInfo.selfDbInfo?.modelTable}
              where {nameof(ContentKeyword.value)} {op} {value}
             )";
     }
 
-    public string ValueSearchGeneric(SearchRequestPlus request, string key, string value, string op)
+    public string ValueSearchGeneric(SearchRequestPlus request, string key, string value, string op, string contentop)
     {
         var typeInfo = typeService.GetTypeInfo<ContentValue>();
-        return $@"id in 
+        return $@"id {contentop}
             (select {nameof(ContentValue.contentId)} 
              from {typeInfo.selfDbInfo?.modelTable}
              where {nameof(ContentValue.key)} {op} {key} 
@@ -92,18 +94,38 @@ public class QueryBuilder : IQueryBuilder
             )";
     }
 
+    public string ValueKeySearchGeneric(SearchRequestPlus request, string key, string op, string contentop)
+    {
+        var typeInfo = typeService.GetTypeInfo<ContentValue>();
+        return $@"id {contentop}
+            (select {nameof(ContentValue.contentId)} 
+             from {typeInfo.selfDbInfo?.modelTable}
+             where {nameof(ContentValue.key)} {op} {key} 
+            )";
+    }
+
     //NOTE: Even though these might say "0" references, they're all used by the macro system!
     public string KeywordLike(SearchRequestPlus request, string value) =>
-        KeywordSearchGeneric(request, value, "like");
+        KeywordSearchGeneric(request, value, "like", "in");
         
     public string KeywordIn(SearchRequestPlus request, string value) =>
-        KeywordSearchGeneric(request, value, "in");
+        KeywordSearchGeneric(request, value, "in", "in");
 
     public string ValueLike(SearchRequestPlus request, string key, string value) =>
-        ValueSearchGeneric(request, key, value, "like");
+        ValueSearchGeneric(request, key, value, "like", "in");
 
     public string ValueIn(SearchRequestPlus request, string key, string value) =>
-        ValueSearchGeneric(request, key, value, "in");
+        ValueSearchGeneric(request, key, value, "in", "in");
+    
+    public string ValueKeyNotIn(SearchRequestPlus request, string key)
+    {
+        return ValueKeySearchGeneric(request, key, "IN", "not in");
+    }
+
+    public string ValueKeyNotLike(SearchRequestPlus request, string key)
+    {
+        return ValueKeySearchGeneric(request, key, "LIKE", "not in");
+    }
 
     public string OnlyParents(SearchRequestPlus request)
     {

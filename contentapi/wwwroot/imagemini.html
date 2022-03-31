@@ -17,6 +17,10 @@ const IMAGESIZE = 40;
 const TOKENKEY = "contentapi_defimpl_userkey";
 function GetToken() { return localStorage.getItem(TOKENKEY); }
 
+function getPage() { return Number(page.textContent); }
+function changePage(amount) { setPage(getPage() + amount); }
+function setPage(exact) { page.textContent = String(Math.max(0, exact)); }
+
 window.onload = function()
 {
     // You should try to create only one API object for your entire application (or at least, one per session)
@@ -28,16 +32,11 @@ window.onload = function()
         console.log("Error: ", e);
     };
 
-    var search = new RequestParameter({ type : 3 }, [
-        new RequestSearchParameter("content", "id,contentType,hash,permissions,name,createDate,createUserId", "contentType = @type", "id_desc", LOADIMAGES, 0)
-    ]);
+    reloadList();
 
-    api.Search(search, new ApiHandler(dd =>
-    {
-        dd.result.data.content.forEach(x => {
-            imagelist.appendChild(createImage(x));
-        });
-    }));
+    bucket.onblur = () => { setPage(0); reloadList(); };
+    forward.onclick = () => { changePage(1); reloadList(); };
+    back.onclick = () => { changePage(-1); reloadList(); };
 
     document.addEventListener('paste', (event)=>
     {
@@ -52,15 +51,55 @@ window.onload = function()
                 var form = new FormData();
                 form.append("file", file);
                 if(quantize.value)
+                {
+                    console.log(`Quantizing to ${quantize.value}`);
                     form.append("quantize", quantize.value);
-                api.UploadFile(form, new ApiHandler(d => {
+                }
+                if(bucket.value)
+                {
+                    console.log(`Uploading to bucket ${bucket.value}`);
+                    form.append("globalPerms", "");
+                    form.append("values[bucket]", bucket.value);
+                }
+                api.UploadFile(form, new ApiHandler(d => 
+                {
                     console.log("Upload successful. ID: " + d.result.id);
-                    location.reload();
+                    reloadList();
                 }));
             }
         }
     });
 };
+
+function reloadList()
+{
+    var values = {
+        key : "bucket",
+        type : 3
+    };
+
+    var request = new RequestSearchParameter("content", "id,contentType,hash,permissions,name,createDate,createUserId", "contentType = @type", "id_desc", LOADIMAGES, getPage() * LOADIMAGES);
+
+    if(bucket.value)
+    {
+        values["value"] = JSON.stringify(bucket.value);
+        request.query += " and !valuelike(@key,@value)";
+    }
+    else
+    {
+        request.query += " and !valuekeynotlike(@key)";
+    }
+
+    var search = new RequestParameter(values, [ request ]);
+
+    imagelist.innerHTML = "";
+    api.Search(search, new ApiHandler(dd =>
+    {
+        dd.result.data.content.forEach(x => {
+            imagelist.appendChild(createImage(x));
+        });
+    }));
+}
 
 function createImage(content)
 {
@@ -70,8 +109,21 @@ function createImage(content)
     container.href = api.ResolveRelativeUrl(api.GetFileUrl(content.hash));
     container.append(image);
     container.target="_blank";
+    container.className = "imagecontainer";
+    container.title = new Date(content.createDate).toLocaleString();
+
+    if(!(content.permissions[0] && content.permissions[0].indexOf("R")))
+    {
+        var lock = document.createElement("div");
+        lock.innerHTML = "&#128274;";
+        lock.className = "private";
+        container.appendChild(lock);
+        container.setAttribute("data-private", "true");
+    }
+
     return container;
 }
+
     </script>
 
     <style>
@@ -88,8 +140,18 @@ body {
     height: 100vh;
     overflow-y: scroll;
 }
-#imagelist a {
+.imagecontainer {
     display: inline-block;
+    position: relative;
+}
+.imagecontainer[data-private] {
+    border: 1px solid red;
+}
+.private {
+    position: absolute;
+    bottom:1px;
+    right:0px;
+    z-index: 100;
 }
 @media (max-width: 30rem)
 {
@@ -114,10 +176,14 @@ body {
 
 <body>
     <div id="main">
-        <span>paste image anywhere</span>
+        <span>paste img in here</span>
+        <input id="bucket" placeholder="bucket" autocomplete="on">
         <input id="quantize" placeholder="quantize" autocomplete="on">
-        <div id="imagelist">
-
+        <div id="imagelist"></div>
+        <div id="controls">
+            <button id="back">&lt;</button>
+            <span id="page">0</span>
+            <button id="forward">&gt;</button>
         </div>
     </div>
 </body>

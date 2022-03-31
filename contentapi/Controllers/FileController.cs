@@ -1,6 +1,4 @@
 using System.Diagnostics;
-using System.Text.RegularExpressions;
-using contentapi.Main;
 using contentapi.Search;
 using contentapi.Utilities;
 using contentapi.Views;
@@ -88,6 +86,7 @@ public class FileController : BaseController
       public bool tryResize {get;set;} = true;
       public int quantize {get;set;} = -1; 
       public string? globalPerms {get;set;} = null;
+      public Dictionary<string, string> values {get;set;} = new Dictionary<string, string>();
    }
 
    [HttpPost]
@@ -117,7 +116,8 @@ public class FileController : BaseController
 
          var newView = new ContentView() { 
             name = model.name ?? "",
-            contentType = Db.InternalContentType.file
+            contentType = Db.InternalContentType.file,
+            values = model.values.ToDictionary(x => x.Key, y => (object)y.Value)
          };
 
          //This may look strange: it's because we have a bit of a hack to make empty globalPerms work. We strip

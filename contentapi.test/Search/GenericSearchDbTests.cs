@@ -2,15 +2,11 @@ using System;
 using System.Collections.Generic;
 using System.Data;
 using System.Linq;
-using System.Text.RegularExpressions;
 using System.Threading.Tasks;
-using AutoMapper;
 using contentapi.Db;
-using contentapi.Main;
 using contentapi.Search;
 using contentapi.Utilities;
 using contentapi.Views;
-using Microsoft.Extensions.Logging;
 using Xunit;
 
 namespace contentapi.test;
@@ -1025,6 +1021,62 @@ public class GenericSearchDbTests : ViewUnitTestBase, IClassFixture<DbUnitTestSe
             Assert.True(x.values.ContainsKey(keys[0]) || x.values.ContainsKey(keys[1]));
             Assert.True(x.values.Values.Contains(searchesPrime[0]) || x.values.Values.Contains(searchesPrime[1]));
             //Assert.True(((x.id - 1) & (int)ContentVariations.Values) > 0);
+        });
+    }
+    
+    [Theory]
+    [InlineData(0)]
+    [InlineData(1)]
+    [InlineData(2)]
+    [InlineData(5)]
+    public async Task GenericSearch_Search_ValueKeyNotInMacro(int id)
+    {
+        var antiKey = $"contentval_{id}";
+        var search = new SearchRequests();
+        search.values.Add("key", new[] { antiKey });
+        search.requests.Add(new SearchRequest()
+        {
+            type = "content",
+            fields = "id,values",
+            query = "!valuekeynotin(@key)"
+        });
+
+        var result = (await service.SearchUnrestricted(search)).data["content"];
+        var castResult = service.ToStronglyTyped<ContentView>(result);
+
+        Assert.Contains(castResult, x => x.values.Count > 0);
+        Assert.Contains(castResult, x => x.values.Count == 0);
+        Assert.All(castResult, x =>
+        {
+            Assert.DoesNotContain(antiKey, x.values.Keys);
+        });
+    }
+
+    [Theory]
+    [InlineData(0)]
+    [InlineData(1)]
+    [InlineData(2)]
+    [InlineData(5)]
+    public async Task GenericSearch_Search_ValueKeyNotLikeMacro(int id)
+    {
+        var antiKey = $"contentval_{id}";
+        var search = new SearchRequests();
+        search.values.Add("key", antiKey);
+        search.requests.Add(new SearchRequest()
+        {
+            type = "content",
+            fields = "id,values",
+            query = "!valuekeynotlike(@key)"
+        });
+
+        var result = (await service.SearchUnrestricted(search)).data["content"];
+        var castResult = service.ToStronglyTyped<ContentView>(result);
+
+        Assert.Contains(castResult, x => x.values.Count > 0);
+        Assert.Contains(castResult, x => x.values.Count == 0);
+        Assert.All(castResult, x =>
+        {
+            Assert.DoesNotContain(antiKey, x.values.Keys);
         });
     }
 
