@@ -112,7 +112,7 @@ function createImage(content)
     container.className = "imagecontainer";
     container.title = new Date(content.createDate).toLocaleString();
 
-    if(!(content.permissions[0] && content.permissions[0].indexOf("R")))
+    if(!(content.permissions[0] && content.permissions[0].indexOf("R") >= 0))
     {
         var lock = document.createElement("div");
         lock.innerHTML = "&#128274;";
