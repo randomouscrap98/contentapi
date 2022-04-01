@@ -1,6 +1,4 @@
 using contentapi.Main;
-using contentapi.Search;
-using contentapi.Security;
 using contentapi.Utilities;
 using contentapi.Views;
 using Microsoft.AspNetCore.Authorization;
@@ -74,6 +72,17 @@ public class UserController : BaseController
                 RateLimit(RateLogin, loginInfo.email);
                 return userService.LoginEmailAsync(loginInfo.email, loginInfo.password, expireOverride);
             }
+        });
+    }
+
+    [Authorize]
+    [HttpGet("me")]
+    public Task<ActionResult<UserView>> GetMe()
+    {
+        return MatchExceptions(() =>
+        {
+            var uid = GetUserIdStrict();
+            return services.searcher.GetById<UserView>(Search.RequestType.user, uid, true);
         });
     }
 

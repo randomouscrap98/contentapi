@@ -433,6 +433,11 @@ Api.prototype.AboutToken = function(handler)
     this.Raw("status/token", null, handler);
 };
 
+Api.prototype.UserSelf = function(handler)
+{
+    this.Raw("user/me", null, handler);
+};
+
 // This is your main source for all data on the website, excluding live updates.
 Api.prototype.Search = function(request, handler)
 {

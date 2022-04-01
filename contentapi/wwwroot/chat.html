@@ -27,6 +27,8 @@ var api;
 var ws;
 var pid;
 
+var userSelf;
+
 //Constants for our page runtime, you don't necessarily need these
 const FIRSTLOADMESSAGES = 30;
 const LOADMOREMESSAGES = 200;
@@ -63,6 +65,10 @@ window.onload = function()
         console.log("Error: ", e);
     };
 
+    //Quickly go figure out who you are, this is just for tracking stuff like avatar/etc. "UserSelf" gets your whole
+    //user view, with id and avatar and everything, but no private data (so same object you'd get from any request)
+    api.UserSelf(new ApiHandler(d => { userSelf = d.result; }));
+
     //Set up the automatic websocket. The auto websocket automatically manages connections, reconnects, and funnels
     //messages to the appropriate endpoints. It grealy simplifies usage of the websocket, and I highly recommend you
     //follow this example for your own applications. However, you can also do everything manually. If you need a 
@@ -71,7 +77,9 @@ window.onload = function()
         //NOTE: this doesn't handle edits or deletes just yet! You'll need to check the event
         //type and action and edit/remove comments accordingly!
         live => {
-            console.log(live);
+            console.log("Live:", live);
+            //This method searches in ALL event types for yourself. It shouldn't be too expensive... maybe
+            updateUserInfo(live.data.data);
             //Note that live data is in a complex format, because the data related to the events
             //is grouped by event type. For some reason, the API reports the event types as strings
             //rather than as integers for the data, but reports as integers in the events. This is
@@ -157,7 +165,7 @@ window.onload = function()
     var lastPostboxValue = "";
 
     //Postbox setup
-    postbox.onkeyup = function(e)
+    postbox.onkeydown = function(e)
     {
         if(e.key === "Enter" && !e.shiftKey)
         {
@@ -175,10 +183,10 @@ window.onload = function()
         lastPostboxValue = postbox.value;
         postbox.value = "";
 
-        //NOTE: if you want the avatar you used to comment with saved with the comment for posterity
-        //(meaning searching for your old comment will show your original avatar when commenting and not
-        // your current avatar), you can add your avatar to the metadata. 
-        api.WriteNewComment(new NewCommentParameter(lastPostboxValue, pid, DEFAULTMARKUP), new ApiHandler(d => {
+        //NOTE: the "yourAvatar" here might be empty, or it might have a value (depending on how quickly all the async stuff happens).
+        //Both will work: if it's empty, it'll just not set the avatar field and use your current avatar whenever displaying. Or, if
+        //it IS set, your avatar will be saved with the comment.
+        api.WriteNewComment(new NewCommentParameter(lastPostboxValue, pid, DEFAULTMARKUP, userSelf && userSelf.avatar), new ApiHandler(d => {
             if(d.error)
             {
                 alert("Error on post: " + d.error)
@@ -187,6 +195,7 @@ window.onload = function()
         }));
     };
 
+    //The button at the top of the page to load older comments. Still goes through the websocket to make it slightly faster though (maybe)
     loadolder.onclick = function()
     {
         //find the oldest comment id, that's our starting point. load 
@@ -203,6 +212,31 @@ window.onload = function()
         });
     };
 };
+
+// We need to track your current user information in order to use it for special fields in message posting. Your user data could be
+// ANYWHERE, so we just scan all the data for users and do a little extra work to find yourself
+function updateUserInfo(data)
+{
+    //We can't find ourselves if we don't know our own user id
+    if(!userSelf)
+    {
+        console.warn("Initial self user search not completed yet, but live data was received. Skipping user info update");
+        return;
+    }
+
+    //the keys in the data are the event types, since we assume we get this from live data.
+    Object.keys(data).forEach(x =>
+    {
+        //Some event types don't even have user responses (I don't know of any but just in case...)
+        if(data[x].user)
+        {
+            //Sort the users and find yourself. You could also just linear scan, that might be faster
+            var keyedUsers = api.KeyById(data[x].user);
+            if(keyedUsers[userSelf.id])
+                userSelf = keyedUsers[userSelf.id];
+        }
+    });
+}
 
 //Go discover all message elements, which helps us find all the ids and also determine where to put NEW elements
 function getAllMessageElements()
@@ -240,8 +274,8 @@ function createMessage(message)
     userInfo.className = "userinfo";
     var avatar = document.createElement("img");
     avatar.className = "avatar";
-    //You should use the metadata instead. This is the lazy version
-    avatar.src = api.GetFileUrl(message.createUser.avatar, new FileModifyParameter(AVATARSIZE, true));
+    //Use the "a" field if present, otherwise fallback to current avatar for user
+    avatar.src = api.GetFileUrl((message.values && message.values.a) || message.createUser.avatar, new FileModifyParameter(AVATARSIZE, true));
     var user = document.createElement("span");
     user.className = "user";
     user.textContent = message.createUser.username;
