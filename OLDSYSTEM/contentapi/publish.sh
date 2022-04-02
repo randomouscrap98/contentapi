@@ -21,7 +21,7 @@ then
    echo "WARN: PUBLISHING PRODUCTION"
    phost=publisher@smilebasicsource.com # The production server (and user to connect)
    port=22
-   pfolder="/var/www/contentapi"                        # The REMOTE location to PLACE all files
+   pfolder="/var/www/contentapi_old"                        # The REMOTE location to PLACE all files
    rdf="rl"
 else
    phost=publisher@oboy.smilebasicsource.com # The production server (and user to connect)
@@ -74,7 +74,9 @@ done
 # THE PUBLISH! I DON'T EVER WANT THAT TO HAPPEN AGAIN, this is safety
 for rmfl in $removefiles
 do
-   rm -rf "$lpfolder/$rmfl"
+   removefile="$lpfolder/$rmfl"
+   echo "Trying to remove $removefile"
+   rm -rf $removefile
 done
 
 # Now put the stuff on the server! A simple direct copy

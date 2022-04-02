@@ -1,5 +1,5 @@
 [Unit]
-Description=Contentapi for servicing sbs
+Description=Contentapi for servicing qcs
 
 [Service]
 WorkingDirectory=/var/www/contentapi

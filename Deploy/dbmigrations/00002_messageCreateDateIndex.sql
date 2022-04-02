@@ -9,6 +9,6 @@ drop index if exists idx_content_history_contentId;
 -- in the way of unique entries (most are null). And whether through some glitch or otherwise, having
 -- just contentId and module seems to solve that problem... weird. Maybe createDate makes the index
 -- too large and that's why it's hard to search through (this seems likely)
-create index idx_message_contentid on messages(contentId, createDate, module);
-create index idx_message_contentmodule on messages(contentId, module);
-create index idx_content_history_contentId on content_history(contentId, createDate);
+create index if not exists idx_message_contentid on messages(contentId, createDate, module);
+create index if not exists idx_message_contentmodule on messages(contentId, module);
+create index if not exists idx_content_history_contentId on content_history(contentId, createDate);
