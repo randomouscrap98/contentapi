@@ -1,1 +1,5 @@
 PRAGMA journal_mode=WAL;
+
+-- This is the double id index, which is for some reason required to actually find messages WITHIN a content
+-- that has a LOT of messages. You can probably get rid of the module column if it impacts performance...
+create index idx_message_contentidid on messages(contentId, id, module);
