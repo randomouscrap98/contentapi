@@ -84,6 +84,7 @@ public class ModuleController : BaseController
             var requester = GetUserIdStrict();
             string result = "";
             //RunCommand should be thread safe, so just... run it async!
+            var modData = await modService.RefreshModuleAsync(services.searcher, name, requester);
             await Task.Run(() => result = modService.RunCommand(name, arguments, requester, parentId));
             return result;
         });

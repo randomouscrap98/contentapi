@@ -211,7 +211,7 @@ function user_onload(template, state)
         template.querySelector("#user-update-avatar").value = user.avatar;
         template.querySelector("#user-update-special").value = user.special;
         template.querySelector("#user-update-groups").value = user.groups.join(" ");
-        template.querySelector("#user-update-super").value = user.super;
+        template.querySelector("#user-update-super").value = Number(user.super);
 
         //This search is to get files and such
         var search = new RequestParameter({

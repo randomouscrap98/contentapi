@@ -137,7 +137,7 @@ window.onload = function()
         new RequestSearchParameter("message_aggregate", "contentId,count,maxId,minId,createUserId,maxCreateDate", "createDate > @yesterday"),
         new RequestSearchParameter("content", "id, name, permissions", "id = @pid or id in @message_aggregate.contentId"),
         new RequestSearchParameter("message", "*", "contentId = @pid and !notdeleted()", "id_desc", FIRSTLOADMESSAGES),
-        new RequestSearchParameter("user", "*", "id in @message.createUserId")
+        new RequestSearchParameter("user", "*", "id in @message.createUserId or id in @message.uidsInText")
     ]), response =>
     {
         //It's "data.data" because it's double wrapped: the data is already wrapped in the "request"
@@ -168,25 +168,40 @@ window.onload = function()
         }
     };
 
+    //Use a custom handler for posting to restore the textbox
+    var postHandler = new ApiHandler(d => {
+        if (d.error) {
+            alert("Error on post: " + d.error)
+            postbox.value = lastPostboxValue;
+        }
+    }, e => {
+        api.default_handler.error(e);
+        postbox.value = lastPostboxValue;
+    });
+
     //This doesn't let you use markup, so take that into account
     postsubmit.onclick = function()
     {
         if(!postbox.value)
             return;
+        
+        var commandCheck = postbox.value.match(/^\/([^\s]+)\s*(.*)$/);
 
         lastPostboxValue = postbox.value;
         postbox.value = "";
 
-        //NOTE: the "yourAvatar" here might be empty, or it might have a value (depending on how quickly all the async stuff happens).
-        //Both will work: if it's empty, it'll just not set the avatar field and use your current avatar whenever displaying. Or, if
-        //it IS set, your avatar will be saved with the comment.
-        api.WriteNewComment(new NewCommentParameter(lastPostboxValue, pid, DEFAULTMARKUP, userSelf && userSelf.avatar), new ApiHandler(d => {
-            if(d.error)
-            {
-                alert("Error on post: " + d.error)
-                postbox.value = lastPostboxValue;
-            }
-        }));
+        if(commandCheck)
+        {
+            api.WriteModuleMessage(commandCheck[1], pid, commandCheck[2], postHandler); 
+        }
+        else
+        {
+            //NOTE: the "yourAvatar" here might be empty, or it might have a value (depending on how quickly all the async stuff happens).
+            //Both will work: if it's empty, it'll just not set the avatar field and use your current avatar whenever displaying. Or, if
+            //it IS set, your avatar will be saved with the comment.
+            api.WriteNewComment(new NewCommentParameter(lastPostboxValue, pid, DEFAULTMARKUP, userSelf && userSelf.avatar), postHandler);
+        }
+
     };
 
     //The button at the top of the page to load older comments. Still goes through the websocket to make it slightly faster though (maybe)
@@ -327,6 +342,7 @@ function displayMessages(data, keepScroll)
 {
     //Prelink the data all at the start so we only do it once and have proper data throughout
     api.AutoLinkUsers(data.message, data.user);
+    api.AutoLinkModuleUsers(data.message, data.user);
     if(data.content)
     {   //Sometimes, there is no content
         api.AutoLinkContent(data.message, data.content);

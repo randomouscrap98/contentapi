@@ -265,7 +265,7 @@ Api.prototype.GetErrorHandler = function(handler, error)
 //Attempt to handle the given error with either the given handler (if possible) or our internal error handler.
 Api.prototype.HandleError = function(handler, error)
 {
-    var realHandler = this.GetErrorHandler(handler, error) || this.GetErrorHandler(this.default_handler.error, error);
+    var realHandler = this.GetErrorHandler(handler.error, error) || this.GetErrorHandler(this.default_handler.error, error);
 
     if(!realHandler)
         throw "No API error handler set!";
@@ -483,7 +483,6 @@ Api.prototype.DeleteType = function(type, id, handler)
 // to supply the user for any writes, because it is part of your login token supplied
 // by this API wrapper.
 Api.prototype.WriteNewComment = function(newComment, handler)
-    //text, contentId, markup, avatar, nickname, handler)
 {
     var values = {};
     if(newComment.markup) values.m = newComment.markup; //Should be one of the supported markups
@@ -1069,6 +1068,26 @@ Api.prototype.AutoFixAllDates = function(data)
 {
     var me = this;
     Object.keys(data).forEach(x => me.AutoFixDates(data[x]));
+};
+
+Api.prototype.AutoLinkModuleUsers = function(data, userlist)
+{
+    var linkUsers = this.KeyById(userlist);
+    data.forEach(m => 
+    {
+        //This is the field that tells us which users are inside the userlist. Also, we only operate on modules
+        if(m.uidsInText && m.module)
+        {
+            m.uidsInText.forEach(u =>
+            {
+                //Only link if the user actually exists
+                if(linkUsers[u])
+                    m.text = m.text.replace(new RegExp(`%${u}%`,"g"), linkUsers[u].username);
+                else
+                    console.warn(`No user ${u} found in userlist during module user autolinking!`);
+            });
+        }
+    });
 };
 
 // Given one of the type descriptions from the "details" resultset of "AboutSearch", returns

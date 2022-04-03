@@ -116,37 +116,51 @@ public class LiveEventQueue : ILiveEventQueue
     {
         //First, need to lookup the data for the event to add it to our true cache. Also need to remove old values!
         var cacheItem = await LookupEventDataAsync(evnt);
-        //var permissions = GetPermissionsFromEvent(evnt, cacheItem);
 
         //This is the ONLY place we're performing this permission calculation nonsense. Be VERY CAREFUL, this is
         //quite the hack!
         if(evnt.type == EventType.activity || evnt.type == EventType.message)
         {
-            var currentPermissions = GetStandardContentPermissions(cacheItem.data ?? throw new InvalidOperationException("No cache result data to pull permissions from!"));
+            var recipientPerms = new Dictionary<long, string>();
+            var data = cacheItem.data ?? throw new InvalidOperationException("No cache result data to pull permissions from!");
 
-            //Go figure out our permission linking
-            lock(permissionCacheLock)
+            if(evnt.type == EventType.message)
+                recipientPerms = GetRestrictedMessagePermissions(data);
+
+            //The special case: restricted message permissions ALWAYS override others!
+            if(recipientPerms.Count > 0)
             {
-                //The permissions are brand new, just add an empty object
-                if(!permissionCache.ContainsKey(currentPermissions.Item1))
-                    permissionCache.Add(currentPermissions.Item1, new PermissionCacheData()); 
-
-                //We must modify the dictionary IN PLACE so we don't replace the reference! THIS IS CRITICAL TO MAKING THE PERMISSION UPDATE SYSTEM WORK!
-                var permData = permissionCache[currentPermissions.Item1];
-                permData.MaxLinkId = evnt.id;
-                permData.Permissions.Clear();
-            
-                //The very special modification in-place. Slightly slower, but saves a LOT of complexity and processing for permission updates!
-                foreach(var kv in currentPermissions.Item2)
-                    permData.Permissions.Add(kv.Key, kv.Value);
-
-                //This makes the event permissions reference the permissions WITHIN our tracked permission dictionary!
-                //This way, when OTHER events come in with new permissions for the same content, it will go through and
-                //update ALL prior events! Hopefully!
-                evnt.permissions = permData.Permissions;
-
-                //TODO: Add the old permission removal!
+                evnt.permissions = recipientPerms;
             }
+            else
+            {
+                var currentPermissions = GetStandardContentPermissions(data);
+
+                //Go figure out our permission linking
+                lock (permissionCacheLock)
+                {
+                    //The permissions are brand new, just add an empty object
+                    if (!permissionCache.ContainsKey(currentPermissions.Item1))
+                        permissionCache.Add(currentPermissions.Item1, new PermissionCacheData());
+
+                    //We must modify the dictionary IN PLACE so we don't replace the reference! THIS IS CRITICAL TO MAKING THE PERMISSION UPDATE SYSTEM WORK!
+                    var permData = permissionCache[currentPermissions.Item1];
+                    permData.MaxLinkId = evnt.id;
+                    permData.Permissions.Clear();
+
+                    //The very special modification in-place. Slightly slower, but saves a LOT of complexity and processing for permission updates!
+                    foreach (var kv in currentPermissions.Item2)
+                        permData.Permissions.Add(kv.Key, kv.Value);
+
+                    //This makes the event permissions reference the permissions WITHIN our tracked permission dictionary!
+                    //This way, when OTHER events come in with new permissions for the same content, it will go through and
+                    //update ALL prior events! Hopefully!
+                    evnt.permissions = permData.Permissions;
+
+                    //TODO: Add the old permission removal!
+                }
+            }
+
         }
         else if(evnt.type == EventType.user)
         {
@@ -199,6 +213,30 @@ public class LiveEventQueue : ILiveEventQueue
 
         //We can be "reasonably" sure that it's a dictionary
         return Tuple.Create((long)content["id"], (Dictionary<long, string>)content[permKey]);
+    }
+
+    public Dictionary<long, string> GetRestrictedMessagePermissions(Dictionary<string, QueryResultSet> result)
+    {
+        var key = RequestType.message.ToString();
+
+        if(!result.ContainsKey(key))
+            throw new InvalidOperationException($"Tried to retrieve restricted message permissions from 'standard' result, but result had no '{key}'");
+        if(result[key].Count() != 1)
+            throw new InvalidOperationException($"Tried to retrieve restricted message permissions from 'standard' result, but result had multiple '{key}'");
+        
+        var message = result[key].First();
+        var ruidKey = nameof(MessageView.receiveUserId);
+
+        if(!message.ContainsKey(ruidKey))
+            throw new InvalidOperationException($"Tried to retrieve restricted message recipient from 'standard' result, but result from '{key}' had no key '{ruidKey}'");
+        
+        var recipient = (long)message[ruidKey];
+
+        //ONLY the recipient should have access to this restricted message
+        if(recipient == 0)
+            return new Dictionary<long, string>();
+        else
+            return new Dictionary<long, string>() { { recipient, "R" } }; 
     }
 
     public SearchRequest GetAutoContentRequest(string query)
