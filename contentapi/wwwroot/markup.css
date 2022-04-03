@@ -10,6 +10,11 @@ html {
 	--bgblue: #CEF;
 	--bgpurple: #ECF;
 	--bggray: #DDD;
+	word-break: break-word;
+}
+
+.content {
+	white-space: pre-wrap;
 }
 
 .content blockquote {
@@ -22,9 +27,12 @@ html {
 	margin-left: -1em;
 }
 
-.spoilerButton:not([data-show]) + .spoiler {
-	display: none;
+.content img {
+	display: block;
 }
+
+.spoilerButton { display: block; }
+.spoilerButton:not([data-show]) + .spoiler { display: none; }
 .content .spoiler {
 	padding: 0.5em;
 	background: var(--spoiler-bg);

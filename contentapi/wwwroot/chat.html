@@ -58,12 +58,6 @@ window.onload = function()
 
     // You should try to create only one API object for your entire application (or at least, one per session)
     api = new Api(null, GetToken); //Just a global api object, whatever. Null means use the default endpoint (local to self)
-    // Set the default error handler for all REGULAR requests (not websocket) to show an alert to the user.
-    api.default_handler.error = e =>
-    {
-        alert(`Error ${e.status_code}: ${e.message}`);
-        console.log("Error: ", e);
-    };
 
     //Quickly go figure out who you are, this is just for tracking stuff like avatar/etc. "UserSelf" gets your whole
     //user view, with id and avatar and everything, but no private data (so same object you'd get from any request)

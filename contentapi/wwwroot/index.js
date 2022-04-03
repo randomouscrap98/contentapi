@@ -20,11 +20,6 @@ window.onload = function()
     var parameters = new URLSearchParams(location.search);
     var state = Object.fromEntries(parameters);
     api = new Api(null, GetToken); //Just a global api object, whatever. Null means use the default endpoint (local to self)
-    api.default_handler.error = e =>
-    {
-        alert(`Error ${e.status_code}: ${e.message}`);
-        console.log("Error: ", e);
-    };
 
     //Load a template! Otherwise, just leave the page as-is
     if(parameters.has("t"))
@@ -203,13 +198,26 @@ function user_onload(template, state)
     var avatar = template.querySelector("#user-avatar");
     var userFiles = template.querySelector("#user-files-container");
 
-    api.AboutToken(new ApiHandler(d =>
+    //This gets the information for the current user, if there is one (just the user, not anything else)
+    api.UserSelf(new ApiHandler(d =>
     {
+        //Set up the basic user information on the page, but we need to go out and get more
+        var user = d.result;
+        avatar.src = api.GetFileUrl(user.avatar, new FileModifyParameter(50));
+        MakeTable(user, table);
+
+        template.querySelector("#user-update-id").value = user.id;
+        template.querySelector("#user-update-username").value = user.username;
+        template.querySelector("#user-update-avatar").value = user.avatar;
+        template.querySelector("#user-update-special").value = user.special;
+        template.querySelector("#user-update-groups").value = user.groups.join(" ");
+        template.querySelector("#user-update-super").value = user.super;
+
+        //This search is to get files and such
         var search = new RequestParameter({
-            uid : d.result.userId,
+            uid : user.id,
             type : 3
         }, [
-            new RequestSearchParameter("user", "*", "id = @uid"),
             new RequestSearchParameter("content", "*", "createUserId = @uid and contentType = @type", "id_desc", SEARCHRESULTSPERPAGE, state.fp * SEARCHRESULTSPERPAGE),
         ]);
 
@@ -218,23 +226,7 @@ function user_onload(template, state)
             //So the data from the api is in "result", but results from the "request"
             //endpoint are complicated and contain additional information about the request,
             //so you have to look into "data", and because request can get ANY data from the 
-            //database you want, you have to go into "user" because that's what you asked for.
-            if(dd.result.data.user.length == 0)
-            {
-                alert("No user data found!");
-                return;
-            }
-
-            var user = dd.result.data.user[0];
-            avatar.src = api.GetFileUrl(user.avatar, new FileModifyParameter(50));
-            MakeTable(user, table);
-
-            template.querySelector("#user-update-id").value = user.id;
-            template.querySelector("#user-update-username").value = user.username;
-            template.querySelector("#user-update-avatar").value = user.avatar;
-            template.querySelector("#user-update-special").value = user.special;
-            template.querySelector("#user-update-groups").value = user.groups.join(" ");
-            template.querySelector("#user-update-super").value = user.super;
+            //database you want, you have to go into "content" because that's what you asked for.
 
             //Now go set up the file list display thing
             dd.result.data.content.forEach(x => {

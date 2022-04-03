@@ -217,8 +217,11 @@ function Api(url, tokenGet)
             console.log("Data from API: ", d);
         },
         e => {
-            alert("No default error handler set for api! See console for error");
-            console.log("Error from API: ", e);
+            var message = e.message;
+            if(e.status_code == APICONST.STATUS.TOKENERROR)
+                message = "You're not logged in (invalid token)! " + message;
+            alert(`Error ${e.status_code}: ${message}`);
+            console.log("Error: ", e);
         },
         d => {
             console.debug(`api[${d.id}]: '${d.request.responseURL}' ${d.request.status} - ${d.request.responseText.length} bytes`);
