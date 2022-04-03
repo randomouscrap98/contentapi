@@ -1,5 +1,4 @@
 using System;
-using System.Collections.Concurrent;
 using System.Collections.Generic;
 using System.Linq;
 using System.Threading.Tasks;
@@ -430,5 +429,37 @@ public class EventQueueTest : ViewUnitTestBase, IClassFixture<DbUnitTestSearchFi
 
         Assert.Contains(eventData.data[EventType.message]["user"], x => (long)x["id"] == (int)UserVariations.Special + 1);
         Assert.Contains(eventData.data[EventType.message]["user"], x => (long)x["id"] == (int)UserVariations.Special + 2);
+    }
+
+    [Fact]
+    public async Task Regression_ListenAsync_ReceiveUserPermissions()
+    {
+        //Set up a module message with a recipient
+        var message = GetNewCommentView(AllAccessContentId);
+        message.module = "test";
+        message.receiveUserId = NormalUserId;
+
+        //Set up our two listeners
+        var ourUser = await searcher.GetById<UserView>(RequestType.user, NormalUserId, true);
+        var otherUser = await searcher.GetById<UserView>(RequestType.user, SuperUserId, true);
+
+        var ourListener = queue.ListenAsync(ourUser, -1, safetySource.Token);
+        var otherListener = queue.ListenAsync(otherUser, -1, safetySource.Token);
+
+        //Now, write the message
+        var writtenMessage = await writer.WriteAsync(message, ourUser.id);
+
+        var result = await ourListener;
+        Assert.Contains(result.events, x => x.refId == writtenMessage.id && x.userId == ourUser.id);
+        Assert.Contains(EventType.message, result.data.Keys);
+        Assert.Contains("message", result.data[EventType.message].Keys);
+        Assert.Contains(result.data[EventType.message]["message"], x => (long)x["id"] == writtenMessage.id && (string)x["module"] == "test" && (long)x["receiveUserId"] == ourUser.id);
+
+        Assert.False(await Task.Run(() => otherListener.Wait(10)));
+        safetySource.Cancel();
+
+        try { await otherListener; }
+        catch(TaskCanceledException) {}
+        catch(OperationCanceledException) {}
     }
 }
