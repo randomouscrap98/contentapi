@@ -307,11 +307,9 @@ function createMessage(message)
     var time = document.createElement("time");
     time.setAttribute("time", message.createDate);
     time.textContent = (new Date(message.createDate)).toLocaleString();
+    if(message.edited) time.textContent += ` (edited ${new Date(message.editDate).toLocaleString()})`;
     time.className = "annotation";
-    var deleteButton = document.createElement("button");
-    deleteButton.textContent = "Delete";
-    deleteButton.className = "delete";
-    deleteButton.onclick = () => deleteComment(message);
+    var deleteButton = false;
 
     if(message.module)
     {
@@ -321,11 +319,18 @@ function createMessage(message)
         container.setAttribute("data-module", message.module);
         userInfo.appendChild(moduleElement);
     }
+    else //You can't delete module messages, hence the else
+    {
+        deleteButton = document.createElement("button");
+        deleteButton.textContent = "Delete";
+        deleteButton.className = "delete";
+        deleteButton.onclick = () => deleteComment(message);
+    }
 
     userInfo.appendChild(avatar);
     userInfo.appendChild(user);
     userInfo.appendChild(time);
-    userInfo.appendChild(deleteButton);
+    if(deleteButton) userInfo.appendChild(deleteButton);
 
     var content = document.createElement("div");
     content.className = "content";
@@ -410,7 +415,7 @@ function displayMessages(data, keepScroll)
             else
             {
                 //This should ONLY happen on edit.
-                console.warn("Need to scan messagelist to insert message " + message.id);
+                console.warn("Need to scan messagelist to insert message " + x.id);
 
                 //We know it's never going to be at the end, so just skip the last one
                 //so we can safely use "nextSibling"
@@ -423,7 +428,7 @@ function displayMessages(data, keepScroll)
                     }
                     else if(i === 0)
                     {
-                        alert("Couldn't insert message " + message.id + ", no suitable position found!");
+                        alert("Couldn't insert message " + x.id + ", no suitable position found!");
                     }
                 }
             }
@@ -666,15 +671,14 @@ body, input, textarea, select {
 }
 .userinfo * {
     vertical-align: middle;
+    margin-right: 0.75em;
 }
 .userinfo .user {
-    margin-right: 0.75em;
     text-decoration: underline;
 }
 .delete { 
     display: none; 
     font-size: 0.5em;
-    margin-left: 0.75em;
 }
 .message:hover .delete, .message:focus .delete { 
     display: inline-block; 
