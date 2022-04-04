@@ -15,8 +15,8 @@ namespace contentapi.Main;
 
 public class DbWriterConfig
 {
-   public int HashChars {get;set;} = 5;
-   public int MaxHashRetries {get;set;} = 50;
+   public int AutoHashChars {get;set;} = 5;
+   public int AutoHashMaxRetries {get;set;} = 50;
    public string HashRegex {get;set;} = @"^[a-z\-]+$";
    public int HashMinLength {get;set;} = 8;
    public int HashMaxLength {get;set;} = 32;
@@ -1065,7 +1065,7 @@ public class DbWriter : IDbWriter
             int retries = 0;
             while (true)
             {
-                hash = rng.GetAlphaSequence(config.HashChars);
+                hash = rng.GetAlphaSequence(config.AutoHashChars);
 
                 //Not a duplicate hash? We can quit!
                 if(!(await IsDuplicateHash(hash)))
@@ -1075,7 +1075,7 @@ public class DbWriter : IDbWriter
 
                 retries++;
 
-                if (retries > config.MaxHashRetries)
+                if (retries > config.AutoHashMaxRetries)
                     throw new InvalidOperationException("Ran out of hash retries! Maybe there's too many files on the system?");
             }
 

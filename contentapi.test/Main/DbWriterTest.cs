@@ -1069,8 +1069,8 @@ public class DbWriterTest : ViewUnitTestBase, IClassFixture<DbUnitTestSearchFixt
         //All that REALLY matters is the hash length for auto generation. Well oops, and the retry count.
         //If we somehow reach 100 retries WITHOUT finding 1 out of 5 letters, that's really dumb. BUT,
         //it's definitely a possibility!
-        config.HashChars = 1;
-        config.MaxHashRetries = 200;
+        config.AutoHashChars = 1;
+        config.AutoHashMaxRetries = 200;
 
         //This is VERY important, as it makes this test take WAY less time!!
         rng.AlphaSequenceAvailableAlphabet = 8;

@@ -20,6 +20,11 @@
     <script src="markup.js"></script>
     <link rel="stylesheet" href="markup.css">
 
+    <!-- These are really unnecessary, and you can ignore them. They just add some quality of life
+        updates to the chat while we lived there; they don't do anything for this example though! -->
+    <script src="chatfancy.js"></script>
+    <link rel="stylesheet" href="chatfancy.css">
+
     <script>
 //NOTE: this file has nothing to do with index.html or any script/etc other than api.js
 //Use it as a starting point for a chat if you want.
@@ -489,12 +494,36 @@ function setUserlist(data)
     --rightpanewidth: 12rem;
     --titleheight: 2.8rem;
     --postareaheight: 6rem;
-    --stdborder: 1px solid #777;
     --postsubmitwidth: 3rem;
+    --stdborder: 1px solid #777;
+    --rightpanebg: #EEE;
+    --titlebg: #CCC;
+    --imageminibg: gainsboro;
+    --userlistbg: unset;
+    --activitybg: unset;
+    --connectedbg: lawngreen;
+    --usercolor: darkblue;
+    --modulecolor: darkcyan;
+    --modulecontentcolor: gray;
+    --annotationcolor: #999;
+    --notificationbg: gainsboro;
+    --notificationalertbg: salmon;
+    --mainbg: white;
+    --maincolor: #111;
+    --font: monospace;
+    --linkcolor: #0000F0;
+    --linkvisitedcolor: rgb(85,26,139);
 }
 body, div { padding: 0; margin: 0; box-sizing: border-box; overflow: hidden; }
-html, body { position: fixed; overflow: auto; top: 0; bottom: 0; left: 0; right: 0; font-family: monospace;}
-input, textarea { font-size: 1em; }
+html, body { position: fixed; overflow: auto; top: 0; bottom: 0; left: 0; right: 0; } /* 12's suggestion for actual window size */
+input, textarea { font-size: 1em; } /* fixes ios zoom-in? */
+a { color: var(--linkcolor); }
+a:visited { color: var(--linkvisitedcolor); }
+body, input, textarea, select {
+    font-family: var(--font);
+    color: var(--maincolor);
+    background: var(--mainbg);
+}
 #leftpane {
     width: calc(100% - var(--rightpanewidth));
     height: 100%;
@@ -505,7 +534,7 @@ input, textarea { font-size: 1em; }
 #rightpane {
     width: var(--rightpanewidth);
     height: 100%;
-    background-color: #EEE;
+    background: var(--rightpanebg);
     border-left: var(--stdborder);
     overflow-y: auto;
     position: absolute;
@@ -519,7 +548,7 @@ input, textarea { font-size: 1em; }
 #titlearea {
     width: 100%;
     height: var(--titleheight);
-    background-color: #CCC;
+    background: var(--titlebg);
     border-bottom: var(--stdborder);
     position: relative;
 }
@@ -538,7 +567,7 @@ input, textarea { font-size: 1em; }
     border: var(--stdborder);
 }
 #connectionstatus.connected {
-    background-color: lawngreen;
+    background: var(--connectedbg);
 }
 #postarea {
     width: 100%;
@@ -577,16 +606,18 @@ input, textarea { font-size: 1em; }
     width: 100%;
     border-bottom: var(--stdborder);
 }
+#userlist { background: var(--userlistbg); }
+#activitylist { background: var(--activitybg); }
 #imagemini {
     width: 100%;
     height: 16em;
-    background-color: gainsboro;
-    border: 1px solid gray;
+    background: var(--imageminibg);
+    border: var(--stdborder);
     box-sizing: border-box;
 }
 .user {
     font-weight: bold;
-    color: darkblue;
+    color: var(--usercolor);
 }
 #messagelist .user::after {
     content: ":";
@@ -597,7 +628,7 @@ input, textarea { font-size: 1em; }
 }
 .annotation {
     font-size: 0.7em;
-    color: #999;
+    color: var(--annotationcolor);
     font-style: italic;
 }
 .content {
@@ -625,19 +656,19 @@ input, textarea { font-size: 1em; }
 .module {
     margin-right: 0.5em;
     font-style: italic;
-    color: darkcyan;
+    color: var(--modulecolor);
 }
 .notification_bubble {
     padding: 0.25em;
-    background-color: gainsboro;
+    background: var(--notificationbg);
     border-radius: 0.2em;
     margin: 0 0.5em;
     cursor: pointer;
 }
 .notification_alert {
-    background-color: salmon;
+    background: var(--notificationalertbg);
 }
-[data-module] .content { color: gray; }
+[data-module] .content { color: var(--modulecontentcolor); }
 [data-module] .avatar { display: none; }
 [data-module] .user { text-decoration: none; }
 @media (max-width: 30rem)
@@ -662,6 +693,7 @@ input, textarea { font-size: 1em; }
 
 </head>
 
+<!-- Most chat content is auto-generated, but we have a lot of the scaffolding to hold it all here in the actual page -->
 <body class="">
     <div id="leftpane" class="">
         <div id="titlearea">
@@ -683,11 +715,26 @@ input, textarea { font-size: 1em; }
         <div id="rightpanecontent" class="">
             <div id="userlist"></div>
             <div id="activitylist"></div>
-            <div><label><input id="autoscroll" type="checkbox" checked="">Autoscroll</label></div>
+            <!-- Just some extras to make life nicer, not part of making chat work of course -->
+            <div>
+                <!-- Only displayed if the chatthemes.css file is included (again, not necessary at all) -->
+                <label id="themeselectcontainer" style="display: none"> 
+                    <span>Theme:</span>
+                    <select id="themeselect">
+                        <option>base</option>
+                        <option>dark</option>
+                        <option>purple</option>
+                        <!--<option>blue</option>-->
+                        <option>frog</option>
+                    </select>
+                </label>
+                <label><input id="autoscroll" type="checkbox" checked="">Autoscroll</label>
+            </div>
             <div id="linkslist">
                 <a href="index.html">Home</a>
                 <a href="index.html?t=login">Login</a>
             </div>
+            <!-- A special miniature page in the api run frontend for managing images -->
             <iframe id="imagemini" src="imagemini.html"></iframe>
         </div>
     </div>

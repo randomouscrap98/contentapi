@@ -1,0 +1,54 @@
+body[data-theme="frog"] {
+    --rightpanebg: mediumaquamarine;
+    --titlebg: deepskyblue;
+    --imageminibg: ghostwhite;
+    --activitybg: antiquewhite;
+    --linkvisitedcolor: rebeccapurple;
+}
+
+body[data-theme="purple"] {
+    --stdborder: 1px solid #8c75c8;
+    --rightpanebg: #e9e2fc;
+    --titlebg: #c1b1e1;
+    --imageminibg: #ccc7f9;
+    --activitybg: #decaf3;
+    --connectedbg: lawngreen;
+    --usercolor: #522a74;
+    --modulecolor: darkcyan;
+    --modulecontentcolor: gray;
+    --annotationcolor: #c5a7da;
+    --notificationbg: #c1b3e2;
+    --notificationalertbg: #ff77f7;
+    --mainbg: #fff8ff;
+    --maincolor: #4c4264;
+    --font: sans;
+    --linkcolor: #2e73fd;
+    --linkvisitedcolor: #6112ab;
+}
+
+body[data-theme="dark"] {
+    --stdborder: 1px solid #555;
+    --rightpanebg: #333;
+    --titlebg: #111;
+    --imageminibg: #777;
+    --connectedbg: limegreen;
+    --usercolor: cornflowerblue;
+    --modulecolor: cadetblue;
+    --modulecontentcolor: gray;
+    --annotationcolor: #777;
+    --notificationbg: darkblue;
+    --notificationalertbg: darkred;
+    --mainbg: #222;
+    --maincolor: #CCC;
+    --linkcolor: deepskyblue;
+    --linkvisitedcolor: mediumpurple;
+}
+body[data-theme="dark"] button {
+    background: #2f2f2f;
+    color: var(--maincolor);
+    border: var(--stdborder);
+}
+
+#themeselectcontainer {
+    display: block !important;
+}
