@@ -3,7 +3,7 @@ html {
 	--border-color: gray;
 	--bar-bg: #EEE;
 	--spoiler-bg: #F7F7F7;
-	--spoiler-color: #222;
+	--main-color: #222;
 	--bgred: #FCC;
 	--bgorange: #FEA;
 	--bgyellow: #FF8;
@@ -22,6 +22,7 @@ html {
 	padding: 0.3em;
 	padding-left: 0.5em;
 	background: var(--bar-bg);
+	color: var(--main-color);
 	margin-block: 1px;
 }
 .content blockquote > cite {
@@ -37,7 +38,7 @@ html {
 .content .spoiler {
 	padding: 0.5em;
 	background: var(--spoiler-bg);
-	color: var(--spoiler-color);
+	color: var(--main-color);
 	margin-bottom: 1px;
 }
 

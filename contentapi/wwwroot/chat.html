@@ -204,9 +204,8 @@ window.onload = function()
             //NOTE: the "yourAvatar" here might be empty, or it might have a value (depending on how quickly all the async stuff happens).
             //Both will work: if it's empty, it'll just not set the avatar field and use your current avatar whenever displaying. Or, if
             //it IS set, your avatar will be saved with the comment.
-            api.WriteNewComment(new NewCommentParameter(lastPostboxValue, pid, DEFAULTMARKUP, userSelf && userSelf.avatar), postHandler);
+            api.WriteType(APICONST.WRITETYPES.MESSAGE, new CommentBuilder(lastPostboxValue, pid, DEFAULTMARKUP, userSelf && userSelf.avatar), postHandler);
         }
-
     };
 
     //The button at the top of the page to load older comments. Still goes through the websocket to make it slightly faster though (maybe)
@@ -275,6 +274,17 @@ function createUserlistUser(user, status)
     return element;
 }
 
+function deleteComment(message)
+{
+    if(confirm(`Are you sure you want to delete comment '${message.id}' that says: ${message.text}?`))
+    {
+        api.DeleteType(APICONST.WRITETYPES.MESSAGE, message.id, new ApiHandler(d =>
+        {
+            console.warn(`Deleted comment: ${d.id}`);
+        }));
+    }
+}
+
 //Create a single message element (full element, no merging) from the given message data.
 //Will also create module messages. Message data needs to be prelinked
 function createMessage(message)
@@ -283,6 +293,7 @@ function createMessage(message)
     container.className = "message";
     container.id = `message_${message.id}`;
     container.setAttribute("data-id", message.id);
+    container.setAttribute("tabindex", "-1");
 
     var userInfo = document.createElement("div");
     userInfo.className = "userinfo";
@@ -297,6 +308,10 @@ function createMessage(message)
     time.setAttribute("time", message.createDate);
     time.textContent = (new Date(message.createDate)).toLocaleString();
     time.className = "annotation";
+    var deleteButton = document.createElement("button");
+    deleteButton.textContent = "Delete";
+    deleteButton.className = "delete";
+    deleteButton.onclick = () => deleteComment(message);
 
     if(message.module)
     {
@@ -310,6 +325,7 @@ function createMessage(message)
     userInfo.appendChild(avatar);
     userInfo.appendChild(user);
     userInfo.appendChild(time);
+    userInfo.appendChild(deleteButton);
 
     var content = document.createElement("div");
     content.className = "content";
@@ -373,6 +389,11 @@ function displayMessages(data, keepScroll)
             var existing = document.getElementById(`message_${x.id}`);
             // This is just for edits or duplicate messages, don't want it duplicated
             if(existing) existing.parentNode.removeChild(existing);
+            if(x.deleted)
+            {
+                console.debug(`Got deleted comment ${x.id}, skipping`);
+                return;
+            }
             var element = createMessage(x);
             var allMessages = getAllMessageElements();
             var ids = allMessages.map(y => Number(y.getAttribute("data-id")));
@@ -649,6 +670,14 @@ body, input, textarea, select {
 .userinfo .user {
     margin-right: 0.75em;
     text-decoration: underline;
+}
+.delete { 
+    display: none; 
+    font-size: 0.5em;
+    margin-left: 0.75em;
+}
+.message:hover .delete, .message:focus .delete { 
+    display: inline-block; 
 }
 .avatar {
     width: 15px;

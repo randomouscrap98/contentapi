@@ -795,8 +795,9 @@ function t_comment_submit_submit(form)
 
     //NOTE: if you want the avatar you used to comment with saved with the comment for posterity
     //(meaning searching for your old comment will show your original avatar when commenting and not
-    // your current avatar), you can add your avatar to the metadata. 
-    api.WriteNewComment(new NewCommentParameter(text, contentId, markup), new ApiHandler(d => {
+    // your current avatar), you can add your avatar to the metadata. Also notice that we're using
+    //the coment builder to make life simpler, this is NOT required!
+    api.WriteType(APICONST.WRITETYPES.MESSAGE, new CommentBuilder(text, contentId, markup), new ApiHandler(d => {
         location.reload();
     }));
 

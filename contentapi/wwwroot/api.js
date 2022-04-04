@@ -91,17 +91,36 @@ function WebsocketAutoConfig(liveHandler, userlistUpdateHandler, errorEventListe
 // NOTE: These are here for reference. You CAN use them if you want, or you can simply ignore them
 // and pass in your own objects with the same fields. The API will work either way.
 
-// This is the data you'd need to submit a NEW comment, not necessarily the format of the comments that are 
-// returned from the API. Many fields are computed automatically. Only "text" and "contentId" is truly 
-// required of a comment though.
-function NewCommentParameter(text, contentId, markup, avatar, nickname)
+// Use this object to create a new comment without having to know all the zany fields;
+// NOT required to write comments, however! This is a helper function for NEW comments,
+// it is relatively useless for comment edits other than to see the expected format.
+// NOTE: All writes (creates and updates) go through the "WriteType" function; you 
+// write the exact data you want to send. This comment builder simply creates an 
+// object for you, since there are strange fields in comments. The example might
+// be: api.WriteType(APICONST.WRITETYPES.MESSAGE, new CommentBuilder(etc), new ApiHandler(etc))
+// NOTES: comments are an interesting thing. Due to historical reasons, several key
+// pieces of information for comment rendering is stored in the "values" dictionary
+// that's part of every comment. So you'll commonly see "m", "a", and "n" values on
+// comments, representing the markup, avatar, and nickname, respectively. More may be
+// added in the future as well! Because they're not native fields on comments, and 
+// because constructing a new comment is a bit cumbersome, this function strives to
+// simplify all that by allowing you to provide the very basic fields. You don't have
+// to supply the user for any writes, because it is part of your login token supplied
+// by this API wrapper.
+function CommentBuilder(text, contentId, markup, avatar, nickname)
 {
+    //The absolute requirements
     this.id = 0; //Should be 0 for new comments; set to an id for an edit
     this.contentId = contentId;
     this.text = text; 
-    this.markup = markup || null;
-    this.avatar = avatar || null;
-    this.nickname = nickname || null;
+
+    //The optional; notice how the 'values' dictionary in comments is used for
+    //additional metadata. You can simply create this object yourself, there's
+    //nothing special here.
+    this.values = {};
+    if(markup) this.values.m = markup;
+    if(avatar) this.values.a = avatar;
+    if(nickname) this.values.n = nickname;
 }
 
 // The data you could provide when uploading a brand new file, NOT the format of file metadata
@@ -469,31 +488,6 @@ Api.prototype.WriteType = function(type, object, handler)
 Api.prototype.DeleteType = function(type, id, handler)
 {
     this.Raw("delete/" + type.replace(/[^a-zA-Z]+/g, "").toLowerCase() + `/${id}`, null, handler, "POST");
-};
-
-// This is just a simplified shortcut for writing NEW comments. For updating existing 
-// comments, just send the comment object that you pulled from the API.
-// NOTES: comments are an interesting thing. Due to historical reasons, several key
-// pieces of information for comment rendering is stored in the "values" dictionary
-// that's part of every comment. So you'll commonly see "m", "a", and "n" values on
-// comments, representing the markup, avatar, and nickname, respectively. More may be
-// added in the future as well! Because they're not native fields on comments, and 
-// because constructing a new comment is a bit cumbersome, this function strives to
-// simplify all that by allowing you to provide the very basic fields. You don't have
-// to supply the user for any writes, because it is part of your login token supplied
-// by this API wrapper.
-Api.prototype.WriteNewComment = function(newComment, handler)
-{
-    var values = {};
-    if(newComment.markup) values.m = newComment.markup; //Should be one of the supported markups
-    if(newComment.avatar) values.a = newComment.avatar; //Should be a file HASH (a string), not the id!!
-    if(newComment.nickname) values.n = newComment.nickname;
-
-    this.WriteType(APICONST.WRITETYPES.MESSAGE, {
-        text : newComment.text,
-        contentId : newComment.contentId,
-        values : values
-    }, handler);
 };
 
 // Use this endpoint to upload files to the API. Requires login. fileUploadParam can either
