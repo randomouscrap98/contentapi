@@ -26,6 +26,50 @@ body[data-theme="purple"] {
     --linkvisitedcolor: #6112ab;
 }
 
+body[data-theme="blue"] {
+    --stdborder: 1px solid #7ea0c1;
+    --rightpanebg: #e1eef5;
+    --titlebg: #64b5d8;
+    --imageminibg: #b9e1fa;
+    --userlistbg: #bcd3ea;
+    --activitybg: #f4f8ff;
+    --connectedbg: #00ff9c;
+    --usercolor: #002d8b;
+    --modulecolor: darkcyan;
+    --modulecontentcolor: gray;
+    --annotationcolor: #8ab3da;
+    --notificationbg: #d5e5ec;
+    --notificationalertbg: #fa72ff;
+    --mainbg: #f2fbff;
+    --maincolor: #1c2363;
+    --font: sans;
+    --linkcolor: #0669da;
+    --linkvisitedcolor: rgb(36 26 139);
+}
+
+body[data-theme="terminal"] {
+    --stdborder: 1px solid lime;
+    --rightpanebg: black;
+    --titlebg: black;
+    --imageminibg: lime;
+    --connectedbg: lawngreen;
+    --usercolor: lime;
+    --modulecolor: darkcyan;
+    --modulecontentcolor: #999;
+    --annotationcolor: #999;
+    --notificationbg: black;
+    --notificationalertbg: red;
+    --mainbg: black;
+    --maincolor: lime;
+    --linkcolor: cyan;
+    --linkvisitedcolor: magenta;
+}
+body[data-theme="terminal"] button {
+    background: var(--maincolor); /*#3333FF;*/
+    color: var(--mainbg);
+    border: var(--stdborder);
+}
+
 body[data-theme="dark"] {
     --stdborder: 1px solid #555;
     --rightpanebg: #333;

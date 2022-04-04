@@ -8,7 +8,7 @@
     <meta name="rating" content="general">
     <meta name="description" content="SBS default implementation chat">
 
-    <title>SBS Chat</title>
+    <title>QCS Chat</title>
     <link rel="icon" href="favicon.ico" type="image/x-icon">
     <!-- The MAIN api consumer script, it comes with most things you need to work with the API. 
         In particular, it has an auto websocket manager for building quick chatrooms -->
@@ -495,6 +495,7 @@ function setUserlist(data)
     --titleheight: 2.8rem;
     --postareaheight: 6rem;
     --postsubmitwidth: 3rem;
+    --rightpanefontsize: 1.0em;
     --stdborder: 1px solid #777;
     --rightpanebg: #EEE;
     --titlebg: #CCC;
@@ -516,7 +517,7 @@ function setUserlist(data)
 }
 body, div { padding: 0; margin: 0; box-sizing: border-box; overflow: hidden; }
 html, body { position: fixed; overflow: auto; top: 0; bottom: 0; left: 0; right: 0; } /* 12's suggestion for actual window size */
-input, textarea { font-size: 1em; } /* fixes ios zoom-in? */
+input, textarea, select, #rightpane { font-size: var(--rightpanefontsize); }
 a { color: var(--linkcolor); }
 a:visited { color: var(--linkvisitedcolor); }
 body, input, textarea, select {
@@ -592,6 +593,7 @@ body, input, textarea, select {
     top: 0;
     right: 0;
     font-size: 1.5em;
+    text-align: center;
 }
 #messagearea {
     width: 100%;
@@ -677,9 +679,7 @@ body, input, textarea, select {
         --rightpanewidth: 8rem;
         --postareaheight: 4rem;
         --titleheight: 1.7rem;
-    }
-    #rightpane {
-        font-size: 0.7em;
+        --rightpanefontsize: 0.7em;
     }
     #titlearea .title {
         font-size: 0.95em;
@@ -724,8 +724,9 @@ body, input, textarea, select {
                         <option>base</option>
                         <option>dark</option>
                         <option>purple</option>
-                        <!--<option>blue</option>-->
+                        <option>blue</option>
                         <option>frog</option>
+                        <option>terminal</option>
                     </select>
                 </label>
                 <label><input id="autoscroll" type="checkbox" checked="">Autoscroll</label>

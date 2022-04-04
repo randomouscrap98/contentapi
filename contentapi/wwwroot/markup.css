@@ -3,6 +3,7 @@ html {
 	--border-color: gray;
 	--bar-bg: #EEE;
 	--spoiler-bg: #F7F7F7;
+	--spoiler-color: #222;
 	--bgred: #FCC;
 	--bgorange: #FEA;
 	--bgyellow: #FF8;
@@ -36,6 +37,7 @@ html {
 .content .spoiler {
 	padding: 0.5em;
 	background: var(--spoiler-bg);
+	color: var(--spoiler-color);
 	margin-bottom: 1px;
 }
 
