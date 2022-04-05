@@ -20,6 +20,9 @@ public class DbWriterConfig
    public string HashRegex {get;set;} = @"^[a-z\-]+$";
    public int HashMinLength {get;set;} = 8;
    public int HashMaxLength {get;set;} = 32;
+   public List<string> ReservedModuleNames {get;set;} = new List<string> {
+       "system"
+   };
 }
 
 public class DbWriter : IDbWriter
@@ -118,7 +121,7 @@ public class DbWriter : IDbWriter
             //ids as orphaned pages
             if((action == UserAction.create || action == UserAction.update) && (cView.parentId > 0))
             {
-                if(!(await CanUserAsync(requester, action, cView.parentId)))
+                if(!(await CanUserAsync(requester, UserAction.create, cView.parentId)))
                     throw new ForbiddenException($"User {requester.id} can't '{action}' content in parent {cView.parentId}!");
             }
 
@@ -139,6 +142,26 @@ public class DbWriter : IDbWriter
                     throw new ForbiddenException($"User {requester.id} can't '{action}' content {cView.id}!");
             }
 
+            if(cView.contentType == InternalContentType.module)
+            {
+                if (config.ReservedModuleNames.Select(x => x.ToLower()).Contains(cView.name.ToLower()))
+                    throw new ForbiddenException($"Module name {cView.name} is reserved!");
+                
+                var exmod = await searcher.SearchSingleTypeUnrestricted<ContentView>(new SearchRequest()
+                {
+                    type = "content",
+                    fields = "id,name,contentType,deleted",
+                    query = "name = @name and contentType = @type and id <> @id and !notdeleted()"
+                }, new Dictionary<string, object> {
+                    { "name", cView.name },
+                    { "type", Db.InternalContentType.module },
+                    { "id", cView.id }
+                });
+
+                if(exmod.Count > 0)
+                    throw new RequestException($"A module already exists with name {cView.name}");
+            }
+
             //WARN : NO PARENTID VALIDATION!
 
             //Now for general validation
@@ -157,7 +180,7 @@ public class DbWriter : IDbWriter
             var parent = await searcher.GetById<ContentView>(RequestType.content, cView.contentId, true);
 
             //Can't post in invalid locations! So we check ANY contentId passed in, even if it's invalid
-            if (parent == null || !(await CanUserAsync(requester, action, cView.contentId)))
+            if (parent == null || !(await CanUserAsync(requester, UserAction.create, cView.contentId)))
                 throw new ForbiddenException($"User {requester.id} can't '{action}' comments in content {cView.contentId}!");
 
             //Modification actions

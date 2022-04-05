@@ -1507,4 +1507,79 @@ public class DbWriterTest : ViewUnitTestBase
                 await Assert.ThrowsAnyAsync<ForbiddenException>(() => writer.WriteAsync(comment, userId));
         }
     }
+
+    [Theory]
+    [InlineData(NormalUserId, "system", false)]
+    [InlineData(SuperUserId, "system", false)]
+    [InlineData(SuperUserId, "evil", false)]
+    [InlineData(NormalUserId, "whatever", false)]
+    [InlineData(SuperUserId, "whatever", true)]
+    public async Task WriteAsync_Module_ReservedName(long userId, string name, bool allowed)
+    {
+        this.config.ReservedModuleNames = new List<string> { "system", "evil" };
+
+        var module = GetNewModuleView();
+        module.name = name;
+
+        var writeModule = new Func<Task<ContentView>>(() => writer.WriteAsync(module, userId));
+
+        //This is create
+        if(allowed)
+        {
+            await writeModule();
+            Assert.Equal(name, module.name);
+        }
+        else
+        {
+            await Assert.ThrowsAnyAsync<ForbiddenException>(writeModule);
+            //And then fix the name and try again
+            module.name = "safe";
+            var olduserid = userId;
+            userId = SuperUserId;
+            await writeModule();
+            userId = olduserid;
+        }
+
+        //just make sure it's always written
+        Assert.NotEqual(0, module.id);
+
+        long id = module.id;
+        const string description = "And now for an updated description!";
+        module.description = description;
+        module.name = name;
+
+        //This is update. Note that regardless of allowed, the above will eventually write the module
+        if(allowed)
+        {
+            await writeModule();
+            Assert.Equal(name, module.name);
+            Assert.Equal(id, module.id);
+        }
+        else
+        {
+            //This should always be an update
+            await Assert.ThrowsAnyAsync<ForbiddenException>(writeModule);
+        }
+    }
+
+    [Fact]
+    public async Task WriteAsync_Module_DuplicateName_Disallow()
+    {
+        var module = GetNewModuleView();
+        module.name = "hugs";
+        module = await writer.WriteAsync(module, SuperUserId); //this should work
+        Assert.NotEqual(0, module.id);
+
+        var module2 = GetNewModuleView();
+        module2.name = "hugs";
+
+        await Assert.ThrowsAnyAsync<RequestException>(() => writer.WriteAsync(module2, SuperUserId));
+
+        //But this SHOULD work
+        module.description = "just an update";
+        module = await writer.WriteAsync(module, SuperUserId); //this should work
+        Assert.Equal("just an update", module.description);
+        Assert.NotEqual(0, module.id);
+        Assert.Equal("hugs", module.name); //Name should not change
+    }
 }
