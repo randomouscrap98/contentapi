@@ -24,6 +24,7 @@ DefaultSetup.AddConfigBinding<UserControllerConfig>(builder.Services, builder.Co
 DefaultSetup.AddConfigBinding<FileControllerConfig>(builder.Services, builder.Configuration);
 DefaultSetup.AddConfigBinding<EmailConfig>(builder.Services, builder.Configuration);
 DefaultSetup.AddConfigBinding<RateLimitConfig>(builder.Services, builder.Configuration);
+DefaultSetup.AddConfigBinding<StatusControllerConfig>(builder.Services, builder.Configuration);
 builder.Services.AddTransient<BaseControllerServices>();
 
 // Set up configurable services, as in stuff that users might want to turn off/etc

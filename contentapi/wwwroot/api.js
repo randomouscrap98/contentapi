@@ -1,6 +1,20 @@
 //haloopdy - 2022/01
 //A default implementation for connecting to our API. Feel free to use anywhere
 
+// *****************
+// !!!!! NOTE !!!!!!
+// *****************
+
+// If you have questions, suggestions, trouble/bugs, or just anything really related to the api,
+// whether it's the backend or the included frontend or this js helper file or anything, please
+// post issues on github at https://github.com/randomouscrap98/contentapi/issues. I check and 
+// track issues there all the time, and I will see it promptly. Speaking of, the repository
+// for all this code is at https://github.com/randomouscrap98/contentapi. Feel free to inspect
+// the code or make pull requests or whatever. And remember that you can poke at the raw api
+// a little easier using the "swagger" endpoint, which should be available at /api/swagger or
+// just /swagger depending on where the system is run (try to use oboy; if you need the full
+// urls, send me a message and I'll get it to you somehow, just don't want to post it in here)
+
 //Some simple constants that should never change... hopefully
 var APICONST = {
     STATUS : {

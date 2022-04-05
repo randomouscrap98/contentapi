@@ -4,17 +4,26 @@ using Microsoft.AspNetCore.Mvc;
 
 namespace contentapi.Controllers;
 
+public class StatusControllerConfig 
+{
+    public string Repo {get;set;} = "";
+    public string BugReports {get;set;} = "";
+    public string Contact {get;set;} = "";
+}
+
 public class StatusController : BaseController
 {
     protected IWebHostEnvironment environment;
     protected IRuntimeInformation runtimeInformation;
+    protected StatusControllerConfig config;
 
 
-    public StatusController(BaseControllerServices services, IWebHostEnvironment environment, IRuntimeInformation rinfo) 
+    public StatusController(BaseControllerServices services, IWebHostEnvironment environment, IRuntimeInformation rinfo, StatusControllerConfig config) 
         : base(services)
     {
         this.environment = environment;
         this.runtimeInformation = rinfo;
+        this.config = config;
     }
 
     [HttpGet()]
@@ -25,7 +34,10 @@ public class StatusController : BaseController
             appname = environment.ApplicationName,
             environment = environment.EnvironmentName,
             processStart = runtimeInformation.ProcessStart,
-            runtime = runtimeInformation.ProcessRuntime
+            runtime = runtimeInformation.ProcessRuntime,
+            repo = config.Repo,
+            bugreport = config.BugReports,
+            contact = config.Contact
         };
     }
 
