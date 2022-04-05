@@ -96,3 +96,6 @@ body[data-theme="dark"] button {
 body:not([data-showmessageselect]) .messageselect {
     display: none;
 }
+#rethreadpid {
+    width: 4em;
+}

@@ -43,7 +43,11 @@ namespace contentapi.Db
         contentCreate = 3,
         contentUpdate = 4,
         contentDelete = 5,
-        usernameChange = 6
+        usernameChange = 6,
+        rethread = 7,
+        userCreate = 8,
+        userRegister = 9,
+        loginFailure = 10
     }
 
     public enum VoteType : long

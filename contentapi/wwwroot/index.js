@@ -490,6 +490,22 @@ function uservariables_onload(template, state)
     }));
 }
 
+function admin_onload(template, state)
+{
+    var container = template.querySelector("#adminlog-container");
+    SetupPagination(template.querySelector("#adminlog-up"), template.querySelector("#adminlog-down"), state, "alp");
+
+    api.Search_AllByType("adminlog", "*", "id_desc", SEARCHRESULTSPERPAGE, state.alp, new ApiHandler(d =>
+    {
+        console.log(d.result.data);
+        d.result.data.adminlog.forEach(x =>
+        {
+            var item = LoadTemplate(`adminlog_item`, x);
+            container.appendChild(item);
+        });
+    }));
+}
+
 // This function is an excellent example for auto websocket usage. This is the
 // onload function for the websocket tester page, and utilizes the basic features
 // of the auto websocket.
@@ -719,6 +735,17 @@ function uservariable_item_onload(template, state)
     deleteelem.onclick = function() {
         api.DeleteUserVariable(state.key, new ApiHandler(d => { location.reload(); }));
     };
+}
+
+function adminlog_item_onload(template, state)
+{
+    var timeelem = template.querySelector("[data-time]");
+    var idelem = template.querySelector("[data-id]");
+    var textelem = template.querySelector("[data-text]");
+
+    timeelem.textContent = new Date(state.createDate).toLocaleString();
+    idelem.textContent = state.id;
+    textelem.textContent = state.text;
 }
 
 function page_editor_onload(template, state)

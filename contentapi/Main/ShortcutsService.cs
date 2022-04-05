@@ -148,6 +148,15 @@ public class ShortcutsService
         var result = new List<MessageView>();
         foreach(var m in newMessages)
             result.Add(await writer.WriteAsync(m, requester, message));
+
+        await writer.WriteAdminLog(new Db.AdminLog()
+        {
+            type = Db.AdminLogType.rethread,
+            initiator = requester,
+            target = newParent,
+            text = $"User {user.username} ({user.id}) rethreaded {result.Count} messages into content {newParent}" 
+        });
+
         return result;
     }
 }

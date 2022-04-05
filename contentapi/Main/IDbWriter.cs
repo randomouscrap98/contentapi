@@ -27,4 +27,6 @@ public interface IDbWriter
     /// <param name="hash"></param>
     /// <returns></returns>
     Task VerifyHash(string hash);
+
+    Task<AdminLog> WriteAdminLog(AdminLog log);
 }

@@ -32,6 +32,7 @@ public class UserService : IUserService
 
     public ConcurrentDictionary<long, string> RegistrationLog = new ConcurrentDictionary<long, string>();
 
+    //DO NOT ADD IDBWRITER, IT CAUSED A MILLION FAILURES!!!
     public UserService(ILogger<UserService> logger, IGenericSearch searcher, IHashService hashService, IAuthTokenService<long> authTokenService,
         UserServiceConfig config, ContentApiDbConnection wrapper)
     {
@@ -41,6 +42,7 @@ public class UserService : IUserService
         this.authTokenService = authTokenService;
         this.config = config;
         this.dbcon = wrapper.Connection;
+        //this.writer = writer;
 
         this.dbcon.Open();
     }
@@ -139,6 +141,14 @@ public class UserService : IUserService
 
         RegistrationLog.TryAdd(user.id, user.registrationKey);
 
+        await WriteAdminLog(new AdminLog()
+        {
+            type = AdminLogType.userCreate,
+            initiator = userView.id,
+            target = userView.id,
+            text = $"User {userView.username} ({userView.id}) created an account"
+        });
+
         return userView;
     }
     
@@ -191,6 +201,17 @@ public class UserService : IUserService
             throw new InvalidOperationException("Couldn't update user record to complete registration!");
 
         RegistrationLog.TryRemove(userId, out _);
+
+        var userView = await searcher.GetById<UserView>(RequestType.user, userId, true);
+
+        await WriteAdminLog(new AdminLog()
+        {
+            type = AdminLogType.userRegister,
+            initiator = userId,
+            target = userId,
+            text = $"User {userView.username} ({userId}) completed account registration"
+        });
+
         return GetNewTokenForUser(userId);
    }
 
@@ -204,11 +225,21 @@ public class UserService : IUserService
 
         //Next, get the LEGITIMATE data from the database
         var userSecrets = (await searcher.QueryRawAsync(
-            $"select id, password, salt, registrationKey, type from {searcher.GetDatabaseForType<UserView>()} where {fieldname} = @user and deleted=0",
+            $"select id, username, password, salt, registrationKey, type from {searcher.GetDatabaseForType<UserView>()} where {fieldname} = @user and deleted=0",
             new Dictionary<string, object> { { "user", value }})).FirstOrDefault();
 
         if(userSecrets == null)
+        {
+            await WriteAdminLog(new AdminLog()
+            {
+                type = AdminLogType.loginFailure,
+                initiator = 0,
+                target = 0,
+                text = $"Failed login attempt for {value}: user not found!"
+            });
+
             throw new ArgumentException("User not found!");
+        }
 
         CheckValidUser(userSecrets);
         
@@ -218,7 +249,20 @@ public class UserService : IUserService
 
         //Finally, compare hashes and if good, send out the token
         if(!hashService.VerifyText(password, Convert.FromBase64String((string)userSecrets["password"]), Convert.FromBase64String((string)userSecrets["salt"])))
+        {
+            long userId = (long)userSecrets["id"];
+            string username = (string)userSecrets["username"];
+
+            await WriteAdminLog(new AdminLog()
+            {
+                type = AdminLogType.loginFailure,
+                initiator = userId,
+                target = userId,
+                text = $"Failed login attempt for {username} ({userId}): incorrect password"
+            });
+
             throw new RequestException("Password incorrect!");
+        }
         
         //Right now, I don't really have anything that needs to go in here
         return GetNewTokenForUser ((long)userSecrets["id"], expireOverride);
@@ -301,5 +345,15 @@ public class UserService : IUserService
 
         if(count != 1)
             throw new ArgumentException($"Couldn't find user {userId}");
+    }
+
+    //Just yet another admin log writer... probably need to fix this
+    public async Task<AdminLog> WriteAdminLog(AdminLog log)
+    {
+        log.id = 0;
+        log.createDate = DateTime.UtcNow;
+        //Probably not necessary to reassign
+        log.id = await dbcon.InsertAsync(log);
+        return log;
     }
 }

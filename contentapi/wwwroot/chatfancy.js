@@ -121,7 +121,7 @@ function createRethreader()
     var div = document.createElement("span")
     var content = document.createElement("input");
     content.setAttribute('placeholder', "pid");
-    content.style.width = "3em";
+    content.id = "rethreadpid";
     var button = document.createElement('button');
     button.textContent = "Rethread";
     button.onclick = () =>

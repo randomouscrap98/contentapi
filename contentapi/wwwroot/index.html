@@ -27,6 +27,7 @@
         <a href="?t=page&pid=0">Pages</a>
         <a href="?t=search">Search</a>
         <a href="?t=notifications">Notifications</a>
+        <a href="?t=admin">Admin</a>
     </header>
     <section id="main">
         <h1>ContentApi Default Implementation</h1>
@@ -226,6 +227,15 @@
             <button id="websocket_send">Send</button>
             <div id="websocket_output" class="console"></div>
         </div>
+        <div id="t_admin" data-onload="admin_onload">
+            <h3>Admin log:</h3>
+            <div id="adminlog-container"></div>
+            <div id="adminlog-nav" class="nav">
+                <a href="#" id="adminlog-down">Older</a>
+                <a href="#" id="adminlog-up">Newer</a>
+            </div>
+            <!-- also bans! -->
+        </div>
         <!-- The rest of this stuff are sort of "subtemplates", like little repeated items used within the page -->
         <div id="page_item" data-onload="page_item_onload">
             <a data-title></a>
@@ -265,6 +275,11 @@
             <textarea data-value></textarea>
             <button data-edit>Edit</button>
             <button data-delete>Remove variable</button>
+        </div>
+        <div id="adminlog_item" data-onload="adminlog_item_onload"> 
+            <time data-time class="annotation"></time>
+            <span data-id></span>
+            <span data-text></span>
         </div>
         <div id="page_editor" data-onload="page_editor_onload">
             <form onsubmit="return t_page_editor_submit(this)">

@@ -518,7 +518,7 @@ public class DbWriter : IDbWriter
     public AdminLog MakeContentLog(UserView requester, ContentView view, UserAction action)
     {
         return new AdminLog {
-            text = $"User '{requester.username}'({requester.id}) {action}d '{view.name}'({view.id})",
+            text = $"User '{requester.username}'({requester.id}) {action}d {view.contentType} '{view.name}'({view.id})",
             type = action == UserAction.create ? AdminLogType.contentCreate :  
                     action == UserAction.update ? AdminLogType.contentUpdate :
                     action == UserAction.delete ? AdminLogType.contentDelete :
@@ -1110,5 +1110,14 @@ public class DbWriter : IDbWriter
 
         if(await IsDuplicateHash(hash))
             throw new ArgumentException($"Duplicate hash: already content with hash '{hash}'!");
+    }
+
+    public async Task<AdminLog> WriteAdminLog(AdminLog log)
+    {
+        log.id = 0;
+        log.createDate = DateTime.UtcNow;
+        //Probably not necessary to reassign
+        log.id = await dbcon.InsertAsync(log);
+        return log;
     }
 }
