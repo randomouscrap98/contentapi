@@ -146,7 +146,7 @@ public class UserService : IUserService
             type = AdminLogType.userCreate,
             initiator = userView.id,
             target = userView.id,
-            text = $"User {userView.username} ({userView.id}) created an account"
+            text = $"User '{userView.username}'({userView.id}) created an account"
         });
 
         return userView;
@@ -209,7 +209,7 @@ public class UserService : IUserService
             type = AdminLogType.userRegister,
             initiator = userId,
             target = userId,
-            text = $"User {userView.username} ({userId}) completed account registration"
+            text = $"User '{userView.username}'({userId}) completed account registration"
         });
 
         return GetNewTokenForUser(userId);
@@ -258,7 +258,7 @@ public class UserService : IUserService
                 type = AdminLogType.loginFailure,
                 initiator = userId,
                 target = userId,
-                text = $"Failed login attempt for {username} ({userId}): incorrect password"
+                text = $"Failed login attempt for '{username}'({userId}): incorrect password"
             });
 
             throw new RequestException("Password incorrect!");

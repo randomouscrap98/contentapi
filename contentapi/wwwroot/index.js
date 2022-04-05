@@ -744,7 +744,7 @@ function adminlog_item_onload(template, state)
     var textelem = template.querySelector("[data-text]");
 
     timeelem.textContent = new Date(state.createDate).toLocaleString();
-    idelem.textContent = state.id;
+    idelem.textContent = `[${state.id}]`;
     textelem.textContent = state.text;
 }
 
