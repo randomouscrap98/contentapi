@@ -1582,4 +1582,46 @@ public class DbWriterTest : ViewUnitTestBase
         Assert.NotEqual(0, module.id);
         Assert.Equal("hugs", module.name); //Name should not change
     }
+
+    [Fact]
+    public async Task Regression_WriteAsync_ContentId_ParentPerm()
+    {
+        //Create content with a create only perm for all
+        var content = GetNewPageView(0, new Dictionary<long, string> { {0,"C"} });
+        content = await writer.WriteAsync(content, SuperUserId);
+
+        //Now post a comment in there
+        var comment = GetNewCommentView(content.id);
+        comment = await writer.WriteAsync(comment, NormalUserId);
+
+        //Now edit it, it should still let you
+        comment.text = "AHAHAHA HEDITKD";
+        comment = await writer.WriteAsync(comment, NormalUserId);
+
+        //Now delete it, again should still let you
+        var deleted = await writer.DeleteAsync<MessageView>(comment.id, NormalUserId);
+        Assert.Equal(comment.id, deleted.id);
+        Assert.Equal(comment.contentId, deleted.contentId);
+    }
+
+    [Fact]
+    public async Task Regression_WriteAsync_ParentId_ParentPerm()
+    {
+        //Create content with a create only perm for all
+        var content = GetNewPageView(0, new Dictionary<long, string> { {0,"C"} });
+        content = await writer.WriteAsync(content, SuperUserId);
+
+        //Now post content in there
+        var myContent = GetNewPageView(content.id);
+        myContent = await writer.WriteAsync(myContent, NormalUserId);
+
+        //Now edit it, it should still let you
+        myContent.text = "AHAHAHA HEDITKD";
+        myContent = await writer.WriteAsync(myContent, NormalUserId);
+
+        //Now delete it, again should still let you
+        var deleted = await writer.DeleteAsync<ContentView>(myContent.id, NormalUserId);
+        Assert.Equal(myContent.id, deleted.id);
+        Assert.Equal(myContent.parentId, deleted.parentId);
+    }
 }

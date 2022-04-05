@@ -116,10 +116,12 @@ public class DbWriter : IDbWriter
         if(view is ContentView)
         {
             var cView = view as ContentView ?? throw new InvalidOperationException("Somehow, ContentView could not be cast to a ContentView");
+            var exView = existing as ContentView;
 
             //Only need to check parent for create if it's actually a place! This is because we treat non-valid 
-            //ids as orphaned pages
-            if((action == UserAction.create || action == UserAction.update) && (cView.parentId > 0))
+            //ids as orphaned pages. We care about the user's ability to "create" pages in the parent when a new view is created OR when
+            //a view is updated and being moved to a different parent.
+            if((action == UserAction.create || (action == UserAction.update && cView.parentId != exView!.parentId)) && (cView.parentId > 0))
             {
                 if(!(await CanUserAsync(requester, UserAction.create, cView.parentId)))
                     throw new ForbiddenException($"User {requester.id} can't '{action}' content in parent {cView.parentId}!");
