@@ -894,7 +894,7 @@ public class DbWriter : IDbWriter
                     createDate = DateTime.UtcNow,
                     initiator = work.requester.id,
                     target = work.view.id,
-                    text = $"User {work.requester.id}({work.requester.username}) changed username for {work.existing?.username} to '{work.view.username}'"
+                    text = $"User '{work.requester.username}'({work.requester.id}) changed username for {work.existing?.username} to '{work.view.username}'"
                 }, tsx);
             }
 
