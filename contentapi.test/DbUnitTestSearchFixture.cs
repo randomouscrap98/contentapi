@@ -332,7 +332,7 @@ public class DbUnitTestSearchFixture : DbUnitTestBase, IDisposable
                     {
                         initiator = 1 + (int)type,
                         target = 2 + (int)type,
-                        text = StandardPublicTypes[(int)type],
+                        text = StandardPublicTypes[(int)type % StandardPublicTypes.Count],
                         createDate = DateTime.Now.AddDays(-(int)type),
                         type = type,
                     });
