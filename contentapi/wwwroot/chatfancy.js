@@ -43,13 +43,17 @@ window.addEventListener('load', function()
     createMessage = (m) =>
     {
         var container = oldCreateMessage(m);
-        var userArea = container.querySelector(".userinfo");
-        var deleteButton = container.querySelector(".delete");
 
-        var checkBox = document.createElement("input");
-        checkBox.setAttribute("type", "checkbox");
-        checkBox.className = "messageselect";
-        userArea.insertBefore(checkBox, deleteButton);
+        if(!m.module)
+        {
+            var userArea = container.querySelector(".userinfo");
+            var deleteButton = container.querySelector(".delete");
+
+            var checkBox = document.createElement("input");
+            checkBox.setAttribute("type", "checkbox");
+            checkBox.className = "messageselect";
+            userArea.insertBefore(checkBox, deleteButton);
+        }
 
         return container;
     }
@@ -117,14 +121,17 @@ function createRethreader()
     var div = document.createElement("span")
     var content = document.createElement("input");
     content.setAttribute('placeholder', "pid");
-    content.style.width = "2em";
+    content.style.width = "3em";
     var button = document.createElement('button');
     button.textContent = "Rethread";
     button.onclick = () =>
     {
         //Go find messages that are checked
         var messages = getAllMessageElements();
-        messages = messages.filter(x => x.querySelector('.messageselect').checked);
+        messages = messages.filter(x => {
+            var sel = x.querySelector('.messageselect');
+            return sel && sel.checked
+        });
         var ids = messages.map(y => Number(y.getAttribute("data-id")));
         if(confirm(`Do you want to rethread ${ids.length} messages: ${JSON.stringify(ids)} into content ${content.value}?`))
         {
