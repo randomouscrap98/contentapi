@@ -1,15 +1,14 @@
 using System.Linq;
 using System.Threading.Tasks;
-using contentapi.Db;
 using contentapi.Live;
 using contentapi.Search;
 using contentapi.Views;
-using Microsoft.Extensions.Logging;
 using Xunit;
 
 namespace contentapi.test;
 
-public class LiveExtensionsTest : ViewUnitTestBase, IClassFixture<DbUnitTestSearchFixture>
+[Collection("PremadeDatabase")]
+public class LiveExtensionsTest : ViewUnitTestBase //, IClassFixture<DbUnitTestSearchFixture>
 {
     protected IUserStatusTracker userStatuses;
     protected IGenericSearch searcher;

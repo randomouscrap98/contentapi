@@ -1,6 +1,4 @@
 using System;
-using System.Collections.Generic;
-using System.Linq;
 using System.Threading.Tasks;
 using AutoMapper;
 using contentapi.Main;
@@ -11,7 +9,8 @@ using Xunit;
 
 namespace contentapi.test;
 
-public class CombinedUserTests : ViewUnitTestBase, IClassFixture<DbUnitTestSearchFixture>
+[Collection("PremadeDatabase")]
+public class CombinedUserTests : ViewUnitTestBase //, IClassFixture<DbUnitTestSearchFixture>
 {
     protected DbUnitTestSearchFixture fixture;
     protected IMapper mapper;

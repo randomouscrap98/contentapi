@@ -388,17 +388,21 @@ function displayMessages(data, keepScroll)
     //messages from other rooms are displayed as created or updated "notifications"
     data.message.forEach(x =>
     {
+        //Due to rethreading (comments moving between rooms), we look for existing comments OUTSIDE of the pid check,
+        //so that comments that move always leave the chat visually
+        var existing = document.getElementById(`message_${x.id}`);
+        // This is just for edits or duplicate messages, don't want it duplicated
+        if(existing) existing.parentNode.removeChild(existing);
+
+        if(x.deleted)
+        {
+            console.debug(`Got deleted comment ${x.id}, skipping`);
+            return;
+        }
+
         //only process messages that are in this thing
         if(x.contentId == pid)
         {
-            var existing = document.getElementById(`message_${x.id}`);
-            // This is just for edits or duplicate messages, don't want it duplicated
-            if(existing) existing.parentNode.removeChild(existing);
-            if(x.deleted)
-            {
-                console.debug(`Got deleted comment ${x.id}, skipping`);
-                return;
-            }
             var element = createMessage(x);
             var allMessages = getAllMessageElements();
             var ids = allMessages.map(y => Number(y.getAttribute("data-id")));

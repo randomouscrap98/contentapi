@@ -12,7 +12,8 @@ public class MessageView : IContentRelatedView
     public long id {get;set;}
 
     [FieldSelect]
-    [Writable(WriteRule.User, WriteRule.Preserve)]
+    //[Writable(WriteRule.User, WriteRule.Preserve)] //This USED to be preserved, but now that we can rethread, we don't want to
+    [Writable()]
     public long contentId {get;set;}
 
     [FieldSelect]

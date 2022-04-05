@@ -3,13 +3,7 @@ using System;
 using System.Collections.Generic;
 using System.Data;
 using System.Linq;
-using System.Threading.Tasks;
-using AutoMapper;
 using contentapi.Db;
-using contentapi.Live;
-using contentapi.Main;
-using contentapi.Search;
-using contentapi.test.Mock;
 using contentapi.Views;
 using Xunit;
 
@@ -20,6 +14,7 @@ public class ViewUnitTestBase : UnitTestBase
     protected const long SuperUserId = 1 + (int)UserVariations.Super;
     protected const long NormalUserId = (int)UserVariations.Super;
     protected const long AllAccessContentId = 1 + (int)ContentVariations.AccessByAll;
+    protected const long AllAccessContentId2 = 1 + (int)ContentVariations.AccessByAll + (int)ContentVariations.Values;
     protected const long SuperAccessContentId = 1 + (int)ContentVariations.AccessBySupers;
 
     public ViewUnitTestBase()

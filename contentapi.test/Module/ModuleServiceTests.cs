@@ -13,7 +13,8 @@ using Xunit;
 
 namespace contentapi.test;
 
-public class ModuleServiceTests : ViewUnitTestBase, IClassFixture<DbUnitTestSearchFixture>
+[Collection("PremadeDatabase")]
+public class ModuleServiceTests : ViewUnitTestBase //, IClassFixture<DbUnitTestSearchFixture>
 {
     protected ModuleServiceConfig config;
     protected IGenericSearch searcher;

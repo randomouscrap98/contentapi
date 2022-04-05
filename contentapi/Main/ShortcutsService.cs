@@ -1,3 +1,4 @@
+using AutoMapper;
 using contentapi.Search;
 using contentapi.Utilities;
 using contentapi.Views;
@@ -8,13 +9,15 @@ public class ShortcutsService
 {
     protected IDbWriter writer;
     protected IGenericSearch search;
+    protected IMapper mapper;
     protected ILogger logger;
 
-    public ShortcutsService(ILogger<ShortcutsService> logger, IDbWriter writer, IGenericSearch search)
+    public ShortcutsService(ILogger<ShortcutsService> logger, IDbWriter writer, IGenericSearch search, IMapper mapper)
     {
         this.writer = writer;
         this.search = search;
         this.logger = logger;
+        this.mapper = mapper;
     }
 
     public async Task ClearNotificationsAsync(WatchView watch, long uid)
@@ -94,5 +97,57 @@ public class ShortcutsService
             throw new NotFoundException($"Variable {key} not found!");
         
         return variables.First();
+    }
+
+    /// <summary>
+    /// Move all the given messages (by id) to the given parent. Fails early if any message is not found, or a problem is found
+    /// with permissions before the move. May still fail in the middle.
+    /// </summary>
+    /// <param name="messageIds"></param>
+    /// <param name="newParent"></param>
+    /// <param name="requester"></param>
+    /// <param name="message"></param>
+    /// <returns></returns>
+    public async Task<List<MessageView>> RethreadMessagesAsync(List<long> messageIds, long newParent, long requester, string message = "")
+    {
+        var user = await search.GetById<UserView>(RequestType.user, requester, true);
+
+        if(string.IsNullOrWhiteSpace(message))
+            message = $"Rethreading {messageIds.Count} comments to content {newParent}";
+
+        //Go lookup the messages
+        var messages = await search.SearchSingleType<MessageView>(requester, new SearchRequest()
+        {
+            type = RequestType.message.ToString(),
+            fields = "*",
+            query = "id in @ids",
+            order = "id"
+        }, new Dictionary<string, object>()
+        {
+            { "ids", messageIds }
+        });
+
+        var leftovers = messageIds.Except(messages.Select(x => x.id)).ToList();
+
+        if(leftovers.Count > 0)
+            throw new RequestException($"(Precheck): Some messages were not found: {string.Join(",", leftovers)}");
+
+        //Get a copy of them but with the parent reset
+        var newMessages = messages.Select(x => 
+        {
+            var m = mapper.Map<MessageView>(x);
+            m.contentId = newParent;
+            return m;
+        }).OrderBy(x => x.id).ToList();
+        
+        //Now, verify them all. If ANY of them throw an error, it will happen BEFORE work was performed
+        for(var i = 0; i < newMessages.Count; i++) 
+            await writer.ValidateWorkGeneral(newMessages[i], messages[i], user, Db.UserAction.update);
+        
+        //OK, now we can write them
+        var result = new List<MessageView>();
+        foreach(var m in newMessages)
+            result.Add(await writer.WriteAsync(m, requester, message));
+        return result;
     }
 }

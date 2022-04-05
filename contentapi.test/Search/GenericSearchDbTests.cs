@@ -14,7 +14,8 @@ namespace contentapi.test;
 //WARN: ALL TESTS THAT ACCESS THE SEARCHFIXTURE SHOULD GO IN HERE! Otherwise the database
 //will be created for EVERY class that uses the fixture, increasing the test time! Just
 //keep it together, even if the class gets large!
-public class GenericSearchDbTests : ViewUnitTestBase, IClassFixture<DbUnitTestSearchFixture>
+[Collection("PremadeDatabase")]
+public class GenericSearchDbTests : ViewUnitTestBase //, IClassFixture<DbUnitTestSearchFixture>
 {
     protected GenericSearcher service;
     protected DbUnitTestSearchFixture fixture;

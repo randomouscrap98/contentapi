@@ -15,7 +15,8 @@ using QueryResultSet = System.Collections.Generic.IEnumerable<System.Collections
 
 namespace contentapi.test;
 
-public class EventQueueTest : ViewUnitTestBase, IClassFixture<DbUnitTestSearchFixture>
+[Collection("PremadeDatabase")]
+public class EventQueueTest : ViewUnitTestBase //, IClassFixture<DbUnitTestSearchFixture>
 {
     protected DbWriter writer;
     protected IGenericSearch searcher;

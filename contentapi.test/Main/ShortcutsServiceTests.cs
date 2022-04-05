@@ -1,4 +1,8 @@
+using System;
+using System.Collections.Generic;
+using System.Linq;
 using System.Threading.Tasks;
+using AutoMapper;
 using contentapi.Main;
 using contentapi.Search;
 using contentapi.Utilities;
@@ -8,19 +12,22 @@ using Xunit;
 
 namespace contentapi.test;
 
-public class ShortcutsServiceTests : ViewUnitTestBase, IClassFixture<DbUnitTestSearchFixture>
+[Collection("PremadeDatabase")]
+public class ShortcutsServiceTests : ViewUnitTestBase //, IClassFixture<DbUnitTestSearchFixture>
 {
     protected DbUnitTestSearchFixture fixture;
     protected ShortcutsService service;
     protected IDbWriter writer;
     protected IGenericSearch search;
+    protected IMapper mapper;
 
     public ShortcutsServiceTests(DbUnitTestSearchFixture fixture)
     {
         this.fixture = fixture;
         this.writer = fixture.GetService<IDbWriter>();
         this.search = fixture.GetService<IGenericSearch>();
-        this.service = new ShortcutsService(fixture.GetService<ILogger<ShortcutsService>>(), writer, search);
+        this.mapper = fixture.GetService<IMapper>();
+        this.service = new ShortcutsService(fixture.GetService<ILogger<ShortcutsService>>(), writer, search, mapper);
     }
 
     [Theory]
@@ -114,5 +121,72 @@ public class ShortcutsServiceTests : ViewUnitTestBase, IClassFixture<DbUnitTestS
         Assert.Equal(uid, lookupVariable.userId);
         Assert.Equal(key, lookupVariable.key);
         Assert.Equal(writtenVariable.value, lookupVariable.value);
+    }
+
+    [Theory]
+    [InlineData(AllAccessContentId, AllAccessContentId, NormalUserId, NormalUserId, NormalUserId, AllAccessContentId2, true)]  //Just a basic "move my comments"
+    [InlineData(SuperAccessContentId, SuperAccessContentId, SuperUserId, SuperUserId, SuperUserId, AllAccessContentId2, true)] 
+    [InlineData(AllAccessContentId, SuperAccessContentId, NormalUserId, SuperUserId, NormalUserId, AllAccessContentId2, false)] //because some are super
+    [InlineData(SuperAccessContentId, SuperAccessContentId, SuperUserId, SuperUserId, NormalUserId, AllAccessContentId2, false)] //because ALL are super
+    [InlineData(AllAccessContentId, AllAccessContentId, SuperUserId, SuperUserId, NormalUserId, AllAccessContentId2, false)] //because ALL are super (writer)
+    [InlineData(AllAccessContentId, SuperAccessContentId, NormalUserId, SuperUserId, SuperUserId, AllAccessContentId2, true)] //Supers allowed
+    //NOTE: PROBABLY THE MOST IMPORTANT TEST IN THIS SUITE! This should be another test in dbwriter!
+    [InlineData(AllAccessContentId, AllAccessContentId, NormalUserId, NormalUserId, NormalUserId, SuperAccessContentId, false)]  //Even if you're moving your comments, can't go into bad parent
+    [InlineData(AllAccessContentId, AllAccessContentId, NormalUserId, NormalUserId, NormalUserId, 0, false)]                     
+    [InlineData(SuperAccessContentId, SuperAccessContentId, SuperUserId, SuperUserId, SuperUserId, 0, false)]
+    public async Task RethreadMissing(long content1, long content2, long write1, long write2, long rethreadUser, long rethreadPlace, bool allowed)
+    {
+        const int commentsCount = 5;
+
+        var writtenMessages = new List<MessageView>();
+
+        //Add a bunch of comments to the two contents (might be the same)
+        for(var i = 0; i < commentsCount; i++)
+        {
+            var ncomment = GetNewCommentView(content1);
+            writtenMessages.Add(await writer.WriteAsync(ncomment, write1));
+            var scomment = GetNewCommentView(content2);
+            writtenMessages.Add(await writer.WriteAsync(scomment, write2));
+        }
+
+        Assert.Equal(commentsCount * 2, writtenMessages.Count);
+
+        var work = new Func<Task<List<MessageView>>>(() => service.RethreadMessagesAsync(writtenMessages.Select(x => x.id).ToList(), rethreadPlace, rethreadUser));
+
+        //Now, try to rethread
+        if(allowed)
+        {
+            var result = await work();
+            Assert.All(result, x => 
+            {
+                AssertDateClose(x.editDate ?? throw new InvalidOperationException("NO EDIT DATE SET"));
+                Assert.Equal(rethreadPlace, x.contentId);
+                Assert.Contains(writtenMessages, y => y.id == x.id);
+                Assert.Equal(rethreadUser, x.editUserId);
+            });
+        }
+        else
+        {
+            //This could be permissions or it could be request or anything... this is kind of dangerous but whatever
+            await Assert.ThrowsAnyAsync<Exception>(work);
+
+            //Go search these messages
+            var currentMessages = await search.SearchSingleTypeUnrestricted<MessageView>(new SearchRequest()
+            {
+                type = "message",
+                fields = "*",
+                query = "id in @ids"
+            }, new Dictionary<string, object>()
+            {
+                { "ids", writtenMessages.Select(x => x.id )}
+            });
+
+            Assert.All(currentMessages, x => 
+            {
+                Assert.Null(x.editDate);
+                Assert.NotEqual(rethreadPlace, x.contentId);
+                Assert.NotEqual(rethreadUser, x.editUserId);
+            });
+        }
     }
 }

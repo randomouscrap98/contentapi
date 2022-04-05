@@ -151,6 +151,15 @@ public class DbWriter : IDbWriter
         {
             var cView = view as MessageView ?? throw new InvalidOperationException("Somehow, MessageView could not be cast to a MessageView");
 
+            //This check USED TO be only create, but now that we can rethread, it must ALWAYS be checked!
+
+            //No orphaned comments, so the parent MUST exist! This is an easy check. You will get a "notfound" exception
+            var parent = await searcher.GetById<ContentView>(RequestType.content, cView.contentId, true);
+
+            //Can't post in invalid locations! So we check ANY contentId passed in, even if it's invalid
+            if (parent == null || !(await CanUserAsync(requester, action, cView.contentId)))
+                throw new ForbiddenException($"User {requester.id} can't '{action}' comments in content {cView.contentId}!");
+
             //Modification actions
             if(action == UserAction.update || action == UserAction.delete)
             {
@@ -165,15 +174,9 @@ public class DbWriter : IDbWriter
 
             //Create is special, because we need the parent create permission. We also check updates so users can't 
             //move a comment into an unusable room (if that ever gets allowed)
-            if(action == UserAction.create)// || action == UserAction.update)
-            {
-                //No orphaned comments, so the parent MUST exist! This is an easy check. You will get a "notfound" exception
-                var parent = await searcher.GetById<ContentView>(RequestType.content, cView.contentId, true);
-
-                //Can't post in invalid locations! So we check ANY contentId passed in, even if it's invalid
-                if (parent == null || !(await CanUserAsync(requester, action, cView.contentId)))
-                    throw new ForbiddenException($"User {requester.id} can't '{action}' comments in content {cView.contentId}!");
-            }
+            //if(action == UserAction.create)// || action == UserAction.update)
+            //{
+            //}
 
             if(cView.deleted)
                 throw new RequestException("Don't delete comments by setting the deleted flag!");

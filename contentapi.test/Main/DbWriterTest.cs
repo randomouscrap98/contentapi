@@ -15,7 +15,8 @@ using Xunit;
 
 namespace contentapi.test;
 
-public class DbWriterTest : ViewUnitTestBase, IClassFixture<DbUnitTestSearchFixture>
+[Collection("PremadeDatabase")]
+public class DbWriterTest : ViewUnitTestBase
 {
     protected DbUnitTestSearchFixture fixture;
     protected FakeEventQueue events;
@@ -867,12 +868,11 @@ public class DbWriterTest : ViewUnitTestBase, IClassFixture<DbUnitTestSearchFixt
         Assert.Empty(result.values);
     }
 
-    //NOBODY CAN CREATE OR EDIT OR DELETE MODULE MESSAGES, regardless of where they go!
     [Theory]
-    [InlineData((int)UserVariations.Super, (int)ContentVariations.AccessByAll + 1, true)]
-    [InlineData(1 + (int)UserVariations.Super, (int)ContentVariations.AccessByAll + 1, true)] //THIS one is super
-    [InlineData((int)UserVariations.Super, (int)ContentVariations.AccessBySupers + 1, false)]
-    [InlineData(1 + (int)UserVariations.Super, (int)ContentVariations.AccessBySupers + 1, true)] //THIS one is super
+    [InlineData(NormalUserId, AllAccessContentId, true)]
+    [InlineData(SuperUserId, AllAccessContentId, true)] //THIS one is super
+    [InlineData(NormalUserId, SuperAccessContentId, false)]
+    [InlineData(SuperUserId, SuperAccessContentId, true)] //THIS one is super
     public async Task WriteAsync_DisallowModuleMessage(long uid, long parentId, bool allowed)
     {
         //NOTE: DO NOT PROVIDE CREATEDATE! ALSO IT SHOULD BE UTC TIME!
@@ -892,11 +892,15 @@ public class DbWriterTest : ViewUnitTestBase, IClassFixture<DbUnitTestSearchFixt
             await Assert.ThrowsAnyAsync<ForbiddenException>(() => writer.WriteAsync(comment, uid));
         }
 
-        //Now go get some random-ass module message
+        //Now go get some random-ass module messages, but they need to be in NON-DELETED content
         var modMessages = await searcher.SearchSingleTypeUnrestricted<MessageView>(new SearchRequest() {
             type = "message",
             fields = "*",
-            query = "!notnull(module)"
+            query = "!notnull(module) and createUserId = @uid and contentId in @contents"
+        }, new Dictionary<string, object>()
+        {
+            { "uid", uid },
+            { "contents", Enumerable.Range(1, fixture.ContentCount).Where(x => ((x - 1) & (int)ContentVariations.Deleted) == 0)}
         });
 
         Assert.True(modMessages.Count > 0, "No module messages found!");
@@ -1472,4 +1476,35 @@ public class DbWriterTest : ViewUnitTestBase, IClassFixture<DbUnitTestSearchFixt
         Assert.True(comments.First(x => x.id == writtenComment2.id).edited);
     }
 
+    [Theory]
+    [InlineData(NormalUserId, AllAccessContentId2, true)]
+    [InlineData(SuperUserId, AllAccessContentId2, true)]
+    [InlineData(SuperUserId, SuperAccessContentId, true)]
+    [InlineData(NormalUserId, SuperAccessContentId, false)] //This is the important part
+    [InlineData(NormalUserId, 999, false)] //This is the important part
+    [InlineData(NormalUserId, 0, false)] //This is the important part
+    public async Task WriteAsync_Message_ParentMove(long userId, long newContentId, bool allowed)
+    {
+        //Write the initial comment
+        var comment = await writer.WriteAsync(GetNewCommentView(AllAccessContentId), userId);
+
+        //Change the id
+        comment.contentId = newContentId;
+
+        //Try to write it
+        if(allowed)
+        {
+            var result = await writer.WriteAsync(comment, userId);
+            AssertDateClose(result.editDate ?? throw new InvalidOperationException("Can not find edit date!!"));
+            Assert.Equal(userId, result.editUserId);
+            Assert.Equal(newContentId, result.contentId);
+        }
+        else
+        {
+            if(newContentId == 0 || newContentId > 900)
+                await Assert.ThrowsAnyAsync<NotFoundException>(() => writer.WriteAsync(comment, userId));
+            else
+                await Assert.ThrowsAnyAsync<ForbiddenException>(() => writer.WriteAsync(comment, userId));
+        }
+    }
 }

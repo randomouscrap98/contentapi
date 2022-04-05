@@ -10,7 +10,8 @@ using Xunit;
 
 namespace contentapi.test;
 
-public class SpecializedSearchTests : ViewUnitTestBase, IClassFixture<DbUnitTestSearchFixture>
+[Collection("PremadeDatabase")]
+public class SpecializedSearchTests : ViewUnitTestBase //, IClassFixture<DbUnitTestSearchFixture>
 {
     protected DbUnitTestSearchFixture fixture;
     protected IMapper mapper;

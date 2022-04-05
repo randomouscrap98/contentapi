@@ -4,6 +4,7 @@ using System.Linq;
 using contentapi.Utilities;
 using Dapper.Contrib.Extensions;
 using Microsoft.Extensions.Logging;
+using Xunit;
 
 namespace contentapi.test;
 
@@ -25,6 +26,15 @@ public enum ContentVariations
     Deleted = 32,
     //TypeBits1 = 64,
     //TypeBits2 = 128
+}
+
+//The static definition
+[CollectionDefinition("PremadeDatabase")]
+public class PremadeDatabaseCollection : ICollectionFixture<DbUnitTestSearchFixture>
+{
+    // This class has no code, and is never created. Its purpose is simply
+    // to be the place to apply [CollectionDefinition] and all the
+    // ICollectionFixture<> interfaces.
 }
 
 public class DbUnitTestSearchFixture : DbUnitTestBase, IDisposable
