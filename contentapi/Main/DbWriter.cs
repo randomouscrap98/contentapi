@@ -1017,12 +1017,14 @@ public class DbWriter : IDbWriter
     /// <returns></returns>
     public CommentSnapshot CreateSnapshotFromCommentWork(DbWorkUnit<MessageView> work)
     {
+        var realExisting = work.existing ?? throw new InvalidOperationException("NO EXISTING MESSAGEVIEW WHEN CREATING SNAPSHOT, INTERNAL ERROR!");
         return new CommentSnapshot {
             userId = work.requester.id,
             editDate = DateTime.UtcNow,
-            previous = work.existing?.text,
+            previous = realExisting.text,
+            contentId = realExisting.contentId,
             action = work.action,
-            values = GetCommentValuesFromView(work.existing ?? throw new InvalidOperationException("NO EXISTING COMMENTVIEW WHEN CREATING SNAPSHOT, INTERNAL ERROR!"))
+            values = GetCommentValuesFromView(realExisting)
         };
     }
 

@@ -9,6 +9,7 @@ namespace contentapi.Db.History
         public UserAction action {get;set;}
         public DateTime editDate {get;set;}
         public string previous {get;set;}
+        public long contentId {get;set;}
 
         public List<MessageValue> values {get;set;} = new List<MessageValue>();
     }

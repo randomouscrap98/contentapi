@@ -165,4 +165,28 @@ public class ShortcutsController : BaseController
             return await services.writer.WriteAsync(variable, uid);
         });
     }
+
+    public class RethreadData
+    {
+        public List<long> messageIds {get;set;} = new List<long>();
+        public long contentId {get;set;}
+        public string message {get;set;} = "";
+    }
+
+    [HttpPost("rethread")]
+    public Task<ActionResult<List<MessageView>>> RethreadAsync([FromBody]RethreadData rethread)
+    {
+        return MatchExceptions(async () =>
+        {
+            RateLimit(RateWrite);
+            var uid = GetUserIdStrict();
+
+            if(rethread.contentId == 0)
+                throw new RequestException("Must set contentId!");
+            if(rethread.messageIds.Count == 0)
+                throw new RequestException("Must set at least one messageId!");
+            
+            return await shortcuts.RethreadMessagesAsync(rethread.messageIds, rethread.contentId, uid, rethread.message);
+        });
+    }
 }

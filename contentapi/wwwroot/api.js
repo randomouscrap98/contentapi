@@ -178,6 +178,13 @@ function FileModifyParameter(size, crop, freeze)
     this.freeze = freeze;
 }
 
+function RethreadParameter(messageIds, contentId, message)
+{
+    this.messageIds = messageIds;
+    this.contentId = contentId;
+    this.message = message;
+}
+
 // The main configuration object for ALL searches. Send this directly to the "Search" endpoint. 
 // This should be a direct reflection of "SearchRequests" within the API C# code.
 function RequestParameter(values, requests)
@@ -573,6 +580,11 @@ Api.prototype.DeleteUserVariable = function(key, handler)
 {
     //Need it to be post, so send whatever data
     this.Raw(`shortcuts/uservariable/delete/${key}`, null, handler, "POST");
+};
+
+Api.prototype.Rethread = function(rethreadParam, handler)
+{
+    this.Raw("shortcuts/rethread", rethreadParam, handler, "POST");
 };
 
 

@@ -21,7 +21,8 @@
     <link rel="stylesheet" href="markup.css">
 
     <!-- These are really unnecessary, and you can ignore them. They just add some quality of life
-        updates to the chat while we lived there; they don't do anything for this example though! -->
+        updates to the chat while we lived there; they don't do anything for this example though! 
+        If you are copying this example, you can safely leave these out! -->
     <script src="chatfancy.js"></script>
     <link rel="stylesheet" href="chatfancy.css">
 
@@ -309,7 +310,7 @@ function createMessage(message)
     time.textContent = (new Date(message.createDate)).toLocaleString();
     if(message.edited) time.textContent += ` (edited ${new Date(message.editDate).toLocaleString()})`;
     time.className = "annotation";
-    var deleteButton = false;
+    var deleteButton = false; document.createElement('span');
 
     if(message.module)
     {
@@ -321,7 +322,7 @@ function createMessage(message)
     }
     else //You can't delete module messages, hence the else
     {
-        deleteButton = document.createElement("button");
+        var deleteButton = document.createElement("button");
         deleteButton.textContent = "Delete";
         deleteButton.className = "delete";
         deleteButton.onclick = () => deleteComment(message);
@@ -547,7 +548,7 @@ function setUserlist(data)
 }
 body, div { padding: 0; margin: 0; box-sizing: border-box; overflow: hidden; }
 html, body { position: fixed; overflow: auto; top: 0; bottom: 0; left: 0; right: 0; } /* 12's suggestion for actual window size */
-input, textarea, select, #rightpane { font-size: var(--rightpanefontsize); }
+#rightpane input, #rightpage textarea, #rightpane select, #rightpane button, #rightpane { font-size: var(--rightpanefontsize); }
 a { color: var(--linkcolor); }
 a:visited { color: var(--linkvisitedcolor); }
 body, input, textarea, select {
@@ -753,20 +754,8 @@ body, input, textarea, select {
             <div id="userlist"></div>
             <div id="activitylist"></div>
             <!-- Just some extras to make life nicer, not part of making chat work of course -->
-            <div>
-                <!-- Only displayed if the chatthemes.css file is included (again, not necessary at all) -->
-                <label id="themeselectcontainer" style="display: none"> 
-                    <span>Theme:</span>
-                    <select id="themeselect">
-                        <option>base</option>
-                        <option>dark</option>
-                        <option>purple</option>
-                        <option>blue</option>
-                        <option>frog</option>
-                        <option>terminal</option>
-                    </select>
-                </label>
-                <label><input id="autoscroll" type="checkbox" checked="">Autoscroll</label>
+            <div id="chatcontrols">
+                <div id="autoscrollcontainer"><label><input id="autoscroll" type="checkbox" checked="">Autoscroll</label></div>
             </div>
             <div id="linkslist">
                 <a href="index.html">Home</a>

@@ -93,6 +93,6 @@ body[data-theme="dark"] button {
     border: var(--stdborder);
 }
 
-#themeselectcontainer {
-    display: block !important;
+body:not([data-showmessageselect]) .messageselect {
+    display: none;
 }

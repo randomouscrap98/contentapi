@@ -64,5 +64,10 @@ namespace contentapi.Db.History
         {
             current.history = JsonConvert.SerializeObject(snapshots);
         }
+
+        public List<CommentSnapshot> GetCommentHistory(Message current)
+        {
+            return JsonConvert.DeserializeObject<List<CommentSnapshot>>(current.history);
+        }
     }
 }
