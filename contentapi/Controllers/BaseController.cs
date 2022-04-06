@@ -1,3 +1,4 @@
+using System.Runtime.ExceptionServices;
 using AutoMapper;
 using contentapi.Main;
 using contentapi.Search;
@@ -88,22 +89,22 @@ public class BaseController : Controller
         }
         catch(Exception ex)
         {
-            if(ex is AggregateException)
+            if (ex is AggregateException)
                 ex = ex.InnerException ?? throw new InvalidOperationException("Aggregate exception did not have inner exception!", ex); //Grab the first inner exception
 
-            if(ex is ArgumentException || ex is RequestException || ex is ParseException)
+            if (ex is ArgumentException || ex is RequestException || ex is ParseException)
                 return BadRequest($"Request error: {ex.Message}");
 
-            if(ex is NotFoundException)
+            if (ex is NotFoundException)
                 return NotFound($"Not found: {ex.Message}");
 
-            if(ex is ForbiddenException)
+            if (ex is ForbiddenException)
                 return new ObjectResult($"Forbidden error: {ex.Message}") { StatusCode = 403 }; //Forbidden
 
-            if(ex is RateLimitException)
+            if (ex is RateLimitException)
                 return new ObjectResult($"Rate limited: {ex.Message}") { StatusCode = 429 };
-            
-            //Just rethrow if we couldn't figure out what it was.
+
+            //Just rethrow if we don't know
             throw;
         }
     }

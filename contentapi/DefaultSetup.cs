@@ -43,6 +43,7 @@ public static class DefaultSetup
         services.AddSingleton<ILiveEventQueue, LiveEventQueue>();
         services.AddSingleton<IEventTracker, EventTracker>();
         services.AddSingleton<IUserStatusTracker, UserStatusTracker>();
+        services.AddSingleton<IFileService, FileService>();
 
         //This NEEDS to stay transient because it holds onto a DB connection! We want those recycled!
         services.AddTransient<IGenericSearch, GenericSearcher>();
@@ -59,6 +60,7 @@ public static class DefaultSetup
         services.AddSingleton<DbWriterConfig>();
         services.AddSingleton<ModuleServiceConfig>();
         services.AddSingleton<EventTrackerConfig>();
+        services.AddSingleton<FileServiceConfig>();
 
         services.AddSingleton<IModuleService, ModuleService>();
         services.AddSingleton<ModuleMessageAdder>((p) => (m, r) =>

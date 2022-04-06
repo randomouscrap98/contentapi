@@ -39,7 +39,7 @@ public class FileService : IFileService
 
     protected FileServiceConfig config;
 
-    protected static readonly SemaphoreSlim filelock = new SemaphoreSlim(1, 1);
+    protected readonly SemaphoreSlim filelock = new SemaphoreSlim(1, 1);
 
     public FileService(ILogger<FileService> logger, IDbWriter writer, IGenericSearch searcher, FileServiceConfig config, IAmazonS3 s3client)
     {
@@ -154,34 +154,6 @@ public class FileService : IFileService
 
         return "";
     }
-
-    //protected string GetUploadPath(string hash, GetFileModify? modify = null)
-    //{
-    //   if (modify != null)
-    //   {
-    //      var extraFolder = "_";
-
-    //      if (modify.size > 0)
-    //         extraFolder += $"{modify.size}";
-    //      if (modify.crop)
-    //         extraFolder += "a";
-    //      if (modify.freeze)
-    //         extraFolder += "f";
-
-    //      if (extraFolder != "_")
-    //         return Path.Join(config.Location, extraFolder, hash);
-    //   }
-
-    //   return Path.Join(config.Location, hash);
-    //}
-
-    //Should be thread safe
-    //protected string GetAndMakeUploadPath(string hash, GetFileModify? modify = null)
-    //{
-    //   var result = GetUploadPath(hash, modify);
-    //   System.IO.Directory.CreateDirectory(Path.GetDirectoryName(result) ?? throw new InvalidOperationException("Couldn't compute path for file upload!"));
-    //   return result;
-    //}
 
     protected string GetAndMakeTempPath()
     {

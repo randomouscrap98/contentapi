@@ -22,7 +22,7 @@ DefaultSetup.AddDefaultServices(builder.Services);
 DefaultSetup.AddConfigBinding<GenericSearcherConfig>(builder.Services, builder.Configuration);
 DefaultSetup.AddConfigBinding<UserServiceConfig>(builder.Services, builder.Configuration);
 DefaultSetup.AddConfigBinding<UserControllerConfig>(builder.Services, builder.Configuration);
-DefaultSetup.AddConfigBinding<FileControllerConfig>(builder.Services, builder.Configuration);
+DefaultSetup.AddConfigBinding<FileServiceConfig>(builder.Services, builder.Configuration);
 DefaultSetup.AddConfigBinding<EmailConfig>(builder.Services, builder.Configuration);
 DefaultSetup.AddConfigBinding<RateLimitConfig>(builder.Services, builder.Configuration);
 DefaultSetup.AddConfigBinding<StatusControllerConfig>(builder.Services, builder.Configuration);
