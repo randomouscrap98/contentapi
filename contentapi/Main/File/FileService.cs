@@ -96,6 +96,7 @@ public class FileService : IFileService
             }
             catch (Exception ex)
             {
+                logger.LogWarning($"Exception from S3 get for {name}: {ex}");
                 throw new NotFoundException($"File {name} not found", ex);
             }
         }
@@ -429,6 +430,7 @@ public class FileService : IFileService
             //Will checking the fileinfo be too much??
             if (!System.IO.File.Exists(thumbnailPath) || (new FileInfo(thumbnailPath)).Length == 0)
             {
+                Directory.CreateDirectory(Path.GetDirectoryName(thumbnailPath) ?? throw new InvalidOperationException("No parent for thumbail path?"));
                 IImageFormat format;
 
                 var baseData = await GetMainDataAsync(hash);
