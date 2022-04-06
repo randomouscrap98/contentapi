@@ -1,3 +1,4 @@
+using Amazon.S3;
 using contentapi;
 using contentapi.Controllers;
 using contentapi.Db;
@@ -44,7 +45,10 @@ var validationParameters = DefaultSetup.AddSecurity(builder.Services, secretKey)
 builder.Services.AddTransient<ContentApiDbConnection>(ctx => 
     new ContentApiDbConnection(new SqliteConnection(builder.Configuration.GetConnectionString("contentapi"))));
 
+//In kland, the amazon stuff comes after cors. Just want to make sure it's the same...
 builder.Services.AddCors();
+builder.Services.AddDefaultAWSOptions(builder.Configuration.GetAWSOptions());
+builder.Services.AddAWSService<IAmazonS3>();
 
 //This section sets up(?) jwt authentication
 builder.Services.AddAuthentication(x =>
