@@ -110,6 +110,12 @@ public class FileService : IFileService
         }
     }
 
+    public string GetAndMakeMainPath(string name)
+    {
+        Directory.CreateDirectory(config.MainLocation);
+        return Path.Join(config.MainLocation, name);
+    }
+
     public async Task SaveMainDataAsync(string tempFilePath, string name, string mimeType)
     {
         if (IsS3())
@@ -118,7 +124,7 @@ public class FileService : IFileService
         }
         else
         {
-            System.IO.File.Copy(tempFilePath, Path.Join(config.MainLocation, name));
+            System.IO.File.Copy(tempFilePath, GetAndMakeMainPath(name));
         }
     }
 
@@ -131,7 +137,7 @@ public class FileService : IFileService
         }
         else
         {
-            await System.IO.File.WriteAllBytesAsync(Path.Join(config.MainLocation, name), rawData);
+            await System.IO.File.WriteAllBytesAsync(GetAndMakeMainPath(name), rawData);
         }
     }
 
