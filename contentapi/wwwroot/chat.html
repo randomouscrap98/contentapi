@@ -141,7 +141,7 @@ window.onload = function()
         "yesterday" : api.GetSearchBackDate(24)
     }, [
         new RequestSearchParameter("message_aggregate", "contentId,count,maxId,minId,createUserId,maxCreateDate", "createDate > @yesterday"),
-        new RequestSearchParameter("content", "id, name, permissions", "id = @pid or id in @message_aggregate.contentId"),
+        new RequestSearchParameter("content", APICONST.FIELDSETS.CONTENTQUICK, "id = @pid or id in @message_aggregate.contentId"),
         new RequestSearchParameter("message", "*", "contentId = @pid and !notdeleted()", "id_desc", FIRSTLOADMESSAGES),
         new RequestSearchParameter("user", "*", "id in @message.createUserId or id in @message.uidsInText")
     ]), response =>
@@ -351,7 +351,18 @@ function createNotification(content)
     var title = document.createElement("a");
     var count = document.createElement("span");
     title.href = `?pid=${content.id}`;
-    title.textContent = content.name;
+
+    if(content.contentType == 3)
+    {
+        var img = document.createElement('img');
+        img.src = api.GetFileUrl(content.hash, new FileModifyParameter(AVATARSIZE, true));
+        title.appendChild(img);
+    }
+    else
+    {
+        title.textContent = content.name;
+    }
+
     title.className = "content_title";
     count.className = "notification_bubble";
     count.textContent = "0";
@@ -692,11 +703,18 @@ body, input, textarea, select {
     width: 15px;
     margin-right: 0.2em;
     border-radius: 5px;
+    image-rendering: pixelated;
+    image-rendering: crisp-edges;
 }
 .module {
     margin-right: 0.5em;
     font-style: italic;
     color: var(--modulecolor);
+}
+.content_title img {
+    height: 1.2em;
+    image-rendering: pixelated;
+    image-rendering: crisp-edges;
 }
 .notification_bubble {
     padding: 0.25em;

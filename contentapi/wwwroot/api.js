@@ -25,6 +25,9 @@ var APICONST = {
         RATELIMIT : 429,
         NETWORKERROR : 9999
     },
+    FIELDSETS : {
+        CONTENTQUICK : "~values,keywords,votes,text,commentCount"
+    },
     MARKUP : [ "12y", "bbcode", "plaintext" ],
     WRITETYPES : {
         MESSAGE : "message",
@@ -886,7 +889,7 @@ Api.prototype.Search_BasicPageDisplay = function(id, subpagesPerPage, subpagePag
     }, [
         new RequestSearchParameter("content", "*", "id = @pageid"),
         //Subpages: we want most fields, but not SOME big/expensive fields. Hence the ~ (NOTE: commentCount is ironically, most likely the MOST expensive field)
-        new RequestSearchParameter("content", "~values,keywords,votes,text,commentCount", "parentId = @pageid and !notdeleted() and contentType <> @filetype", "contentType,literalType,name", subpagesPerPage, subpagesPerPage * subpagePage, "subpages"),
+        new RequestSearchParameter("content", APICONST.FIELDSETS.CONTENTQUICK, "parentId = @pageid and !notdeleted() and contentType <> @filetype", "contentType,literalType,name", subpagesPerPage, subpagesPerPage * subpagePage, "subpages"),
         new RequestSearchParameter("message", "*", "contentId = @pageid and !notdeleted() and !null(module)", "id_desc", commentsPerPage, commentsPerPage * commentPage),
         // We grab your personal watches/votes/etc specifically for the main page to see if you ARE watching it
         new RequestSearchParameter("watch", "*", "contentId = @pageid"),    //This is YOUR watch (the requester)
@@ -953,7 +956,7 @@ Api.prototype.GetHourlyAggregate = function(startHour, numHours, date, handler)
     console.log(`Start date: ${startDate}`);
 
     var userSearch = new RequestSearchParameter("user", "*", "");
-    var contentSearch = new RequestSearchParameter("content", "id,name,createDate,permissions,createUserId,deleted,parentId", "");
+    var contentSearch = new RequestSearchParameter("content", APICONST.FIELDSETS.CONTENTQUICK, "");
     var queryUserIns = [];
     var queryContentIns = [];
     var commentKey = x => `cag${x}`;

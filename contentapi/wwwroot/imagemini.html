@@ -11,7 +11,7 @@ var api;
 
 //Constants for our page runtime, you don't necessarily need these
 const LOADIMAGES = 50;
-const IMAGESIZE = 40;
+const IMAGESIZE = 100;
 
 //duplicate from index.js
 const TOKENKEY = "contentapi_defimpl_userkey";
@@ -144,6 +144,13 @@ body {
     width: 100%;
     height: 100vh;
     overflow-y: scroll;
+}
+img {
+    max-width: 40px;
+    max-height: 40px;
+    margin-right: 2px;
+    image-rendering: pixelated;
+    image-rendering: crisp-edges;
 }
 .imagecontainer {
     display: inline-block;
