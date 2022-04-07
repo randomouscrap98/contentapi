@@ -17,6 +17,11 @@ header {
     margin-bottom: 0.5em;
 }
 
+img {
+    max-width: 100%;
+    max-height: 50vh;
+}
+
 .error { color: red; }
 .success { color: green; }
 .systemmsg { color: cornflowerblue; }

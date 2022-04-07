@@ -303,6 +303,15 @@ function page_onload(template, state)
             setupEditor("edit", originalPage);
             template.querySelector("#page-chat-link").removeAttribute("hidden");
 
+            if(page.contentType == 3) //A file
+            {
+                var filelink = api.GetFileUrl(page.hash);
+                var filepagelink = template.querySelector("#filepage-link");
+                filepagelink.removeAttribute("hidden");
+                filepagelink.href = filelink;
+                template.querySelector("#filepage-image").src = filelink;
+            }
+
             //Display watch/unwatch based on if they're watching
             if(d.result.data.watch.length)
                 template.querySelector("#unwatch-page").removeAttribute("hidden");
@@ -682,13 +691,16 @@ function file_item_onload(template, state)
     var file = template.querySelector("[data-file]");
     var filelink = template.querySelector("[data-filelink]");
     var hash = template.querySelector("[data-hash]");
+    var idelem = template.querySelector("[data-id]");
     var time = template.querySelector("[data-time]");
     var private = template.querySelector("[data-private]");
 
     file.src = api.GetFileUrl(state.hash, new FileModifyParameter(50));
     file.title = `${state.literalType} : ${state.meta}`;
     filelink.href = api.GetFileUrl(state.hash);
-    hash.textContent = `${state.name} [${state.id}] pubId: ${state.hash}`;
+    idelem.textContent = `${state.name} [${state.id}]`;
+    idelem.href = `?t=page&pid=${state.id}`;
+    hash.textContent = ` pubId: ${state.hash}`;
     time.textContent = state.createDate;
 
     if(state.permissions[0] && state.permissions[0].indexOf("R") >= 0)
@@ -754,6 +766,7 @@ function page_editor_onload(template, state)
     state = state || {};
     template.querySelector("#page-editor-id").value = state.id || 0;
     template.querySelector("#page-editor-parentid").value = state.parentId || 0;
+    template.querySelector("#page-editor-contenttype").value = state.contentType || 1;
     template.querySelector("#page-editor-name").value = state.name || "";
     template.querySelector("#page-editor-text").value = state.text || "";
     template.querySelector("#page-editor-type").value = state.literalType || "";
