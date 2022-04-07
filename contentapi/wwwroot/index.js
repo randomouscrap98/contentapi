@@ -316,7 +316,7 @@ function page_onload(template, state)
             //having to maintain the vote system if I change it.
             api.AboutSearch(new ApiHandler(dd =>
             {
-                var voteCodes = dd.result.details.codes.vote_types;
+                var voteCodes = dd.result.details.codes.VoteType;
                 Object.keys(voteCodes).forEach(k =>
                 {
                     var option = document.createElement("option");
