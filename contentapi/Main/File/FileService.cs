@@ -184,6 +184,7 @@ public class FileService : IFileService
         {
             name = fileConfig.name ?? "",
             contentType = Db.InternalContentType.file,
+            hash = fileConfig.hash ?? "",
             values = fileConfig.values.ToDictionary(x => x.Key, y => (object)y.Value)
         };
 
