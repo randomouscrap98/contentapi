@@ -92,7 +92,7 @@ public class ContentView : IIdView
 
     [Expensive(1)]
     [FieldSelect("select max(id) from " + MessagesTable + " where main.id = contentId and " + NaturalCommentQuery )]
-    public long lastCommentId {get;set;}
+    public long? lastCommentId {get;set;}
 
     [Expensive(3)]
     [FieldSelect("select count(*) from " + MessagesTable + " where main.id = contentId and " + NaturalCommentQuery)]
@@ -108,7 +108,7 @@ public class ContentView : IIdView
 
     [Expensive(1)]
     [FieldSelect("select max(id) from content_history where main.id = contentId")]
-    public long lastRevisionId {get;set;}
+    public long lastRevisionId {get;set;} //ALL content has a lastRevisionId
 
     //[Expensive(1)]
     //[FieldSelect("select createUserId from content_history where main.id = contentId order by id desc limit 1")]
