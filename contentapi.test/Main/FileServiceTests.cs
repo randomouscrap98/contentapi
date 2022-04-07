@@ -24,7 +24,8 @@ public class FileServiceTests : ViewUnitTestBase, IDisposable
     protected IGenericSearch searcher;
     protected FileService service;
     protected FileServiceConfig config;
-    protected FakeS3Client s3Mock;
+    protected S3Provider s3provider;
+    //protected FakeS3Client s3Mock;
 
 
 
@@ -34,12 +35,13 @@ public class FileServiceTests : ViewUnitTestBase, IDisposable
         this.mapper = fixture.GetService<IMapper>();
 
         //This client throws exceptions for everything
-        s3Mock = new FakeS3Client();
+        //s3Mock = new FakeS3Client();
+        s3provider = new S3Provider(); //As is, it will returned NotImplemented for IAmazonS3
 
         searcher = fixture.GetService<IGenericSearch>();
         writer = fixture.GetService<IDbWriter>();
         config = new FileServiceConfig();
-        service = new FileService(fixture.GetService<ILogger<FileService>>(), writer, searcher, config, s3Mock);
+        service = new FileService(fixture.GetService<ILogger<FileService>>(), () => writer, () => searcher, config, s3provider);
 
         //Always want a fresh database!
         fixture.ResetDatabase();

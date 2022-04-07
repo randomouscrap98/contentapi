@@ -3,7 +3,6 @@ using System.Collections.Generic;
 using System.Linq;
 using AutoMapper;
 using contentapi.Search;
-using contentapi.Utilities;
 using contentapi.Views;
 using Microsoft.Extensions.Logging;
 using Xunit;

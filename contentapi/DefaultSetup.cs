@@ -1,4 +1,5 @@
 using System.Runtime.ExceptionServices;
+using Amazon.S3;
 using contentapi.Live;
 using contentapi.Main;
 using contentapi.Module;
@@ -29,6 +30,8 @@ public static class DefaultSetup
 
         //For anything that just needs a simple search here and there, but doesn't want to be transient
         services.AddSingleton(p => new Func<IGenericSearch>(() => p.GetService<IGenericSearch>() ?? throw new InvalidOperationException("Couldn't create IGenericSearch somehow!")));
+        services.AddSingleton(p => new Func<IDbWriter>(() => p.GetService<IDbWriter>() ?? throw new InvalidOperationException("Couldn't create IDbWriter somehow!")));
+        services.AddSingleton(p => new S3Provider() { GetRawProvider = new Func<IAmazonS3>(() => p.GetService<IAmazonS3>() ?? throw new InvalidOperationException("Couldn't create IAmazonS3!")) } );
 
         services.AddSingleton<IRuntimeInformation>(new MyRuntimeInformation(DateTime.Now));
         services.AddSingleton<IViewTypeInfoService, ViewTypeInfoService_Cached>();

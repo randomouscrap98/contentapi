@@ -32,21 +32,22 @@ public class FileService : IFileService
     public const string GifMime = "image/gif";
     public const string FallbackMime = "image/png";
 
-    protected IDbWriter writer;
-    protected IGenericSearch searcher;
-    protected IAmazonS3 s3client;
+    protected Func<IDbWriter> writeProvider;
+    protected Func<IGenericSearch> searchProvider;
+    protected S3Provider s3Provider;
     protected ILogger logger;
 
     protected FileServiceConfig config;
 
     protected readonly SemaphoreSlim filelock = new SemaphoreSlim(1, 1);
 
-    public FileService(ILogger<FileService> logger, IDbWriter writer, IGenericSearch searcher, FileServiceConfig config, IAmazonS3 s3client)
+    public FileService(ILogger<FileService> logger, Func<IDbWriter> writer, Func<IGenericSearch> searcher, FileServiceConfig config, S3Provider provider) //IAmazonS3 s3client)
     {
-        this.writer = writer;
-        this.searcher = searcher;
+        this.writeProvider = writer;
+        this.searchProvider = searcher;
         this.config = config;
-        this.s3client = s3client;
+        //this.s3client = s3client;
+        this.s3Provider = provider;
         this.logger = logger;
     }
 
@@ -57,7 +58,7 @@ public class FileService : IFileService
 
     public async Task<byte[]> GetS3DataAsync(string name)
     {
-        var obj = await s3client.GetObjectAsync(GetBucketName(), name);
+        var obj = await s3Provider.GetCachedProvider().GetObjectAsync(GetBucketName(), name);
         using (var stream = new MemoryStream())
         {
             await obj.ResponseStream.CopyToAsync(stream);
@@ -77,7 +78,7 @@ public class FileService : IFileService
             ContentType = mimeType
         };
 
-        return s3client.PutObjectAsync(putRequest);
+        return s3Provider.GetCachedProvider().PutObjectAsync(putRequest);
     }
 
     public bool IsS3()
@@ -263,8 +264,9 @@ public class FileService : IFileService
             //We now have the metadata
             newView.meta = JsonConvert.SerializeObject(meta);
 
+            var tempWriter = writeProvider();
             //This is QUITE dangerous: a file could be created in the api first and THEN the file write fails!
-            newView = await writer.WriteAsync(newView, requester);
+            newView = await tempWriter.WriteAsync(newView, requester);
 
             try
             {
@@ -273,7 +275,7 @@ public class FileService : IFileService
             catch (Exception ex)
             {
                 logger.LogError($"FILE WRITE '{newView.hash}'({newView.id}) FAILED: {ex}");
-                await writer.DeleteAsync<ContentView>(newView.id, requester);
+                await tempWriter.DeleteAsync<ContentView>(newView.id, requester);
             }
         }
         finally
@@ -381,7 +383,7 @@ public class FileService : IFileService
         else
         {
             //Doesn't matter who the requester is, ANY file with this hash is fine... what about deleted though?
-            fileData = (await searcher.GetByField<ContentView>(RequestType.content, "hash", hash)).FirstOrDefault();
+            fileData = (await searchProvider().GetByField<ContentView>(RequestType.content, "hash", hash)).FirstOrDefault();
         }
 
         if (fileData == null || fileData.deleted || fileData.contentType != Db.InternalContentType.file)
