@@ -611,13 +611,13 @@ public class QueryBuilder : IQueryBuilder
             });
         }
 
-        result.codes.Add("actions", Enum.GetValues<UserAction>().ToDictionary(x => (int)x, y => y.ToString("G")));
-        result.codes.Add("internal_types", Enum.GetValues<InternalContentType>().ToDictionary(x => (int)x, y => y.ToString("G")));
-        result.codes.Add("user_types", Enum.GetValues<UserType>().ToDictionary(x => (int)x, y => y.ToString("G")));
-        result.codes.Add("ban_types", Enum.GetValues<BanType>().ToDictionary(x => (int)x, y => y.ToString("G")));
-        result.codes.Add("admin_log_types", Enum.GetValues<AdminLogType>().ToDictionary(x => (int)x, y => y.ToString("G")));
-        result.codes.Add("vote_types", Enum.GetValues<VoteType>().ToDictionary(x => (int)x, y => y.ToString("G")));
-        result.codes.Add("event_types", Enum.GetValues<EventType>().ToDictionary(x => (int)x, y => y.ToString("G")));
+        result.codes.Add(typeof(UserAction).Name, Enum.GetValues<UserAction>().ToDictionary(x => (int)x, y => y.ToString("G")));
+        result.codes.Add(typeof(InternalContentType).Name, Enum.GetValues<InternalContentType>().ToDictionary(x => (int)x, y => y.ToString("G")));
+        result.codes.Add(typeof(UserType).Name, Enum.GetValues<UserType>().ToDictionary(x => (int)x, y => y.ToString("G")));
+        result.codes.Add(typeof(BanType).Name, Enum.GetValues<BanType>().ToDictionary(x => (int)x, y => y.ToString("G")));
+        result.codes.Add(typeof(AdminLogType).Name, Enum.GetValues<AdminLogType>().ToDictionary(x => (int)x, y => y.ToString("G")));
+        result.codes.Add(typeof(VoteType).Name, Enum.GetValues<VoteType>().ToDictionary(x => (int)x, y => y.ToString("G")));
+        result.codes.Add(typeof(EventType).Name, Enum.GetValues<EventType>().ToDictionary(x => (int)x, y => y.ToString("G")));
 
         return result;
     }

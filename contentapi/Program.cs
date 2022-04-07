@@ -65,7 +65,7 @@ builder.Services.AddAuthentication(x =>
 Action<Newtonsoft.Json.JsonSerializerSettings> setupJsonOptions = opts =>
 {
     opts.Converters.Add(new CustomDateTimeConverter());
-    opts.Converters.Add(new StringEnumConverter());
+    //opts.Converters.Add(new StringEnumConverter());
 };
 JsonConvert.DefaultSettings = () => {
     var settings = new JsonSerializerSettings();

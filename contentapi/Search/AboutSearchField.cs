@@ -65,7 +65,7 @@ public class AboutSearchFieldProfile : Profile
         if(t == typeof(bool))
             return "bool";
         if(t.IsEnum)
-            return $"string({string.Join("|", Enum.GetNames(t))})";
+            return $"{t.Name}({string.Join("|", Enum.GetNames(t))})";
 
         return "unknown";
     }
