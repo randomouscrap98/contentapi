@@ -91,6 +91,7 @@ window.onload = function()
         //Live userlist updates. Note that you can also manually request userlists, but those
         //don't go through this handler, they go through the sendRequest handler (because it's manual)
         userlist => {
+            console.log("RECEIVED USERLIST", userlist);
             //Might want to do other things, so we call the function rather than pass it
             setUserlist(userlist.data);
         },
@@ -123,7 +124,7 @@ window.onload = function()
             //only persists per-connection
             var statuses = {};
             statuses[`${pid}`] = "active";
-            ws.sendRequest("setuserstatus", statuses, response => console.log("Successfully set user status"));
+            ws.sendRequest("setuserstatus", statuses, response => console.log("Successfully set user status", statuses, response));
             setConnectionStatus("connected");
         },
         //event generated on any close, whether it reconnects or not. You don't need to manage the websocket

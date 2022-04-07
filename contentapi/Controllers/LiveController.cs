@@ -131,7 +131,7 @@ public class LiveController : BaseController
                     if(receiveItem.data == null)
                         throw new RequestException("Must set data to a dictionary of contentId:status");
 
-                    var statuses = services.mapper.Map<Dictionary<string, string>>(receiveItem.data)
+                    var statuses = (((JObject)receiveItem.data).ToObject<Dictionary<string, string>>() ?? throw new RequestException("Couldn't parse sent userlist!"))
                         .ToDictionary(x => long.Parse(x.Key), y => y.Value);//(Dictionary<long, string>)receiveItem.data;
 
                     //TODO: this will need to do some magic to send the userlist to everyone. I suppose if I
@@ -141,6 +141,8 @@ public class LiveController : BaseController
                 }
                 catch(Exception ex)
                 {
+                    if(!(ex is RequestException))
+                        services.logger.LogWarning($"Error when user {userId} set statuses to {receiveItem.data}: {ex}");
                     response.error = $"Error while setting statuses: {ex.Message}";
                 }
             }
