@@ -352,14 +352,14 @@ public class EventQueueTest : ViewUnitTestBase //, IClassFixture<DbUnitTestSearc
 
         if(allowed)
         {
-            Assert.Contains(events.events, x => x.type == EventType.watch && x.refId == watch.id);
+            Assert.Contains(events.events, x => x.type == "watch" && x.refId == watch.id);
 
             //Since we're here anyway, might as well ensure the content is pulled
             Assert.Contains(events.data[EventType.watch]["content"], x => (long)x["id"] == watch.contentId);
         }
         else
         {
-            Assert.DoesNotContain(events.events, x => x.type == EventType.watch && x.refId == watch.id);
+            Assert.DoesNotContain(events.events, x => x.type == "watch" && x.refId == watch.id);
         }
     }
 

@@ -9,7 +9,7 @@ public class LiveEventView
     public DateTime date {get;set;}
     public long userId {get;set;}
     public UserAction action {get;set;}
-    public EventType type {get;set;}
+    public string type {get;set;} = "";
     public long refId {get;set;}
 
     public LiveEventView() { }

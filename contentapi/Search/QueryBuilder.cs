@@ -617,7 +617,7 @@ public class QueryBuilder : IQueryBuilder
         result.codes.Add(typeof(BanType).Name, Enum.GetValues<BanType>().ToDictionary(x => (int)x, y => y.ToString("G")));
         result.codes.Add(typeof(AdminLogType).Name, Enum.GetValues<AdminLogType>().ToDictionary(x => (int)x, y => y.ToString("G")));
         result.codes.Add(typeof(VoteType).Name, Enum.GetValues<VoteType>().ToDictionary(x => (int)x, y => y.ToString("G")));
-        result.codes.Add(typeof(EventType).Name, Enum.GetValues<EventType>().ToDictionary(x => (int)x, y => y.ToString("G")));
+        //result.codes.Add(typeof(EventType).Name, Enum.GetValues<EventType>().ToDictionary(x => (int)x, y => y.ToString("G")));
 
         return result;
     }
