@@ -10,8 +10,10 @@ update content_watches set createDate = REPLACE(createDate, ' ', 'T') || 'Z';
 update content_watches set editDate = REPLACE(editDate, ' ', 'T') || 'Z';
 
 DROP INDEX IF EXISTS idx_message_standard_date;
+DROP INDEX IF EXISTS idx_message_standard;
 update messages set createDate = REPLACE(createDate, ' ', 'T') || 'Z';
 update messages set editDate = REPLACE(editDate, ' ', 'T') || 'Z';
+CREATE INDEX if not exists idx_message_standard on messages(contentId, id, module, deleted);
 CREATE INDEX if not exists idx_message_standard_date on messages(contentId, createDate, module, deleted);
 
 update user_relations set createDate = REPLACE(createDate, ' ', 'T') || 'Z';

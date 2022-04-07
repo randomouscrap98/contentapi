@@ -3,6 +3,9 @@ using Dapper;
 
 namespace contentapi;
 
+/// <summary>
+/// A class required to store datetime values as true ISO UTC
+/// </summary>
 public class DapperUtcDateTimeHandler : SqlMapper.TypeHandler<DateTime>
 {
     public override DateTime Parse(object value)

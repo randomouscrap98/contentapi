@@ -32,12 +32,14 @@ public class DbUnitTestBase : UnitTestBase, IDisposable
         //Insert database structure here
         var queries = GetAllQueries();
 
-        using(var trans = masterConnection.BeginTransaction())
-        {
-            foreach(var q in queries)
-                masterConnection.Execute(q, null, trans);
-            trans.Commit();
-        }
+        //Each of these could have a transaction, sooo
+        foreach(var q in queries)
+            masterConnection.Execute(q, null); //, trans);
+
+        //using(var trans = masterConnection.BeginTransaction())
+        //{
+        //    trans.Commit();
+        //}
 
         masterBackupConnection = new SqliteConnection(MasterBackupConnectionString);
         masterBackupConnection.Open(); //We need to keep the master connection open so it doesn't delete the in memory database
