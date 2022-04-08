@@ -38,9 +38,6 @@ public class DbWriter : IDbWriter
     protected DbWriterConfig config;
     protected IRandomGenerator rng;
 
-    //A TEMPORARY HACK! I need this information!
-    protected FileServiceConfig fileConfig;
-
     protected static readonly SemaphoreSlim hashLock = new SemaphoreSlim(1, 1);
 
     public List<RequestType> TrueDeletes = new List<RequestType> {
@@ -52,7 +49,7 @@ public class DbWriter : IDbWriter
     public DbWriter(ILogger<DbWriter> logger, IGenericSearch searcher, ContentApiDbConnection connection,
         IViewTypeInfoService typeInfoService, IMapper mapper, IHistoryConverter historyConverter,
         IPermissionService permissionService, ILiveEventQueue eventQueue, DbWriterConfig config,
-        IRandomGenerator rng, FileServiceConfig fileConfig)
+        IRandomGenerator rng)
     {
         this.logger = logger;
         this.searcher = searcher;
@@ -64,7 +61,6 @@ public class DbWriter : IDbWriter
         this.eventQueue = eventQueue;
         this.config = config;
         this.rng = rng;
-        this.fileConfig = fileConfig;
     
         //Preemptively open this, we know us (as a writer) SHOULD BE short-lived, so...
         this.dbcon.Open();
@@ -228,23 +224,26 @@ public class DbWriter : IDbWriter
             if(uView.deleted)
                 throw new RequestException("Don't delete users by setting the deleted flag!");
 
+            //Never allow usersInGroup to be set for non-group items
+            if(uView.type != UserType.group && uView.usersInGroup.Count > 0)
+                throw new RequestException("You can't add users to a non-group user!");
+            
+
             if(action != UserAction.delete)
             {
                 //Go make sure the username is fine
 
                 //Go lookup the avatar, make sure they can't set something junk
-                if(uView.avatar != fileConfig.DefaultHash)
+                if(uView.avatar != Constants.DefaultHash)
                 {
                     var fileData = (await searcher.GetByField<ContentView>(RequestType.content, "hash", uView.avatar)).FirstOrDefault();
                     if(fileData == null || fileData.id == 0)
                         throw new RequestException($"Couldn't find avatar {uView.avatar}");
                 }
             }
-            
+
             if (uView.type == UserType.user)
             {
-                await ValidateGroups(uView.groups, requester);
-
                 //Users aren't created here except by supers? This might change sometime
                 if(action == UserAction.create)
                     throw new ForbiddenException("Nobody can create users outside of registration!");
@@ -264,12 +263,14 @@ public class DbWriter : IDbWriter
             }
             else if (uView.type == UserType.group)
             {
-                if(uView.groups.Count > 0)
-                    throw new RequestException("You can't add groups to groups!");
+                await ValidateUsers(uView.usersInGroup, requester);
 
-                //Only supers can do ANYTHING with groups
-                if(!requester.super)
-                    throw new ForbiddenException("Only supers can create, modify, or delete groups!");
+                //You can only work with existing groups if you created them or you're a super user
+                if(action == UserAction.update || action == UserAction.delete)
+                {
+                    if (!(requester.id == exView!.createUserId || requester.super))
+                        throw new ForbiddenException("You're not allowed to modify this group!");
+                }
             }
             else
             {
@@ -888,7 +889,7 @@ public class DbWriter : IDbWriter
         else if(work.action == UserAction.delete)
         {
             //These groups are added later anyway, don't worry about it being after map
-            work.view.groups.Clear();
+            work.view.usersInGroup.Clear();
             user.avatar = "";               //This might need special attention!
             user.username = $"deleted_user_{work.view.id}"; //Want all usernames to be unique probably...
             user.password = "";
@@ -923,7 +924,7 @@ public class DbWriter : IDbWriter
             else if(work.action == UserAction.update || work.action == UserAction.delete)
             {
                 //Remove the old associated values
-                await DeleteAssociatedType<UserRelation>(user.id, tsx, "userId", "user"); //For now, just remove where the user is directly referenced. We MIGHT need the relatedId, but what if that's content??
+                await DeleteAssociatedType<UserRelation>(user.id, tsx, nameof(Db.UserRelation.relatedId), "user"); //For now, just remove where the user is directly referenced. We MIGHT need the relatedId, but what if that's content??
                 await dbcon.UpdateAsync(user, tsx);
             }
             else 
@@ -935,11 +936,11 @@ public class DbWriter : IDbWriter
             if(work.action != UserAction.delete)
             {
                 //Need to insert the group relations. We've already verified the groups, AND removed the old relations.
-                await dbcon.InsertAsync(work.view.groups.Select(x => new UserRelation()
+                await dbcon.InsertAsync(work.view.usersInGroup.Select(x => new UserRelation()
                 {
                     type = UserRelationType.inGroup,
-                    userId = work.view.id,
-                    relatedId = x,
+                    userId = x, //work.view.id,
+                    relatedId = work.view.id,
                     createDate = DateTime.UtcNow
                 }), tsx);
             }
@@ -968,31 +969,59 @@ public class DbWriter : IDbWriter
         }
     }
 
-    public async Task ValidateGroups(List<long> groups, UserView requester)
+    //public async Task ValidateUsers(List<long> groups, UserView requester)
+    //{
+    //    //Nothing to check
+    //    if(groups.Count == 0)
+    //        return;
+
+    //    if(groups.Distinct().Count() != groups.Count)
+    //        throw new ArgumentException("Duplicate groups found in user group list");
+
+    //    //Just go lookup the groups
+    //    var utinfo = typeInfoService.GetTypeInfo<UserView>();
+    //    var foundGroups = await searcher.QueryRawAsync($"select id,super from users where id in @ids and type = @type", new Dictionary<string, object> {
+    //        { "ids", groups },
+    //        { "type", UserType.group }
+    //    });
+    //    //var foundGroupIds = foundGroups.Select(x => x["id"]);
+
+    //    foreach(var id in groups)
+    //    {
+    //        var fg = foundGroups.FirstOrDefault(x => id.Equals(x["id"]));
+
+    //        if(fg == null)
+    //            throw new ArgumentException($"Group {id} in user group set not found in database! Note: only groups can be added, not users!");
+    //        else if((long)fg["super"] > 0 && !requester.super)
+    //            throw new ForbiddenException($"You can't put yourself in restricted group {id}!");
+    //    }
+    //}
+
+    public async Task ValidateUsers(List<long> users, UserView requester) //, UserType type)
     {
         //Nothing to check
-        if(groups.Count == 0)
+        if(users.Count == 0)
             return;
 
-        if(groups.Distinct().Count() != groups.Count)
-            throw new ArgumentException("Duplicate groups found in user group list");
+        if(users.Distinct().Count() != users.Count)
+            throw new ArgumentException("Duplicate users found in group user list");
 
         //Just go lookup the groups
         var utinfo = typeInfoService.GetTypeInfo<UserView>();
         var foundGroups = await searcher.QueryRawAsync($"select id,super from users where id in @ids and type = @type", new Dictionary<string, object> {
-            { "ids", groups },
-            { "type", UserType.group }
+            { "ids", users },
+            { "type", UserType.user }
         });
         //var foundGroupIds = foundGroups.Select(x => x["id"]);
 
-        foreach(var id in groups)
+        foreach(var id in users)
         {
             var fg = foundGroups.FirstOrDefault(x => id.Equals(x["id"]));
 
             if(fg == null)
-                throw new ArgumentException($"Group {id} in user group set not found in database! Note: only groups can be added, not users!");
-            else if((long)fg["super"] > 0 && !requester.super)
-                throw new ForbiddenException($"You can't put yourself in restricted group {id}!");
+                throw new ArgumentException($"User {id} in user set not found in database!"); // Note: only groups can be added, not users!");
+            //else if((long)fg["super"] > 0 && !requester.super)
+            //    throw new ForbiddenException($"You can't put yourself in restricted group {id}!");
         }
     }
 

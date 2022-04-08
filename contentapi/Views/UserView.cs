@@ -34,6 +34,10 @@ public class UserView : IIdView
     public DateTime createDate {get;set;}
 
     [FieldSelect]
+    [Writable(WriteRule.AutoUserId, WriteRule.Preserve)]
+    public long createUserId {get;set;}
+
+    [FieldSelect]
     [Writable]
     public bool super {get;set;}
 
@@ -45,6 +49,11 @@ public class UserView : IIdView
 
     [NoQuery]
     [Expensive(2)]
-    [Writable]
+    //[Writable] //Readonly now
     public List<long> groups {get;set;} = new List<long>();
+
+    [NoQuery]
+    [Expensive(2)]
+    [Writable]
+    public List<long> usersInGroup {get;set;} = new List<long>();
 }

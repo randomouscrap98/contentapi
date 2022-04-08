@@ -18,6 +18,7 @@ namespace contentapi.Db
         public UserType type { get; set; } = UserType.user;
         public DateTime createDate { get; set; }
         public DateTime editDate { get; set; }
+        public long createUserId {get;set;}
         public string email { get; set; } = "";
         //public string hidelist { get; set; } //Hidelist is nullable!
         public string password { get; set; } = ""; //Don't worry, just the salted hash

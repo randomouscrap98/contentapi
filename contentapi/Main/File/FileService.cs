@@ -22,7 +22,7 @@ public class FileServiceConfig
     public int MaxQuantize { get; set; } = 256;
     public int MinQuantize { get; set; } = 2;
     public double ResizeRepeatFactor { get; set; } = 0.8;
-    public string DefaultHash { get; set; } = "0";
+    //public string DefaultHash { get; set; } = "0";
     public string? DefaultImageFallback { get; set; } = null;
 }
 
@@ -377,7 +377,7 @@ public class FileService : IFileService
         //SPECIAL: the 0 file is 
         ContentView? fileData = null;
 
-        if (hash == config.DefaultHash)
+        if (hash == Constants.DefaultHash)
         {
             fileData = new ContentView() { id = 0, literalType = FallbackMime, hash = hash, contentType = Db.InternalContentType.file };
         }
@@ -408,7 +408,7 @@ public class FileService : IFileService
         catch (NotFoundException)
         {
             //This just means we CAN generate it!
-            if (hash == config.DefaultHash && !string.IsNullOrWhiteSpace(config.DefaultImageFallback))
+            if (hash == Constants.DefaultHash && !string.IsNullOrWhiteSpace(config.DefaultImageFallback))
             {
                 logger.LogInformation($"Creating default image {hash} from base64 string given in config");
                 await SaveMainDataAsync(Convert.FromBase64String(config.DefaultImageFallback), hash, mimeType);

@@ -64,6 +64,7 @@ public class GenericSearcher : IGenericSearch
         if(r.requestType == RequestType.user)
         {
             const string groupskey = nameof(UserView.groups);
+            const string usersInGroupkey = nameof(UserView.usersInGroup);
             const string ridkey =  nameof(Db.UserRelation.relatedId);
             const string uidkey =  nameof(Db.UserRelation.userId);
             const string typekey = nameof(Db.UserRelation.type);
@@ -79,6 +80,17 @@ public class GenericSearcher : IGenericSearch
 
                 foreach(var u in index)
                     u.Value[groupskey] = lookup.Contains(u.Key) ? lookup[u.Key].Select(x => x.relatedId).ToList() : new List<long>();
+            }
+            if(r.requestFields.Contains(usersInGroupkey))
+            {
+                var relinfo = typeService.GetTypeInfo<Db.UserRelation>();
+                var groups = await dbcon.QueryAsync<Db.UserRelation>($"select {ridkey},{uidkey} from {relinfo.selfDbInfo?.modelTable} where {typekey} = @type and {ridkey} in @ids",
+                    new { ids = index.Keys, type = (int)UserRelationType.inGroup }); 
+                
+                var lookup = groups.ToLookup(x => x.relatedId);
+
+                foreach(var u in index)
+                    u.Value[usersInGroupkey] = lookup.Contains(u.Key) ? lookup[u.Key].Select(x => x.userId).ToList() : new List<long>();
             }
         }
 

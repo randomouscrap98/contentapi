@@ -40,7 +40,7 @@ public class DbWriterTest : ViewUnitTestBase
         writer = new DbWriter(fixture.GetService<ILogger<DbWriter>>(), fixture.GetService<IGenericSearch>(),
             fixture.GetService<Db.ContentApiDbConnection>(), typeInfoService, fixture.GetService<IMapper>(),
             fixture.GetService<Db.History.IHistoryConverter>(), fixture.GetService<IPermissionService>(),
-            events, config, rng, new FileServiceConfig());
+            events, config, rng);
         searcher = fixture.GetService<IGenericSearch>();
 
         //Reset it for every test
@@ -666,7 +666,7 @@ public class DbWriterTest : ViewUnitTestBase
     [InlineData((int)UserVariations.Super, UserType.user, true, false)]         
     [InlineData((int)UserVariations.Super + 1, UserType.user, false, false)]    
     [InlineData((int)UserVariations.Super + 1, UserType.user, true, false)]    
-    [InlineData((int)UserVariations.Super, UserType.group, false, false)]        //Users can't create groups (for now)
+    [InlineData((int)UserVariations.Super, UserType.group, false, true)]        //Users can create groups (for now)
     [InlineData((int)UserVariations.Super, UserType.group, true, false)]         
     [InlineData((int)UserVariations.Super + 1, UserType.group, false, true)]     //Supers can create groups (regardless of super)
     [InlineData((int)UserVariations.Super + 1, UserType.group, true, true)]     
@@ -715,64 +715,74 @@ public class DbWriterTest : ViewUnitTestBase
         return writer.WriteAsync(baseGroup, (int)UserVariations.Super + 1);
     }
 
-    [Theory]
-    [InlineData((int)UserVariations.Super, (int)UserVariations.Super, false, true)]
-    [InlineData((int)UserVariations.Super, (int)UserVariations.Super, true, false)]
-    [InlineData((int)UserVariations.Super, (int)UserVariations.Super + 2, false, false)]
-    [InlineData((int)UserVariations.Super, (int)UserVariations.Super + 2, true, false)]
-    [InlineData((int)UserVariations.Super + 1, (int)UserVariations.Super + 1, false, true)]
-    [InlineData((int)UserVariations.Super + 1, (int)UserVariations.Super + 1, true, true)]
-    [InlineData((int)UserVariations.Super + 1, (int)UserVariations.Super + 2, false, true)]
-    [InlineData((int)UserVariations.Super + 1, (int)UserVariations.Super + 2, true, true)]
-    public async Task WriteAsync_AddGroup_Gamut(long updaterId, long userId, bool groupSuper, bool allowed)
-    {
-        var group = await MakeQuickGroup(groupSuper);
+    //[Theory]
+    //[InlineData((int)UserVariations.Super, (int)UserVariations.Super, false, true)]
+    //[InlineData((int)UserVariations.Super, (int)UserVariations.Super, true, false)]
+    //[InlineData((int)UserVariations.Super, (int)UserVariations.Super + 2, false, false)]
+    //[InlineData((int)UserVariations.Super, (int)UserVariations.Super + 2, true, false)]
+    //[InlineData((int)UserVariations.Super + 1, (int)UserVariations.Super + 1, false, true)]
+    //[InlineData((int)UserVariations.Super + 1, (int)UserVariations.Super + 1, true, true)]
+    //[InlineData((int)UserVariations.Super + 1, (int)UserVariations.Super + 2, false, true)]
+    //[InlineData((int)UserVariations.Super + 1, (int)UserVariations.Super + 2, true, true)]
+    //public async Task WriteAsync_AddGroup_Gamut(long updaterId, long userId, bool groupSuper, bool allowed)
+    //{
+    //    var group = await MakeQuickGroup(groupSuper);
 
+    //    //go lookup the user to recieve the group
+    //    var user = await searcher.GetById<UserView>(RequestType.user, userId, true);
+
+    //    //Set it now
+    //    user.groups.Add(group.id);
+
+    //    //The function which does the update
+    //    var addGroup = new Func<Task<UserView>>(() => writer.WriteAsync(user, updaterId));
+
+    //    //Now, try to add this group to the given user BY the given user.
+    //    if(allowed)
+    //    {
+    //        var result = await addGroup();
+    //        Assert.Contains(group.id, result.groups);
+    //        StandardUserEqualityCheck(user, result, userId); //Some sanity checks, should work
+    //    }
+    //    else
+    //    {
+    //        await Assert.ThrowsAnyAsync<ForbiddenException>(addGroup);
+    //    }
+    //}
+
+    [Theory]
+    [InlineData(NormalUserId, NormalUserId)]
+    [InlineData(SuperUserId, NormalUserId)]
+    [InlineData(SuperUserId, SuperUserId)]
+    public async Task WriteAsync_AddUsersToUsers_Fail(long userId, long addUserId)
+    {
         //go lookup the user to recieve the group
         var user = await searcher.GetById<UserView>(RequestType.user, userId, true);
+        Assert.Empty(user.usersInGroup);
+        user.usersInGroup.Add(addUserId);
 
-        //Set it now
-        user.groups.Add(group.id);
-
-        //The function which does the update
-        var addGroup = new Func<Task<UserView>>(() => writer.WriteAsync(user, updaterId));
-
-        //Now, try to add this group to the given user BY the given user.
-        if(allowed)
-        {
-            var result = await addGroup();
-            Assert.Contains(group.id, result.groups);
-            StandardUserEqualityCheck(user, result, userId); //Some sanity checks, should work
-        }
-        else
-        {
-            await Assert.ThrowsAnyAsync<ForbiddenException>(addGroup);
-        }
+        await Assert.ThrowsAnyAsync<RequestException>(() => writer.WriteAsync(user, user.id));
     }
 
     [Fact]
-    public async Task WriteAsync_GroupValidate_Fail()
+    public async Task WriteAsync_UserValidate_Fail()
     {
         //Quickly create a simple group. This HAS to be done by the super user
         var group = await MakeQuickGroup(false);
 
-        //go lookup the user to recieve the group
-        var user = await searcher.GetById<UserView>(RequestType.user, (int)UserVariations.Super, true);
+        Assert.Empty(group.usersInGroup);
+        group.usersInGroup.Add(9999);
 
-        //We know that the group exists AND that it's the last group AND that groups probably work already.
-        //Se we can purposefully break it
-        user.groups.Add(group.id + 1);
+        //Because 9999 isn't a user
+        await Assert.ThrowsAnyAsync<ArgumentException>(() => writer.WriteAsync(group, SuperUserId));
 
-        //This should not let us write it, because the group is bad
-        await Assert.ThrowsAnyAsync<ArgumentException>(() => writer.WriteAsync(user, user.id));
+        //But then just for fun, add the real user. This will verify that our earlier failure was most likely genuine
+        group.usersInGroup.Clear();
+        group.usersInGroup.Add(NormalUserId);
 
-        //But then just for fun, add the real group. This will verify that our earlier failure was most likely genuine
-        user.groups.Clear();
-        user.groups.Add(group.id);
-
-        var result = await writer.WriteAsync(user, user.id);
-        Assert.Contains(group.id, result.groups);
-        StandardUserEqualityCheck(user, result, user.id); //Some sanity checks, should work
+        var result = await writer.WriteAsync(group, SuperUserId);
+        Assert.Contains(NormalUserId, result.usersInGroup);
+        StandardUserEqualityCheck(group, result, SuperUserId); //Some sanity checks, should work
     }
 
     [Theory]
