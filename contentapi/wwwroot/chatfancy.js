@@ -22,33 +22,46 @@ function SetFancySettingValue(key, value)
 
 window.addEventListener('load', function()
 {
-    var themeselectcontainer = createThemeSelector();
-    chatcontrols.insertBefore(themeselectcontainer, autoscrollcontainer);
-    var themeselect = document.getElementById("themeselect");
+    var settings = GetFancySettings();
+
+    setupThemeSelector(settings);
 
     var selectShow = createMessageSelectShow();
     chatcontrols.insertBefore(selectShow, autoscrollcontainer);
 
-    var settings = GetFancySettings();
+    var fancySelector = createFancySelector(settings.fancy);
+    chatcontrols.insertBefore(fancySelector, autoscrollcontainer);
 
-    themeselect.oninput = () => updateTheme(themeselect);
-
-    if(settings.theme)
+    if(settings.fancy)
     {
-        themeselect.value = settings.theme;
-        updateTheme(themeselect);
+        document.body.setAttribute("data-fancy", "true");
+        AVATARSIZE = 100;
+        window.createUserlistUser = fancyCreateUserlistUser;
     }
 
     var oldCreateMessage = createMessage;
     createMessage = (m) =>
     {
         var container = oldCreateMessage(m);
+        var userArea = container.querySelector(".userinfo");
+        var deleteButton = container.querySelector(".delete");
+
+        //Split the message into left and right to make more space for the avatar... if it's fancy
+        if(settings.fancy)
+        {
+            var leftCon = this.document.createElement("div");
+            var rightCon = this.document.createElement("div");
+            leftCon.className = "leftmessage";
+            rightCon.className = "rightmessage";
+            leftCon.appendChild(container.querySelector(".avatar"));
+            rightCon.appendChild(userArea);
+            rightCon.appendChild(container.querySelector(".content"));
+            container.appendChild(leftCon);
+            container.appendChild(rightCon);
+        }
 
         if(!m.module)
         {
-            var userArea = container.querySelector(".userinfo");
-            var deleteButton = container.querySelector(".delete");
-
             var checkBox = document.createElement("input");
             checkBox.setAttribute("type", "checkbox");
             checkBox.className = "messageselect";
@@ -59,32 +72,70 @@ window.addEventListener('load', function()
     }
 
     //Should override the boring title for something fancier!
-    window.setTitle = function (title, content)
-    {
-        if(content.contentType == 3)
-        {
-            var img = document.createElement('img');
-            img.src = api.GetFileUrl(content.hash, new FileModifyParameter(AVATARSIZE, true));
-            title.appendChild(img);
-            var span = document.createElement("span");
-            span.textContent = `${content.name}`;
-            title.appendChild(span);
-        }
-        else
-        {
-            title.textContent = content.name;
-        }
-
-        if(api.IsPrivate(content))
-        {
-            var lock = document.createElement("div");
-            lock.textContent = "🔒";
-            lock.className = "private";
-            title.appendChild(lock);
-            title.className = (title.className || "") + " privateparent";
-        }
-    };
+    window.setTitle = fancySetTitle;
 });
+
+function fancySetTitle(title, content)
+{
+    if (content.contentType == 3) {
+        var img = document.createElement('img');
+        img.src = api.GetFileUrl(content.hash, new FileModifyParameter(AVATARSIZE, true));
+        title.appendChild(img);
+        var span = document.createElement("span");
+        span.textContent = `${content.name}`;
+        title.appendChild(span);
+    }
+    else {
+        title.textContent = content.name;
+    }
+
+    if (api.IsPrivate(content)) {
+        var lock = document.createElement("div");
+        lock.textContent = "🔒";
+        lock.className = "private";
+        title.appendChild(lock);
+        title.className = (title.className || "") + " privateparent";
+    }
+}
+
+function fancyCreateUserlistUser(user, status)
+{
+    var element = document.createElement("div");
+    var img = document.createElement("img");
+    img.src = api.GetFileUrl(user.avatar, new FileModifyParameter(50, true));
+    img.className = "avatar";
+    element.appendChild(img);
+    element.title = user.username;
+    element.className = "user";
+    return element;
+    /*var element = document.createElement("div");
+    var username = document.createElement("span");
+    username.textContent = user.username;
+    username.className = "user";
+    username.setAttribute("title", status);
+    var avatar = document.createElement("img");
+    avatar.src = api.GetFileUrl(user.avatar, new FileModifyParameter(50, true));
+    avatar.className = "avatar";
+    element.appendChild(avatar);
+    element.appendChild(username);
+    return element;*/
+}
+
+function setupThemeSelector(settings)
+{
+    var themeselectcontainer = createThemeSelector();
+    chatcontrols.insertBefore(themeselectcontainer, autoscrollcontainer);
+    var themeselect = document.getElementById("themeselect");
+
+    themeselect.oninput = () => updateTheme(themeselect);
+
+    if(settings.theme)
+    {
+        themeselect.value = settings.theme;
+        updateTheme(themeselect);
+    }
+}
+
 
 
 function updateTheme(themeselect)
@@ -126,6 +177,7 @@ function createThemeSelector()
     return createLabelGeneric('Theme: ', sel, true);
 }
 
+
 function createMessageSelectShow()
 {
     var checkbox = document.createElement("input");
@@ -143,6 +195,21 @@ function createMessageSelectShow()
     div.appendChild(rethreader);
     return div;
 }
+
+function createFancySelector(checked)
+{
+    var checkbox = document.createElement("input");
+    checkbox.setAttribute("type", "checkbox");
+    checkbox.checked = checked;
+    checkbox.oninput = () =>
+    {
+        SetFancySettingValue("fancy", checkbox.checked);
+        location.reload();
+    };
+    var div = createLabelGeneric("Fancy mode!", checkbox);
+    return div;
+}
+
 
 function createRethreader()
 {

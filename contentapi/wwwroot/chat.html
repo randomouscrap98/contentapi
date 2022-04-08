@@ -38,7 +38,7 @@ var userSelf;
 //Constants for our page runtime, you don't necessarily need these
 const FIRSTLOADMESSAGES = 30;
 const LOADMOREMESSAGES = 200;
-const AVATARSIZE = 30;
+var AVATARSIZE = 30; //VARIABLE BECAUSE MAY CHANGE HAHAHA
 const DEFAULTMARKUP = "12y";
 
 //duplicate from index.js
@@ -529,7 +529,7 @@ function setUserlist(data)
 
     <style>
 :root {
-    --rightpanewidth: 12rem;
+    --rightpanewidth: 12.6rem;
     --titleheight: 2.8rem;
     --postareaheight: 6rem;
     --postsubmitwidth: 3rem;
@@ -732,7 +732,7 @@ body, input, textarea, select {
         font-size: 0.95em;
         padding: 0.1em;
     }
-    #messagelist {
+    #messagearea {
         font-size: 0.9em;
     }
 }

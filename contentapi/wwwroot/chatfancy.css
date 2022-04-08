@@ -115,3 +115,41 @@ body:not([data-showmessageselect]) .messageselect {
     margin-right: 0.25em;
     vertical-align: middle;
 }
+
+/* [data-fancy] #messagelist { font-size: 1.05em; } */
+[data-fancy] .message { display: flex; }
+[data-fancy] .message .content { margin-left: 0; }
+[data-fancy] .message .avatar { 
+    width: 2.7em; 
+    margin-top: 0.23em;
+    margin-right: 0.3em;
+}
+
+[data-fancy] .leftmessage { flex: none; }
+[data-fancy] .rightmessage { flex: auto; }
+[data-fancy] .userinfo time { white-space: nowrap; }
+
+[data-fancy] #userlist {
+    display: flex;
+    flex-wrap: wrap;
+}
+
+[data-fancy] #userlist .user { width: 2.5em; height: 2.5em; }
+[data-fancy] #userlist .avatar { 
+    width: 100%; 
+    height: 100%; 
+    margin: 0;
+    border-radius: 0;
+    box-sizing: border-box;
+    font-size: 0;
+}
+
+[data-fancy] ::-webkit-scrollbar {
+  /*width: 5px;
+  height: 8px;*/
+  background-color: var(--mainbg); /* or add it to the track */
+}
+
+[data-fancy] ::-webkit-scrollbar-thumb {
+  background: var(--notificationbg);
+}
