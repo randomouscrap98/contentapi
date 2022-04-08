@@ -703,6 +703,71 @@ public class DbWriterTest : ViewUnitTestBase
         }
     }
 
+    [Theory]
+    [InlineData(NormalUserId, NormalUserId, true)]
+    [InlineData(NormalUserId, SuperUserId + 1, false)] //A non-super trying to edit someone else's group
+    [InlineData(NormalUserId, SuperUserId, true)]
+    [InlineData(SuperUserId, SuperUserId, true)]
+    [InlineData(SuperUserId, NormalUserId, false)]
+    public async Task WriteAsync_GroupEdit_Allowed(long creatorId, long editor, bool allowed)
+    {
+        var group = new UserView()
+        {
+            username = "some_group",
+            type = UserType.group
+        };
+
+        //Write the initial group, should always be fine
+        var result = await writer.WriteAsync(group, creatorId);
+        Assert.Empty(result.groups);
+        Assert.Empty(result.usersInGroup);
+
+        //Now change the special field or something
+        result.special = "wow it's new! new!!!";
+
+        if(allowed)
+        {
+            var result2 = await writer.WriteAsync(result, editor);
+            Assert.Equal(result.special, result2.special);
+            Assert.Empty(result2.groups);
+            Assert.Empty(result2.usersInGroup);
+        }
+        else
+        {
+            await Assert.ThrowsAnyAsync<ForbiddenException>(() => writer.WriteAsync(result, editor));
+        }
+    }
+
+    [Theory]
+    [InlineData(NormalUserId, NormalUserId, false)] //NOBODY can add themselves to a group through the "groups" field! It's readonly!
+    [InlineData(NormalUserId, SuperUserId, false)]
+    [InlineData(SuperUserId, NormalUserId, false)]
+    [InlineData(SuperUserId, SuperUserId, false)]
+    public async Task WriteAsync_AddSelfToGroup_Fail(long creatorId, long editor, bool allowed)
+    {
+        var group = new UserView()
+        {
+            username = "some_group",
+            type = UserType.group
+        };
+
+        //Write the initial group, should always be fine
+        var result = await writer.WriteAsync(group, creatorId);
+        Assert.True(result.id > 0);
+
+        var untoucheduser = await searcher.GetById<UserView>(RequestType.user, editor);
+        var user = await searcher.GetById<UserView>(RequestType.user, editor);
+        user.groups.Add(result.id);
+
+        //It should probably always work
+        var result2 = await writer.WriteAsync(user, editor);
+
+        if(allowed)
+            Assert.Contains(result.id, result2.groups);
+        else
+            Assert.True(untoucheduser.groups.OrderBy(x => x).SequenceEqual(result2.groups.OrderBy(x => x)));
+    }
+
     private Task<UserView> MakeQuickGroup(bool super)
     {
         var baseGroup = new UserView()
@@ -765,7 +830,7 @@ public class DbWriterTest : ViewUnitTestBase
     }
 
     [Fact]
-    public async Task WriteAsync_UserValidate_Fail()
+    public async Task WriteAsync_AddGroup_FailAndSucceed()
     {
         //Quickly create a simple group. This HAS to be done by the super user
         var group = await MakeQuickGroup(false);
@@ -783,6 +848,10 @@ public class DbWriterTest : ViewUnitTestBase
         var result = await writer.WriteAsync(group, SuperUserId);
         Assert.Contains(NormalUserId, result.usersInGroup);
         StandardUserEqualityCheck(group, result, SuperUserId); //Some sanity checks, should work
+
+        //Go see if the user has that group in their list
+        var user = await searcher.GetById<UserView>(RequestType.user, NormalUserId);
+        Assert.Contains(group.id, user.groups);
     }
 
     [Theory]
