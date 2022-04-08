@@ -29,6 +29,9 @@ window.addEventListener('load', function()
     var selectShow = createMessageSelectShow();
     chatcontrols.insertBefore(selectShow, autoscrollcontainer);
 
+    var messageZoom = createMessageZoom(settings.messagezoom);
+    chatcontrols.insertBefore(messageZoom, autoscrollcontainer);
+
     var fancySelector = createFancySelector(settings.fancy);
     chatcontrols.insertBefore(fancySelector, autoscrollcontainer);
 
@@ -207,6 +210,31 @@ function createFancySelector(checked)
         location.reload();
     };
     var div = createLabelGeneric("Fancy mode!", checkbox);
+    return div;
+}
+
+function createMessageZoom(baseZoom)
+{
+    var checkbox = document.createElement("input");
+    var label = null;
+    checkbox.setAttribute("type", "range");
+    checkbox.setAttribute("step", "0.1");
+    checkbox.setAttribute("min", "0.5");
+    checkbox.setAttribute("max", "3");
+    var refreshZoom = () =>
+    {
+        SetFancySettingValue("messagezoom", checkbox.value);
+        var msglist = document.getElementById("messagelist");
+        console.log("Setting zoom to " + checkbox.value);
+        msglist.style.fontSize = `${checkbox.value}em`;
+        if(label) label.title = checkbox.value;
+    };
+    checkbox.oninput = refreshZoom;
+    checkbox.value = baseZoom || 1;
+    var div = createLabelGeneric("Msg zoom", checkbox, true);
+    label = div.querySelector("span");
+    label.style.verticalAlign = "top";
+    refreshZoom();
     return div;
 }
 
