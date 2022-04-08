@@ -397,7 +397,7 @@ function displayMessages(data, keepScroll)
         if(data.message_aggregate)
             api.AutoLinkContent(data.message_aggregate, data.content);
     } 
-    api.AutoFixAllDates(data);
+    //api.AutoFixAllDates(data);
     var messagearea = document.getElementById("messagearea");
     var messagelist = document.getElementById("messagelist");
     var activitylist = document.getElementById("activitylist");
@@ -521,7 +521,7 @@ function setUserlist(data)
     console.debug("SetUserList called with response: ", data);
     var userlist = document.getElementById("userlist");
 
-    api.AutoFixAllDates(data.data);
+    //api.AutoFixAllDates(data.data);
     var usersById = api.KeyById(data.data.user);
 
     //response should have statuses and data, always same format (assuming you get a single status)
