@@ -119,11 +119,11 @@ body:not([data-showmessageselect]) .messageselect {
 [data-fancy] .avatar { border-radius: 0; box-sizing: border-box; }
 
 [data-fancy] .message { display: flex; }
-[data-fancy] .message .content { margin-left: 0; }
+[data-fancy] .message .content { margin-left: 0; /*margin-top: 0.3em;*/ }
 [data-fancy] .message .avatar { 
     width: 2.7em; 
-    margin-top: 0.18em;
-    margin-right: 0.3em;
+    margin-top: 0.29em;
+    margin-right: 0.35em;
     border: var(--stdborder);
 }
 
@@ -136,6 +136,12 @@ body:not([data-showmessageselect]) .messageselect {
     flex-wrap: wrap;
 }
 
+[data-fancy] #activitylist > div {
+    display: flex;
+    align-items: center;
+    min-height: 2em;
+}
+
 [data-fancy] #userlist .user { width: 2.5em; height: 2.5em; }
 [data-fancy] #userlist .avatar { 
     width: 100%; 
@@ -144,11 +150,15 @@ body:not([data-showmessageselect]) .messageselect {
 }
 
 [data-fancy] ::-webkit-scrollbar {
-  /*width: 5px;
-  height: 8px;*/
   background-color: var(--mainbg); /* or add it to the track */
 }
 
 [data-fancy] ::-webkit-scrollbar-thumb {
   background: var(--notificationbg);
 }
+
+
+
+/* this is irritating, how do I fix this? */
+body[data-theme="purple"][data-fancy] .message .avatar { margin-top: 0.18em; }
+body[data-theme="blue"][data-fancy] .message .avatar { margin-top: 0.18em; }

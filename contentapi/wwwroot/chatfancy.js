@@ -26,11 +26,11 @@ window.addEventListener('load', function()
 
     setupThemeSelector(settings);
 
-    var selectShow = createMessageSelectShow();
-    chatcontrols.insertBefore(selectShow, autoscrollcontainer);
-
     var messageZoom = createMessageZoom(settings.messagezoom);
     chatcontrols.insertBefore(messageZoom, autoscrollcontainer);
+
+    var selectShow = createMessageSelectShow();
+    chatcontrols.insertBefore(selectShow, autoscrollcontainer);
 
     var fancySelector = createFancySelector(settings.fancy);
     chatcontrols.insertBefore(fancySelector, autoscrollcontainer);
@@ -231,7 +231,7 @@ function createMessageZoom(baseZoom)
     };
     checkbox.oninput = refreshZoom;
     checkbox.value = baseZoom || 1;
-    var div = createLabelGeneric("Msg zoom", checkbox, true);
+    var div = createLabelGeneric("MZ", checkbox, true);
     label = div.querySelector("span");
     label.style.verticalAlign = "top";
     refreshZoom();
