@@ -687,6 +687,7 @@ public class DbWriterTest : ViewUnitTestBase
             Assert.Equal(user.username, result.username);
             Assert.Equal(user.type, result.type);
             Assert.Equal(user.super, result.super);
+            Assert.Equal(creatorId, result.createUserId);
 
             //"Users" created through this endpoint should maaaybe be registered. This also ensures that, even if there are weird bugs,
             //these users probably can't login

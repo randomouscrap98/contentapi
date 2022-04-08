@@ -498,10 +498,6 @@ function uservariables_onload(template, state)
 function admin_onload(template, state)
 {
     SetupPagination(template.querySelector("#adminlog-up"), template.querySelector("#adminlog-down"), state, "alp");
-    SetupPagination(template.querySelector("#group-up"), template.querySelector("#group-down"), state, "grp");
-
-    var groupEditor = LoadTemplate("user_editor", { type : 2 });
-    template.querySelector("#newgroup-container").appendChild(groupEditor);
 
     api.Search_AllByType("adminlog", "*", "id_desc", SEARCHRESULTSPERPAGE, state.alp, new ApiHandler(d =>
     {
@@ -513,6 +509,14 @@ function admin_onload(template, state)
             container.appendChild(item);
         });
     }));
+}
+
+function groupmanage_onload(template, state)
+{
+    SetupPagination(template.querySelector("#group-up"), template.querySelector("#group-down"), state, "grp");
+
+    var groupEditor = LoadTemplate("user_editor", { type : 2 });
+    template.querySelector("#newgroup-container").appendChild(groupEditor);
 
     //Search for groups
     api.Search(new RequestParameter({ "type" : 2 }, [
@@ -781,6 +785,7 @@ function group_item_onload(template, state)
 {
     template.querySelector("[data-id]").textContent = state.id;
     template.querySelector("[data-createdate").textContent = new Date(state.createDate).toLocaleDateString();
+    template.querySelector("[data-createuserid").textContent = state.createUserId;
 
     var groupEditor = LoadTemplate("user_editor", state);
     template.querySelector("[data-editcontainer]").appendChild(groupEditor);
@@ -815,7 +820,7 @@ function user_editor_onload(template, user)
     var avatarinput = template.querySelector("[data-user-update-avatar]");
     var avatarpreview = template.querySelector("[data-avatarpreview]");
     var special = template.querySelector("[data-user-update-special]");
-    var groups = template.querySelector("[data-user-update-groups]");
+    var groups = template.querySelector("[data-user-update-usersingroup]");
     var refreshPreview = () =>
     {
         if(avatarinput.value)
@@ -831,13 +836,17 @@ function user_editor_onload(template, user)
     avatarinput.onblur = refreshPreview;
     avatarinput.value = user.avatar || "0";
     special.value = user.special || "";
-    groups.value = user.groups ? user.groups.join(" ") : "";
+    groups.value = user.usersInGroup ? user.usersInGroup.join(" ") : "";
     if(user.type === 2)
     {
         //parents because label
-        groups.parentNode.style.display = "none"; //setAttribute("hidden", ""); //"type", "hidden");
-        special.parentNode.style.display = "none"; //setAttribute("hidden", ""); //"type", "hidden");
+        special.parentNode.style.display = "none";
     } 
+    else
+    {
+        //Only available... IN groups
+        groups.parentNode.style.display = "none"; 
+    }
     refreshPreview();
 }
 
@@ -955,7 +964,7 @@ function t_user_update_submit(form)
         username : form.querySelector("[data-user-update-username]").value,
         avatar : form.querySelector("[data-user-update-avatar]").value,
         special : form.querySelector("[data-user-update-special]").value,
-        groups : form.querySelector("[data-user-update-groups]").value.split(" ").filter(x => x).map(x => Number(x)),
+        usersInGroup : form.querySelector("[data-user-update-usersingroup]").value.split(" ").filter(x => x).map(x => Number(x)),
         super : Number(form.querySelector("[data-user-update-super]").value)
     };
 

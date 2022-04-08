@@ -26,6 +26,7 @@
         <a href="?t=user">User</a>
         <a href="?t=page&pid=0">Pages</a>
         <a href="?t=search">Search</a>
+        <a href="?t=groupmanage">Groups</a>
         <a href="?t=notifications">Notifications</a>
         <a href="?t=admin">Admin</a>
     </header>
@@ -226,16 +227,18 @@
             </div>
             <!-- also bans! -->
             <hr>
+        </div>
+        <div id="t_groupmanage" data-onload="groupmanage_onload">
             <h2>Group Editor</h2>
             <p>Groups are fake users you can create, which users can then add themselves to. Anyone can
                 then substitute groups anywhere where a user can be set, but they were made with <b>permissions</b>
                 in mind. Users in a group get the permissions set for the group for that page dynamically.
                 Groups act just like users in permissions, so you can still set individual user permissions or multiple groups on a single page.
             </p>
+            <p class="error">Only the creator of a group or super users can edit a group</p>
             <h3>New group:</h3>
             <div id="newgroup-container"></div>
             <h3>Find/edit groups:</h3>
-            <p>As a side note, regular users can use this list to find groups, but you cannot edit or create them.</p>
             <div id="group-list"></div>
             <div id="group-nav" class="nav">
                 <a href="#" id="group-down">More</a>
@@ -306,6 +309,7 @@
         </div>-->
         <div id="group_item" data-onload="group_item_onload">
             <div><b>ID:</b> <span data-id>0</span></div>
+            <div><b>Creator:</b> <span data-createuserid>0</span></div>
             <div><b>Create date:</b> <time data-createdate></time></div>
             <div data-editcontainer></div>
             <!--<button data-edit>Edit group</button>
@@ -329,8 +333,8 @@
                     <input type="text" data-user-update-special>
                 </label>
                 <label>
-                    <span>Groups (space separated):</span>
-                    <input type="text" data-user-update-groups>
+                    <span>Users in groups (space separated):</span>
+                    <input type="text" data-user-update-usersingroup>
                 </label>
                 <label>
                     <span>Super (probably can't set):</span>
