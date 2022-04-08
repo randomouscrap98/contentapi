@@ -141,6 +141,7 @@ body:not([data-showmessageselect]) .messageselect {
     align-items: center;
     min-height: 2em;
 }
+[data-fancy] .notification_bubble { flex: none; }
 
 [data-fancy] #userlist .user { width: 2.5em; height: 2.5em; }
 [data-fancy] #userlist .avatar { 
