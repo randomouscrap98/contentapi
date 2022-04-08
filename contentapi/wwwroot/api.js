@@ -1069,30 +1069,6 @@ Api.prototype.AutoLinkContent = function(data, contentList)
     this.AutoLinkGeneric(data, contentList, this.contentAutolinks);
 };
 
-//Api.prototype.AutoFixDates = function(data)
-//{
-//    var me = this;
-//    data.forEach(x =>
-//    {
-//        me.dateAutoFormats.forEach(f =>
-//        {
-//            if(x[f])
-//            {
-//                x[f] = x[f].replace(" ", "T");
-//
-//                if(x[f].indexOf("Z") < 0) 
-//                    x[f] += "Z";
-//            }
-//        });
-//    });
-//};
-//
-//Api.prototype.AutoFixAllDates = function(data)
-//{
-//    var me = this;
-//    Object.keys(data).forEach(x => me.AutoFixDates(data[x]));
-//};
-
 Api.prototype.AutoLinkModuleUsers = function(data, userlist)
 {
     var linkUsers = this.KeyById(userlist);
@@ -1161,5 +1137,11 @@ Api.prototype.GetSearchBackDate = function(hours, date)
     hours = hours || 0;
     back = date || new Date;
     back.setHours(back.getHours() - hours);
-    return back.toISOString().substring(0, 13); //.replace("T", " ");
+    return back.toISOString().substring(0, 13);
 };
+
+//Return whether or not the content is private (meaning not public...)
+Api.prototype.IsPrivate = function(content)
+{
+    return !(content.permissions[0] && content.permissions[0].indexOf("R") >= 0);
+}

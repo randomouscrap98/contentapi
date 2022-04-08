@@ -642,7 +642,7 @@ function page_item_onload(template, state)
     title.textContent = state.name;
     if(state.createUser) title.title = `${state.createUser.username}`;
     time.textContent = state.createDate;
-    if(state.permissions[0] && state.permissions[0].indexOf("R") >= 0)
+    if(!api.IsPrivate(state))
         private.style.display = "none";
 }
 
@@ -703,7 +703,7 @@ function file_item_onload(template, state)
     hash.textContent = ` pubId: ${state.hash}`;
     time.textContent = state.createDate;
 
-    if(state.permissions[0] && state.permissions[0].indexOf("R") >= 0)
+    if(!api.IsPrivate(state))
         private.style.display = "none";
 }
 

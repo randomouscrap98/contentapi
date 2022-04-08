@@ -57,7 +57,35 @@ window.addEventListener('load', function()
 
         return container;
     }
+
+    //Should override the boring title for something fancier!
+    window.setTitle = function (title, content)
+    {
+        if(content.contentType == 3)
+        {
+            var img = document.createElement('img');
+            img.src = api.GetFileUrl(content.hash, new FileModifyParameter(AVATARSIZE, true));
+            title.appendChild(img);
+            var span = document.createElement("span");
+            span.textContent = `${content.name}`;
+            title.appendChild(span);
+        }
+        else
+        {
+            title.textContent = content.name;
+        }
+
+        if(api.IsPrivate(content))
+        {
+            var lock = document.createElement("div");
+            lock.textContent = "🔒";
+            lock.className = "private";
+            title.appendChild(lock);
+            title.className = (title.className || "") + " privateparent";
+        }
+    };
 });
+
 
 function updateTheme(themeselect)
 {

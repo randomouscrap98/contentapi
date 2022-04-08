@@ -21,7 +21,7 @@ body[data-theme="purple"] {
     --notificationalertbg: #ff77f7;
     --mainbg: #fff8ff;
     --maincolor: #4c4264;
-    --font: sans;
+    --font: sans-serif;
     --linkcolor: #2e73fd;
     --linkvisitedcolor: #6112ab;
 }
@@ -42,7 +42,7 @@ body[data-theme="blue"] {
     --notificationalertbg: #fa72ff;
     --mainbg: #f2fbff;
     --maincolor: #1c2363;
-    --font: sans;
+    --font: sans-serif;
     --linkcolor: #0669da;
     --linkvisitedcolor: rgb(36 26 139);
 }
@@ -98,4 +98,20 @@ body:not([data-showmessageselect]) .messageselect {
 }
 #rethreadpid {
     width: 4em;
+}
+
+.privateparent { position: relative; }
+.private {
+    position: absolute;
+    bottom: 0em;
+    right: -1.1em;
+    z-index: 100;
+    font-size: 0.7em;
+}
+.content_title img, .title img {
+    height: 1.2em;
+    image-rendering: pixelated;
+    image-rendering: crisp-edges;
+    margin-right: 0.25em;
+    vertical-align: middle;
 }

@@ -45,6 +45,9 @@ const DEFAULTMARKUP = "12y";
 const TOKENKEY = "contentapi_defimpl_userkey";
 function GetToken() { return localStorage.getItem(TOKENKEY); }
 
+//Simple functions that might be overridden for fanciness
+function setTitle(title, content) { title.textContent = content.name; }
+
 window.onload = function()
 {
     //NOTE: there is no error checking in this frontend, because it is not meant to be used full time. Furthermore,
@@ -154,7 +157,7 @@ window.onload = function()
         var sortedContent = api.KeyById(response.data.data.content)
         var pagetitle = document.getElementById("pagetitle");
         var page = sortedContent[pid];
-        titleOrImage(pagetitle, page);
+        setTitle(pagetitle, page);
 
         pagetitle.href = "index.html?t=page&pid=" + sortedContent[pid].id;
 
@@ -346,37 +349,22 @@ function createMessage(message)
     return container;
 }
 
-function titleOrImage(title, content)
-{
-    if(content.contentType == 3)
-    {
-        var img = document.createElement('img');
-        img.src = api.GetFileUrl(content.hash, new FileModifyParameter(AVATARSIZE, true));
-        title.appendChild(img);
-        var span = document.createElement("span");
-        span.textContent = `${content.name}`; // [${content.hash}]`;
-        title.appendChild(span);
-    }
-    else
-    {
-        title.textContent = content.name;
-    }
-}
-
 // Create a single new "notification" element, which consists of a link to the content and a counter
 // (may be expanded upon later)
 function createNotification(content)
 {
     var container = document.createElement("div");
-    var title = document.createElement("a");
-    var count = document.createElement("span");
-    title.href = `?pid=${content.id}`;
-    titleOrImage(title, content);
 
-    title.className = "content_title";
+    var count = document.createElement("span");
     count.className = "notification_bubble";
     count.textContent = "0";
     count.onclick = () => { container.parentNode.removeChild(container); };
+
+    var title = document.createElement("a");
+    title.href = `?pid=${content.id}`;
+    title.className = "content_title";
+    setTitle(title, content);
+
     container.appendChild(count);
     container.appendChild(title);
     container.id = `notification_${content.id}`;
@@ -397,7 +385,6 @@ function displayMessages(data, keepScroll)
         if(data.message_aggregate)
             api.AutoLinkContent(data.message_aggregate, data.content);
     } 
-    //api.AutoFixAllDates(data);
     var messagearea = document.getElementById("messagearea");
     var messagelist = document.getElementById("messagelist");
     var activitylist = document.getElementById("activitylist");
@@ -521,7 +508,6 @@ function setUserlist(data)
     console.debug("SetUserList called with response: ", data);
     var userlist = document.getElementById("userlist");
 
-    //api.AutoFixAllDates(data.data);
     var usersById = api.KeyById(data.data.user);
 
     //response should have statuses and data, always same format (assuming you get a single status)
@@ -720,13 +706,6 @@ body, input, textarea, select {
     margin-right: 0.5em;
     font-style: italic;
     color: var(--modulecolor);
-}
-.content_title img, .title img {
-    height: 1.2em;
-    image-rendering: pixelated;
-    image-rendering: crisp-edges;
-    margin-right: 0.25em;
-    vertical-align: middle;
 }
 .notification_bubble {
     padding: 0.25em;
