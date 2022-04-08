@@ -17,6 +17,8 @@ create table if not exists users (
     password text not null,
     salt text not null,
     registrationKey text
+    --***Added:***
+    --createUserId integer,
 );
 
 -- Relates users to other things. Useful for groups, may be used for other things.

@@ -26,6 +26,7 @@
         <a href="?t=user">User</a>
         <a href="?t=page&pid=0">Pages</a>
         <a href="?t=search">Search</a>
+        <a href="?t=groupedit">Groups</a>
         <a href="?t=notifications">Notifications</a>
         <a href="?t=admin">Admin</a>
     </header>
@@ -229,6 +230,17 @@
             <textarea id="websocket_data" placeholder="Websocket data"></textarea>
             <button id="websocket_send">Send</button>
             <div id="websocket_output" class="console"></div>
+        </div>
+        <div id="t_groupedit" data-onload="groupedit_onload">
+            <h3>Group Editor</h3>
+            <p>Groups are fake users you can create, then add real users to. You can then substitute
+                groups anywhere where a user can be set, but they were made with <b>permissions</b>
+                in mind. If you add users to a group, then use that group in the permissions object
+                for a page, those permissions are shared with all users in the group dynamically. 
+                You can then manage who's in the group and change who has access to any page with
+                that group set. Groups act just like users in permissions, so you can still set
+                individual user permissions or multiple groups on a single page.
+            </p>
         </div>
         <div id="t_admin" data-onload="admin_onload">
             <h3>Admin log:</h3>

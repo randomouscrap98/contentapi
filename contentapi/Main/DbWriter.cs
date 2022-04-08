@@ -118,6 +118,9 @@ public class DbWriter : IDbWriter
             var cView = view as ContentView ?? throw new InvalidOperationException("Somehow, ContentView could not be cast to a ContentView");
             var exView = existing as ContentView;
 
+            //Don't check certain fields for "don't allow change" (like type) because the later systems do it for you
+            //(with writable:preserve attributes and all that)
+
             //Only need to check parent for create if it's actually a place! This is because we treat non-valid 
             //ids as orphaned pages. We care about the user's ability to "create" pages in the parent when a new view is created OR when
             //a view is updated and being moved to a different parent.
@@ -210,35 +213,45 @@ public class DbWriter : IDbWriter
         {
             var uView = (view as UserView)!;
             var exView = existing as UserView;
-            
-            //NOTE: adding groups to groups is supported but does not do what users expect it to do: you cannot create nested groups!
-            await ValidateGroups(uView.groups, requester);
 
-            //Users aren't created here except by supers? This might change sometime
-            if(action == UserAction.create)
+            //Don't check certain fields for "don't allow change" (like type) because the later systems do it for you
+            //(with writable:preserve attributes and all that)
+            
+            //This ensures that the "super" field, whether on groups or users, is only modifyable with supers.
+            if((uView.super || exView?.super == true) && !requester.super)
+                throw new ForbiddenException("You can't minipulate the super field through this endpoint unless you're a super user!");
+            
+            if (uView.type == UserType.user)
             {
-                if(uView.type == UserType.user)
+                await ValidateGroups(uView.groups, requester);
+
+                //Users aren't created here except by supers? This might change sometime
+                if(action == UserAction.create)
                     throw new ForbiddenException("Nobody can create users outside of registration!");
 
-                if(!requester.super)
-                    throw new ForbiddenException("You can't create users or groups through this endpoint unless you're a super user!");
-            }
+                if(action == UserAction.update)
+                {
+                    //This luckily encompasses groups too, so nobody but supers can edit groups too
+                    if(requester.id != uView.id && !requester.super)
+                        throw new ForbiddenException("You cannot modify users other than yourself unless you're a super user!");
+                }
 
-            if(action == UserAction.update)
+                if(action == UserAction.delete)
+                {
+                    if(!requester.super)
+                        throw new ForbiddenException("Only super users can delete users!");
+                }
+            }
+            else if (uView.type == UserType.group)
             {
-                //This luckily encompasses groups too, so nobody but supers can edit groups too
-                if(requester.id != uView.id && !requester.super)
-                    throw new ForbiddenException("You cannot modify users other than yourself unless you're a super user!");
-
-                if(uView.super != exView?.super && !requester.super)
-                    throw new ForbiddenException("You cannot modify the super state unless you're a super user!");
+                if(uView.groups.Count > 0)
+                    throw new RequestException("You can't add groups to groups!");
             }
-
-            if(action == UserAction.delete)
+            else
             {
-                if(!requester.super)
-                    throw new ForbiddenException("Only super users can delete users!");
+                throw new RequestException($"You cannot do anything with users of type {uView.type}!");
             }
+
 
             if(uView.deleted)
                 throw new RequestException("Don't delete users by setting the deleted flag!");
