@@ -38,6 +38,9 @@ public class DbWriter : IDbWriter
     protected DbWriterConfig config;
     protected IRandomGenerator rng;
 
+    //A TEMPORARY HACK! I need this information!
+    protected FileServiceConfig fileConfig;
+
     protected static readonly SemaphoreSlim hashLock = new SemaphoreSlim(1, 1);
 
     public List<RequestType> TrueDeletes = new List<RequestType> {
@@ -49,7 +52,7 @@ public class DbWriter : IDbWriter
     public DbWriter(ILogger<DbWriter> logger, IGenericSearch searcher, ContentApiDbConnection connection,
         IViewTypeInfoService typeInfoService, IMapper mapper, IHistoryConverter historyConverter,
         IPermissionService permissionService, ILiveEventQueue eventQueue, DbWriterConfig config,
-        IRandomGenerator rng)
+        IRandomGenerator rng, FileServiceConfig fileConfig)
     {
         this.logger = logger;
         this.searcher = searcher;
@@ -61,6 +64,7 @@ public class DbWriter : IDbWriter
         this.eventQueue = eventQueue;
         this.config = config;
         this.rng = rng;
+        this.fileConfig = fileConfig;
     
         //Preemptively open this, we know us (as a writer) SHOULD BE short-lived, so...
         this.dbcon.Open();
@@ -217,9 +221,25 @@ public class DbWriter : IDbWriter
             //Don't check certain fields for "don't allow change" (like type) because the later systems do it for you
             //(with writable:preserve attributes and all that)
             
-            //This ensures that the "super" field, whether on groups or users, is only modifyable with supers.
+            //This ensures that the "super" field, no matter where it is, is only modifyable with supers.
             if((uView.super || exView?.super == true) && !requester.super)
                 throw new ForbiddenException("You can't minipulate the super field through this endpoint unless you're a super user!");
+
+            if(uView.deleted)
+                throw new RequestException("Don't delete users by setting the deleted flag!");
+
+            if(action != UserAction.delete)
+            {
+                //Go make sure the username is fine
+
+                //Go lookup the avatar, make sure they can't set something junk
+                if(uView.avatar != fileConfig.DefaultHash)
+                {
+                    var fileData = (await searcher.GetByField<ContentView>(RequestType.content, "hash", uView.avatar)).FirstOrDefault();
+                    if(fileData == null || fileData.id == 0)
+                        throw new RequestException($"Couldn't find avatar {uView.avatar}");
+                }
+            }
             
             if (uView.type == UserType.user)
             {
@@ -246,15 +266,15 @@ public class DbWriter : IDbWriter
             {
                 if(uView.groups.Count > 0)
                     throw new RequestException("You can't add groups to groups!");
+
+                //Only supers can do ANYTHING with groups
+                if(!requester.super)
+                    throw new ForbiddenException("Only supers can create, modify, or delete groups!");
             }
             else
             {
                 throw new RequestException($"You cannot do anything with users of type {uView.type}!");
             }
-
-
-            if(uView.deleted)
-                throw new RequestException("Don't delete users by setting the deleted flag!");
         }
         else if(view is WatchView)
         {

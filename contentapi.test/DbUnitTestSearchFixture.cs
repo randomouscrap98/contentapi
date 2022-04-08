@@ -92,7 +92,7 @@ public class DbUnitTestSearchFixture : DbUnitTestBase, IDisposable
                     var user = new Db.User() {
                         username = $"user_{i}",
                         password = $"SECRETS_{i}",
-                        avatar = rng.GetAlphaSequence(5),//UserCount - i,
+                        avatar = "0", //NOTE: WE'RE ASSUMING THE DEFAULT HASH IS 0!!! //rng.GetAlphaSequence(5),//UserCount - i,
                         type = Db.UserType.user,
                         createDate = DateTime.Now.AddDays(i - UserCount),
                         salt = $"SALTYSECRETS_{i}"

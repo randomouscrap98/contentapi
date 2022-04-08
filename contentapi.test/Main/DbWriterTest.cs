@@ -40,7 +40,7 @@ public class DbWriterTest : ViewUnitTestBase
         writer = new DbWriter(fixture.GetService<ILogger<DbWriter>>(), fixture.GetService<IGenericSearch>(),
             fixture.GetService<Db.ContentApiDbConnection>(), typeInfoService, fixture.GetService<IMapper>(),
             fixture.GetService<Db.History.IHistoryConverter>(), fixture.GetService<IPermissionService>(),
-            events, config, rng);
+            events, config, rng, new FileServiceConfig());
         searcher = fixture.GetService<IGenericSearch>();
 
         //Reset it for every test
@@ -583,7 +583,7 @@ public class DbWriterTest : ViewUnitTestBase
 
         //Modify fields we're allowed to modify
         user.username = "somethingNEW";
-        user.avatar = "heck"; //TODO: there's no checks on avatar yet!
+        user.avatar = "0";  //WE ARE ASSUMING THE DEFAULT HASH IS 0!!!
         user.special = "somethingSTUPID";
 
         if(allowed)
@@ -631,6 +631,33 @@ public class DbWriterTest : ViewUnitTestBase
             {
                 await writer.WriteAsync(user, writerId);
             });
+        }
+    }
+
+    //THIS MAKES THE ASSUMPTION THAT "0" IS THE DEFAULT HASH!
+    [Theory]
+    [InlineData(NormalUserId, "normal-hash", "0", true)]
+    [InlineData(NormalUserId, "normal-hash", "normal-hash", true)]
+    [InlineData(NormalUserId, "normal-hash", "bad-hash", false)]
+    [InlineData(SuperUserId, "normal-hash", "bad-hash", false)]
+    public async Task WriteAsync_SettingAvatar(long userId, string writeFileHash, string avatar, bool allowed)
+    {
+        var file = GetNewFileView();
+        file.hash = writeFileHash;
+
+        await writer.WriteAsync(file, SuperUserId); //This ensures there is SOMe file with a hash we can expect
+        var user = await searcher.GetById<UserView>(RequestType.user, userId);
+        user.avatar = avatar;
+
+        if(allowed)
+        {
+            var result = await writer.WriteAsync(user, userId);
+            StandardUserEqualityCheck(user, result, userId); //This also checks avatar but
+            Assert.Equal(avatar, result.avatar);
+        }
+        else
+        {
+            await Assert.ThrowsAnyAsync<RequestException>(() => writer.WriteAsync(user, userId));
         }
     }
 

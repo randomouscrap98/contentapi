@@ -7,7 +7,7 @@ var api;
 const SUBPAGESPERPAGE = 100;
 const COMMENTSPERPAGE = 100;
 const SEARCHRESULTSPERPAGE = 100;
-const TINYAVATAR = 25;
+const TINYAVATAR = 30;
 
 //NOTE: although this is set up to use templates and dynamic loading as an example, this is NOT
 //SPA. It does not attempt to intercept URLS and do all the fanciness required for that.
@@ -206,12 +206,8 @@ function user_onload(template, state)
         avatar.src = api.GetFileUrl(user.avatar, new FileModifyParameter(50));
         MakeTable(user, table);
 
-        template.querySelector("#user-update-id").value = user.id;
-        template.querySelector("#user-update-username").value = user.username;
-        template.querySelector("#user-update-avatar").value = user.avatar;
-        template.querySelector("#user-update-special").value = user.special;
-        template.querySelector("#user-update-groups").value = user.groups.join(" ");
-        template.querySelector("#user-update-super").value = Number(user.super);
+        var userEditor = LoadTemplate("user_editor", user);
+        template.querySelector("#user-update-form").appendChild(userEditor);
 
         //This search is to get files and such
         var search = new RequestParameter({
@@ -501,15 +497,34 @@ function uservariables_onload(template, state)
 
 function admin_onload(template, state)
 {
-    var container = template.querySelector("#adminlog-container");
     SetupPagination(template.querySelector("#adminlog-up"), template.querySelector("#adminlog-down"), state, "alp");
+    SetupPagination(template.querySelector("#group-up"), template.querySelector("#group-down"), state, "grp");
+
+    var groupEditor = LoadTemplate("user_editor", { type : 2 });
+    template.querySelector("#newgroup-container").appendChild(groupEditor);
 
     api.Search_AllByType("adminlog", "*", "id_desc", SEARCHRESULTSPERPAGE, state.alp, new ApiHandler(d =>
     {
         console.log(d.result.data);
+        var container = template.querySelector("#adminlog-container");
         d.result.data.adminlog.forEach(x =>
         {
             var item = LoadTemplate(`adminlog_item`, x);
+            container.appendChild(item);
+        });
+    }));
+
+    //Search for groups
+    api.Search(new RequestParameter({ "type" : 2 }, [
+        new RequestSearchParameter("user", "*", "type = @type", "id_desc", SEARCHRESULTSPERPAGE, SEARCHRESULTSPERPAGE * state.grp)
+    ]), new ApiHandler(d =>
+    {
+        console.log(d.result.data);
+        var container = template.querySelector("#group-list");
+
+        d.result.data.user.forEach(x =>
+        {
+            var item = LoadTemplate(`group_item`, x);
             container.appendChild(item);
         });
     }));
@@ -684,6 +699,8 @@ function user_item_onload(template, state)
 
     if(!state.super)
         sup.style.display = "none";
+    if(state.type !== 2)
+        template.querySelector("[data-group]").style.display = "none";
 }
 
 function file_item_onload(template, state)
@@ -760,6 +777,15 @@ function adminlog_item_onload(template, state)
     textelem.textContent = state.text;
 }
 
+function group_item_onload(template, state)
+{
+    template.querySelector("[data-id]").textContent = state.id;
+    template.querySelector("[data-createdate").textContent = new Date(state.createDate).toLocaleDateString();
+
+    var groupEditor = LoadTemplate("user_editor", state);
+    template.querySelector("[data-editcontainer]").appendChild(groupEditor);
+}
+
 function page_editor_onload(template, state)
 {
     //state is going to be the page IN the format from the api itself.
@@ -777,6 +803,42 @@ function page_editor_onload(template, state)
         template.querySelector("#page-editor-values").value = QuickObjectToInput(state.values);
     if(state.permissions)
         template.querySelector("#page-editor-permissions").value = QuickObjectToInput(state.permissions);
+}
+
+function user_editor_onload(template, user)
+{
+    user = user || {};
+    template.querySelector("[data-user-update-id]").value = user.id || 0;
+    template.querySelector("[data-user-update-type]").value = user.type || 1;
+    template.querySelector("[data-user-update-username]").value = user.username || "";
+    template.querySelector("[data-user-update-super]").value = Number(user.super) || 0;
+    var avatarinput = template.querySelector("[data-user-update-avatar]");
+    var avatarpreview = template.querySelector("[data-avatarpreview]");
+    var special = template.querySelector("[data-user-update-special]");
+    var groups = template.querySelector("[data-user-update-groups]");
+    var refreshPreview = () =>
+    {
+        if(avatarinput.value)
+        {
+            avatarpreview.src = api.GetFileUrl(avatarinput.value, new FileModifyParameter(TINYAVATAR, true));
+            avatarpreview.removeAttribute("hidden");
+        }
+        else
+        {
+            avatarpreview.setAttribute("hidden", "");
+        }
+    };
+    avatarinput.onblur = refreshPreview;
+    avatarinput.value = user.avatar || "0";
+    special.value = user.special || "";
+    groups.value = user.groups ? user.groups.join(" ") : "";
+    if(user.type === 2)
+    {
+        //parents because label
+        groups.parentNode.style.display = "none"; //setAttribute("hidden", ""); //"type", "hidden");
+        special.parentNode.style.display = "none"; //setAttribute("hidden", ""); //"type", "hidden");
+    } 
+    refreshPreview();
 }
 
 
@@ -888,12 +950,13 @@ function t_user_update_submit(form)
     //It just looks complicated in real frontends because the "values" array probably contains
     //things you want individual inputs for, like "what's the key" or whatever
     var user = {
-        id : Number(form.querySelector("#user-update-id").value),
-        username : form.querySelector("#user-update-username").value,
-        avatar : form.querySelector("#user-update-avatar").value,
-        special : form.querySelector("#user-update-special").value,
-        groups : form.querySelector("#user-update-groups").value.split(" ").filter(x => x).map(x => Number(x)),
-        super : Number(form.querySelector("#user-update-super").value)
+        id : Number(form.querySelector("[data-user-update-id]").value),
+        type : Number(form.querySelector("[data-user-update-type]").value),
+        username : form.querySelector("[data-user-update-username]").value,
+        avatar : form.querySelector("[data-user-update-avatar]").value,
+        special : form.querySelector("[data-user-update-special]").value,
+        groups : form.querySelector("[data-user-update-groups]").value.split(" ").filter(x => x).map(x => Number(x)),
+        super : Number(form.querySelector("[data-user-update-super]").value)
     };
 
     api.WriteType(APICONST.WRITETYPES.USER, user, new ApiHandler(d => {

@@ -26,7 +26,6 @@
         <a href="?t=user">User</a>
         <a href="?t=page&pid=0">Pages</a>
         <a href="?t=search">Search</a>
-        <a href="?t=groupedit">Groups</a>
         <a href="?t=notifications">Notifications</a>
         <a href="?t=admin">Admin</a>
     </header>
@@ -83,20 +82,7 @@
             <a href="?t=uservariables">Manage user variables</a>
             <div id="user-update">
                 <h3>Update: <button id="user-update-toggle"></button></h3>
-                <form id="user-update-form" onsubmit="return t_user_update_submit(this)">
-                    <input type="hidden" id="user-update-id" value="0">
-                    <label for="user-update-username">Username (limited changes?):<label>
-                    <input type="text" id="user-update-username">
-                    <label for="user-update-avatar">Avatar (hash/pubId):<label>
-                    <input type="text" id="user-update-avatar">
-                    <label for="user-update-special">Special (unused?):<label>
-                    <input type="text" id="user-update-special">
-                    <label for="user-update-groups">Groups (space separated):<label>
-                    <input type="text" id="user-update-groups">
-                    <label for="user-update-super">Super (probably can't set):<label>
-                    <input type="text" id="user-update-super">
-                    <input type="submit" value="Update">
-                </form>
+                <div id="user-update-form"></div>
             </div>
             <div id="user-files">
                 <h3>Upload new file: <button id="user-file-upload-toggle"></button></h3>
@@ -231,25 +217,30 @@
             <button id="websocket_send">Send</button>
             <div id="websocket_output" class="console"></div>
         </div>
-        <div id="t_groupedit" data-onload="groupedit_onload">
-            <h3>Group Editor</h3>
-            <p>Groups are fake users you can create, then add real users to. You can then substitute
-                groups anywhere where a user can be set, but they were made with <b>permissions</b>
-                in mind. If you add users to a group, then use that group in the permissions object
-                for a page, those permissions are shared with all users in the group dynamically. 
-                You can then manage who's in the group and change who has access to any page with
-                that group set. Groups act just like users in permissions, so you can still set
-                individual user permissions or multiple groups on a single page.
-            </p>
-        </div>
         <div id="t_admin" data-onload="admin_onload">
-            <h3>Admin log:</h3>
+            <h2>Admin log:</h2>
             <div id="adminlog-container"></div>
             <div id="adminlog-nav" class="nav">
                 <a href="#" id="adminlog-down">Older</a>
                 <a href="#" id="adminlog-up">Newer</a>
             </div>
             <!-- also bans! -->
+            <hr>
+            <h2>Group Editor</h2>
+            <p>Groups are fake users you can create, which users can then add themselves to. Anyone can
+                then substitute groups anywhere where a user can be set, but they were made with <b>permissions</b>
+                in mind. Users in a group get the permissions set for the group for that page dynamically.
+                Groups act just like users in permissions, so you can still set individual user permissions or multiple groups on a single page.
+            </p>
+            <h3>New group:</h3>
+            <div id="newgroup-container"></div>
+            <h3>Find/edit groups:</h3>
+            <p>As a side note, regular users can use this list to find groups, but you cannot edit or create them.</p>
+            <div id="group-list"></div>
+            <div id="group-nav" class="nav">
+                <a href="#" id="group-down">More</a>
+                <a href="#" id="group-up">Back</a>
+            </div>
         </div>
         <!-- The rest of this stuff are sort of "subtemplates", like little repeated items used within the page -->
         <div id="page_item" data-onload="page_item_onload">
@@ -270,6 +261,7 @@
             <span data-username class="important username"></span>
             <time data-time class="annotation"></time>
             <span data-super>⭐</span>
+            <span data-group>🫂</span>
         </div>
         <div id="file_item" data-onload="file_item_onload">
             <a data-filelink><img data-file></a>
@@ -296,6 +288,56 @@
             <time data-time class="annotation"></time>
             <span data-id></span>
             <span data-text></span>
+        </div>
+        <!-- The container for the editor portion of groups -->
+        <!--<div id="group_edit" data-onload="group_edit_onload">
+            <form data-groupform onsubmit="return t_group_edit_submit(this)">
+                <input type="hidden" data-id>
+                <label>
+                    <div>Name:</div>
+                    <input data-name >
+                </label>
+                <label> 
+                    <input type="checkbox" data-super>
+                    <span>Super (regular users can't add or remove themselves)</span>
+                </label>
+                <input type="submit">
+            </form>
+        </div>-->
+        <div id="group_item" data-onload="group_item_onload">
+            <div><b>ID:</b> <span data-id>0</span></div>
+            <div><b>Create date:</b> <time data-createdate></time></div>
+            <div data-editcontainer></div>
+            <!--<button data-edit>Edit group</button>
+            <button data-delete>Remove group</button>-->
+        </div>
+        <div id="user_editor" data-onload="user_editor_onload">
+            <form onsubmit="return t_user_update_submit(this)">
+                <input type="hidden" data-user-update-id value="0">
+                <input type="hidden" data-user-update-type value="1">
+                <label>
+                    <span>Username (limited changes?):</span>
+                    <input type="text" data-user-update-username>
+                </label>
+                <label>
+                    <span>Avatar (hash/pubId):</span> 
+                    <img data-avatarpreview>
+                    <input type="text" data-user-update-avatar>
+                </label>
+                <label>
+                    <span>Special (unused?):</span>
+                    <input type="text" data-user-update-special>
+                </label>
+                <label>
+                    <span>Groups (space separated):</span>
+                    <input type="text" data-user-update-groups>
+                </label>
+                <label>
+                    <span>Super (probably can't set):</span>
+                    <input type="text" data-user-update-super>
+                </label>
+                <input type="submit" value="Submit">
+            </form>
         </div>
         <div id="page_editor" data-onload="page_editor_onload">
             <form onsubmit="return t_page_editor_submit(this)">
