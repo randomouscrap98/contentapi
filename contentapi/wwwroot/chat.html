@@ -452,11 +452,11 @@ function displayMessages(data, keepScroll)
             }
             addedMessages++;
         }
-        // This is NOT the current room, so display it on the sidebar
-        else
+
+        if(x.content)
         {
-            var existing = getOrCreateNotification(x.content);
-            updateNotification(existing, 1, x.createDate, true);
+            var notification = getOrCreateNotification(x.content);
+            updateNotification(notification, 1, x.createDate, x.contentId !== pid);
         }
 
         if(addedMessages && !keepScroll && autoscroll.checked)

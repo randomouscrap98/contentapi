@@ -1021,6 +1021,15 @@ Api.prototype.GetFileUrl = function(hash, modify)
     return encodeURI(url);
 };
 
+// Return the UID reported by the given token, or from the token within the API
+// object if none is given. Does NOT connect to the API, and does NOT verify 
+// that the token is valid, but it is very fast. Given generously by 12
+Api.prototype.GetUidFromToken = function(token)
+{
+    token = token || this.get_token();
+    return Number(JSON.parse(atob(token.split(".")[1])).uid);
+};
+
 // Return a dictionary where each key is the id from the given dataset
 Api.prototype.KeyById = function(data, idField)
 {
