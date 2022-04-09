@@ -26,14 +26,16 @@ window.addEventListener('load', function()
 
     setupThemeSelector(settings);
 
-    var messageZoom = createMessageZoom(settings.messagezoom);
+    var messageZoom = createMessageZoom(settings);
     chatcontrols.insertBefore(messageZoom, autoscrollcontainer);
 
     var selectShow = createMessageSelectShow();
     chatcontrols.insertBefore(selectShow, autoscrollcontainer);
 
-    var fancySelector = createFancySelector(settings.fancy);
+    var fancySelector = createFancySelector(settings);
     chatcontrols.insertBefore(fancySelector, autoscrollcontainer);
+
+    setupSidebarToggle(settings);
 
     if(settings.fancy)
     {
@@ -42,8 +44,9 @@ window.addEventListener('load', function()
         window.createUserlistUser = fancyCreateUserlistUser;
     }
 
-    var oldCreateMessage = createMessage;
-    createMessage = (m) =>
+
+    var oldCreateMessage = window.createMessage;
+    window.createMessage = (m) =>
     {
         var container = oldCreateMessage(m);
         var userArea = container.querySelector(".userinfo");
@@ -73,6 +76,20 @@ window.addEventListener('load', function()
 
         return container;
     }
+
+    var oldUpdateNotification = updateNotification;
+    window.updateNotification = (a,b,c,d) =>
+    {
+        oldUpdateNotification(a, b, c, d);
+        updateSideNotify();
+    };
+
+    var oldResetNotificationBubble = window.resetNotificationBubble;
+    window.resetNotificationBubble = (b) =>
+    {
+        oldResetNotificationBubble(b);
+        updateSideNotify();
+    };
 
     //Should override the boring title for something fancier!
     window.setTitle = fancySetTitle;
@@ -111,17 +128,46 @@ function fancyCreateUserlistUser(user, status)
     element.title = user.username;
     element.className = "user";
     return element;
-    /*var element = document.createElement("div");
-    var username = document.createElement("span");
-    username.textContent = user.username;
-    username.className = "user";
-    username.setAttribute("title", status);
-    var avatar = document.createElement("img");
-    avatar.src = api.GetFileUrl(user.avatar, new FileModifyParameter(50, true));
-    avatar.className = "avatar";
-    element.appendChild(avatar);
-    element.appendChild(username);
-    return element;*/
+}
+
+function updateSideNotify()
+{
+    var sidenotify = document.getElementById("sidenotify");
+    var alerts = document.querySelectorAll("#activitylist .notification_alert");
+    sidenotify.style.visibility = alerts.length ? "visible" : "hidden";
+}
+
+function setupSidebarToggle(settings)
+{
+    var titleicons = document.getElementById("titleicons");
+
+    var sidenotify = document.createElement("div");
+    sidenotify.id = "sidenotify";
+    sidenotify.textContent = "!";
+
+    var toggle = document.createElement("input");
+    toggle.setAttribute("type", "checkbox");
+    toggle.id = "sidebartoggle";
+    toggle.checked = !settings.sidebarhidden;
+
+    var refreshSidebarToggle = () =>
+    {
+        SetFancySettingValue("sidebarhidden", !toggle.checked);
+
+        if(toggle.checked)
+            document.body.removeAttribute("data-sidebarhidden");
+        else
+            document.body.setAttribute("data-sidebarhidden", "true");
+    };
+
+    toggle.oninput = refreshSidebarToggle;
+
+    titleicons.appendChild(toggle);
+    titleicons.appendChild(sidenotify);
+
+    sidenotify.style.visibility = "hidden";
+
+    refreshSidebarToggle();
 }
 
 function setupThemeSelector(settings)
@@ -199,11 +245,11 @@ function createMessageSelectShow()
     return div;
 }
 
-function createFancySelector(checked)
+function createFancySelector(settings)
 {
     var checkbox = document.createElement("input");
     checkbox.setAttribute("type", "checkbox");
-    checkbox.checked = checked;
+    checkbox.checked = settings.fancy;
     checkbox.oninput = () =>
     {
         SetFancySettingValue("fancy", checkbox.checked);
@@ -213,7 +259,7 @@ function createFancySelector(checked)
     return div;
 }
 
-function createMessageZoom(baseZoom)
+function createMessageZoom(settings)
 {
     var checkbox = document.createElement("input");
     var label = null;
@@ -230,7 +276,7 @@ function createMessageZoom(baseZoom)
         if(label) label.title = checkbox.value;
     };
     checkbox.oninput = refreshZoom;
-    checkbox.value = baseZoom || 1;
+    checkbox.value = settings.messagezoom || 1;
     var div = createLabelGeneric("MZ", checkbox, true);
     label = div.querySelector("span");
     label.style.verticalAlign = "top";

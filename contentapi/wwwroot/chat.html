@@ -356,9 +356,8 @@ function createNotification(content)
     var container = document.createElement("div");
 
     var count = document.createElement("span");
-    count.className = "notification_bubble";
-    count.textContent = "0";
-    count.onclick = () => { container.parentNode.removeChild(container); };
+    resetNotificationBubble(count);
+    count.onclick = () => resetNotificationBubble(count);
 
     var title = document.createElement("a");
     title.href = `?pid=${content.id}`;
@@ -369,6 +368,12 @@ function createNotification(content)
     container.appendChild(title);
     container.id = `notification_${content.id}`;
     return container;
+}
+
+function resetNotificationBubble(bubble)
+{
+    bubble.textContent = "0";
+    bubble.className = "notification_bubble";
 }
 
 //A big function to do essentially all of the display work based on data received from the websocket,
@@ -590,19 +595,21 @@ body, input, textarea, select {
     background: var(--titlebg);
     border-bottom: var(--stdborder);
     position: relative;
+    display: flex;
 }
 #titlearea .title {
+    flex: auto;
     padding: 0.2em;
     margin: 0;
     overflow-y: auto;
-    height: 100%;
+}
+#titleicons { 
+    flex: none; 
+    padding: 0.1em;
 }
 #connectionstatus {
-    position: absolute;
-    top: 0.1em;
-    right: 0.1em;
-    width: 0.5em;
-    height: 0.5em;
+    width: calc(var(--titleheight) / 6);
+    height: calc(var(--titleheight) / 6);
     border: var(--stdborder);
 }
 #connectionstatus.connected {
@@ -745,7 +752,9 @@ body, input, textarea, select {
     <div id="leftpane" class="">
         <div id="titlearea">
             <h2 class="title"><a id="pagetitle" href="#"></a></h2>
-            <div id="connectionstatus" class="disconnected"></div>
+            <div id="titleicons">
+                <div id="connectionstatus" class="disconnected"></div>
+            </div>
         </div>
         <div id="messagearea">
             <div id="messagecontrols">

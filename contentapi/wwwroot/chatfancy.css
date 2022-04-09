@@ -1,3 +1,7 @@
+:root {
+    --titleiconsize: calc(var(--titleheight) / 3.5); 
+}
+
 body[data-theme="frog"] {
     --rightpanebg: mediumaquamarine;
     --titlebg: deepskyblue;
@@ -93,11 +97,36 @@ body[data-theme="dark"] button {
     border: var(--stdborder);
 }
 
-body:not([data-showmessageselect]) .messageselect {
-    display: none;
+body:not([data-showmessageselect]) .messageselect { display: none; }
+#rethreadpid { width: 4em; }
+body[data-sidebarhidden] {
+    --rightpanewidth: 0px;
 }
-#rethreadpid {
-    width: 4em;
+
+#titleicons { 
+    display: flex;
+    flex-direction: column;
+    justify-content: space-between;
+    align-items: center;
+}
+#connectionstatus {
+    flex: none;
+}
+#sidebartoggle {
+    width: var(--titleiconsize); 
+    height: var(--titleiconsize); 
+    margin: 0;
+    flex: none;
+}
+#sidenotify {
+    background: var(--notificationalertbg);
+    border-radius: 0.2em;
+    width: var(--titleiconsize); 
+    height: var(--titleiconsize); 
+    font-size: calc(var(--titleheight) / 4.5);
+    font-weight: bold;
+    text-align: center;
+    flex: none;
 }
 
 .privateparent { position: relative; }
