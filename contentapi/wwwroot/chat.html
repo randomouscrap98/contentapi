@@ -89,7 +89,7 @@ window.onload = function()
             //difficult to fix, so... I'm sorry. Also, use "live.data.events" to look at the 
             //events for deleting/editing comments, among other things.
             if(live.data.data.message && live.data.data.message.message)
-                displayMessages(live.data.data.message);
+                displayMessages(live.data.data.message, false, true); //don't keep scroll fixed, DO track individual message notifications
         }, 
         //Live userlist updates. Note that you can also manually request userlists, but those
         //don't go through this handler, they go through the sendRequest handler (because it's manual)
@@ -161,7 +161,7 @@ window.onload = function()
 
         pagetitle.href = "index.html?t=page&pid=" + sortedContent[pid].id;
 
-        displayMessages(response.data.data);
+        displayMessages(response.data.data); //, false, false); //don't keep scroll, don't update notifications with unique messages
     });
 
     //General controls setup
@@ -228,7 +228,7 @@ window.onload = function()
         ]), response =>
         {
             console.log(response);
-            displayMessages(response.data.data, true);
+            displayMessages(response.data.data, true); //Do keep scroll fixed, DON'T update notification count with new messages //, false);
         });
     };
 };
@@ -379,7 +379,7 @@ function resetNotificationBubble(bubble)
 //A big function to do essentially all of the display work based on data received from the websocket,
 //whether that be live updates OR a manual request. Also does processing for the notifications
 //area, again whether live or manual.
-function displayMessages(data, keepScroll)
+function displayMessages(data, keepScroll, countNotifications)
 {
     //Prelink the data all at the start so we only do it once and have proper data throughout
     api.AutoLinkUsers(data.message, data.user);
@@ -453,7 +453,7 @@ function displayMessages(data, keepScroll)
             addedMessages++;
         }
 
-        if(x.content)
+        if(countNotifications)
         {
             var notification = getOrCreateNotification(x.content);
             updateNotification(notification, 1, x.createDate, x.contentId !== pid);
