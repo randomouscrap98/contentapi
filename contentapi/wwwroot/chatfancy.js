@@ -44,6 +44,10 @@ window.addEventListener('load', function()
         window.createUserlistUser = fancyCreateUserlistUser;
     }
 
+    var messagearea = document.getElementById("messagearea");
+    var autoscroll = document.getElementById("autoscroll");
+
+    var doAutoScroll = () => { if(autoscroll.checked) messagearea.scrollTop = messagearea.scrollHeight; };
 
     var oldCreateMessage = window.createMessage;
     window.createMessage = (m) =>
@@ -51,6 +55,10 @@ window.addEventListener('load', function()
         var container = oldCreateMessage(m);
         var userArea = container.querySelector(".userinfo");
         var deleteButton = container.querySelector(".delete");
+        var content = container.querySelector(".content");
+
+        var images = content.querySelectorAll("img");
+        [...images].forEach(x => x.onload = doAutoScroll);
 
         //Split the message into left and right to make more space for the avatar... if it's fancy
         if(settings.fancy)
@@ -61,7 +69,7 @@ window.addEventListener('load', function()
             rightCon.className = "rightmessage";
             leftCon.appendChild(container.querySelector(".avatar"));
             rightCon.appendChild(userArea);
-            rightCon.appendChild(container.querySelector(".content"));
+            rightCon.appendChild(content);
             container.appendChild(leftCon);
             container.appendChild(rightCon);
         }

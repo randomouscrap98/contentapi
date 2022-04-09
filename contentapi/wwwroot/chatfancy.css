@@ -151,6 +151,7 @@ body[data-sidebarhidden] {
 [data-fancy] .message .content { margin-left: 0; /*margin-top: 0.3em;*/ }
 [data-fancy] .message .avatar { 
     width: 2.7em; 
+    height: 2.7em; 
     margin-top: 0.29em;
     margin-right: 0.35em;
     border: var(--stdborder);
