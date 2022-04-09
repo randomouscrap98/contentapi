@@ -1,5 +1,5 @@
 :root {
-    --titleiconsize: calc(var(--titleheight) / 3.5); 
+    --titleiconsize: calc(var(--titleheight) / 3); 
 }
 
 body[data-theme="frog"] {
@@ -123,7 +123,7 @@ body[data-sidebarhidden] {
     border-radius: 0.2em;
     width: var(--titleiconsize); 
     height: var(--titleiconsize); 
-    font-size: calc(var(--titleheight) / 4.5);
+    font-size: calc(var(--titleheight) / 3.3);
     font-weight: bold;
     text-align: center;
     flex: none;
