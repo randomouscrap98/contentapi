@@ -32,22 +32,22 @@ namespace contentapi.Db
 
     public enum UserRelationType : long
     {
-        inGroup = 1
+        in_group = 1
     }
 
     public enum AdminLogType : long
     {
         none = 0,
-        groupAssign = 1,
-        groupRemove = 2,
-        contentCreate = 3,
-        contentUpdate = 4,
-        contentDelete = 5,
-        usernameChange = 6,
+        group_assign = 1,
+        group_remove = 2,
+        content_create = 3,
+        content_update = 4,
+        content_delete = 5,
+        username_change = 6,
         rethread = 7,
-        userCreate = 8,
-        userRegister = 9,
-        loginFailure = 10
+        user_create = 8,
+        user_register = 9,
+        login_failure = 10
     }
 
     public enum VoteType : long

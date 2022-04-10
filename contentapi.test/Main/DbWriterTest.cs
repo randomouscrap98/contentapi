@@ -72,23 +72,23 @@ public class DbWriterTest : ViewUnitTestBase
     {
         //Ensure the events are reported correctly.
         //REMEMBER: we're looking for an ACTIVITY event, so the id is the revision id!
-        var ev = AssertEventMatchesBase(content.lastRevisionId, expected, userId, EventType.activity);
+        var ev = AssertEventMatchesBase(content.lastRevisionId, expected, userId, EventType.activity_event);
     }
 
     protected void AssertCommentEventMatches(MessageView comment, long userId, UserAction expected)
     {
         //Ensure the events are reported correctly
-        var ev = AssertEventMatchesBase(comment.id, expected, userId, EventType.message);
+        var ev = AssertEventMatchesBase(comment.id, expected, userId, EventType.message_event);
     }
 
     protected void AssertUserEventMatches(UserView user, long userId, UserAction expected)
     {
-        var ev = AssertEventMatchesBase(user.id, expected, userId, EventType.user);
+        var ev = AssertEventMatchesBase(user.id, expected, userId, EventType.user_event);
     }
 
     protected void AssertWatchEventMatches(WatchView watch, long userId, UserAction expected)
     {
-        var ev = AssertEventMatchesBase(watch.id, expected, userId, EventType.watch);
+        var ev = AssertEventMatchesBase(watch.id, expected, userId, EventType.watch_event);
     }
 
 
@@ -1039,7 +1039,7 @@ public class DbWriterTest : ViewUnitTestBase
         var ultraGroup = fixture.UserCount + fixture.GroupCount;
 
         var relId = await fixture.WriteSingle(new UserRelation() {
-            type = UserRelationType.inGroup,
+            type = UserRelationType.in_group,
             userId = uid,
             relatedId = ultraGroup
         });
@@ -1312,7 +1312,7 @@ public class DbWriterTest : ViewUnitTestBase
         Assert.Equal(uid, writtenVariable.userId);
         Assert.Equal(firstKey, writtenVariable.key);
         Assert.Equal("whatever", writtenVariable.value);
-        AssertEventMatchesBase(writtenVariable.id, UserAction.create, uid, EventType.uservariable);
+        AssertEventMatchesBase(writtenVariable.id, UserAction.create, uid, EventType.uservariable_event);
 
         //Now, try to write the second variable
         var secondVariable = new UserVariableView()
@@ -1327,7 +1327,7 @@ public class DbWriterTest : ViewUnitTestBase
             Assert.Equal(uid, writtenVariable.userId);
             Assert.Equal(secondKey, writtenVariable.key);
             Assert.Equal("whatever", writtenVariable.value);
-            AssertEventMatchesBase(writtenVariable.id, UserAction.create, uid, EventType.uservariable);
+            AssertEventMatchesBase(writtenVariable.id, UserAction.create, uid, EventType.uservariable_event);
         }
         else
         {

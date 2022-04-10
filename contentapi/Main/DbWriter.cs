@@ -428,7 +428,7 @@ public class DbWriter : IDbWriter
         {
             id = await DatabaseWork_ContentUserRelated<WatchView, Db.ContentWatch>(
                 new DbWorkUnit<WatchView>((view as WatchView)!, requester, typeInfo, action, existing as WatchView, message),
-                EventType.watch);
+                EventType.watch_event);
         }
         else if (view is VoteView)
         {
@@ -578,9 +578,9 @@ public class DbWriter : IDbWriter
     {
         return new AdminLog {
             text = $"User '{requester.username}'({requester.id}) {action}d {view.contentType} '{view.name}'({view.id})",
-            type = action == UserAction.create ? AdminLogType.contentCreate :  
-                    action == UserAction.update ? AdminLogType.contentUpdate :
-                    action == UserAction.delete ? AdminLogType.contentDelete :
+            type = action == UserAction.create ? AdminLogType.content_create :  
+                    action == UserAction.update ? AdminLogType.content_update :
+                    action == UserAction.delete ? AdminLogType.content_delete :
                     throw new InvalidOperationException($"Unsupported admin log type {action}"),
             target = view.id,
             initiator = requester.id,
@@ -700,7 +700,7 @@ public class DbWriter : IDbWriter
             tsx.Commit();
 
             //Content events are reported as activity
-            await eventQueue.AddEventAsync(new LiveEvent(work.requester.id, work.action, EventType.activity, activityId));
+            await eventQueue.AddEventAsync(new LiveEvent(work.requester.id, work.action, EventType.activity_event, activityId));
 
             logger.LogDebug(adminLog.text); //The admin log actually has the log text we want!
 
@@ -763,7 +763,7 @@ public class DbWriter : IDbWriter
 
             tsx.Commit();
 
-            await eventQueue.AddEventAsync(new LiveEvent(work.requester.id, work.action, EventType.message, work.view.id));
+            await eventQueue.AddEventAsync(new LiveEvent(work.requester.id, work.action, EventType.message_event, work.view.id));
 
             logger.LogDebug($"User {work.requester.id} commented on {comment.contentId}"); //No admin log for comments, so have to construct the message ourselves
 
@@ -851,7 +851,7 @@ public class DbWriter : IDbWriter
 
             tsx.Commit();
 
-            await eventQueue.AddEventAsync(new LiveEvent(work.requester.id, work.action, EventType.uservariable, work.view.id));
+            await eventQueue.AddEventAsync(new LiveEvent(work.requester.id, work.action, EventType.uservariable_event, work.view.id));
 
             logger.LogDebug($"User {work.requester.id} did '{work.action}' on variable {work.view.key}"); 
 
@@ -938,7 +938,7 @@ public class DbWriter : IDbWriter
                 //Need to insert the group relations. We've already verified the groups, AND removed the old relations.
                 await dbcon.InsertAsync(work.view.usersInGroup.Select(x => new UserRelation()
                 {
-                    type = UserRelationType.inGroup,
+                    type = UserRelationType.in_group,
                     userId = x, //work.view.id,
                     relatedId = work.view.id,
                     createDate = DateTime.UtcNow
@@ -949,7 +949,7 @@ public class DbWriter : IDbWriter
             if(work.action == UserAction.update && work.view.username != work.existing?.username)
             {
                 await dbcon.InsertAsync(new AdminLog() {
-                    type = AdminLogType.usernameChange,
+                    type = AdminLogType.username_change,
                     createDate = DateTime.UtcNow,
                     initiator = work.requester.id,
                     target = work.view.id,
@@ -960,7 +960,7 @@ public class DbWriter : IDbWriter
             tsx.Commit();
 
             //User events are reported for the purpose of tracking 
-            await eventQueue.AddEventAsync(new LiveEvent(work.requester.id, work.action, EventType.user, work.view.id));
+            await eventQueue.AddEventAsync(new LiveEvent(work.requester.id, work.action, EventType.user_event, work.view.id));
 
             logger.LogDebug($"User {work.requester.id}({work.requester.username}) did action '{work.action}' on user {work.view.id}"); 
 

@@ -119,12 +119,12 @@ public class LiveEventQueue : ILiveEventQueue
 
         //This is the ONLY place we're performing this permission calculation nonsense. Be VERY CAREFUL, this is
         //quite the hack!
-        if(evnt.type == EventType.activity || evnt.type == EventType.message)
+        if(evnt.type == EventType.activity_event || evnt.type == EventType.message_event)
         {
             var recipientPerms = new Dictionary<long, string>();
             var data = cacheItem.data ?? throw new InvalidOperationException("No cache result data to pull permissions from!");
 
-            if(evnt.type == EventType.message)
+            if(evnt.type == EventType.message_event)
                 recipientPerms = GetRestrictedMessagePermissions(data);
 
             //The special case: restricted message permissions ALWAYS override others!
@@ -162,11 +162,11 @@ public class LiveEventQueue : ILiveEventQueue
             }
 
         }
-        else if(evnt.type == EventType.user)
+        else if(evnt.type == EventType.user_event)
         {
             evnt.permissions = new Dictionary<long, string> { { 0, "R" }};
         }
-        else if(evnt.type == EventType.uservariable || evnt.type == EventType.watch)
+        else if(evnt.type == EventType.uservariable_event || evnt.type == EventType.watch_event)
         {
             evnt.permissions = new Dictionary<long, string> { { evnt.userId, "R" }};
         }
@@ -273,7 +273,7 @@ public class LiveEventQueue : ILiveEventQueue
             query = "id in @ids"
         });
 
-        if(first.type == EventType.message)
+        if(first.type == EventType.message_event)
         {
             requests.requests.Add(basicRequest(RequestType.message.ToString())); 
             requests.requests.Add(GetAutoContentRequest("id in @message.contentId"));
@@ -284,7 +284,7 @@ public class LiveEventQueue : ILiveEventQueue
                 query = "id in @content.createUserId or id in @message.createUserId or id in @message.editUserId or id in @message.uidsInText"
             });
         }
-        else if(first.type == EventType.activity)
+        else if(first.type == EventType.activity_event)
         {
             requests.requests.Add(basicRequest(RequestType.activity.ToString())); 
             requests.requests.Add(GetAutoContentRequest("id in @activity.contentId"));
@@ -295,15 +295,15 @@ public class LiveEventQueue : ILiveEventQueue
                 query = "id in @content.createUserId or id in @activity.userId"
             });
         }
-        else if(first.type == EventType.user)
+        else if(first.type == EventType.user_event)
         {
             requests.requests.Add(basicRequest(RequestType.user.ToString())); 
         }
-        else if(first.type == EventType.uservariable) 
+        else if(first.type == EventType.uservariable_event) 
         {
             requests.requests.Add(basicRequest(RequestType.uservariable.ToString())); 
         }
-        else if(first.type == EventType.watch) 
+        else if(first.type == EventType.watch_event) 
         {
             requests.requests.Add(basicRequest(RequestType.watch.ToString())); 
             requests.requests.Add(GetAutoContentRequest("id in @watch.contentId"));
@@ -390,7 +390,7 @@ public class LiveEventQueue : ILiveEventQueue
                     var matching = dataCache.FirstOrDefault(x => x.evnt.id == optimalEvent.id);
                     if(matching != null)
                     {
-                        result.data.Add(optimalEvent.type, matching.data ?? throw new InvalidOperationException($"No data set for event cache item {optimalEvent.id}"));
+                        result.event_data.Add(optimalEvent.type, matching.data ?? throw new InvalidOperationException($"No data set for event cache item {optimalEvent.id}"));
                         result.optimized = true;
                         optimalRoute = true;
                     }
@@ -408,7 +408,7 @@ public class LiveEventQueue : ILiveEventQueue
                 {
                     var requests = GetSearchRequestsForEvents(events.Where(x => x.type == type));
                     var searchData = await search.SearchUnrestricted(requests); //SKIPPING PERMISSIONS! IS THIS OK??? We're relying on the permissions in the events being accurate!
-                    result.data.Add(type, searchData.data);
+                    result.event_data.Add(type, searchData.data);
                 }
             }
 

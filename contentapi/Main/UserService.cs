@@ -143,7 +143,7 @@ public class UserService : IUserService
 
         await WriteAdminLog(new AdminLog()
         {
-            type = AdminLogType.userCreate,
+            type = AdminLogType.user_create,
             initiator = userView.id,
             target = userView.id,
             text = $"User '{userView.username}'({userView.id}) created an account"
@@ -206,7 +206,7 @@ public class UserService : IUserService
 
         await WriteAdminLog(new AdminLog()
         {
-            type = AdminLogType.userRegister,
+            type = AdminLogType.user_register,
             initiator = userId,
             target = userId,
             text = $"User '{userView.username}'({userId}) completed account registration"
@@ -232,7 +232,7 @@ public class UserService : IUserService
         {
             await WriteAdminLog(new AdminLog()
             {
-                type = AdminLogType.loginFailure,
+                type = AdminLogType.login_failure,
                 initiator = 0,
                 target = 0,
                 text = $"Failed login attempt for {value}: user not found!"
@@ -255,7 +255,7 @@ public class UserService : IUserService
 
             await WriteAdminLog(new AdminLog()
             {
-                type = AdminLogType.loginFailure,
+                type = AdminLogType.login_failure,
                 initiator = userId,
                 target = userId,
                 text = $"Failed login attempt for '{username}'({userId}): incorrect password"

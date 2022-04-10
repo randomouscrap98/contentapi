@@ -137,7 +137,7 @@ public class DbUnitTestSearchFixture : DbUnitTestBase, IDisposable
                     {
                         var userGroup = new Db.UserRelation() {
                             userId = j + 1 + i * UserCount / GroupCount,
-                            type = Db.UserRelationType.inGroup,
+                            type = Db.UserRelationType.in_group,
                             relatedId = UserCount + i + 1
                         };
 

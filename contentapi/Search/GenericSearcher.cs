@@ -74,7 +74,7 @@ public class GenericSearcher : IGenericSearch
             {
                 var relinfo = typeService.GetTypeInfo<Db.UserRelation>();
                 var groups = await dbcon.QueryAsync<Db.UserRelation>($"select {ridkey},{uidkey} from {relinfo.selfDbInfo?.modelTable} where {typekey} = @type and {uidkey} in @ids",
-                    new { ids = index.Keys, type = (int)UserRelationType.inGroup }); 
+                    new { ids = index.Keys, type = (int)UserRelationType.in_group }); 
                 
                 var lookup = groups.ToLookup(x => x.userId);
 
@@ -85,7 +85,7 @@ public class GenericSearcher : IGenericSearch
             {
                 var relinfo = typeService.GetTypeInfo<Db.UserRelation>();
                 var groups = await dbcon.QueryAsync<Db.UserRelation>($"select {ridkey},{uidkey} from {relinfo.selfDbInfo?.modelTable} where {typekey} = @type and {ridkey} in @ids",
-                    new { ids = index.Keys, type = (int)UserRelationType.inGroup }); 
+                    new { ids = index.Keys, type = (int)UserRelationType.in_group }); 
                 
                 var lookup = groups.ToLookup(x => x.relatedId);
 
