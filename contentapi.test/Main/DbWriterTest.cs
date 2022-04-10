@@ -1823,4 +1823,36 @@ public class DbWriterTest : ViewUnitTestBase
         Assert.Contains(group.username, logItem.text);
         Assert.Contains(nameof(UserType.group), logItem.text);
     }
+
+    [Fact]
+    public async Task WriteAsync_Username_NoDupes()
+    {
+        var user = await searcher.GetById<UserView>(RequestType.user, NormalUserId);
+        user.special = "something_new";
+        //Ensure that even though we're updating with the new special, the existing username isn't tripped
+        var update1 = await writer.WriteAsync(user, NormalUserId);
+        Assert.Equal(user.id, update1.id);
+        Assert.Equal("something_new", update1.special);
+        //BUT, if we set it to someone else's name, bad
+        var other = await searcher.GetById<UserView>(RequestType.user, SuperUserId);
+        update1.username = other.username;
+        await Assert.ThrowsAnyAsync<ArgumentException>(() => writer.WriteAsync(update1, NormalUserId));
+    }
+
+    [Theory]
+    [InlineData("a")]
+    [InlineData("this_username_is_obviously_way_too_long_I_mean_come_on")]
+    [InlineData("$%|baduser")]
+    public async Task WriteAsync_Username_ShortLong(string username)
+    {
+        var user = await searcher.GetById<UserView>(RequestType.user, NormalUserId);
+        user.special = "something_new";
+        //Ensure that even though we're updating with the new special, the existing username isn't tripped
+        var update1 = await writer.WriteAsync(user, NormalUserId);
+        Assert.Equal(user.id, update1.id);
+        Assert.Equal("something_new", update1.special);
+        //BUT, if we set it to someone else's name, bad
+        update1.username = username;
+        await Assert.ThrowsAnyAsync<ArgumentException>(() => writer.WriteAsync(update1, NormalUserId));
+    }
 }

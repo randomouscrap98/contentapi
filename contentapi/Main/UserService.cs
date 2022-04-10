@@ -14,7 +14,7 @@ namespace contentapi.Main;
 public class UserServiceConfig
 {
     public TimeSpan TokenExpireDefault {get;set;} = TimeSpan.FromDays(10);
-    public string UsernameRegex {get;set;} = "[a-zA-Z0-9_]+";
+    public string UsernameRegex {get;set;} = "^[a-zA-Z0-9_]+$";
     public int MinUsernameLength {get;set;} = 2;
     public int MaxUsernameLength {get;set;} = 16;
     public int MinPasswordLength {get;set;} = 8;
