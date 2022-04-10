@@ -1731,4 +1731,95 @@ public class DbWriterTest : ViewUnitTestBase
         Assert.Equal(myContent.id, deleted.id);
         Assert.Equal(myContent.parentId, deleted.parentId);
     }
+
+    [Fact]
+    public async Task WriteAsync_AdminLog_GroupCreate()
+    {
+        var group = new UserView()
+        {
+            username = "some_group",
+            type = UserType.group
+        };
+
+        //Write the initial group, should always be fine
+        var result = await writer.WriteAsync(group, NormalUserId);
+
+        var log = await searcher.SearchSingleTypeUnrestricted<AdminLogView>(new SearchRequest() {
+            type = nameof(RequestType.adminlog),
+            fields = "*",
+            query = "target = @id and initiator = @uid"
+        }, new Dictionary<string, object>() {
+            { "id", result.id },
+            { "uid", NormalUserId }
+        });
+
+        Assert.NotEmpty(log);
+        Assert.Contains(log, x => x.type == AdminLogType.group_create);
+    }
+
+    [Fact]
+    public async Task WriteAsync_AdminLog_GroupAssign()
+    {
+        var group = new UserView()
+        {
+            username = "some_group",
+            type = UserType.group,
+            usersInGroup = new List<long> { NormalUserId }
+        };
+
+        //Write the initial group, should always be fine
+        var result = await writer.WriteAsync(group, NormalUserId);
+
+        result.usersInGroup.Add(SuperUserId);
+
+        var updatedResult = await writer.WriteAsync(result, NormalUserId);
+
+        var log = await searcher.SearchSingleTypeUnrestricted<AdminLogView>(new SearchRequest() {
+            type = nameof(RequestType.adminlog),
+            fields = "*",
+            query = "target = @id and initiator = @uid"
+        }, new Dictionary<string, object>() {
+            { "id", result.id },
+            { "uid", NormalUserId }
+        });
+
+        Assert.NotEmpty(log);
+        Assert.Contains(log, x => x.type == AdminLogType.group_create);
+        Assert.Contains(log, x => x.type == AdminLogType.group_assign);
+
+        var logItem = log.First(x => x.type == AdminLogType.group_assign);
+        Assert.Contains($"'{NormalUserId}'", logItem.text);
+        Assert.Contains($"'{NormalUserId},{SuperUserId}'", logItem.text);
+    }
+
+    [Fact]
+    public async Task WriteAsync_AdminLog_UserDelete()
+    {
+        var group = new UserView()
+        {
+            username = "some_group",
+            type = UserType.group,
+        };
+
+        //Write the initial group, should always be fine
+        var result = await writer.WriteAsync(group, NormalUserId);
+        var deletedResult = await writer.DeleteAsync<UserView>(result.id, SuperUserId);
+
+        var log = await searcher.SearchSingleTypeUnrestricted<AdminLogView>(new SearchRequest() {
+            type = nameof(RequestType.adminlog),
+            fields = "*",
+            query = "target = @id and initiator = @uid"
+        }, new Dictionary<string, object>() {
+            { "id", result.id },
+            { "uid", SuperUserId }
+        });
+
+        Assert.NotEmpty(log);
+        Assert.DoesNotContain(log, x => x.type == AdminLogType.group_create);
+        Assert.Contains(log, x => x.type == AdminLogType.user_delete);
+
+        var logItem = log.First(x => x.type == AdminLogType.user_delete);
+        Assert.Contains(group.username, logItem.text);
+        Assert.Contains(nameof(UserType.group), logItem.text);
+    }
 }

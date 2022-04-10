@@ -931,7 +931,7 @@ public class DbWriter : IDbWriter
             {
                 throw new InvalidOperationException($"Can't perform action {work.action} in DatabaseWork_User!");
             }
-            
+
             //Note: when deleting, don't want to write ANY extra data, regardless of what's there!
             if(work.action != UserAction.delete)
             {
@@ -945,18 +945,7 @@ public class DbWriter : IDbWriter
                 }), tsx);
             }
 
-            //Write admin log only for specific circumstances, don't need to track everything users do
-            if(work.action == UserAction.update && work.view.username != work.existing?.username)
-            {
-                await dbcon.InsertAsync(new AdminLog() {
-                    type = AdminLogType.username_change,
-                    createDate = DateTime.UtcNow,
-                    initiator = work.requester.id,
-                    target = work.view.id,
-                    text = $"User '{work.requester.username}'({work.requester.id}) changed username for {work.existing?.username} to '{work.view.username}'"
-                }, tsx);
-            }
-
+            await InsertAdminLogForUserWork(work, tsx);
             tsx.Commit();
 
             //User events are reported for the purpose of tracking 
@@ -966,6 +955,43 @@ public class DbWriter : IDbWriter
 
             //NOTE: this is the newly computed id, we place it inside the view for safekeeping 
             return work.view.id;
+        }
+    }
+
+    public async Task InsertAdminLogForUserWork(DbWorkUnit<UserView> work, IDbTransaction tsx)
+    {
+        //The baseline admin log
+        var adminLog = new AdminLog()
+        {
+            createDate = DateTime.UtcNow,
+            initiator = work.requester.id,
+            target = work.view.id
+        };
+
+        //Write admin log only for specific circumstances, don't need to track everything users do
+        if (work.action == UserAction.update && work.view.username != work.existing?.username)
+        {
+            adminLog.type = AdminLogType.username_change;
+            adminLog.text = $"User '{work.requester.username}'({work.requester.id}) changed username for {work.existing?.username}({work.existing?.type}) to '{work.view.username}'";
+            await dbcon.InsertAsync(adminLog, tsx);
+        }
+        if (work.action == UserAction.create && work.view.type == UserType.group)
+        {
+            adminLog.type = AdminLogType.group_create;
+            adminLog.text = $"User '{work.requester.username}'({work.requester.id}) created group '{work.view.username}'({work.view.id}) with users '{string.Join(",", work.view.usersInGroup)}'";
+            await dbcon.InsertAsync(adminLog, tsx);
+        }
+        if (work.action == UserAction.delete) // && work.view.type == UserType.group)
+        {
+            adminLog.type = AdminLogType.user_delete;
+            adminLog.text = $"User '{work.requester.username}'({work.requester.id}) deleted {work.existing!.type} '{work.existing!.username}'({work.view.id})";
+            await dbcon.InsertAsync(adminLog, tsx);
+        }
+        if (work.action == UserAction.update && work.view.type == UserType.group && !work.view.usersInGroup.OrderBy(x => x).SequenceEqual(work.existing!.usersInGroup.OrderBy(x => x)))
+        {
+            adminLog.type = AdminLogType.group_assign;
+            adminLog.text = $"User '{work.requester.username}'({work.requester.id}) modified assigned users in group '{work.view.username}'({work.view.id}) from '{string.Join(",", work.existing!.usersInGroup)}' to '{string.Join(",", work.view.usersInGroup)}'";
+            await dbcon.InsertAsync(adminLog, tsx);
         }
     }
 

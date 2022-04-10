@@ -39,7 +39,7 @@ namespace contentapi.Db
     {
         none = 0,
         group_assign = 1,
-        group_remove = 2,
+        group_create = 2,
         content_create = 3,
         content_update = 4,
         content_delete = 5,
@@ -47,7 +47,8 @@ namespace contentapi.Db
         rethread = 7,
         user_create = 8,
         user_register = 9,
-        login_failure = 10
+        login_failure = 10,
+        user_delete = 11
     }
 
     public enum VoteType : long
