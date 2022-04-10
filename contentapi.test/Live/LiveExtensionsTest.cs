@@ -30,10 +30,10 @@ public class LiveExtensionsTest : ViewUnitTestBase //, IClassFixture<DbUnitTestS
         await userStatuses.AddStatusAsync(SuperUserId, 0, "here!", 1);
         var result = await userStatuses.GetUserStatusesAsync(searcher, NormalUserId, EasyFields);
         Assert.Contains(0, result.statuses.Keys);
-        Assert.Contains("user", result.data.Keys);
-        Assert.Contains("content", result.data.Keys);
-        Assert.Empty(result.data["content"]);
-        var users = searcher.ToStronglyTyped<UserView>(result.data["user"]);
+        Assert.Contains("user", result.objects.Keys);
+        Assert.Contains("content", result.objects.Keys);
+        Assert.Empty(result.objects["content"]);
+        var users = searcher.ToStronglyTyped<UserView>(result.objects["user"]);
         Assert.Single(users);
         Assert.Equal(SuperUserId, users.First().id);
     }
@@ -44,10 +44,10 @@ public class LiveExtensionsTest : ViewUnitTestBase //, IClassFixture<DbUnitTestS
         await userStatuses.AddStatusAsync(SuperUserId, SuperAccessContentId, "here!", 1);
         var result = await userStatuses.GetUserStatusesAsync(searcher, NormalUserId, EasyFields);
         Assert.Empty(result.statuses);
-        Assert.Contains("user", result.data.Keys);
-        Assert.Contains("content", result.data.Keys);
-        Assert.Empty(result.data["content"]);
-        Assert.Empty(result.data["user"]);
+        Assert.Contains("user", result.objects.Keys);
+        Assert.Contains("content", result.objects.Keys);
+        Assert.Empty(result.objects["content"]);
+        Assert.Empty(result.objects["user"]);
     }
 
     [Fact]
@@ -60,10 +60,10 @@ public class LiveExtensionsTest : ViewUnitTestBase //, IClassFixture<DbUnitTestS
         Assert.Single(result.statuses[AllAccessContentId]);
         Assert.Equal("here!", result.statuses[AllAccessContentId][SuperUserId]);
 
-        Assert.Contains("user", result.data.Keys);
-        Assert.Contains("content", result.data.Keys);
-        Assert.Contains(result.data["content"], x => (long)x["id"] == AllAccessContentId);
-        Assert.Contains(result.data["user"], x => (long)x["id"] == SuperUserId);
+        Assert.Contains("user", result.objects.Keys);
+        Assert.Contains("content", result.objects.Keys);
+        Assert.Contains(result.objects["content"], x => (long)x["id"] == AllAccessContentId);
+        Assert.Contains(result.objects["user"], x => (long)x["id"] == SuperUserId);
     }
 
     [Fact]
@@ -83,11 +83,11 @@ public class LiveExtensionsTest : ViewUnitTestBase //, IClassFixture<DbUnitTestS
         Assert.Single(result.statuses[0]);
         Assert.Equal("also here!", result.statuses[0][NormalUserId]);
 
-        Assert.Contains("user", result.data.Keys);
-        Assert.Contains("content", result.data.Keys);
-        Assert.Contains(result.data["content"], x => (long)x["id"] == AllAccessContentId);
-        Assert.DoesNotContain(result.data["content"], x => (long)x["id"] == 0);
-        Assert.Contains(result.data["user"], x => (long)x["id"] == SuperUserId);
-        Assert.Contains(result.data["user"], x => (long)x["id"] == NormalUserId);
+        Assert.Contains("user", result.objects.Keys);
+        Assert.Contains("content", result.objects.Keys);
+        Assert.Contains(result.objects["content"], x => (long)x["id"] == AllAccessContentId);
+        Assert.DoesNotContain(result.objects["content"], x => (long)x["id"] == 0);
+        Assert.Contains(result.objects["user"], x => (long)x["id"] == SuperUserId);
+        Assert.Contains(result.objects["user"], x => (long)x["id"] == NormalUserId);
     }
 }

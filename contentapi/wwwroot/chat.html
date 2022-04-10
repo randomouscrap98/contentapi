@@ -82,14 +82,14 @@ window.onload = function()
         live => {
             console.log("Live:", live);
             //This method searches in ALL event types for yourself. It shouldn't be too expensive... maybe
-            updateUserInfo(live.data.data);
+            updateUserInfo(live.data.objects);
             //Note that live data is in a complex format, because the data related to the events
             //is grouped by event type. For some reason, the API reports the event types as strings
             //rather than as integers for the data, but reports as integers in the events. This is
             //difficult to fix, so... I'm sorry. Also, use "live.data.events" to look at the 
             //events for deleting/editing comments, among other things.
-            if(live.data.data.message && live.data.data.message.message)
-                displayMessages(live.data.data.message, false, true); //don't keep scroll fixed, DO track individual message notifications
+            if(live.data.objects.message_event && live.data.objects.message_event.message)
+                displayMessages(live.data.objects.message_event, false, true); //don't keep scroll fixed, DO track individual message notifications
         }, 
         //Live userlist updates. Note that you can also manually request userlists, but those
         //don't go through this handler, they go through the sendRequest handler (because it's manual)
@@ -150,18 +150,16 @@ window.onload = function()
         new RequestSearchParameter("user", "*", "id in @message.createUserId or id in @message.uidsInText")
     ]), response =>
     {
-        //It's "data.data" because it's double wrapped: the data is already wrapped in the "request"
-        //context that gives lots of information, but then we're proxying that through the websocket,
-        //which has its own context.
+        //Websocket acts like a proxy, so your standard 'request' result is wrapped in the standard websocket result
         console.log(response);
-        var sortedContent = api.KeyById(response.data.data.content)
+        var sortedContent = api.KeyById(response.data.objects.content)
         var pagetitle = document.getElementById("pagetitle");
         var page = sortedContent[pid];
         setTitle(pagetitle, page);
 
         pagetitle.href = "index.html?t=page&pid=" + sortedContent[pid].id;
 
-        displayMessages(response.data.data); //, false, false); //don't keep scroll, don't update notifications with unique messages
+        displayMessages(response.data.objects); //don't keep scroll, don't update notifications with unique messages
     });
 
     //General controls setup
@@ -228,7 +226,7 @@ window.onload = function()
         ]), response =>
         {
             console.log(response);
-            displayMessages(response.data.data, true); //Do keep scroll fixed, DON'T update notification count with new messages //, false);
+            displayMessages(response.data.objects, true); //Do keep scroll fixed, DON'T update notification count with new messages //, false);
         });
     };
 };
@@ -513,7 +511,7 @@ function setUserlist(data)
     console.debug("SetUserList called with response: ", data);
     var userlist = document.getElementById("userlist");
 
-    var usersById = api.KeyById(data.data.user);
+    var usersById = api.KeyById(data.objects.user);
 
     //response should have statuses and data, always same format (assuming you get a single status)
     //furthermore, the statuses are always a dictionary because it could have multiple content in it.

@@ -6,7 +6,7 @@ namespace contentapi.Live;
 public class UserlistResult
 {
     public Dictionary<long, Dictionary<long, string>> statuses = new Dictionary<long, Dictionary<long, string>>();
-    public Dictionary<string, IEnumerable<IDictionary<string, object>>> data = new Dictionary<string, IEnumerable<IDictionary<string, object>>>();
+    public Dictionary<string, IEnumerable<IDictionary<string, object>>> objects = new Dictionary<string, IEnumerable<IDictionary<string, object>>>();
 }
 
 public static class LiveExtensions
@@ -63,7 +63,7 @@ public static class LiveExtensions
         return new UserlistResult()
         {
             statuses = allStatuses,
-            data = allSearch.objects
+            objects = allSearch.objects
         };
     }
 

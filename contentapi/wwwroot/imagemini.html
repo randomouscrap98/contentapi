@@ -95,7 +95,7 @@ function reloadList()
     imagelist.innerHTML = "";
     api.Search(search, new ApiHandler(dd =>
     {
-        dd.result.data.content.forEach(x => {
+        dd.result.objects.content.forEach(x => {
             imagelist.appendChild(createImage(x));
         });
     }));
