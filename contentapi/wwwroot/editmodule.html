@@ -131,8 +131,8 @@ window.onload = function()
          api.GetModuleMessages(room, name, 100, new ApiHandler(d =>
          {
             moduleoutput.innerHTML = "";
-            var messages = d.result.data.message;
-            var users = d.result.data.user;
+            var messages = d.result.objects.message;
+            var users = d.result.objects.user;
             api.AutoLinkUsers(messages, users); 
             for(var i = messages.length - 1; i >= 0; i--) //reverse order
             {

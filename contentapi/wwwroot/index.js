@@ -225,7 +225,7 @@ function user_onload(template, state)
             //database you want, you have to go into "content" because that's what you asked for.
 
             //Now go set up the file list display thing
-            dd.result.data.content.forEach(x => {
+            dd.result.objects.content.forEach(x => {
                 var item = LoadTemplate(`file_item`, x);
                 userFiles.appendChild(item);
             });
@@ -275,7 +275,7 @@ function page_onload(template, state)
 
     api.Search_BasicPageDisplay(state.pid, SUBPAGESPERPAGE, state.sp, COMMENTSPERPAGE, state.cp, new ApiHandler(d =>
     {
-        if(d.result.data.content.length == 0)
+        if(d.result.objects.content.length == 0)
         {
             if(state.pid == 0)
                 title.textContent = "Root parent (not a page)";
@@ -284,7 +284,7 @@ function page_onload(template, state)
         }
         else
         {
-            var page = d.result.data.content[0];
+            var page = d.result.objects.content[0];
             var originalPage = JSON.parse(JSON.stringify(page));
             title.textContent = page.name;
             content.appendChild(Parse.parseLang(page.text, page.values.markupLang || "plaintext"));
@@ -309,7 +309,7 @@ function page_onload(template, state)
             }
 
             //Display watch/unwatch based on if they're watching
-            if(d.result.data.watch.length)
+            if(d.result.objects.watch.length)
                 template.querySelector("#unwatch-page").removeAttribute("hidden");
             else
                 template.querySelector("#watch-page").removeAttribute("hidden");
@@ -338,25 +338,25 @@ function page_onload(template, state)
                 };
                 template.querySelector("#vote-submit-page").removeAttribute("hidden");
 
-                if(d.result.data.vote.length)
+                if(d.result.objects.vote.length)
                 {
-                    template.querySelector("#current-vote-page").textContent = voteCodes[d.result.data.vote[0].vote];
+                    template.querySelector("#current-vote-page").textContent = voteCodes[d.result.objects.vote[0].vote];
                     template.querySelector("#current-vote-container-page").removeAttribute("hidden");
                 }
             }));
         }
 
         //Waste a few cycles linking some stuff together!
-        api.AutoLinkUsers(d.result.data.subpages, d.result.data.user);
-        api.AutoLinkUsers(d.result.data.message, d.result.data.user);
+        api.AutoLinkUsers(d.result.objects.subpages, d.result.objects.user);
+        api.AutoLinkUsers(d.result.objects.message, d.result.objects.user);
 
-        d.result.data.subpages.forEach(x => {
+        d.result.objects.subpages.forEach(x => {
             var template = x.contentType === 3 ? "file_item" : "page_item";
             var subpage = LoadTemplate(template, x);
             subpagesElement.appendChild(subpage);
         });
 
-        d.result.data.message.forEach(x => {
+        d.result.objects.message.forEach(x => {
             var comment = LoadTemplate("comment_item", x);
             commentsElement.appendChild(comment);
         });
@@ -388,6 +388,7 @@ function search_onload(template, state)
         {
             var searchType = searchtype.value;
             if(searchType === "page" || searchType === "file") searchType = "content";
+            if(searchType === "comment") searchType = "message";
             console.log(searchType, d);
             var typeInfo = d.result.details.types[searchType];
             FillOptions(api.GetQueryableFields(typeInfo), searchfield);
@@ -437,6 +438,11 @@ function search_onload(template, state)
             searchType = "content";
             query.push("contentType = @pagetype");
         } 
+        else if(searchType == "comment")
+        {
+            searchType = "message";
+            query.push("!null(module) and !notdeleted()");
+        }
 
         var requests = [
             new RequestSearchParameter(searchType, "*", query.join(" AND "), state.sort, SEARCHRESULTSPERPAGE, state.sp * SEARCHRESULTSPERPAGE, "main"),
@@ -451,10 +457,10 @@ function search_onload(template, state)
         api.Search(search, new ApiHandler(d =>
         {
             //If we DID ask for the users, link them
-            if(d.result.data.user)
-                api.AutoLinkUsers(d.result.data.main, d.result.data.user);
+            if(d.result.objects.user)
+                api.AutoLinkUsers(d.result.objects.main, d.result.objects.user);
 
-            d.result.data.main.forEach(x => {
+            d.result.objects.main.forEach(x => {
                 var item = LoadTemplate(`${state.type}_item`, x);
                 resultElement.appendChild(item);
             });
@@ -470,9 +476,9 @@ function notifications_onload(template, state)
     SetupPagination(template.querySelector("#notifications-up"), template.querySelector("#notifications-down"), state, "np");
 
     api.Notifications(SEARCHRESULTSPERPAGE, state.np, new ApiHandler(d => {
-        api.AutoLinkContent(d.result.data.watch, d.result.data.content);
-        console.log(d.result.data);
-        d.result.data.watch.forEach(x => {
+        api.AutoLinkContent(d.result.objects.watch, d.result.objects.content);
+        console.log(d.result.objects);
+        d.result.objects.watch.forEach(x => {
             var item = LoadTemplate(`notification_item`, x);
             container.appendChild(item);
         });
@@ -486,8 +492,8 @@ function uservariables_onload(template, state)
 
     api.Search_AllByType("uservariable", "key,value,userId", "key", SEARCHRESULTSPERPAGE, state.uvp, new ApiHandler(d =>
     {
-        console.log(d.result.data);
-        d.result.data.uservariable.forEach(x =>
+        console.log(d.result.objects);
+        d.result.objects.uservariable.forEach(x =>
         {
             var item = LoadTemplate(`uservariable_item`, x);
             container.appendChild(item);
@@ -501,9 +507,9 @@ function admin_onload(template, state)
 
     api.Search_AllByType("adminlog", "*", "id_desc", SEARCHRESULTSPERPAGE, state.alp, new ApiHandler(d =>
     {
-        console.log(d.result.data);
+        console.log(d.result.objects);
         var container = template.querySelector("#adminlog-container");
-        d.result.data.adminlog.forEach(x =>
+        d.result.objects.adminlog.forEach(x =>
         {
             var item = LoadTemplate(`adminlog_item`, x);
             container.appendChild(item);
@@ -523,10 +529,10 @@ function groupmanage_onload(template, state)
         new RequestSearchParameter("user", "*", "type = @type", "id_desc", SEARCHRESULTSPERPAGE, SEARCHRESULTSPERPAGE * state.grp)
     ]), new ApiHandler(d =>
     {
-        console.log(d.result.data);
+        console.log(d.result.objects);
         var container = template.querySelector("#group-list");
 
-        d.result.data.user.forEach(x =>
+        d.result.objects.user.forEach(x =>
         {
             var item = LoadTemplate(`group_item`, x);
             container.appendChild(item);
