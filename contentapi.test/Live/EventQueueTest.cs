@@ -80,7 +80,7 @@ public class EventQueueTest : ViewUnitTestBase //, IClassFixture<DbUnitTestSearc
             query = "contentId = @id"
         });
         var baseResult = await searcher.SearchUnrestricted(search);
-        var activities = searcher.ToStronglyTyped<ActivityView>(baseResult.data["activity"]);
+        var activities = searcher.ToStronglyTyped<ActivityView>(baseResult.objects["activity"]);
         return activities;
     }
 
@@ -126,7 +126,7 @@ public class EventQueueTest : ViewUnitTestBase //, IClassFixture<DbUnitTestSearc
             var request = queue.GetSearchRequestsForEvents(new[] { new LiveEvent(a.userId, Db.UserAction.create, EventType.activity_event, a.id) });
             var result = await searcher.SearchUnrestricted(request);
 
-            AssertSimpleActivityListenResult(result.data, content, a);
+            AssertSimpleActivityListenResult(result.objects, content, a);
         }
     }
 
@@ -144,7 +144,7 @@ public class EventQueueTest : ViewUnitTestBase //, IClassFixture<DbUnitTestSearc
             query = "contentId = @id"
         });
         var baseResult = await searcher.SearchUnrestricted(search);
-        var comments= searcher.ToStronglyTyped<MessageView>(baseResult.data["message"]);
+        var comments= searcher.ToStronglyTyped<MessageView>(baseResult.objects["message"]);
 
         Assert.True(comments.Count > 1); //It should be greater than 1 for content 1, because of inverse activity amounts
         foreach(var c in comments)
@@ -154,16 +154,16 @@ public class EventQueueTest : ViewUnitTestBase //, IClassFixture<DbUnitTestSearc
             var result = await searcher.SearchUnrestricted(request);
 
             //Now, make sure the result contains content, comment, and user results.
-            Assert.True(result.data.ContainsKey("content"));
-            Assert.True(result.data.ContainsKey("message"));
-            Assert.True(result.data.ContainsKey("user"));
+            Assert.True(result.objects.ContainsKey("content"));
+            Assert.True(result.objects.ContainsKey("message"));
+            Assert.True(result.objects.ContainsKey("user"));
 
             //The content, when requested, MUST have permissions!!
-            Assert.True(result.data["content"].First().ContainsKey("permissions"));
+            Assert.True(result.objects["content"].First().ContainsKey("permissions"));
 
-            var content = searcher.ToStronglyTyped<ContentView>(result.data["content"]);
-            var comment = searcher.ToStronglyTyped<MessageView>(result.data["message"]);
-            var user = searcher.ToStronglyTyped<UserView>(result.data["user"]);
+            var content = searcher.ToStronglyTyped<ContentView>(result.objects["content"]);
+            var comment = searcher.ToStronglyTyped<MessageView>(result.objects["message"]);
+            var user = searcher.ToStronglyTyped<UserView>(result.objects["user"]);
 
             Assert.Single(content);
             Assert.Single(comment);
@@ -216,7 +216,7 @@ public class EventQueueTest : ViewUnitTestBase //, IClassFixture<DbUnitTestSearc
         Assert.Single(liveData.events);
         Assert.Equal(liveData.lastId, liveData.events.Max(x => x.id));
 
-        Assert.Contains(EventType.activity_event, liveData.event_data.Keys);
+        Assert.Contains(EventType.activity_event, liveData.objects.Keys);
 
         //Go find the activity we're pointing to...
         var activity = await GetActivityForContentAsync(writtenPage.id);
@@ -227,7 +227,7 @@ public class EventQueueTest : ViewUnitTestBase //, IClassFixture<DbUnitTestSearc
         Assert.Equal(activity.First().id, liveData.events.First().refId);
         Assert.Equal(userId, liveData.events.First().userId);
 
-        AssertSimpleActivityListenResult(liveData.event_data[EventType.activity_event], writtenPage, activity.First());
+        AssertSimpleActivityListenResult(liveData.objects[EventType.activity_event], writtenPage, activity.First());
     }
 
     //Another simple full integration test, but ensuring that the expected operations happen when non-optimization happens 
@@ -264,7 +264,7 @@ public class EventQueueTest : ViewUnitTestBase //, IClassFixture<DbUnitTestSearc
         Assert.Single(liveData2.events);
         Assert.Equal(liveData2.lastId, liveData2.events.Max(x => x.id));
 
-        Assert.Contains(EventType.activity_event, liveData2.event_data.Keys);
+        Assert.Contains(EventType.activity_event, liveData2.objects.Keys);
 
         //Go find the activity we're pointing to...
         var activity = (await GetActivityForContentAsync(writtenPage.id)).OrderBy(x => x.id);
@@ -275,7 +275,7 @@ public class EventQueueTest : ViewUnitTestBase //, IClassFixture<DbUnitTestSearc
         Assert.Equal(activity.Last().id, liveData2.events.First().refId);
         Assert.Equal(userId, liveData2.events.First().userId);
 
-        AssertSimpleActivityListenResult(liveData2.event_data[EventType.activity_event], writtenPage, activity.Last());
+        AssertSimpleActivityListenResult(liveData2.objects[EventType.activity_event], writtenPage, activity.Last());
 
         //OK but now if we try to read both, it should not be optimized 
         liveData = await queue.ListenAsync(user, -1, safetySource.Token);
@@ -283,8 +283,8 @@ public class EventQueueTest : ViewUnitTestBase //, IClassFixture<DbUnitTestSearc
 
         //And now just make sure we have two events and all that
         Assert.Equal(2, liveData.events.Count);
-        AssertSimpleActivityListenResult(liveData.event_data[EventType.activity_event], writtenPage, activity.First());
-        AssertSimpleActivityListenResult(liveData.event_data[EventType.activity_event], writtenPage, activity.Last());
+        AssertSimpleActivityListenResult(liveData.objects[EventType.activity_event], writtenPage, activity.First());
+        AssertSimpleActivityListenResult(liveData.objects[EventType.activity_event], writtenPage, activity.Last());
     }
 
     //Ensure private pages don't alert listeners
@@ -310,12 +310,12 @@ public class EventQueueTest : ViewUnitTestBase //, IClassFixture<DbUnitTestSearc
 
         //The user themselves should've been able to get it.
         Assert.True(liveData.optimized);
-        AssertSimpleActivityListenResult(liveData.event_data[EventType.activity_event], writtenPage, activity.First());
+        AssertSimpleActivityListenResult(liveData.objects[EventType.activity_event], writtenPage, activity.First());
 
         //And if they ask again, it should still be there
         liveData = await queue.ListenAsync(user, -1, safetySource.Token);
         Assert.True(liveData.optimized);
-        AssertSimpleActivityListenResult(liveData.event_data[EventType.activity_event], writtenPage, activity.First());
+        AssertSimpleActivityListenResult(liveData.objects[EventType.activity_event], writtenPage, activity.First());
 
         //But then if other random user comes along, nope
         cancelSource.CancelAfter(10);
@@ -355,7 +355,7 @@ public class EventQueueTest : ViewUnitTestBase //, IClassFixture<DbUnitTestSearc
             Assert.Contains(events.events, x => x.type == nameof(EventType.watch_event) && x.refId == watch.id);
 
             //Since we're here anyway, might as well ensure the content is pulled
-            Assert.Contains(events.event_data[EventType.watch_event]["content"], x => (long)x["id"] == watch.contentId);
+            Assert.Contains(events.objects[EventType.watch_event]["content"], x => (long)x["id"] == watch.contentId);
         }
         else
         {
@@ -384,9 +384,9 @@ public class EventQueueTest : ViewUnitTestBase //, IClassFixture<DbUnitTestSearc
 
         var result = await ourListener;
         Assert.Contains(result.events, x => x.refId == writtenVariable.id && x.userId == ourUser.id);
-        Assert.Contains(EventType.uservariable_event, result.event_data.Keys);
-        Assert.Contains("uservariable", result.event_data[EventType.uservariable_event].Keys);
-        Assert.Contains(result.event_data[EventType.uservariable_event]["uservariable"], x => (long)x["id"] == writtenVariable.id && (string)x["key"] == "somekey");
+        Assert.Contains(EventType.uservariable_event, result.objects.Keys);
+        Assert.Contains("uservariable", result.objects[EventType.uservariable_event].Keys);
+        Assert.Contains(result.objects[EventType.uservariable_event]["uservariable"], x => (long)x["id"] == writtenVariable.id && (string)x["key"] == "somekey");
 
         Assert.False(otherListener.Wait(10));
         safetySource.Cancel();
@@ -425,11 +425,11 @@ public class EventQueueTest : ViewUnitTestBase //, IClassFixture<DbUnitTestSearc
         var eventData = await queue.ListenAsync(new UserView() { id = NormalUserId }, 0, safetySource.Token);
 
         Assert.Contains(eventData.events, x => x.refId == writtenMessage.id && x.action == UserAction.create);
-        Assert.Contains(EventType.message_event, eventData.event_data.Keys);
-        Assert.Contains("user", eventData.event_data[EventType.message_event].Keys);
+        Assert.Contains(EventType.message_event, eventData.objects.Keys);
+        Assert.Contains("user", eventData.objects[EventType.message_event].Keys);
 
-        Assert.Contains(eventData.event_data[EventType.message_event]["user"], x => (long)x["id"] == (int)UserVariations.Special + 1);
-        Assert.Contains(eventData.event_data[EventType.message_event]["user"], x => (long)x["id"] == (int)UserVariations.Special + 2);
+        Assert.Contains(eventData.objects[EventType.message_event]["user"], x => (long)x["id"] == (int)UserVariations.Special + 1);
+        Assert.Contains(eventData.objects[EventType.message_event]["user"], x => (long)x["id"] == (int)UserVariations.Special + 2);
     }
 
     [Fact]
@@ -452,9 +452,9 @@ public class EventQueueTest : ViewUnitTestBase //, IClassFixture<DbUnitTestSearc
 
         var result = await ourListener;
         Assert.Contains(result.events, x => x.refId == writtenMessage.id && x.userId == ourUser.id);
-        Assert.Contains(EventType.message_event, result.event_data.Keys);
-        Assert.Contains("message", result.event_data[EventType.message_event].Keys);
-        Assert.Contains(result.event_data[EventType.message_event]["message"], x => (long)x["id"] == writtenMessage.id && (string)x["module"] == "test" && (long)x["receiveUserId"] == ourUser.id);
+        Assert.Contains(EventType.message_event, result.objects.Keys);
+        Assert.Contains("message", result.objects[EventType.message_event].Keys);
+        Assert.Contains(result.objects[EventType.message_event]["message"], x => (long)x["id"] == writtenMessage.id && (string)x["module"] == "test" && (long)x["receiveUserId"] == ourUser.id);
 
         Assert.False(await Task.Run(() => otherListener.Wait(10)));
         safetySource.Cancel();

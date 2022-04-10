@@ -83,8 +83,8 @@ public class SpecializedSearchTests : ViewUnitTestBase //, IClassFixture<DbUnitT
         };
 
         var results = await searcher.Search(search, NormalUserId);
-        var comments = searcher.ToStronglyTyped<MessageView>(results.data["message"]);
-        var users = searcher.ToStronglyTyped<UserView>(results.data["user"]);
+        var comments = searcher.ToStronglyTyped<MessageView>(results.objects["message"]);
+        var users = searcher.ToStronglyTyped<UserView>(results.objects["user"]);
 
         Assert.Equal(2, comments.Count);
         Assert.Equal(2, users.Count);

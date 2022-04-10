@@ -139,7 +139,7 @@ body[data-sidebarhidden] {
 }
 .content_title img, .title img {
     height: 1.2em;
-    image-rendering: pixelated;
+    image-rendering: -webkit-optimize-contrast;
     image-rendering: crisp-edges;
     margin-right: 0.25em;
     vertical-align: middle;

@@ -18,7 +18,7 @@ public static class SearchExtensions
             requests = new List<SearchRequest> { request }
         });
 
-        return search.ToStronglyTyped<T>(searchResult.data.First().Value);
+        return search.ToStronglyTyped<T>(searchResult.objects.First().Value);
     }
 
     public static async Task<List<T>> SearchSingleType<T>(this IGenericSearch search, long uid, SearchRequest request, Dictionary<string, object>? values = null)
@@ -29,6 +29,6 @@ public static class SearchExtensions
             requests = new List<SearchRequest> { request }
         }, uid);
 
-        return search.ToStronglyTyped<T>(searchResult.data.First().Value);
+        return search.ToStronglyTyped<T>(searchResult.objects.First().Value);
     }
 }

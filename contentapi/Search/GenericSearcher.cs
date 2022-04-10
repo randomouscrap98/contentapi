@@ -283,7 +283,7 @@ public class GenericSearcher : IGenericSearch
 
             //Add the results to the USER results, AND add it to our list of values so it can
             //be used in chaining. It's just a reference, don't worry about duplication or whatever.
-            result.data.Add(request.name, qresult);
+            result.objects.Add(request.name, qresult);
             parameterValues.Add(request.name, qresult);
         }
 

@@ -322,7 +322,7 @@ public class LiveEventQueue : ILiveEventQueue
         var search = searchProducer();
 
         var searchData = await search.SearchUnrestricted(requests);
-        return new LiveEventCachedData() { evnt = evnt, data = searchData.data };
+        return new LiveEventCachedData() { evnt = evnt, data = searchData.objects };
     }
 
     public async Task<CacheCheckpointResult<LiveEvent>> ListenEventsAsync(int lastId = -1, CancellationToken? token = null)
@@ -390,7 +390,7 @@ public class LiveEventQueue : ILiveEventQueue
                     var matching = dataCache.FirstOrDefault(x => x.evnt.id == optimalEvent.id);
                     if(matching != null)
                     {
-                        result.event_data.Add(optimalEvent.type, matching.data ?? throw new InvalidOperationException($"No data set for event cache item {optimalEvent.id}"));
+                        result.objects.Add(optimalEvent.type, matching.data ?? throw new InvalidOperationException($"No data set for event cache item {optimalEvent.id}"));
                         result.optimized = true;
                         optimalRoute = true;
                     }
@@ -408,7 +408,7 @@ public class LiveEventQueue : ILiveEventQueue
                 {
                     var requests = GetSearchRequestsForEvents(events.Where(x => x.type == type));
                     var searchData = await search.SearchUnrestricted(requests); //SKIPPING PERMISSIONS! IS THIS OK??? We're relying on the permissions in the events being accurate!
-                    result.event_data.Add(type, searchData.data);
+                    result.objects.Add(type, searchData.objects);
                 }
             }
 
