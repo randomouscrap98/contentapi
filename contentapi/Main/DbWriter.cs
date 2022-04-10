@@ -38,6 +38,10 @@ public class DbWriter : IDbWriter
     protected DbWriterConfig config;
     protected IRandomGenerator rng;
 
+    //TODO: THIS IS A TEMPORARY INJECTION! I don't think I want the writer dependent on the user service, since
+    //the user service MAY someday be dependent on the writer!!
+    protected IUserService userService;
+
     protected static readonly SemaphoreSlim hashLock = new SemaphoreSlim(1, 1);
 
     public List<RequestType> TrueDeletes = new List<RequestType> {
@@ -49,7 +53,7 @@ public class DbWriter : IDbWriter
     public DbWriter(ILogger<DbWriter> logger, IGenericSearch searcher, ContentApiDbConnection connection,
         IViewTypeInfoService typeInfoService, IMapper mapper, IHistoryConverter historyConverter,
         IPermissionService permissionService, ILiveEventQueue eventQueue, DbWriterConfig config,
-        IRandomGenerator rng)
+        IRandomGenerator rng, IUserService userService)
     {
         this.logger = logger;
         this.searcher = searcher;
@@ -61,6 +65,7 @@ public class DbWriter : IDbWriter
         this.eventQueue = eventQueue;
         this.config = config;
         this.rng = rng;
+        this.userService = userService;
     
         //Preemptively open this, we know us (as a writer) SHOULD BE short-lived, so...
         this.dbcon.Open();
@@ -228,6 +233,9 @@ public class DbWriter : IDbWriter
             if(uView.type != UserType.group && uView.usersInGroup.Count > 0)
                 throw new RequestException("You can't add users to a non-group user!");
             
+            //Just unconditionally check for valid username. This will prevent people from modifying other fields if their
+            //username is bad, but that's fine I think, they SHOULD change their username if so
+            await userService.CheckValidUsernameAsync(uView.username, uView.id);
 
             if(action != UserAction.delete)
             {

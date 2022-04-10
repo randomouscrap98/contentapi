@@ -16,7 +16,7 @@ public class UserServiceConfig
     public TimeSpan TokenExpireDefault {get;set;} = TimeSpan.FromDays(10);
     public string UsernameRegex {get;set;} = "[a-zA-Z0-9_]+";
     public int MinUsernameLength {get;set;} = 2;
-    public int MaxUsernameLength {get;set;} = 10;
+    public int MaxUsernameLength {get;set;} = 16;
     public int MinPasswordLength {get;set;} = 8;
     public int MaxPasswordLength {get;set;} = 32;
 }
@@ -60,7 +60,8 @@ public class UserService : IUserService
         if(!Regex.IsMatch(username, config.UsernameRegex))
             throw new ArgumentException($"Username has invalid characters, must match regex: {config.UsernameRegex}");
 
-        var existing = await dbcon.ExecuteScalarAsync<int>($"select count(*) from {searcher.GetDatabaseForType<UserView>()} where username = @user", new { user = username });
+        var existing = await dbcon.ExecuteScalarAsync<int>($"select count(*) from {searcher.GetDatabaseForType<UserView>()} where username = @user and id <> @id", new { user = username, id = existingUserId });
+
         if(existing > 0)
             throw new ArgumentException($"Username '{username}' already taken!");
     }

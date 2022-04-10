@@ -40,7 +40,7 @@ public class DbWriterTest : ViewUnitTestBase
         writer = new DbWriter(fixture.GetService<ILogger<DbWriter>>(), fixture.GetService<IGenericSearch>(),
             fixture.GetService<Db.ContentApiDbConnection>(), typeInfoService, fixture.GetService<IMapper>(),
             fixture.GetService<Db.History.IHistoryConverter>(), fixture.GetService<IPermissionService>(),
-            events, config, rng);
+            events, config, rng, fixture.GetService<IUserService>());
         searcher = fixture.GetService<IGenericSearch>();
 
         //Reset it for every test
@@ -729,6 +729,7 @@ public class DbWriterTest : ViewUnitTestBase
         if(allowed)
         {
             var result2 = await writer.WriteAsync(result, editor);
+            Assert.Equal(result.id, result2.id);
             Assert.Equal(result.special, result2.special);
             Assert.Empty(result2.groups);
             Assert.Empty(result2.usersInGroup);

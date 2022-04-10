@@ -52,7 +52,7 @@ public class EventQueueTest : ViewUnitTestBase //, IClassFixture<DbUnitTestSearc
         writer = new DbWriter(fixture.GetService<ILogger<DbWriter>>(), this.searcher, 
             fixture.GetService<Db.ContentApiDbConnection>(), fixture.GetService<IViewTypeInfoService>(), this.mapper,
             fixture.GetService<Db.History.IHistoryConverter>(), this.permission, this.queue,
-            new DbWriterConfig(), new RandomGenerator()); 
+            new DbWriterConfig(), new RandomGenerator(), fixture.GetService<IUserService>()); 
 
         //Reset it for every test
         fixture.ResetDatabase();
