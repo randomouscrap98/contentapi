@@ -113,7 +113,9 @@ public class UserController : BaseController
             if(config.ConfirmationType == InstantConfirmation)
             {
                 services.logger.LogDebug("Instant user account creation set, completing registration immediately");
-                await userService.CompleteRegistration(result.id, await userService.GetRegistrationKeyAsync(result.id));
+                var token = await userService.CompleteRegistration(result.id, await userService.GetRegistrationKeyAsync(result.id));
+                result = await services.searcher.GetById<UserView>(Search.RequestType.user, result.id);
+                result.special = token;
             }
 
             return result;

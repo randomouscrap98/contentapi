@@ -447,6 +447,14 @@ Api.prototype.RegisterAndEmail = function(registerData, handler)
     //After first success, call second endpoint with their original success handler
     handler.success = d =>
     {
+        //If the account comes back pre-registered, skip the email
+        if(d.result.registered)
+        {
+            console.log("The system is set to instant registration, no need for email");
+            originalSuccess(d);
+            return;
+        }
+
         //Only the register call (the first one) returns the user data, which you
         //probably want.
         originalResult = d;

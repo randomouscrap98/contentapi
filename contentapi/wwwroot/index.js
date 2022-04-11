@@ -879,7 +879,17 @@ function t_register_submit(form)
     var password = document.getElementById("register-password").value;
 
     api.RegisterAndEmail(new RegisterParameter(username, email, password), new ApiHandler(d => {
-        location.href = `?t=confirmregister&email=${email}`;
+        if(d.result.registered) //Sometimes, registration is instant (depending on config)
+        {
+            //This is a hack, maybe only temporarily. With instant registration, the user's "special"
+            //field (which is unused as of yet) actually contains the login token
+            SetToken(d.result.special);
+            location.href = "?t=user";
+        }
+        else
+        {
+            location.href = `?t=confirmregister&email=${email}`;
+        }
     }));
 
     return false;
