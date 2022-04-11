@@ -111,7 +111,7 @@ public class FileServiceTests : ViewUnitTestBase, IDisposable
     {
         using var memStream = new MemoryStream(SimpleImage);
 
-        var result = await service.UploadFile(new UploadFileConfig() { }, memStream, NormalUserId);
+        var result = await service.UploadFile(new UploadFileConfigExtra() { }, memStream, NormalUserId);
 
         AssertDateClose(result.createDate);
         Assert.NotEmpty(result.hash);
@@ -125,7 +125,7 @@ public class FileServiceTests : ViewUnitTestBase, IDisposable
     {
         using var memStream = new MemoryStream(SimpleImage);
 
-        var result = await service.UploadFile(new UploadFileConfig() { }, memStream, NormalUserId);
+        var result = await service.UploadFile(new UploadFileConfigExtra() { }, memStream, NormalUserId);
         var rawInfo = await service.GetFileAsync(result.hash, new GetFileModify());
         
         Assert.Equal("image/png", rawInfo.Item2);
@@ -144,7 +144,7 @@ public class FileServiceTests : ViewUnitTestBase, IDisposable
     {
         using var memStream = new MemoryStream(SimpleImage);
 
-        var result = await service.UploadFile(new UploadFileConfig() { }, memStream, NormalUserId);
+        var result = await service.UploadFile(new UploadFileConfigExtra() { }, memStream, NormalUserId);
 
         if(allowed)
         {

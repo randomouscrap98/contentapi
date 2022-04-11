@@ -1,5 +1,6 @@
 using System.Runtime.ExceptionServices;
 using contentapi.Main;
+using contentapi.Utilities;
 using contentapi.Views;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
@@ -17,11 +18,18 @@ public class FileController : BaseController
       this.service = service;
    }
 
-   public class UploadFileModel : UploadFileConfig
+   public class UploadFileModel : UploadFileConfigExtra
    {
       public IFormFile? file {get;set;} = null;
       public List<IFormFile>? files = null;
    }
+
+   public class UploadFileObject : UploadFileConfig
+   {
+      public string base64blob {get;set;} = "";
+      public ContentView @object {get;set;} = new ContentView();
+   }
+
 
    [HttpPost]
    [Authorize]
@@ -41,6 +49,28 @@ public class FileController : BaseController
          RateLimit(RateFile);
          var requester = GetUserIdStrict();
          return service.UploadFile(model, model.file.OpenReadStream(), requester);
+      });
+   }
+
+   [HttpPost("asobject")]
+   [Authorize]
+   public async Task<ActionResult<ContentView>> UploadFile([FromBody] UploadFileObject fileData)
+   {
+      return await MatchExceptions(() =>
+      {
+         RateLimit(RateFile);
+
+         //This one we must report, because it'll give the wrong impression if we let it slide
+         if(fileData.@object.id != 0)
+            throw new RequestException("You must upload NEW content (nonzero id)");
+         
+         //But fix this one for them regardless
+         fileData.@object.contentType = Db.InternalContentType.file;
+
+         using var memstream = new MemoryStream(Convert.FromBase64String(fileData.base64blob));
+         
+         var requester = GetUserIdStrict();
+         return service.UploadFile(fileData.@object, fileData, memstream, requester);
       });
    }
 

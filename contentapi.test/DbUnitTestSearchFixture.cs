@@ -85,6 +85,7 @@ public class DbUnitTestSearchFixture : DbUnitTestBase, IDisposable
                 var users = new List<Db.User>();
                 var userVariables = new List<Db.UserVariable>();
                 var userRelations = new List<Db.UserRelation>();
+                var bans = new List<Db.Ban>();
                 UserCount = (int)Math.Pow(2, Enum.GetValues<UserVariations>().Count());
 
                 for(var i = 0; i < UserCount; i++)
@@ -120,6 +121,17 @@ public class DbUnitTestSearchFixture : DbUnitTestBase, IDisposable
                     users.Add(user);
                 }
 
+                //Add a full ban just for the last user
+                bans.Add(new Db.Ban()
+                {
+                    createDate = DateTime.Now,
+                    createUserId = 1 + (int)UserVariations.Super,
+                    expireDate = DateTime.Now.AddDays(1),
+                    bannedUserId = UserCount,
+                    type = Db.BanType.@public | Db.BanType.@private,
+                    message = "You are banned"
+                });
+
                 //Split up the users into groups evenly
                 GroupCount = 2;
                 for(var i = 0; i < GroupCount; i++)
@@ -148,6 +160,7 @@ public class DbUnitTestSearchFixture : DbUnitTestBase, IDisposable
                 conn.Insert(users, tsx);
                 conn.Insert(userVariables, tsx);
                 conn.Insert(userRelations, tsx);
+                conn.Insert(bans, tsx);
 
                 var content = new List<Db.Content>();
                 var comments = new List<Db.Message>();

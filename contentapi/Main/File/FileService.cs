@@ -170,16 +170,8 @@ public class FileService : IFileService
         return result;
     }
 
-    public async Task<ContentView> UploadFile(UploadFileConfig fileConfig, Stream fileData, long requester) //[FromForm] UploadFileModel model)
+    public Task<ContentView> UploadFile(UploadFileConfigExtra fileConfig, Stream fileData, long requester)
     {
-        fileData.Seek(0, SeekOrigin.Begin);
-
-        if (fileData.Length == 0)
-            throw new RequestException("No data uploaded!");
-
-        if (fileConfig.quantize >= 0 && (fileConfig.quantize < config.MinQuantize || fileConfig.quantize > config.MaxQuantize))
-            throw new RequestException($"Quantize must be between {config.MinQuantize} and {config.MaxQuantize}");
-
         var newView = new ContentView()
         {
             name = fileConfig.name ?? "",
@@ -191,6 +183,19 @@ public class FileService : IFileService
         //This may look strange: it's because we have a bit of a hack to make empty globalPerms work. We strip
         //spaces and periods, just in case the browser requires SOME character to be there for "empty"
         newView.permissions[0] = (fileConfig.globalPerms ?? "CR").Trim().Replace(".", "");
+
+        return UploadFile(newView, fileConfig, fileData, requester);
+    }
+
+    public async Task<ContentView> UploadFile(ContentView newView, UploadFileConfig fileConfig, Stream fileData, long requester)
+    {
+        fileData.Seek(0, SeekOrigin.Begin);
+
+        if (fileData.Length == 0)
+            throw new RequestException("No data uploaded!");
+
+        if (fileConfig.quantize >= 0 && (fileConfig.quantize < config.MinQuantize || fileConfig.quantize > config.MaxQuantize))
+            throw new RequestException($"Quantize must be between {config.MinQuantize} and {config.MaxQuantize}");
 
         IImageFormat? format = null;
         long imageByteCount = fileData.Length;
