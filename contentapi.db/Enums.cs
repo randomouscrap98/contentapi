@@ -1,9 +1,14 @@
+using System;
+
 namespace contentapi.Db
 {
+    //Make this a bitflag
+    [Flags]
     public enum BanType : long
     {
         none = 0,
-        @public = 1
+        @public = 1,    // Ban from public pages only
+        @private = 2    // Ban from private pages only (mix with public for a "full" ban)
     }
 
     //Nobody will see this type most likely

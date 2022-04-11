@@ -293,6 +293,21 @@ public class DbWriter : IDbWriter
         {
             await ValidateContentUserRelatedView<VoteView>((view as VoteView)!, existing as VoteView, requester, action);
         }
+        else if (view is BanView)
+        {
+            var bView = (view as BanView)!;
+            var exView = existing as BanView;
+
+            if (!requester.super)
+                throw new ForbiddenException("Only supers can set bans!");
+            
+            //Go lookup the user, simply doing so should throw the not found exception
+            var user = await searcher.GetById<UserView>(RequestType.user, bView.bannedUserId, true);
+
+            //Can't post in invalid locations! So we check ANY contentId passed in, even if it's invalid
+            if (user == null || user.type != UserType.user)
+                throw new ForbiddenException($"You can only ban users, not other user types!");
+        }
         else if(view is UserVariableView)
         {
             var uvView = (view as UserVariableView)!;

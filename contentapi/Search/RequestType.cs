@@ -11,5 +11,6 @@ public enum RequestType
     uservariable,
     message_aggregate,
     activity_aggregate,
-    vote
+    vote,
+    ban
 }
