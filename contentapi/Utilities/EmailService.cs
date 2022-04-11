@@ -10,6 +10,7 @@ public class EmailConfig
     public string Password { get; set; } = "";
     public int Port { get; set; }
 
+    public string Sender {get;set;} = "";
     public string SubjectFront { get; set; } = "";
 }
 
@@ -29,7 +30,7 @@ public class EmailService : IEmailService
         using (var mailMessage = new MailMessage())
         {
             message.Recipients.ForEach(x => mailMessage.To.Add(new MailAddress(x)));
-            mailMessage.From = new MailAddress(Config.User);
+            mailMessage.From = new MailAddress(Config.Sender);
             mailMessage.Subject = $"{Config.SubjectFront} - {message.Title}";
             mailMessage.Body = message.Body;
 

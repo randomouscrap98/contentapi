@@ -10,6 +10,9 @@ public class UserControllerConfig
 {
     public bool BackdoorRegistration {get;set;}
     public bool BackdoorEmailLog {get;set;}
+    public bool AccountCreationEnabled {get;set;} = true;
+    public string ConfirmationType {get;set;} = "Standard";
+    //Also accepts "Instant" and "Restricted:email,email,etc"
 }
 
 public class UserController : BaseController
@@ -17,6 +20,10 @@ public class UserController : BaseController
     protected IUserService userService;
     protected UserControllerConfig config;
     protected IEmailService emailer;
+
+    const string InstantConfirmation = "Instant";
+    const string StandardConfirmation = "Standard";
+    const string RestrictedConfirmation = "Restricted:";
 
     public UserController(BaseControllerServices services, IUserService userService,
         UserControllerConfig config, IEmailService emailer)
@@ -96,9 +103,20 @@ public class UserController : BaseController
     {
         //Like all controllers, we want ALL of the work possible to be inside a service, not the controller.
         //A service which can be tested!
-        return MatchExceptions<UserView>(() =>
+        return MatchExceptions<UserView>(async () =>
         {
-            return userService.CreateNewUser(credentials.username, credentials.password, credentials.email);
+            if(!config.AccountCreationEnabled)
+                throw new ForbiddenException("We're sorry, account creation is disabled at this time");
+
+            var result = await userService.CreateNewUser(credentials.username, credentials.password, credentials.email);
+
+            if(config.ConfirmationType == InstantConfirmation)
+            {
+                services.logger.LogDebug("Instant user account creation set, completing registration immediately");
+                await userService.CompleteRegistration(result.id, await userService.GetRegistrationKeyAsync(result.id));
+            }
+
+            return result;
         });
     }
 
@@ -107,15 +125,36 @@ public class UserController : BaseController
     {
         return MatchExceptions(async () =>
         {
+            if(config.ConfirmationType == InstantConfirmation)
+                throw new RequestException("User account creation is instant, there is no registration code");
+            
             var userId = await userService.GetUserIdFromEmailAsync(email);
             var registrationCode = await userService.GetRegistrationKeyAsync(userId);
 
             if(string.IsNullOrWhiteSpace(registrationCode))
                 throw new RequestException("Couldn't find registration code for this email! Probably already registered!");
 
-            //TODO: language? Configuration? I don't know
-            await emailer.SendEmailAsync(new EmailMessage(email, "Registration instructions",
-                $"Your registration code for '{Request.Host}' is:\n\n{registrationCode}"));
+            if(config.ConfirmationType.StartsWith(RestrictedConfirmation))
+            {
+                var emails = config.ConfirmationType.Substring(RestrictedConfirmation.Length).Split(",", StringSplitOptions.RemoveEmptyEntries).Select(x => x.Trim());
+
+                var user = await services.searcher.GetById<UserView>(Search.RequestType.user, userId);
+
+                var message = new EmailMessage();
+                message.Recipients = emails.ToList();
+                message.Title = $"User {user.username} would like to create an account";
+                message.Body = $"User {user.username} is trying to create an account using email {email} on {Request.Host}\n\nIf this looks acceptable, please send them " +
+                    $"an email with instructions on how to create an account, using registration code:\n\n{registrationCode}";
+
+                //TODO: language? Configuration? I don't know
+                await emailer.SendEmailAsync(message);
+            }
+            else
+            {
+                //TODO: language? Configuration? I don't know
+                await emailer.SendEmailAsync(new EmailMessage(email, "Registration instructions",
+                    $"Your registration code for '{Request.Host}' is:\n\n{registrationCode}"));
+            }
 
             return true;
         });
@@ -126,6 +165,9 @@ public class UserController : BaseController
     {
         return MatchExceptions(async () =>
         {
+            if(config.ConfirmationType == InstantConfirmation)
+                throw new RequestException("User account creation is instant, there is no registration code");
+
             var userId = await userService.GetUserIdFromEmailAsync(confirmation.email);
             return await userService.CompleteRegistration(userId, confirmation.key);
         });
