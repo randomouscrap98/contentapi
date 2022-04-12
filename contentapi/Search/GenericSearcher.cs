@@ -7,6 +7,7 @@ using contentapi.Utilities;
 using contentapi.Views;
 using Dapper;
 using Newtonsoft.Json;
+using Newtonsoft.Json.Linq;
 using QueryResult = System.Collections.Generic.IDictionary<string, object>;
 using QueryResultSet = System.Collections.Generic.IEnumerable<System.Collections.Generic.IDictionary<string, object>>;
 
@@ -266,6 +267,13 @@ public class GenericSearcher : IGenericSearch
         //Nothing to do!
         if(requests.requests.Count == 0)
             return result;
+
+        //Fix the values to start with
+        foreach(var key in parameterValues.Keys.ToList())
+        {
+            if(parameterValues[key] is JArray)
+                parameterValues[key] = ((JArray)parameterValues[key]).ToObject<List<string>>() ?? throw new InvalidOperationException($"Can't figure out value inside key {key}");
+        }
         
         //Some nice prechecks
         foreach(var request in requests.requests)

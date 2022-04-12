@@ -10,6 +10,7 @@ using Dapper;
 using Microsoft.Extensions.DependencyInjection.Extensions;
 using Microsoft.Extensions.Options;
 using Microsoft.IdentityModel.Tokens;
+using Newtonsoft.Json.Linq;
 
 namespace contentapi.Setup;
 
@@ -27,6 +28,9 @@ public static class DefaultSetup
 
             SqlMapper.RemoveTypeMap(typeof(DateTime)); 
             SqlMapper.AddTypeHandler(typeof(DateTime), new DapperUtcDateTimeHandler());
+
+            //MappingSchema.Default.SetConverter<JToken, DataParameter>(json => new DataParameter { Value = json.ToString() });
+            //MappingSchema.Default.SetConverter<string, JToken>(str => JToken.Parse(str));
 
             return true;
         }

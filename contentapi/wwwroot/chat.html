@@ -308,7 +308,7 @@ function createMessage(message)
     avatar.src = api.GetFileUrl((message.values && message.values.a) || message.createUser.avatar, new FileModifyParameter(AVATARSIZE, true));
     var user = document.createElement("span");
     user.className = "user";
-    user.textContent = message.createUser.username;
+    user.textContent = message.values.n ? `${message.values.n} (${message.createUser.username})` : message.createUser.username;
     var time = document.createElement("time");
     time.setAttribute("time", message.createDate);
     time.textContent = (new Date(message.createDate)).toLocaleString();
