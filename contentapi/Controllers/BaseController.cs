@@ -103,6 +103,9 @@ public class BaseController : Controller
 
             if (ex is RateLimitException)
                 return new ObjectResult($"Rate limited: {ex.Message}") { StatusCode = 429 };
+            
+            if (ex is BannedException)
+                return new ObjectResult($"Banned: {ex.Message}") { StatusCode = 418 };
 
             //CAN'T just rethrow, because the middleware strips our CORS junk. Need to return a real error
             return new ObjectResult($"Unhandled exception: {ex}") { StatusCode = 500 };

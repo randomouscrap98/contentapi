@@ -117,6 +117,14 @@ public class DbWriter : IDbWriter
     /// <typeparam name="T"></typeparam>
     public async Task ValidateWorkGeneral<T>(T view, T? existing, UserView requester, UserAction action) where T : class, IIdView, new()
     {
+        //regardless, always go get ban data
+        var requesterBan = (await searcher.SearchSingleTypeUnrestricted<BanView>(new SearchRequest()
+        {
+            type = nameof(RequestType.ban),
+            fields = "*",
+            query = $"!activebans() and {nameof(BanView.bannedUserId)} = @uid"
+        }, new Dictionary<string, object> { { "uid", requester.id }})).FirstOrDefault();
+
         //Each type needs a different kind of check
         if(view is ContentView)
         {
@@ -175,6 +183,7 @@ public class DbWriter : IDbWriter
             //WARN : NO PARENTID VALIDATION!
 
             //Now for general validation
+            await ValidateBanOnContent(cView.id, requesterBan);
             await ValidatePermissionFormat(cView.permissions);
 
             if(cView.deleted)
@@ -210,6 +219,8 @@ public class DbWriter : IDbWriter
             //if(action == UserAction.create)// || action == UserAction.update)
             //{
             //}
+
+            await ValidateBanOnContent(cView.contentId, requesterBan);
 
             if(cView.deleted)
                 throw new RequestException("Don't delete comments by setting the deleted flag!");
@@ -341,6 +352,17 @@ public class DbWriter : IDbWriter
         {
             //Be SAFER than sorry! All views when created are by default NOT writable!
             throw new ForbiddenException($"View of type {view.GetType().Name} cannot be user-modified!");
+        }
+    }
+
+    public async Task ValidateBanOnContent(long contentId, BanView? requesterBan)
+    {
+        if (requesterBan != null)
+        {
+            var isPublic = await IsItemPublic(contentId);
+
+            if (isPublic && (requesterBan.type & BanType.@public) > 0 || !isPublic && (requesterBan.type & BanType.@private) > 0)
+                throw new BannedException($"You are banned from posting on {(isPublic ? "public" : "private")} content until {requesterBan.expireDate}. Reason: {requesterBan.message}");
         }
     }
 
@@ -1200,6 +1222,11 @@ public class DbWriter : IDbWriter
                and {nameof(ContentPermission.userId)} in @requesters 
                and `{checkCol}` = 1
             ", new { contentId = thing, requesters = permissionService.GetPermissionIdsForUser(requester) })) > 0;
+    }
+
+    public Task<bool> IsItemPublic(long thing)
+    {
+        return CanUserAsync(new UserView() { id = 0, super = false, groups = new List<long>() }, UserAction.read, thing);
     }
 
     public async Task<string> GenerateContentHash(Func<string, Task> writeHash)
