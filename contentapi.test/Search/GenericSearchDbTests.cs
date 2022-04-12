@@ -1547,4 +1547,38 @@ public class GenericSearchDbTests : ViewUnitTestBase //, IClassFixture<DbUnitTes
         Assert.NotEmpty(messages);
         Assert.NotEmpty(messages2);
     }
+
+    [Fact]
+    public async Task SearchAsync_AnyBans()
+    {
+        var search = new SearchRequest()
+        {
+            type = "ban",
+            fields = "*",
+            query = ""
+        };
+        var values = new Dictionary<string, object> { };
+
+        //You should be able to reuse the search and values
+        var bans = await service.SearchSingleType<BanView>(NormalUserId, search, values);
+
+        Assert.NotEmpty(bans);
+    }
+
+    [Fact]
+    public async Task SearchAsync_ActiveBansMacro()
+    {
+        var search = new SearchRequest()
+        {
+            type = "ban",
+            fields = "*",
+            query = "!activebans()"
+        };
+        var values = new Dictionary<string, object> { };
+
+        //You should be able to reuse the search and values
+        var bans = await service.SearchSingleType<BanView>(NormalUserId, search, values);
+
+        Assert.NotEmpty(bans);
+    }
 }

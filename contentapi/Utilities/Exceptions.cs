@@ -32,3 +32,8 @@ public class TokenException : Exception
 {
     public TokenException(string message) : base(message) {}
 }
+
+public class BannedException : Exception
+{
+    public BannedException(string message) : base(message) {}
+}

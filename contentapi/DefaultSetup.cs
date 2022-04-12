@@ -6,6 +6,7 @@ using contentapi.Module;
 using contentapi.Search;
 using contentapi.Security;
 using contentapi.Utilities;
+using Dapper;
 using Microsoft.Extensions.DependencyInjection.Extensions;
 using Microsoft.Extensions.Options;
 using Microsoft.IdentityModel.Tokens;
@@ -14,6 +15,23 @@ namespace contentapi.Setup;
 
 public static class DefaultSetup
 {
+    private static bool OneTimeRun = false;
+    private static readonly object OneTimeLock = new object();
+
+    public static bool OneTimeSetup()
+    {
+        lock(OneTimeLock)
+        {
+            if(OneTimeRun)
+                return false;
+
+            SqlMapper.RemoveTypeMap(typeof(DateTime)); 
+            SqlMapper.AddTypeHandler(typeof(DateTime), new DapperUtcDateTimeHandler());
+
+            return true;
+        }
+    }
+
     /// <summary>
     /// Add all default service implementations to the given service container. Can override later of course.
     /// </summary>

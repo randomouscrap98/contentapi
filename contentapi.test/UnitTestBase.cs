@@ -18,15 +18,15 @@ public class UnitTestBase
 
     protected CancellationTokenSource cancelSource;
     protected CancellationTokenSource safetySource;
-    //protected CancellationToken cancelToken;
 
     public const string SecretKey = "Not very secret, now is it? 7483927932";
 
-    public UnitTestBase()//Action<IServiceCollection>? modify = null)
+    public UnitTestBase()
     {
         baseCollection = new ServiceCollection();
         DefaultSetup.AddDefaultServices(baseCollection);
         DefaultSetup.AddSecurity(baseCollection, SecretKey);
+        DefaultSetup.OneTimeSetup();
 
         baseCollection.AddLogging(builder => {
             builder.AddDebug();
@@ -57,7 +57,8 @@ public class UnitTestBase
 
     protected void AssertDateClose(DateTime dt1, DateTime? dt2 = null, double seconds = 5)
     {
-        var dt2r = dt2 ?? DateTime.UtcNow;
+        dt1 = dt1.ToUniversalTime();
+        var dt2r = (dt2 ?? DateTime.Now).ToUniversalTime();
         Assert.True(Math.Abs((dt1 - dt2r).TotalSeconds) < seconds, $"Dates were not within an acceptable closeness in range! DT1: {dt1}, DT2: {dt2r}");
     }
 

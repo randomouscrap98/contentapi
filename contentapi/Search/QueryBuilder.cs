@@ -34,6 +34,7 @@ public class QueryBuilder : IQueryBuilder
         { "null", new MacroDescription("f", "NullMacro", Enum.GetValues<RequestType>().ToList()) },
         { "usertype", new MacroDescription("i", "UserTypeMacro", new List<RequestType> { RequestType.user }) },
         { "ingroup", new MacroDescription("v", "InGroupMacro", new List<RequestType> { RequestType.user }) },
+        { "activebans", new MacroDescription("", "ActiveBansMacro", new List<RequestType> { RequestType.ban }) },
         //WARN: permission limiting could be very dangerous! Make sure that no matter how the user uses
         //this, they still ONLY get the stuff they're allowed to read!
         { "receiveuserlimit", new MacroDescription("v", "ReceiveUserLimit", new List<RequestType> { RequestType.message }) },
@@ -157,6 +158,22 @@ public class QueryBuilder : IQueryBuilder
              where {nameof(Db.UserRelation.relatedId)} = {group}
             )";
     }
+
+    public string ActiveBansMacro(SearchRequestPlus request)
+    {
+        var typeInfo = typeService.GetTypeInfo<Ban>();
+        var now = DateTime.UtcNow.ToString(Constants.DateFormat);
+        //Active bans are such that the expire date is in the future, but bans don't stack!
+        //Only the VERY LAST ban is the active one (hence the max). This could be a "none" type,
+        //so we filter that out in the outside
+        return $@"{nameof(Ban.type)} <> {(int)BanType.none} and id in 
+            (select max({nameof(Ban.id)})
+             from {typeInfo.selfDbInfo?.modelTable}
+             where {nameof(Ban.expireDate)} > '{now}'
+             group by {nameof(Ban.bannedUserId)}
+            )";
+    }
+
 
     public string NotNullMacro(SearchRequestPlus request, string field) { return $"{field} IS NOT NULL"; }
     public string NullMacro(SearchRequestPlus request, string field) { return $"{field} IS NULL"; }

@@ -15,6 +15,6 @@ public class DapperUtcDateTimeHandler : SqlMapper.TypeHandler<DateTime>
 
     public override void SetValue(IDbDataParameter parameter, DateTime value)
     {
-        parameter.Value = value.ToUniversalTime().ToString(@"yyyy-MM-ddTHH\:mm\:ss.fffZ");
+        parameter.Value = value.ToUniversalTime().ToString(Constants.DateFormat);
     }
 }

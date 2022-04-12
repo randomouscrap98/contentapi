@@ -45,8 +45,7 @@ var validationParameters = DefaultSetup.AddSecurity(builder.Services, secretKey)
 builder.Services.AddTransient<ContentApiDbConnection>(ctx => 
     new ContentApiDbConnection(new SqliteConnection(builder.Configuration.GetConnectionString("contentapi"))));
 
-SqlMapper.RemoveTypeMap(typeof(DateTime)); 
-SqlMapper.AddTypeHandler(typeof(DateTime), new DapperUtcDateTimeHandler());
+DefaultSetup.OneTimeSetup();
 
 //In kland, the amazon stuff comes after cors. Just want to make sure it's the same...
 builder.Services.AddCors();
