@@ -304,9 +304,11 @@ public class DbWriter : IDbWriter
             //Go lookup the user, simply doing so should throw the not found exception
             var user = await searcher.GetById<UserView>(RequestType.user, bView.bannedUserId, true);
 
-            //Can't post in invalid locations! So we check ANY contentId passed in, even if it's invalid
             if (user == null || user.type != UserType.user)
-                throw new ForbiddenException($"You can only ban users, not other user types!");
+                throw new RequestException($"You can only ban users, not other user types!");
+            
+            if(action == UserAction.delete)
+                throw new ForbiddenException("You cannot delete bans just yet, please simply modify existing bans!");
         }
         else if(view is UserVariableView)
         {
@@ -463,6 +465,11 @@ public class DbWriter : IDbWriter
         {
             id = await DatabaseWork_UserVariable(
                 new DbWorkUnit<UserVariableView>((view as UserVariableView)!, requester, typeInfo, action, existing as UserVariableView, message));
+        }
+        else if (view is BanView)
+        {
+            id = await DatabaseWork_Ban(
+                new DbWorkUnit<BanView>((view as BanView)!, requester, typeInfo, action, existing as BanView, message));
         }
         else
         {
@@ -622,10 +629,6 @@ public class DbWriter : IDbWriter
     /// <returns></returns>
     public async Task<long> DatabaseWork_Content(DbWorkUnit<ContentView> work)
     {
-        //Some basic sanity checks
-        if(!work.typeInfo.type.IsAssignableTo(typeof(ContentView)))
-            throw new InvalidOperationException($"TypeInfo given in DatabaseWork was for type '{work.typeInfo.type}', not '{typeof(ContentView)}'");
-
         //NOTE: other validation is performed in the generic, early validation
 
         var content = new Db.Content();
@@ -734,9 +737,6 @@ public class DbWriter : IDbWriter
     
     public async Task<long> DatabaseWork_Message(DbWorkUnit<MessageView> work)
     {
-        if(!work.typeInfo.type.IsAssignableTo(typeof(MessageView)))
-            throw new InvalidOperationException($"TypeInfo given in DatabaseWork was for type '{work.typeInfo.type}', not '{typeof(MessageView)}'");
-
         //NOTE: As usual, validation is performed outside this function!
         var comment = new Db.Message();
         var unmapped = MapSimpleViewFields(work, comment); 
@@ -805,9 +805,6 @@ public class DbWriter : IDbWriter
         where T : class, IContentUserRelatedView, new()
         where V : class, new()
     {
-        if(!work.typeInfo.type.IsAssignableTo(typeof(T)))
-            throw new InvalidOperationException($"TypeInfo given in DatabaseWork was for type '{work.typeInfo.type}', not '{typeof(T)}'");
-
         var type = work.typeInfo.requestType ?? throw new InvalidOperationException($"Tried to do database work for {typeof(T)} but it had no requestType!");
         //var dbType = work.typeInfo.writeAsInfo?.modelType ?? throw new InvalidOperationException($"Tried to do database work for {type} but it had no writeAsInfo!");
 
@@ -848,9 +845,6 @@ public class DbWriter : IDbWriter
 
     public async Task<long> DatabaseWork_UserVariable(DbWorkUnit<UserVariableView> work)
     {
-        if(!work.typeInfo.type.IsAssignableTo(typeof(UserVariableView)))
-            throw new InvalidOperationException($"TypeInfo given in DatabaseWork was for type '{work.typeInfo.type}', not '{typeof(UserVariableView)}'");
-
         //NOTE: As usual, validation is performed outside this function!
         var dbItem = new UserVariable();
         var unmapped = MapSimpleViewFields(work, dbItem); 
@@ -883,6 +877,54 @@ public class DbWriter : IDbWriter
         }
     }
 
+    public async Task<long> DatabaseWork_Ban(DbWorkUnit<BanView> work)
+    {
+        //NOTE: As usual, validation is performed outside this function!
+        var dbItem = new UserVariable();
+        var unmapped = MapSimpleViewFields(work, dbItem); 
+
+        if(unmapped.Count > 0)
+            logger.LogWarning($"Fields '{string.Join(",", unmapped)}' not mapped in ban!");
+
+        //Need to update the edit history with the previous comment!
+        //Always need an ID to link to, so we actually need to create the content first and get the ID.
+        using(var tsx = dbcon.BeginTransaction())
+        {
+            //The baseline admin log
+            var adminLog = NewBaseLog(work); 
+
+            //This doesn't need a history, so write it as-is
+            if(work.action == UserAction.create)
+            {
+                work.view.id = await dbcon.InsertAsync(dbItem, tsx);
+                adminLog.type = AdminLogType.ban_create;
+            }
+            else if(work.action == UserAction.update)
+            {
+                await dbcon.UpdateAsync(dbItem, tsx);
+                adminLog.type = AdminLogType.ban_edit;
+            }
+            //else if(work.action == UserAction.delete)
+            //    await dbcon.DeleteAsync(dbItem, tsx);
+            else 
+            {
+                throw new InvalidOperationException($"Can't perform action {work.action} in DatabaseWork_Ban!");
+            }
+
+            adminLog.text = $"User {work.requester.username}({work.requester.id}) {work.action}d ban for user {work.view.bannedUserId} until {work.view.expireDate}, message: {work.view.message}";
+            await dbcon.InsertAsync(adminLog, tsx);
+            tsx.Commit();
+
+            //No event reporting yet
+            //await eventQueue.AddEventAsync(new LiveEvent(work.requester.id, work.action, EventType.uservariable_event, work.view.id));
+
+            logger.LogDebug($"User {work.requester.id} did '{work.action}' on ban for user {work.view.bannedUserId}: {work.view.message}"); 
+
+            //NOTE: this is the newly computed id, we place it inside the view for safekeeping 
+            return work.view.id;
+        }
+    }
+
     /// <summary>
     /// This function handles any database modification for the given view, from inserts to updates to deletes.
     /// </summary>
@@ -893,16 +935,11 @@ public class DbWriter : IDbWriter
     /// <returns></returns>
     public async Task<long> DatabaseWork_User(DbWorkUnit<UserView> work)
     {
-        //Some basic sanity checks
-        if(!work.typeInfo.type.IsAssignableTo(typeof(UserView)))
-            throw new InvalidOperationException($"TypeInfo given in DatabaseWork was for type '{work.typeInfo.type}', not '{typeof(UserView)}'");
-
         var user = new Db.User();
         var unmapped = MapSimpleViewFields(work, user);
 
         if(unmapped.Count > 0)
             logger.LogWarning($"Fields '{string.Join(",", unmapped)}' not mapped in user!");
-
 
         if(work.action == UserAction.create)
         {
@@ -1018,35 +1055,7 @@ public class DbWriter : IDbWriter
         }
     }
 
-    //public async Task ValidateUsers(List<long> groups, UserView requester)
-    //{
-    //    //Nothing to check
-    //    if(groups.Count == 0)
-    //        return;
-
-    //    if(groups.Distinct().Count() != groups.Count)
-    //        throw new ArgumentException("Duplicate groups found in user group list");
-
-    //    //Just go lookup the groups
-    //    var utinfo = typeInfoService.GetTypeInfo<UserView>();
-    //    var foundGroups = await searcher.QueryRawAsync($"select id,super from users where id in @ids and type = @type", new Dictionary<string, object> {
-    //        { "ids", groups },
-    //        { "type", UserType.group }
-    //    });
-    //    //var foundGroupIds = foundGroups.Select(x => x["id"]);
-
-    //    foreach(var id in groups)
-    //    {
-    //        var fg = foundGroups.FirstOrDefault(x => id.Equals(x["id"]));
-
-    //        if(fg == null)
-    //            throw new ArgumentException($"Group {id} in user group set not found in database! Note: only groups can be added, not users!");
-    //        else if((long)fg["super"] > 0 && !requester.super)
-    //            throw new ForbiddenException($"You can't put yourself in restricted group {id}!");
-    //    }
-    //}
-
-    public async Task ValidateUsers(List<long> users, UserView requester) //, UserType type)
+    public async Task ValidateUsers(List<long> users, UserView requester)
     {
         //Nothing to check
         if(users.Count == 0)
@@ -1061,7 +1070,6 @@ public class DbWriter : IDbWriter
             { "ids", users },
             { "type", UserType.user }
         });
-        //var foundGroupIds = foundGroups.Select(x => x["id"]);
 
         foreach(var id in users)
         {
@@ -1069,8 +1077,6 @@ public class DbWriter : IDbWriter
 
             if(fg == null)
                 throw new ArgumentException($"User {id} in user set not found in database!"); // Note: only groups can be added, not users!");
-            //else if((long)fg["super"] > 0 && !requester.super)
-            //    throw new ForbiddenException($"You can't put yourself in restricted group {id}!");
         }
     }
 
@@ -1246,6 +1252,18 @@ public class DbWriter : IDbWriter
 
         if(await IsDuplicateHash(hash))
             throw new ArgumentException($"Duplicate hash: already content with hash '{hash}'!");
+    }
+
+    public AdminLog NewBaseLog<T>(DbWorkUnit<T> work, AdminLogType type = AdminLogType.none) where T : class, IIdView, new()
+    {
+        return new AdminLog()
+        {
+            id = 0,
+            createDate = DateTime.UtcNow,
+            initiator = work.requester.id,
+            target = work.view.id,
+            type = type
+        };
     }
 
     public async Task<AdminLog> WriteAdminLog(AdminLog log)
