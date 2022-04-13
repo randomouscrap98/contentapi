@@ -1886,4 +1886,84 @@ public class DbWriterTest : ViewUnitTestBase
             await Assert.ThrowsAnyAsync<ForbiddenException>(() => writer.WriteAsync(ban, banner));
         }
     }
+
+    [Theory]
+    [InlineData("CRUD", BanType.none, true)]
+    [InlineData("CRUD", BanType.@public, false)]
+    [InlineData("CRUD", BanType.@private, true)]
+    [InlineData("", BanType.@public, true)]
+    [InlineData("", BanType.@private, false)]
+    public async Task WriteAsync_Ban_AllowedOnContent(string publicperms, BanType type, bool allowed)
+    {
+        //This should be all you need
+        var ban = new BanView()
+        {
+            type = type,
+            bannedUserId = NormalUserId,
+            message = "You are banned",
+            expireDate = DateTime.UtcNow.AddDays(1)
+        };
+
+        var content = await searcher.GetById<ContentView>(RequestType.content, AllAccessContentId);
+        content.permissions[0] = publicperms;
+        content.permissions[NormalUserId] = "CRUD"; //full perms for our banned user
+        var writtenContent = await writer.WriteAsync(content, NormalUserId); //This ensures the user has normal access to it
+
+        var writtenBan = await writer.WriteAsync(ban, SuperUserId);
+
+        writtenContent.keywords.Add("WOWEEZOWEE");
+
+        if(allowed)
+        {
+            var finalContent = await writer.WriteAsync(writtenContent, NormalUserId);
+            Assert.Contains("WOWEEZOWEE", finalContent.keywords);
+        }
+        else
+        {
+            await Assert.ThrowsAnyAsync<BannedException>(() => writer.WriteAsync(writtenContent, NormalUserId));
+        }
+    }
+
+    [Theory]
+    [InlineData("CRUD", BanType.none, true)]
+    [InlineData("CRUD", BanType.@public, false)]
+    [InlineData("CRUD", BanType.@private, true)]
+    [InlineData("", BanType.@public, true)]
+    [InlineData("", BanType.@private, false)]
+    public async Task WriteAsync_Ban_AllowedOnMessage(string publicperms, BanType type, bool allowed)
+    {
+        //This should be all you need
+        var ban = new BanView()
+        {
+            type = type,
+            bannedUserId = NormalUserId,
+            message = "You are banned",
+            expireDate = DateTime.UtcNow.AddDays(1)
+        };
+
+        var content = await searcher.GetById<ContentView>(RequestType.content, AllAccessContentId);
+        content.permissions[0] = publicperms;
+        content.permissions[NormalUserId] = "CRUD"; //full perms for our banned user
+        var writtenContent = await writer.WriteAsync(content, NormalUserId);
+        
+        //Make sure it works before the ban
+        var message = GetNewCommentView(AllAccessContentId);
+        var writtenMessage = await writer.WriteAsync(message, NormalUserId);
+        Assert.NotEqual(0, writtenMessage.id);
+
+        await writer.WriteAsync(ban, SuperUserId);
+
+        message = GetNewCommentView(AllAccessContentId);
+        message.text = "WOWEEZOWEE";
+
+        if(allowed)
+        {
+            writtenMessage = await writer.WriteAsync(message, NormalUserId);
+            Assert.Contains("WOWEEZOWEE", message.text);
+        }
+        else
+        {
+            await Assert.ThrowsAnyAsync<BannedException>(() => writer.WriteAsync(writtenContent, NormalUserId));
+        }
+    }
 }
