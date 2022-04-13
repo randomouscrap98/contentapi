@@ -902,7 +902,7 @@ public class DbWriter : IDbWriter
     public async Task<long> DatabaseWork_Ban(DbWorkUnit<BanView> work)
     {
         //NOTE: As usual, validation is performed outside this function!
-        var dbItem = new UserVariable();
+        var dbItem = new Ban();
         var unmapped = MapSimpleViewFields(work, dbItem); 
 
         if(unmapped.Count > 0)

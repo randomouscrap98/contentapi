@@ -86,10 +86,6 @@ public class ContentView : IIdView
     [Expensive(2)]
     public Dictionary<VoteType, int> votes {get;set;} = new Dictionary<VoteType, int>();
 
-    //[Expensive(1)]
-    //[FieldSelect("select max(createDate) from " + MessagesTable + " where main.id = contentId and " + NaturalCommentQuery)]
-    //public DateTime lastCommentDate {get;set;}
-
     [Expensive(1)]
     [FieldSelect("select max(id) from " + MessagesTable + " where main.id = contentId and " + NaturalCommentQuery )]
     public long? lastCommentId {get;set;}
@@ -102,15 +98,7 @@ public class ContentView : IIdView
     [FieldSelect("select count(*) from content_watches where main.id = contentId")]
     public int watchCount {get;set;}
 
-    //[Expensive(1)]
-    //[FieldSelect("select max(createDate) from content_history where main.id = contentId")]
-    //public DateTime lastRevisionDate {get;set;}
-
     [Expensive(1)]
     [FieldSelect("select max(id) from content_history where main.id = contentId")]
     public long lastRevisionId {get;set;} //ALL content has a lastRevisionId
-
-    //[Expensive(1)]
-    //[FieldSelect("select createUserId from content_history where main.id = contentId order by id desc limit 1")]
-    //public long lastRevisionUserId {get;set;}
 }

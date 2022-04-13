@@ -5,6 +5,7 @@ namespace contentapi.Views;
 
 [ResultFor(RequestType.ban)]
 [SelectFrom("bans")]
+[WriteAs(typeof(Db.Ban))]
 public class BanView : IIdView
 {
     [FieldSelect]

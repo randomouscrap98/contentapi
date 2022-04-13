@@ -1855,4 +1855,35 @@ public class DbWriterTest : ViewUnitTestBase
         update1.username = username;
         await Assert.ThrowsAnyAsync<ArgumentException>(() => writer.WriteAsync(update1, NormalUserId));
     }
+
+    [Theory]
+    [InlineData(NormalUserId, SuperUserId, false)]
+    [InlineData(NormalUserId, NormalUserId, false)]
+    [InlineData(SuperUserId, NormalUserId, true)]
+    [InlineData(SuperUserId, SuperUserId, true)] //You can ban yourself I guess
+    public async Task WriteAsync_Ban_Allowed(long banner, long bannee, bool allowed)
+    {
+        //This should be all you need
+        var ban = new BanView()
+        {
+            type = BanType.@public,
+            bannedUserId = bannee,
+            message = "You are banned",
+            expireDate = DateTime.UtcNow.AddDays(1)
+        };
+
+        if(allowed)
+        {
+            var writtenBan = await writer.WriteAsync(ban, banner);
+            Assert.True(writtenBan.id > 0);
+            Assert.Equal(bannee, writtenBan.bannedUserId);
+            Assert.Equal(banner, writtenBan.createUserId);
+            AssertDateClose(ban.expireDate, writtenBan.expireDate);
+            AssertDateClose(writtenBan.createDate);
+        }
+        else
+        {
+            await Assert.ThrowsAnyAsync<ForbiddenException>(() => writer.WriteAsync(ban, banner));
+        }
+    }
 }
