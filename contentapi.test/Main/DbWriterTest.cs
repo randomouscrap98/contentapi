@@ -1893,6 +1893,8 @@ public class DbWriterTest : ViewUnitTestBase
     [InlineData("CRUD", BanType.@private, true)]
     [InlineData("", BanType.@public, true)]
     [InlineData("", BanType.@private, false)]
+    [InlineData("CRUD", BanType.@public | BanType.@private, false)]
+    [InlineData("", BanType.@public | BanType.@private, false)]
     public async Task WriteAsync_Ban_AllowedOnContent(string publicperms, BanType type, bool allowed)
     {
         //This should be all you need
@@ -1930,6 +1932,8 @@ public class DbWriterTest : ViewUnitTestBase
     [InlineData("CRUD", BanType.@private, true)]
     [InlineData("", BanType.@public, true)]
     [InlineData("", BanType.@private, false)]
+    [InlineData("CRUD", BanType.@public | BanType.@private, false)]
+    [InlineData("", BanType.@public | BanType.@private, false)]
     public async Task WriteAsync_Ban_AllowedOnMessage(string publicperms, BanType type, bool allowed)
     {
         //This should be all you need

@@ -189,4 +189,29 @@ public class ShortcutsController : BaseController
             return await shortcuts.RethreadMessagesAsync(rethread.messageIds, rethread.contentId, uid, rethread.message);
         });
     }
+
+    public class SimpleBanData
+    {
+        public long bannedUserId {get;set;}
+        public BanType type {get;set;}
+        public double banHours {get;set;}
+        public string? message {get;set;}
+    }
+
+    [HttpPost("ban")]
+    public Task<ActionResult<BanView>> AddBanView([FromBody]SimpleBanData banData)
+    {
+        return MatchExceptions(async () =>
+        {
+            var uid = GetUserIdStrict();
+            var realBan = new BanView()
+            {
+                bannedUserId = banData.bannedUserId,
+                type = banData.type,
+                expireDate = DateTime.UtcNow.AddHours(banData.banHours),
+                message = banData.message
+            };
+            return await services.writer.WriteAsync(realBan, uid);
+        });
+    }
 }

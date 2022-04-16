@@ -92,4 +92,14 @@ public class WriteController : BaseController
             return await writer.WriteAsync(variable, GetUserIdStrict()); //message used for activity and such
         });
     }
+
+    [HttpPost("ban")]
+    public Task<ActionResult<BanView>> WriteBanVariableAsync([FromBody]BanView ban)
+    {
+        return MatchExceptions(async () => 
+        {
+            //RateLimit(RateUserVariable);
+            return await writer.WriteAsync(ban, GetUserIdStrict()); //message used for activity and such
+        });
+    }
 }

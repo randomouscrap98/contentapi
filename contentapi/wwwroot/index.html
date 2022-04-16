@@ -222,11 +222,37 @@
             <h2>Admin log:</h2>
             <div id="adminlog-container"></div>
             <div id="adminlog-nav" class="nav">
-                <a href="#" id="adminlog-down">Older</a>
-                <a href="#" id="adminlog-up">Newer</a>
+                <a href="#" id="adminlog-down">Newer</a>
+                <a href="#" id="adminlog-up">Older</a>
             </div>
-            <!-- also bans! -->
             <hr>
+            <h2 id="ban-title">Bans:</h2>
+            <label><input type="checkbox" id="ban-activeonly">Active only</label>
+            <div id="ban-container"></div>
+            <div id="ban-nav" class="nav">
+                <a href="#" id="ban-down">Newer</a>
+                <a href="#" id="ban-up">Older</a>
+            </div>
+            <h3>New ban:</h3>
+            <form onsubmit="return t_ban_submit(this)">
+                <label>
+                    <span>User to ban (id):</span>
+                    <input type="text" id="ban-banneduserid">
+                </label>
+                <label>
+                    <span>Time (hours, can be decimal):</span>
+                    <input type="number" id="ban-banhours">
+                </label>
+                <label>
+                    <span>Type (bitflag):</span>
+                    <input type="text" id="ban-bantype">
+                </label>
+                <label>
+                    <span>Message:</span>
+                    <input type="text" id="ban-banmessage">
+                </label>
+                <input type="submit" value="Submit">
+            </form>
         </div>
         <div id="t_groupmanage" data-onload="groupmanage_onload">
             <h2>Group Editor</h2>
@@ -291,6 +317,19 @@
             <time data-time class="annotation"></time>
             <span data-id></span>
             <span data-text></span>
+        </div>
+        <div id="ban_item" data-onload="ban_item_onload"> 
+            <time data-time class="annotation"></time>
+            <span>
+                <span data-banner></span>
+                <span> banned </span>
+                <span data-bannee></span>
+                <span> until </span>
+                <time data-expire></time>
+            </span>
+            <span data-type></span>
+            <span data-message></span>
+            <span data-id></span>
         </div>
         <!-- The container for the editor portion of groups -->
         <!--<div id="group_edit" data-onload="group_edit_onload">

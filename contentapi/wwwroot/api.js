@@ -32,7 +32,8 @@ var APICONST = {
     WRITETYPES : {
         MESSAGE : "message",
         CONTENT : "content",
-        USER : "user"
+        USER : "user",
+        BAN : "ban"
     }
 };
 
@@ -188,6 +189,14 @@ function RethreadParameter(messageIds, contentId, message)
     this.message = message;
 }
 
+function BanParameter(bannedUserId, type, banHours, message)
+{
+    this.bannedUserId = bannedUserId;
+    this.type = type;
+    this.banHours = banHours;
+    this.message = message;
+}
+
 // The main configuration object for ALL searches. Send this directly to the "Search" endpoint. 
 // This should be a direct reflection of "SearchRequests" within the API C# code.
 function RequestParameter(values, requests)
@@ -274,7 +283,8 @@ function Api(url, tokenGet)
     //The list of fields in ANY type of object that usually links to a user (not exhaustive, probably)
     this.userAutolinks = {
         createUserId: "createUser",
-        editUserId: "editUser"
+        editUserId: "editUser",
+        bannedUserId : "bannedUser"
     };
 
     //The list of fields in ANY type of object that usually links to content (not exhaustive, probably)
@@ -596,6 +606,11 @@ Api.prototype.DeleteUserVariable = function(key, handler)
 Api.prototype.Rethread = function(rethreadParam, handler)
 {
     this.Raw("shortcuts/rethread", rethreadParam, handler, "POST");
+};
+
+Api.prototype.Ban = function(banData, handler)
+{
+    this.Raw("shortcuts/ban", banData, handler, "POST");
 };
 
 
@@ -1152,7 +1167,7 @@ Api.prototype.ResolveRelativeUrl = function(url)
 Api.prototype.GetSearchBackDate = function(hours, date)
 {
     hours = hours || 0;
-    back = date || new Date;
+    back = date || new Date();
     back.setHours(back.getHours() - hours);
     return back.toISOString().substring(0, 13);
 };

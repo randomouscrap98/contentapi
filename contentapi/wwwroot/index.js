@@ -25,6 +25,9 @@ window.onload = function()
     if(parameters.has("t"))
     {
         LoadPage(parameters.get("t"), state);
+        //var oldHash = location.hash;
+        //location.hash = "";
+        //setTimeout(() => location.hash = oldHash, 500);
     }
 };
 
@@ -165,7 +168,7 @@ function LinkState(link, state, modify)
 }
 
 //Set up pagination, with the given page up and page down elements
-function SetupPagination(linkUp, linkDown, state, field)
+function SetupPagination(linkUp, linkDown, state, field, hash)
 {
     //Fix state immediately, it's fine.
     state[field] = Math.max(0, state[field] || 0);
@@ -174,6 +177,12 @@ function SetupPagination(linkUp, linkDown, state, field)
         LinkState(linkDown, state, x => x[field]--);
 
     LinkState(linkUp, state, x => x[field]++);
+
+    if(hash)
+    {
+        linkDown.href = linkDown.href.replace("#", "") + "#" + hash;
+        linkUp.href = linkUp.href.replace("#", "") + "#" + hash;
+    }
 }
 
 
@@ -504,6 +513,15 @@ function uservariables_onload(template, state)
 function admin_onload(template, state)
 {
     SetupPagination(template.querySelector("#adminlog-up"), template.querySelector("#adminlog-down"), state, "alp");
+    SetupPagination(template.querySelector("#ban-up"), template.querySelector("#ban-down"), state, "bp", "ban-title");
+
+    var activeOnlyInput = template.querySelector("#ban-activeonly");
+    activeOnlyInput.checked = state.abonly;
+    activeOnlyInput.oninput = function()
+    {
+        state.abonly = activeOnlyInput.checked;
+        location.href = StateToUrl(state) + "#ban-title";
+    };
 
     api.Search_AllByType("adminlog", "*", "id_desc", SEARCHRESULTSPERPAGE, state.alp, new ApiHandler(d =>
     {
@@ -512,6 +530,22 @@ function admin_onload(template, state)
         d.result.objects.adminlog.forEach(x =>
         {
             var item = LoadTemplate(`adminlog_item`, x);
+            container.appendChild(item);
+        });
+    }));
+
+    api.Search(new RequestParameter({ }, [
+        new RequestSearchParameter("ban", "*", state.abonly ? "!activebans()" : "", "id_desc", SEARCHRESULTSPERPAGE, SEARCHRESULTSPERPAGE * state.bp),
+        new RequestSearchParameter("user", "*", "id in @ban.bannedUserId or id in @ban.createUserId",)
+    ]), new ApiHandler(d =>
+    {
+        console.log(d.result.objects);
+        var container = template.querySelector("#ban-container");
+        api.AutoLinkUsers(d.result.objects.ban, d.result.objects.user);
+
+        d.result.objects.ban.forEach(x =>
+        {
+            var item = LoadTemplate(`ban_item`, x);
             container.appendChild(item);
         });
     }));
@@ -787,6 +821,17 @@ function adminlog_item_onload(template, state)
     textelem.textContent = state.text;
 }
 
+function ban_item_onload(template, state)
+{
+    template.querySelector("[data-time]").textContent = new Date(state.createDate).toLocaleString();
+    template.querySelector("[data-banner]").textContent = state.createUser.username;
+    template.querySelector("[data-bannee]").textContent = state.bannedUser.username;
+    template.querySelector("[data-type]").textContent = `Type: ${state.type}`;
+    template.querySelector("[data-message]").textContent = `Message: ${state.message}`;
+    template.querySelector("[data-id]").textContent = `[${state.id}]`;
+    template.querySelector("[data-expire]").textContent = new Date(state.expireDate).toLocaleString();
+}
+
 function group_item_onload(template, state)
 {
     template.querySelector("[data-id]").textContent = state.id;
@@ -1018,6 +1063,20 @@ function t_uservariable_submit(form)
     api.SetUserVariable(key.value, value.value, new ApiHandler(d => {
         location.reload();
     }));
+
+    return false;
+}
+
+function t_ban_submit(form)
+{
+    var ban = new BanParameter(
+        form.querySelector("#ban-banneduserid").value, 
+        form.querySelector("#ban-bantype").value,
+        form.querySelector("#ban-banhours").value,
+        form.querySelector("#ban-banmessage").value
+    );
+
+    api.Ban(ban, new ApiHandler(d => { location.reload(); }));
 
     return false;
 }

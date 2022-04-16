@@ -2,7 +2,7 @@ body {
     font-family: monospace;
 }
 
-label, input, textarea, select {
+label, input:not([type="checkbox"]), textarea, select {
     display: block;
     width: 100%;
     max-width: 350px;
