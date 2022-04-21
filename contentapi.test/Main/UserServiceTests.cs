@@ -32,8 +32,9 @@ public class UserServiceTests : UnitTestBase, IClassFixture<DbUnitTestBase>
         searcher = fixture.GetService<IGenericSearch>();
         this.fixture = fixture;
 
-        this.service = new UserService(fixture.GetService<ILogger<UserService>>(), searcher, fixture.GetService<IHashService>(), 
-            fixture.GetService<IAuthTokenService<long>>(), config, fixture.GetService<ContentApiDbConnection>()); //, fixture.GetService<IDbWriter>());
+        this.service = new UserService(fixture.GetService<ILogger<UserService>>(), fixture.GetService<IHashService>(), 
+            fixture.GetService<IAuthTokenService<long>>(), config, fixture.GetService<ContentApiDbConnection>(),
+            fixture.GetService<IViewTypeInfoService>()); //, fixture.GetService<IDbWriter>());
 
         //Always want a fresh database!
         fixture.ResetDatabase();
@@ -42,7 +43,8 @@ public class UserServiceTests : UnitTestBase, IClassFixture<DbUnitTestBase>
     [Fact]
     public async Task CreateNewUser_Basic()
     {
-        var user = await service.CreateNewUser("hello", "short", "email@email.com");
+        var userId = await service.CreateNewUser("hello", "short", "email@email.com");
+        var user = await searcher.GetById<UserView>(userId);
         AssertDateClose(user.createDate);
         Assert.True(user.id > 0);
         Assert.False(user.registered);
@@ -63,20 +65,20 @@ public class UserServiceTests : UnitTestBase, IClassFixture<DbUnitTestBase>
     [Fact]
     public async Task CreateNewUser_GetRegistration()
     {
-        var user = await service.CreateNewUser("hello", "short", "email@email.com");
-        var registration = await service.GetRegistrationKeyAsync(user.id);
-        Assert.Equal(service.RegistrationLog[user.id], registration);
+        var userId = await service.CreateNewUser("hello", "short", "email@email.com");
+        var registration = await service.GetRegistrationKeyAsync(userId);
+        Assert.Equal(service.RegistrationLog[userId], registration);
         //Retrieving the registration shouldn't REGISTER them
-        var completedUser = await searcher.GetById<UserView>(RequestType.user, user.id);
+        var completedUser = await searcher.GetById<UserView>(userId);
         Assert.False(completedUser.registered);
     }
 
     [Fact]
     public async Task CreateNewUser_GetUserIdFromEmail()
     {
-        var user = await service.CreateNewUser("hello", "short", "email@email.com");
+        var userId = await service.CreateNewUser("hello", "short", "email@email.com");
         var id = await service.GetUserIdFromEmailAsync("email@email.com");
-        Assert.Equal(user.id, id);
+        Assert.Equal(userId, id);
     }
 
     [Fact]
@@ -93,38 +95,38 @@ public class UserServiceTests : UnitTestBase, IClassFixture<DbUnitTestBase>
     [Fact]
     public async Task CreateNewUser_Register()
     {
-        var user = await service.CreateNewUser("hello", "short", "email@email.com");
-        var token = await service.CompleteRegistration(user.id, service.RegistrationLog[user.id]);
+        var userId = await service.CreateNewUser("hello", "short", "email@email.com");
+        var token = await service.CompleteRegistration(userId, service.RegistrationLog[userId]);
         Assert.False(string.IsNullOrWhiteSpace(token));
-        var completedUser = await searcher.GetById<UserView>(RequestType.user, user.id);
+        var completedUser = await searcher.GetById<UserView>(userId);
         Assert.True(completedUser.registered);
     }
 
     [Fact]
     public async Task CreateNewUser_Register_UnknownUser()
     {
-        var user = await service.CreateNewUser("hello", "short", "email@email.com");
+        var userId = await service.CreateNewUser("hello", "short", "email@email.com");
 
         await Assert.ThrowsAnyAsync<ArgumentException>(async () => {
-            var token = await service.CompleteRegistration(99, service.RegistrationLog[user.id]);
+            var token = await service.CompleteRegistration(99, service.RegistrationLog[userId]);
         });
     }
 
     [Fact]
     public async Task CreateNewUser_Register_BadRegistrationKey()
     {
-        var user = await service.CreateNewUser("hello", "short", "email@email.com");
+        var userId = await service.CreateNewUser("hello", "short", "email@email.com");
 
         await Assert.ThrowsAnyAsync<RequestException>(async () => {
-            var token = await service.CompleteRegistration(user.id, service.RegistrationLog[user.id] + "A");
+            var token = await service.CompleteRegistration(userId, service.RegistrationLog[userId] + "A");
         });
     }
 
     [Fact]
     public async Task CreateNewUser_LoginUsername()
     {
-        var user = await service.CreateNewUser("hello", "short", "email@email.com");
-        var token = await service.CompleteRegistration(user.id, service.RegistrationLog[user.id]);
+        var userId = await service.CreateNewUser("hello", "short", "email@email.com");
+        var token = await service.CompleteRegistration(userId, service.RegistrationLog[userId]);
         var loginToken = await service.LoginUsernameAsync("hello", "short");
         Assert.False(string.IsNullOrWhiteSpace(token));
         Assert.False(string.IsNullOrWhiteSpace(loginToken));
@@ -133,8 +135,8 @@ public class UserServiceTests : UnitTestBase, IClassFixture<DbUnitTestBase>
     [Fact]
     public async Task CreateNewUser_LoginEmail()
     {
-        var user = await service.CreateNewUser("hello", "short", "email@email.com");
-        var token = await service.CompleteRegistration(user.id, service.RegistrationLog[user.id]);
+        var userId = await service.CreateNewUser("hello", "short", "email@email.com");
+        var token = await service.CompleteRegistration(userId, service.RegistrationLog[userId]);
         var loginToken = await service.LoginEmailAsync("email@email.com", "short");
         Assert.False(string.IsNullOrWhiteSpace(token));
         Assert.False(string.IsNullOrWhiteSpace(loginToken));
@@ -143,18 +145,18 @@ public class UserServiceTests : UnitTestBase, IClassFixture<DbUnitTestBase>
     [Fact]
     public async Task CreateNewUser_VerifyPassword()
     {
-        var user = await service.CreateNewUser("hello", "short", "email@email.com");
-        var token = await service.CompleteRegistration(user.id, service.RegistrationLog[user.id]);
-        await service.VerifyPasswordAsync(user.id, "short");
+        var userId = await service.CreateNewUser("hello", "short", "email@email.com");
+        var token = await service.CompleteRegistration(userId, service.RegistrationLog[userId]);
+        await service.VerifyPasswordAsync(userId, "short");
 
-        await Assert.ThrowsAnyAsync<Exception>(() => service.VerifyPasswordAsync(user.id, "shorts"));
+        await Assert.ThrowsAnyAsync<Exception>(() => service.VerifyPasswordAsync(userId, "shorts"));
     }
 
     [Fact]
     public async Task CreateNewUser_Login_BadPassword()
     {
-        var user = await service.CreateNewUser("hello", "short", "email@email.com");
-        var token = await service.CompleteRegistration(user.id, service.RegistrationLog[user.id]);
+        var userId = await service.CreateNewUser("hello", "short", "email@email.com");
+        var token = await service.CompleteRegistration(userId, service.RegistrationLog[userId]);
         await Assert.ThrowsAnyAsync<RequestException>(async () => {
             var loginToken = await service.LoginUsernameAsync("hello", "shorts");
         });
@@ -197,11 +199,11 @@ public class UserServiceTests : UnitTestBase, IClassFixture<DbUnitTestBase>
     public async Task GetPrivateData()
     {
         //Assume this goes OK
-        var user = await service.CreateNewUser("hello", "short", "email@email.com");
-        var token = await service.CompleteRegistration(user.id, service.RegistrationLog[user.id]);
+        var userId = await service.CreateNewUser("hello", "short", "email@email.com");
+        var token = await service.CompleteRegistration(userId, service.RegistrationLog[userId]);
 
         //Now go get the email and hidelist. Hidelist should just be an empty array
-        var privateData = await service.GetPrivateData(user.id);
+        var privateData = await service.GetPrivateData(userId);
 
         Assert.Equal("email@email.com", privateData.email);
         //Assert.NotNull(privateData.hideList);
@@ -216,11 +218,11 @@ public class UserServiceTests : UnitTestBase, IClassFixture<DbUnitTestBase>
     public async Task SetPrivateData_Email(string email, bool success)
     {
         //Assume this goes OK
-        var user = await service.CreateNewUser("hello", "short", "email@email.com");
-        var token = await service.CompleteRegistration(user.id, service.RegistrationLog[user.id]);
+        var userId = await service.CreateNewUser("hello", "short", "email@email.com");
+        var token = await service.CompleteRegistration(userId, service.RegistrationLog[userId]);
 
         //Now go update the email
-        var setData = new Func<Task>(() => service.SetPrivateData(user.id, new UserSetPrivateData() { email = email }));
+        var setData = new Func<Task>(() => service.SetPrivateData(userId, new UserSetPrivateData() { email = email }));
 
         if(success)
         {
@@ -242,11 +244,11 @@ public class UserServiceTests : UnitTestBase, IClassFixture<DbUnitTestBase>
     public async Task SetPrivateData_Password(string password, bool success)
     {
         //Assume this goes OK
-        var user = await service.CreateNewUser("hello", "short", "email@email.com");
-        var token = await service.CompleteRegistration(user.id, service.RegistrationLog[user.id]);
+        var userId = await service.CreateNewUser("hello", "short", "email@email.com");
+        var token = await service.CompleteRegistration(userId, service.RegistrationLog[userId]);
 
         //Now go update the password
-        var setData = new Func<Task>(() => service.SetPrivateData(user.id, new UserSetPrivateData() { password = password }));
+        var setData = new Func<Task>(() => service.SetPrivateData(userId, new UserSetPrivateData() { password = password }));
 
         if(success)
         {

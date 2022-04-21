@@ -7,7 +7,7 @@ public interface IUserService
     void InvalidateAllTokens(long userId);
     Task<string> LoginUsernameAsync(string username, string password, TimeSpan? expireOverride = null);
     Task<string> LoginEmailAsync(string email, string password, TimeSpan? expireOverride = null);
-    Task<UserView> CreateNewUser(string username, string password, string email);
+    Task<long> CreateNewUser(string username, string password, string email);
 
     Task<string> GetRegistrationKeyAsync(long userId);
 

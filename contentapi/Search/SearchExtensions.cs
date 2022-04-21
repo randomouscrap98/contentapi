@@ -31,4 +31,10 @@ public static class SearchExtensions
 
         return search.ToStronglyTyped<T>(searchResult.objects.First().Value);
     }
+
+    public static string GetDatabaseForType<T>(this IViewTypeInfoService typeService)
+    {
+        var typeinfo = typeService.GetTypeInfo<T>();
+        return typeinfo.selectFromSql ?? throw new InvalidOperationException($"No database for type {typeof(T).Name}");
+    }    
 }

@@ -108,13 +108,13 @@ public class UserController : BaseController
             if(!config.AccountCreationEnabled)
                 throw new ForbiddenException("We're sorry, account creation is disabled at this time");
 
-            var result = await userService.CreateNewUser(credentials.username, credentials.password, credentials.email);
+            var userId = await userService.CreateNewUser(credentials.username, credentials.password, credentials.email);
+            var result = await services.searcher.GetById<UserView>(Search.RequestType.user, userId);
 
             if(config.ConfirmationType == InstantConfirmation)
             {
                 services.logger.LogDebug("Instant user account creation set, completing registration immediately");
-                var token = await userService.CompleteRegistration(result.id, await userService.GetRegistrationKeyAsync(result.id));
-                result = await services.searcher.GetById<UserView>(Search.RequestType.user, result.id);
+                var token = await userService.CompleteRegistration(userId, await userService.GetRegistrationKeyAsync(userId));
                 result.special = token;
             }
 

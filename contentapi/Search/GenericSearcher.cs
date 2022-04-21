@@ -208,13 +208,6 @@ public class GenericSearcher : IGenericSearch
         }
     }
 
-    public string GetDatabaseForType<T>()
-    {
-        var typeinfo = typeService.GetTypeInfo<T>();
-        //return typeinfo.modelTable ?? throw new InvalidOperationException($"No database for type {typeof(T).Name}");
-        return typeinfo.selectFromSql ?? throw new InvalidOperationException($"No database for type {typeof(T).Name}");
-    }    
-
     //The simple method for performing a SINGLE request as given. The database accesses are timed...
     protected async Task<QueryResultSet> SearchSingle(
         SearchRequest request, 
@@ -314,6 +307,12 @@ public class GenericSearcher : IGenericSearch
             throw new NotFoundException($"{type} with ID {id} not found!"); 
 
         return ToStronglyTyped<T>(result).First();
+    }
+
+    public Task<T> GetById<T>(long id, bool throwIfDeleted = false)
+    {
+        var typeInfo = typeService.GetTypeInfo<T>();
+        return GetById<T>(typeInfo.requestType ?? throw new InvalidOperationException($"No associated request type for view {typeof(T)}"), id, throwIfDeleted);
     }
 
     public async Task<List<T>> GetByField<T>(RequestType type, string fieldname, object value, string comparator = "=")

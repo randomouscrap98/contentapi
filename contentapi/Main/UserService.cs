@@ -14,6 +14,7 @@ namespace contentapi.Main;
 public class UserServiceConfig
 {
     public TimeSpan TokenExpireDefault {get;set;} = TimeSpan.FromDays(10);
+    public TimeSpan TemporaryPasswordExpire {get;set;} = TimeSpan.FromMinutes(20);
     public string UsernameRegex {get;set;} = "^[a-zA-Z0-9_]+$";
     public int MinUsernameLength {get;set;} = 2;
     public int MaxUsernameLength {get;set;} = 16;
@@ -21,33 +22,55 @@ public class UserServiceConfig
     public int MaxPasswordLength {get;set;} = 32;
 }
 
+public class TemporaryPassword
+{
+    public DateTime ExpireDate {get;set;}
+    public string Key {get;set;} = Guid.NewGuid().ToString();
+}
+
 public class UserService : IUserService
 {
     protected ILogger logger;
-    protected IGenericSearch searcher;
     protected IHashService hashService;
     protected IAuthTokenService<long> authTokenService;
     protected UserServiceConfig config;
     protected IDbConnection dbcon;
+    protected IViewTypeInfoService typeInfoService;
+    protected string userTable;
 
     public ConcurrentDictionary<long, string> RegistrationLog = new ConcurrentDictionary<long, string>();
+    public ConcurrentDictionary<long, TemporaryPassword> TempPasswordSet = new ConcurrentDictionary<long, TemporaryPassword>();
 
     //DO NOT ADD IDBWRITER, IT CAUSED A MILLION FAILURES!!!
-    public UserService(ILogger<UserService> logger, IGenericSearch searcher, IHashService hashService, IAuthTokenService<long> authTokenService,
-        UserServiceConfig config, ContentApiDbConnection wrapper)
+    public UserService(ILogger<UserService> logger, IHashService hashService, IAuthTokenService<long> authTokenService,
+        UserServiceConfig config, ContentApiDbConnection wrapper, IViewTypeInfoService typeInfoService)
     {
         this.logger = logger;
-        this.searcher = searcher;
         this.hashService = hashService;
         this.authTokenService = authTokenService;
         this.config = config;
         this.dbcon = wrapper.Connection;
+        this.typeInfoService = typeInfoService;
         //this.writer = writer;
+
+        userTable = typeInfoService.GetDatabaseForType<UserView>();
 
         this.dbcon.Open();
     }
 
-    public const string BasicRequestName = "userservicesearch";
+    public async Task<User> GetUserByWhatever(string whereClause, object parameters)
+    {
+        var user = await dbcon.QuerySingleAsync<User?>($"select * from {userTable} {whereClause}", parameters);
+        if(user == null || user.deleted)
+            throw new NotFoundException($"User not found");
+        if(user.type != UserType.user)
+            throw new ForbiddenException("Can only perform user session actions with real users!");
+        return user;
+    }
+
+    public Task<User> GetUserById(long userId) => GetUserByWhatever("where id = @user", new { user = userId });
+    public Task<User> GetUserByEmail(string email) => GetUserByWhatever("where email = @email", new { email = email });
+    public async Task<long> GetUserIdFromEmailAsync(string email) => (await GetUserByEmail(email)).id;
 
     public async Task CheckValidUsernameAsync(string username, long existingUserId = 0)
     {
@@ -60,7 +83,7 @@ public class UserService : IUserService
         if(!Regex.IsMatch(username, config.UsernameRegex))
             throw new ArgumentException($"Username has invalid characters, must match regex: {config.UsernameRegex}");
 
-        var existing = await dbcon.ExecuteScalarAsync<int>($"select count(*) from {searcher.GetDatabaseForType<UserView>()} where username = @user and id <> @id", new { user = username, id = existingUserId });
+        var existing = await dbcon.ExecuteScalarAsync<int>($"select count(*) from {userTable} where username = @user and id <> @id", new { user = username, id = existingUserId });
 
         if(existing > 0)
             throw new ArgumentException($"Username '{username}' already taken!");
@@ -71,7 +94,7 @@ public class UserService : IUserService
         if(string.IsNullOrWhiteSpace(email))
             throw new ArgumentException("Must provide email to create new user!");
 
-        var existing = await dbcon.ExecuteScalarAsync<int>($"select count(*) from {searcher.GetDatabaseForType<UserView>()} where email = @user", new { user = email });
+        var existing = await dbcon.ExecuteScalarAsync<int>($"select count(*) from {userTable} where email = @user", new { user = email });
 
         if(existing > 0)
             throw new ArgumentException($"Duplicate email in system: '{email}'");
@@ -87,15 +110,6 @@ public class UserService : IUserService
             throw new ArgumentException($"Password too long! Must be at most {config.MaxPasswordLength} characters");
     }
     
-    public void CheckValidUser(IDictionary<string, object> result)
-    {
-        if(!result.ContainsKey("type"))
-            throw new InvalidOperationException("Tried to check for valid user without retrieving type!");
-
-        if((long)result["type"] != (long)UserType.user)
-            throw new ForbiddenException("Can only perform user session actions with real users!");
-    }
-
     /// <summary>
     /// Item1 is salt, Item2 is password, both are ready to be stored in a user
     /// </summary>
@@ -107,7 +121,7 @@ public class UserService : IUserService
         return Tuple.Create(Convert.ToBase64String(salt), Convert.ToBase64String(hashService.GetHash(password, salt)));
     }
 
-    public async Task<UserView> CreateNewUser(string username, string password, string email)
+    public async Task<long> CreateNewUser(string username, string password, string email)
     {
         await CheckValidUsernameAsync(username);
         await CheckValidEmailAsync(email);
@@ -137,20 +151,17 @@ public class UserService : IUserService
             tsx.Commit();
         }
 
-        //This might (confusingly) throw a "not found" exception. Mmmm
-        var userView = await searcher.GetById<UserView>(RequestType.user, id, true);
-
         RegistrationLog.TryAdd(user.id, user.registrationKey);
 
         await WriteAdminLog(new AdminLog()
         {
             type = AdminLogType.user_create,
-            initiator = userView.id,
-            target = userView.id,
-            text = $"User '{userView.username}'({userView.id}) created an account"
+            initiator = id, 
+            target = id, 
+            text = $"User '{username}'({id}) created an account"
         });
 
-        return userView;
+        return id;
     }
     
     public string GetNewTokenForUser(long uid, TimeSpan? expireOverride = null)
@@ -159,31 +170,21 @@ public class UserService : IUserService
         return authTokenService.GetNewToken(uid, data, expireOverride ?? config.TokenExpireDefault);
     }
 
-    public async Task<long> GetUserIdFromEmailAsync(string email)
-    {
-        var user = (await searcher.QueryRawAsync(
-            $"select id from {searcher.GetDatabaseForType<UserView>()} where email = @email",
-            new Dictionary<string, object> { { "email", email}})).FirstOrDefault();
-        
-        if(user == null)
-            throw new ArgumentException("Email not found!");
-        
-        return (long)user["id"];
-    }
+    //public async Task<long> GetUserIdFromEmailAsync(string email)
+    //{
+    //    var user = await dbcon.ExecuteScalarAsync<long?>($"select id from {userTable} where email = @email", new { email = "email"}); //).FirstOrDefault();
+    //    
+    //    if(user == null)
+    //        throw new ArgumentException("Email not found!");
+    //    
+    //    return user.Value;
+    //}
 
     public async Task<string> GetRegistrationKeyAsync(long userId)
     {
         //Go get the registration key
-        var userRegistration = (await searcher.QueryRawAsync(
-            $"select id, registrationKey, type from {searcher.GetDatabaseForType<UserView>()} where id = @user",
-            new Dictionary<string, object> { { "user", userId}})).FirstOrDefault();
-
-        if(userRegistration == null)
-            throw new ArgumentException($"User {userId} not found!");
-
-        CheckValidUser(userRegistration);
-
-        return (string)userRegistration["registrationKey"];
+        var userRegistration = await GetUserById(userId); 
+        return (string)userRegistration.registrationKey;
     }
 
     public async Task<string> CompleteRegistration(long userId, string registrationKey)
@@ -203,14 +204,14 @@ public class UserService : IUserService
 
         RegistrationLog.TryRemove(userId, out _);
 
-        var userView = await searcher.GetById<UserView>(RequestType.user, userId, true);
+        var user = await GetUserById(userId); //dbcon.ExecuteScalarAsync<string>($"select username from {userTable} where id = @id", new { id = userId });
 
         await WriteAdminLog(new AdminLog()
         {
             type = AdminLogType.user_register,
             initiator = userId,
             target = userId,
-            text = $"User '{userView.username}'({userId}) completed account registration"
+            text = $"User '{user.username}'({user.id}) completed account registration"
         });
 
         return GetNewTokenForUser(userId);
@@ -224,12 +225,14 @@ public class UserService : IUserService
         //stuff when it comes to private user data. For instance, you have to check if "salt" is non-empty here, but that's very dependent on
         //how we mark if users are deleted or not. We ASSUME we don't want the salt (or the password) kept on deletion, BUT...
 
-        //Next, get the LEGITIMATE data from the database
-        var userSecrets = (await searcher.QueryRawAsync(
-            $"select id, username, password, salt, registrationKey, type from {searcher.GetDatabaseForType<UserView>()} where {fieldname} = @user and deleted=0",
-            new Dictionary<string, object> { { "user", value }})).FirstOrDefault();
+        User user;
 
-        if(userSecrets == null)
+        //Next, get the LEGITIMATE data from the database
+        try
+        {
+            user = await GetUserByWhatever($"where {fieldname} = @user", new { user = value });
+        }
+        catch(NotFoundException)
         {
             await WriteAdminLog(new AdminLog()
             {
@@ -239,45 +242,36 @@ public class UserService : IUserService
                 text = $"Failed login attempt for {value}: user not found!"
             });
 
-            throw new ArgumentException("User not found!");
+            throw;
         }
 
-        CheckValidUser(userSecrets);
-        
         //So for registration, it's SPECIFICALLY null which makes you registered! This is IMPORTANT!
-        if(userSecrets["registrationKey"] != null)
+        if(user.registrationKey != null)
             throw new ForbiddenException("User not registered! Can't log in!");
 
         //Finally, compare hashes and if good, send out the token
-        if(!hashService.VerifyText(password, Convert.FromBase64String((string)userSecrets["password"]), Convert.FromBase64String((string)userSecrets["salt"])))
+        if(!hashService.VerifyText(password, Convert.FromBase64String(user.password), Convert.FromBase64String(user.salt)))
         {
-            long userId = (long)userSecrets["id"];
-            string username = (string)userSecrets["username"];
-
             await WriteAdminLog(new AdminLog()
             {
                 type = AdminLogType.login_failure,
-                initiator = userId,
-                target = userId,
-                text = $"Failed login attempt for '{username}'({userId}): incorrect password"
+                initiator = user.id,
+                target = user.id,
+                text = $"Failed login attempt for '{user.username}'({user.id}): incorrect password"
             });
 
             throw new RequestException("Password incorrect!");
         }
         
         //Right now, I don't really have anything that needs to go in here
-        return GetNewTokenForUser ((long)userSecrets["id"], expireOverride);
+        return GetNewTokenForUser (user.id, expireOverride);
     }
 
-    public Task<string> LoginEmailAsync(string email, string password, TimeSpan? expireOverride = null)
-    {
-        return LoginGeneric("email", email, password, expireOverride);
-    }
+    public Task<string> LoginEmailAsync(string email, string password, TimeSpan? expireOverride = null) =>
+        LoginGeneric("email", email, password, expireOverride);
 
-    public Task<string> LoginUsernameAsync(string username, string password, TimeSpan? expireOverride = null)
-    {
-        return LoginGeneric("username", username, password, expireOverride);
-    }
+    public Task<string> LoginUsernameAsync(string username, string password, TimeSpan? expireOverride = null) =>
+        LoginGeneric("username", username, password, expireOverride);
 
     public async Task VerifyPasswordAsync(long userId, string password)
     {
@@ -293,18 +287,12 @@ public class UserService : IUserService
     public async Task<UserGetPrivateData> GetPrivateData(long userId)
     {
         var result = new UserGetPrivateData();
-        var queryResult = await searcher.QueryRawAsync($"select * from {searcher.GetDatabaseForType<UserView>()} where id = @id", 
-            new Dictionary<string, object>() { { "id", userId }});
-        var castResult = searcher.ToStronglyTyped<User>(queryResult);
-
-        if(castResult.Count != 1)
-            throw new ArgumentException($"Couldn't find user {userId}");
+        var user = await GetUserById(userId);
 
         //WARN: this technically lets you get private data for groups!
         
         //This could also be done with an auto-mapper but
-        result.email = castResult.First().email;
-        //result.hideList = castResult.First().hideListParsed;
+        result.email = user.email;
 
         return result;
     }

@@ -824,8 +824,8 @@ function adminlog_item_onload(template, state)
 function ban_item_onload(template, state)
 {
     template.querySelector("[data-time]").textContent = new Date(state.createDate).toLocaleString();
-    template.querySelector("[data-banner]").textContent = state.createUser.username;
-    template.querySelector("[data-bannee]").textContent = state.bannedUser.username;
+    template.querySelector("[data-banner]").textContent = state.createUser ? state.createUser.username : `???(${state.createUserId})`;
+    template.querySelector("[data-bannee]").textContent = state.bannedUser ? state.bannedUser.username : `???(${state.bannedUserId})`;
     template.querySelector("[data-type]").textContent = `Type: ${state.type}`;
     template.querySelector("[data-message]").textContent = `Message: ${state.message}`;
     template.querySelector("[data-id]").textContent = `[${state.id}]`;

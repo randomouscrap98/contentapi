@@ -21,14 +21,13 @@ public interface IGenericSearch
     /// <param name="id"></param>
     /// <typeparam name="T"></typeparam>
     /// <returns></returns>
+    [Obsolete]
     Task<T> GetById<T>(RequestType type, long id, bool throwIfDeleted = false);
+    Task<T> GetById<T>(long id, bool throwIfDeleted = false);
     Task<List<T>> GetByField<T>(RequestType type, string fieldname, object value, string comparator = "=");
 
     //DEFINITELY used for internal tasks!
     Task<QueryResultSet> QueryRawAsync(string sql, Dictionary<string, object> values);
-
-    string GetDatabaseForType<T>();
-    //List<long> GetPermissionSearchIdsForUser(UserView requester);
 
     List<T> ToStronglyTyped<T>(QueryResultSet singleResults);
 }

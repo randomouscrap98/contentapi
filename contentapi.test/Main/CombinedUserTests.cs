@@ -36,13 +36,13 @@ public class CombinedUserTests : ViewUnitTestBase //, IClassFixture<DbUnitTestSe
     [Fact]
     public async Task DeletedUserNoLogin()
     {
-        var user = await service.CreateNewUser("hello", Password, "email@email.com");
-        var token = await service.CompleteRegistration(user.id, await service.GetRegistrationKeyAsync(user.id));
+        var userId = await service.CreateNewUser("hello", Password, "email@email.com");
+        var token = await service.CompleteRegistration(userId, await service.GetRegistrationKeyAsync(userId));
         var loginToken = await service.LoginUsernameAsync("hello", Password);
         Assert.False(string.IsNullOrWhiteSpace(token));
         Assert.False(string.IsNullOrWhiteSpace(loginToken));
         //Login worked, now delete them
-        var deleteResult = await writer.DeleteAsync<UserView>(user.id, (int)UserVariations.Super + 1);
+        var deleteResult = await writer.DeleteAsync<UserView>(userId, (int)UserVariations.Super + 1);
         //Login should no longer work for them
         await Assert.ThrowsAnyAsync<ArgumentException>(async () =>
         {
@@ -60,11 +60,12 @@ public class CombinedUserTests : ViewUnitTestBase //, IClassFixture<DbUnitTestSe
     [Fact]
     public async Task UpdatedUserYesLogin()
     {
-        var user = await service.CreateNewUser("hello", Password, "email@email.com");
-        var token = await service.CompleteRegistration(user.id, await service.GetRegistrationKeyAsync(user.id));
+        var userId = await service.CreateNewUser("hello", Password, "email@email.com");
+        var token = await service.CompleteRegistration(userId, await service.GetRegistrationKeyAsync(userId));
         var loginToken = await service.LoginUsernameAsync("hello", Password);
         Assert.False(string.IsNullOrWhiteSpace(token));
         Assert.False(string.IsNullOrWhiteSpace(loginToken));
+        var user = await searcher.GetById<UserView>(userId);
         //Login worked, now update the user's special field or something and ensure nothing exploded.
         user.special = "seomthingNEWW";
         var updateResult = await writer.WriteAsync(user, user.id);
@@ -78,9 +79,10 @@ public class CombinedUserTests : ViewUnitTestBase //, IClassFixture<DbUnitTestSe
     [Fact] //WARN: This may eventually STOP working if username changes... well, change
     public async Task UpdatedUserUsernameYesLogin()
     {
-        var user = await service.CreateNewUser("hello", Password, "email@email.com");
-        var token = await service.CompleteRegistration(user.id, await service.GetRegistrationKeyAsync(user.id));
+        var userId = await service.CreateNewUser("hello", Password, "email@email.com");
+        var token = await service.CompleteRegistration(userId, await service.GetRegistrationKeyAsync(userId));
         var loginToken = await service.LoginUsernameAsync("hello", Password);
+        var user = await searcher.GetById<UserView>(userId);
         Assert.False(string.IsNullOrWhiteSpace(token));
         Assert.False(string.IsNullOrWhiteSpace(loginToken));
         //Login worked, now update the user's special field or something and ensure nothing exploded.
@@ -99,8 +101,9 @@ public class CombinedUserTests : ViewUnitTestBase //, IClassFixture<DbUnitTestSe
     [Fact] //Updating a user in the middle of registration (for some reason) should not break their registration
     public async Task UpdatedUserYesRegister()
     {
-        var user = await service.CreateNewUser("hello", Password, "email@email.com");
-        var regToken = await service.GetRegistrationKeyAsync(user.id);
+        var userId = await service.CreateNewUser("hello", Password, "email@email.com");
+        var regToken = await service.GetRegistrationKeyAsync(userId);
+        var user = await searcher.GetById<UserView>(userId);
 
         //Wow, updating user in the MIDDLE of registration, how could you?
         user.special = "seomthingNEWW";
@@ -122,8 +125,9 @@ public class CombinedUserTests : ViewUnitTestBase //, IClassFixture<DbUnitTestSe
     public async Task UpdatedUserUnmodifiedPrivates()
     {
         //Assume this worked
-        var user = await service.CreateNewUser("hello", Password, "email@email.com");
-        var token = await service.CompleteRegistration(user.id, await service.GetRegistrationKeyAsync(user.id));
+        var userId = await service.CreateNewUser("hello", Password, "email@email.com");
+        var token = await service.CompleteRegistration(userId, await service.GetRegistrationKeyAsync(userId));
+        var user = await searcher.GetById<UserView>(userId);
 
         //With no hidelist, try to modify other data
         user.special = "seomthingNEWW";
