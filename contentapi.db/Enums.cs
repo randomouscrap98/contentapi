@@ -55,7 +55,9 @@ namespace contentapi.Db
         login_failure = 10,
         user_delete = 11,
         ban_create = 12,
-        ban_edit = 13
+        ban_edit = 13,
+        login_temporary = 14,
+        login_passwordexpired = 15
     }
 
     public enum VoteType : long

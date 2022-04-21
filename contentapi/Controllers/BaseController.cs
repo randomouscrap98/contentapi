@@ -106,6 +106,9 @@ public class BaseController : Controller
             
             if (ex is BannedException)
                 return new ObjectResult($"Banned: {ex.Message}") { StatusCode = 418 };
+            
+            if (ex is TokenException)
+                return new ObjectResult($"Session/token exception: {ex.Message}") { StatusCode = 401 };
 
             //CAN'T just rethrow, because the middleware strips our CORS junk. Need to return a real error
             return new ObjectResult($"Unhandled exception: {ex}") { StatusCode = 500 };

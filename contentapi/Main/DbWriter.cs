@@ -988,12 +988,13 @@ public class DbWriter : IDbWriter
             //Users are special: we have to go get the original so we can preserve some of the fields. We can be pretty sure a lookup by id will work because
             //we've had so much validation before we get here.
             var original = searcher.ToStronglyTyped<User>(await searcher.QueryRawAsync($"select * from users where id = @id", new Dictionary<string, object> {{"id", work.view.id}})).First();
+            user.editDate = DateTime.UtcNow;
+            //TODO: this whole thing is very bad, if you forget to come here and add the copy back for a field, it could spell disaster
             user.registrationKey = original.registrationKey;
-            //user.hidelist = original.hidelist;
             user.password = original.password;
             user.salt = original.salt;
-            user.editDate = DateTime.UtcNow;
             user.email = original.email;
+            user.lastPasswordDate = original.lastPasswordDate;
         }
 
         //Always need an ID to link to, so we actually need to create the content first and get the ID.

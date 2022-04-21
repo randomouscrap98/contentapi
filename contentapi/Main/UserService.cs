@@ -14,6 +14,7 @@ namespace contentapi.Main;
 public class UserServiceConfig
 {
     public TimeSpan TokenExpireDefault {get;set;} = TimeSpan.FromDays(10);
+    public TimeSpan PasswordExpire {get;set;} = TimeSpan.Zero; //Zero means never expire, UNLESS the lastPasswordDate field is empty!
     public TimeSpan TemporaryPasswordExpire {get;set;} = TimeSpan.FromMinutes(20);
     public string UsernameRegex {get;set;} = "^[a-zA-Z0-9_]+$";
     public int MinUsernameLength {get;set;} = 2;
@@ -68,8 +69,8 @@ public class UserService : IUserService
         return user;
     }
 
-    public Task<User> GetUserById(long userId) => GetUserByWhatever("where id = @user", new { user = userId });
-    public Task<User> GetUserByEmail(string email) => GetUserByWhatever("where email = @email", new { email = email });
+    public Task<User> GetUserById(long userId) => GetUserByWhatever($"where {nameof(User.id)} = @user", new { user = userId });
+    public Task<User> GetUserByEmail(string email) => GetUserByWhatever($"where {nameof(User.email)} = @email", new { email = email });
     public async Task<long> GetUserIdFromEmailAsync(string email) => (await GetUserByEmail(email)).id;
 
     public async Task CheckValidUsernameAsync(string username, long existingUserId = 0)
@@ -83,7 +84,7 @@ public class UserService : IUserService
         if(!Regex.IsMatch(username, config.UsernameRegex))
             throw new ArgumentException($"Username has invalid characters, must match regex: {config.UsernameRegex}");
 
-        var existing = await dbcon.ExecuteScalarAsync<int>($"select count(*) from {userTable} where username = @user and id <> @id", new { user = username, id = existingUserId });
+        var existing = await dbcon.ExecuteScalarAsync<int>($"select count(*) from {userTable} where {nameof(User.username)} = @user and {nameof(User.id)} <> @id", new { user = username, id = existingUserId });
 
         if(existing > 0)
             throw new ArgumentException($"Username '{username}' already taken!");
@@ -94,7 +95,7 @@ public class UserService : IUserService
         if(string.IsNullOrWhiteSpace(email))
             throw new ArgumentException("Must provide email to create new user!");
 
-        var existing = await dbcon.ExecuteScalarAsync<int>($"select count(*) from {userTable} where email = @user", new { user = email });
+        var existing = await dbcon.ExecuteScalarAsync<int>($"select count(*) from {userTable} where {nameof(User.email)} = @user", new { user = email });
 
         if(existing > 0)
             throw new ArgumentException($"Duplicate email in system: '{email}'");
@@ -132,6 +133,7 @@ public class UserService : IUserService
             email = email,
             createDate = DateTime.UtcNow,
             registrationKey = Guid.NewGuid().ToString(),
+            lastPasswordDate = DateTime.UtcNow,
             type = UserType.user
         };
 
@@ -170,16 +172,6 @@ public class UserService : IUserService
         return authTokenService.GetNewToken(uid, data, expireOverride ?? config.TokenExpireDefault);
     }
 
-    //public async Task<long> GetUserIdFromEmailAsync(string email)
-    //{
-    //    var user = await dbcon.ExecuteScalarAsync<long?>($"select id from {userTable} where email = @email", new { email = "email"}); //).FirstOrDefault();
-    //    
-    //    if(user == null)
-    //        throw new ArgumentException("Email not found!");
-    //    
-    //    return user.Value;
-    //}
-
     public async Task<string> GetRegistrationKeyAsync(long userId)
     {
         //Go get the registration key
@@ -197,14 +189,14 @@ public class UserService : IUserService
         if(realKey != registrationKey)       
             throw new RequestException($"Invalid registration key!");
         
-        var count = await dbcon.ExecuteAsync("update users set registrationKey = NULL where id = @id", new { id = userId });
+        var count = await dbcon.ExecuteAsync($"update {userTable} set {nameof(User.registrationKey)} = NULL where {nameof(User.id)} = @id", new { id = userId });
 
         if(count <= 0)
             throw new InvalidOperationException("Couldn't update user record to complete registration!");
 
         RegistrationLog.TryRemove(userId, out _);
 
-        var user = await GetUserById(userId); //dbcon.ExecuteScalarAsync<string>($"select username from {userTable} where id = @id", new { id = userId });
+        var user = await GetUserById(userId);
 
         await WriteAdminLog(new AdminLog()
         {
@@ -248,19 +240,46 @@ public class UserService : IUserService
         //So for registration, it's SPECIFICALLY null which makes you registered! This is IMPORTANT!
         if(user.registrationKey != null)
             throw new ForbiddenException("User not registered! Can't log in!");
+        
+        //BEFORE checking the password, we want to see if the password itself is expired. We throw a special exception if so
+        if(user.lastPasswordDate.Ticks == 0 || (config.PasswordExpire.Ticks > 0 && (user.lastPasswordDate + config.PasswordExpire) > DateTime.UtcNow))
+        {
+            await WriteAdminLog(new AdminLog()
+            {
+                type = AdminLogType.login_passwordexpired,
+                initiator = user.id,
+                target = user.id,
+                text = $"Aborted login attempt for '{user.username}'({user.id}): password expired"
+            });
+
+            throw new TokenException("Your password is expired, please send the recovery password to your email associated with this account");
+        }
 
         //Finally, compare hashes and if good, send out the token
         if(!hashService.VerifyText(password, Convert.FromBase64String(user.password), Convert.FromBase64String(user.salt)))
         {
-            await WriteAdminLog(new AdminLog()
+            if(!TemporaryPasswordMatches(user.id, password))
             {
-                type = AdminLogType.login_failure,
-                initiator = user.id,
-                target = user.id,
-                text = $"Failed login attempt for '{user.username}'({user.id}): incorrect password"
-            });
+                await WriteAdminLog(new AdminLog()
+                {
+                    type = AdminLogType.login_failure,
+                    initiator = user.id,
+                    target = user.id,
+                    text = $"Failed login attempt for '{user.username}'({user.id}): incorrect password"
+                });
 
-            throw new RequestException("Password incorrect!");
+                throw new RequestException("Password incorrect!");
+            }
+            else
+            {
+                await WriteAdminLog(new AdminLog()
+                {
+                    type = AdminLogType.login_temporary,
+                    initiator = user.id,
+                    target = user.id,
+                    text = $"User '{user.username}'({user.id}) logged in with a temporary password"
+                });
+            }
         }
         
         //Right now, I don't really have anything that needs to go in here
@@ -268,15 +287,15 @@ public class UserService : IUserService
     }
 
     public Task<string> LoginEmailAsync(string email, string password, TimeSpan? expireOverride = null) =>
-        LoginGeneric("email", email, password, expireOverride);
+        LoginGeneric(nameof(User.email), email, password, expireOverride);
 
     public Task<string> LoginUsernameAsync(string username, string password, TimeSpan? expireOverride = null) =>
-        LoginGeneric("username", username, password, expireOverride);
+        LoginGeneric(nameof(User.username), username, password, expireOverride);
 
     public async Task VerifyPasswordAsync(long userId, string password)
     {
         //The login will tell us all the exceptions we need to know
-        await LoginGeneric("id", userId, password, null);
+        await LoginGeneric(nameof(User.id), userId, password, null);
     }
 
     public void InvalidateAllTokens(long userId)
@@ -299,25 +318,23 @@ public class UserService : IUserService
 
     public async Task SetPrivateData(long userId, UserSetPrivateData data)
     {
-        var sets = new Dictionary<string,string>();
+        var sets = new Dictionary<string,object>();
 
         //Go find the data to add
         if(data.password != null)
         {
             CheckValidPassword(data.password);
             var pwdata = GenerateNewPasswordData(data.password);
-            sets.Add("salt", pwdata.Item1);
-            sets.Add("password", pwdata.Item2);
+            sets.Add(nameof(User.salt), pwdata.Item1);
+            sets.Add(nameof(User.password), pwdata.Item2);
+            sets.Add(nameof(User.lastPasswordDate), DateTime.UtcNow);
         }
 
         if(data.email != null)
         {
             await CheckValidEmailAsync(data.email);
-            sets.Add("email", data.email);
+            sets.Add(nameof(User.email), data.email);
         }
-
-        //if(data.hideList != null) //TODO: maybe move the parsing/generation code for hidelists out of the user data object
-        //    sets.Add("hidelist", User.HideListToString(data.hideList));
 
         //They didn't appear to add any data!
         if(sets.Count == 0)
@@ -330,7 +347,7 @@ public class UserService : IUserService
         
         //WARN: this technically lets you set private data for groups!
 
-        var count = await dbcon.ExecuteAsync($"update users set {string.Join(",", sets.Select(x => $"{x.Key} = @{x.Key}"))} where id = @id", parameters);
+        var count = await dbcon.ExecuteAsync($"update {userTable} set {string.Join(",", sets.Select(x => $"{x.Key} = @{x.Key}"))} where id = @id", parameters);
 
         if(count != 1)
             throw new ArgumentException($"Couldn't find user {userId}");
@@ -339,10 +356,39 @@ public class UserService : IUserService
     //Just yet another admin log writer... probably need to fix this
     public async Task<AdminLog> WriteAdminLog(AdminLog log)
     {
+        logger.LogDebug($"Admin log: {log.text}");
         log.id = 0;
         log.createDate = DateTime.UtcNow;
         //Probably not necessary to reassign
         log.id = await dbcon.InsertAsync(log);
         return log;
+    }
+
+    public TemporaryPassword RefreshPassword(TemporaryPassword temporaryPassword)
+    {
+        temporaryPassword.ExpireDate = DateTime.Now + config.TemporaryPasswordExpire;
+        temporaryPassword.Key = Guid.NewGuid().ToString();
+        return temporaryPassword;
+    }
+
+    public string GetTemporaryPassword(long uid)
+    {
+        var tempPassword = TempPasswordSet.GetOrAdd(uid, uid => RefreshPassword(new TemporaryPassword()));
+
+        //Regen the password if it expired
+        if(tempPassword.ExpireDate > DateTime.Now)
+            RefreshPassword(tempPassword);
+
+        return tempPassword.Key;
+    }
+
+    public bool TemporaryPasswordMatches(long uid, string key)
+    {
+        TemporaryPassword? temporaryPassword;
+
+        if(TempPasswordSet.TryGetValue(uid, out temporaryPassword))
+            return temporaryPassword?.Key == key;
+
+        return false;
     }
 }
