@@ -378,7 +378,7 @@ public class LiveEventQueue : ILiveEventQueue
             var optimalRoute = false;
 
             //Go ahead and set up the return events, we know we'll return SOMETHING this loop, since there's a non-zero amount
-            result.events = events.Select(x => mapper.Map<LiveEventView>(x)).ToList();
+            result.events = events.Select(x => mapper.Map<LiveEventView>(x)).OrderBy(x => x.id).ToList();
 
             //The "fast optimized" route. Hopefully, MOST live updates go through this.
             if (events.Count() == 1)

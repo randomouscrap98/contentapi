@@ -35,4 +35,4 @@ CREATE INDEX if not exists idx_content_literalType on content(literalType);
 CREATE INDEX if not exists idx_content_parentId on content(parentId);
 
 -- This makes sure everyone's password doesn't immediately expire
-UPDATE users SET lastPasswordDate = '2022-04-31T00:00:00.000Z';
+UPDATE users SET lastPasswordDate = '2022-04-30T00:00:00.000Z';
