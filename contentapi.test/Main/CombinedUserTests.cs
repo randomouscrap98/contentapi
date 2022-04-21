@@ -44,13 +44,13 @@ public class CombinedUserTests : ViewUnitTestBase //, IClassFixture<DbUnitTestSe
         //Login worked, now delete them
         var deleteResult = await writer.DeleteAsync<UserView>(userId, (int)UserVariations.Super + 1);
         //Login should no longer work for them
-        await Assert.ThrowsAnyAsync<ArgumentException>(async () =>
+        await Assert.ThrowsAnyAsync<NotFoundException>(async () =>
         {
             var loginToken = await service.LoginUsernameAsync("hello", Password);
             Assert.Empty(loginToken);
         });
         //Also, login shouldn't work for whatever NEW username is there
-        await Assert.ThrowsAnyAsync<ArgumentException>(async () =>
+        await Assert.ThrowsAnyAsync<NotFoundException>(async () =>
         {
             var loginToken = await service.LoginUsernameAsync(deleteResult.username, Password);
             Assert.Empty(loginToken);
@@ -91,7 +91,7 @@ public class CombinedUserTests : ViewUnitTestBase //, IClassFixture<DbUnitTestSe
         loginToken = await service.LoginUsernameAsync("ABRANDNEWNUG", Password);
         Assert.False(string.IsNullOrWhiteSpace(loginToken)); //login should still work even though they changed something about them
         //Login should no longer work for the old username
-        await Assert.ThrowsAnyAsync<ArgumentException>(async () =>
+        await Assert.ThrowsAnyAsync<NotFoundException>(async () =>
         {
             var loginToken = await service.LoginUsernameAsync("hello", Password);
             Assert.Empty(loginToken);

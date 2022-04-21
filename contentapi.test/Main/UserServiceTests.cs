@@ -86,7 +86,7 @@ public class UserServiceTests : UnitTestBase, IClassFixture<DbUnitTestBase>
     {
         var user = await service.CreateNewUser("hello", "short", "email@email.com");
 
-        await Assert.ThrowsAnyAsync<ArgumentException>(async () =>
+        await Assert.ThrowsAnyAsync<NotFoundException>(async () =>
         {
             var id = await service.GetUserIdFromEmailAsync("notemail@email.com");
         });
@@ -107,7 +107,7 @@ public class UserServiceTests : UnitTestBase, IClassFixture<DbUnitTestBase>
     {
         var userId = await service.CreateNewUser("hello", "short", "email@email.com");
 
-        await Assert.ThrowsAnyAsync<ArgumentException>(async () => {
+        await Assert.ThrowsAnyAsync<NotFoundException>(async () => {
             var token = await service.CompleteRegistration(99, service.RegistrationLog[userId]);
         });
     }

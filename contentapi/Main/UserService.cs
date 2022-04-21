@@ -60,7 +60,7 @@ public class UserService : IUserService
 
     public async Task<User> GetUserByWhatever(string whereClause, object parameters)
     {
-        var user = await dbcon.QuerySingleAsync<User?>($"select * from {userTable} {whereClause}", parameters);
+        var user = (await dbcon.QueryAsync<User>($"select * from {userTable} {whereClause}", parameters)).FirstOrDefault();
         if(user == null || user.deleted)
             throw new NotFoundException($"User not found");
         if(user.type != UserType.user)
