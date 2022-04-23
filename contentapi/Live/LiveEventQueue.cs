@@ -239,9 +239,10 @@ public class LiveEventQueue : ILiveEventQueue
             return new Dictionary<long, string>() { { recipient, "R" } }; 
     }
 
-    public SearchRequest GetAutoContentRequest(string query)
+    public SearchRequest GetAutoContentRequest(string query, string name = "")
     {
         return new SearchRequest {
+            name = name,
             type = RequestType.content.ToString(),
             fields = "id,name,parentId,createDate,createUserId,deleted,permissions,contentType,literalType,hash,values",
             query = query
@@ -288,6 +289,7 @@ public class LiveEventQueue : ILiveEventQueue
         {
             requests.requests.Add(basicRequest(RequestType.activity.ToString())); 
             requests.requests.Add(GetAutoContentRequest("id in @activity.contentId"));
+            requests.requests.Add(GetAutoContentRequest("id = @content.parentId", "parent"));
             requests.requests.Add(new SearchRequest()
             {
                 type = RequestType.user.ToString(),

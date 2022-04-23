@@ -18,7 +18,7 @@ public class FakeEventQueue : ILiveEventQueue
         return Task.FromResult(ReturnData);
     }
 
-    public SearchRequest GetAutoContentRequest(string query = "")
+    public SearchRequest GetAutoContentRequest(string query = "", string name = "")
     {
         throw new System.NotImplementedException();
     }
