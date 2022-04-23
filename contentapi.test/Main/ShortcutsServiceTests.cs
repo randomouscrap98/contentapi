@@ -6,9 +6,10 @@ using AutoMapper;
 using contentapi.Main;
 using contentapi.Search;
 using contentapi.Utilities;
-using contentapi.Views;
+using contentapi.data.Views;
 using Microsoft.Extensions.Logging;
 using Xunit;
+using contentapi.data;
 
 namespace contentapi.test;
 

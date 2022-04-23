@@ -11,7 +11,7 @@ if [ "$1" = "production" ]
 then
     echo "WARN: PUBLISHING PRODUCTION"
     phost=publisher@smilebasicsource.com   # The default server (development) (and user to connect)
-    pfolder="/var/www/contentapi"
+    pfolder="/var/www/${name}"
     port=22
 fi
 

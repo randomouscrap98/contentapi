@@ -1,4 +1,4 @@
-using contentapi.Views;
+using contentapi.data.Views;
 
 namespace contentapi.Main;
 

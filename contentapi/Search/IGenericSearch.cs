@@ -1,4 +1,4 @@
-using contentapi.Views;
+using contentapi.data;
 using QueryResultSet = System.Collections.Generic.IEnumerable<System.Collections.Generic.IDictionary<string, object>>;
 
 namespace contentapi.Search;

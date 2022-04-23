@@ -1,6 +1,4 @@
-using contentapi.Main;
-using contentapi.Search;
-using contentapi.Views;
+using contentapi.data.Views;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
 

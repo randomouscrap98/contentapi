@@ -1,8 +1,8 @@
-using System.Collections.Concurrent;
 using AutoMapper;
+using contentapi.data;
+using contentapi.data.Views;
 using contentapi.Search;
 using contentapi.Utilities;
-using contentapi.Views;
 using QueryResultSet = System.Collections.Generic.IEnumerable<System.Collections.Generic.IDictionary<string, object>>;
 
 namespace contentapi.Live;

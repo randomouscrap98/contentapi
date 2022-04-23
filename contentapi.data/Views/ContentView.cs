@@ -1,7 +1,6 @@
 using contentapi.Db;
-using contentapi.Search;
 
-namespace contentapi.Views;
+namespace contentapi.data.Views;
 
 [ResultFor(RequestType.content)]
 [SelectFrom("content AS main")]

@@ -3,11 +3,12 @@ using Amazon.S3;
 using Amazon.S3.Model;
 using contentapi.Search;
 using contentapi.Utilities;
-using contentapi.Views;
+using contentapi.data.Views;
 using Newtonsoft.Json;
 using SixLabors.ImageSharp;
 using SixLabors.ImageSharp.Formats;
 using SixLabors.ImageSharp.Processing;
+using contentapi.data;
 
 namespace contentapi.Main;
 

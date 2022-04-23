@@ -1,4 +1,5 @@
 using System.Reflection;
+using contentapi.data;
 using Dapper.Contrib.Extensions;
 
 namespace contentapi.Search;

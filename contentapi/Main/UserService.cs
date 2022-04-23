@@ -5,7 +5,7 @@ using contentapi.Db;
 using contentapi.Search;
 using contentapi.Security;
 using contentapi.Utilities;
-using contentapi.Views;
+using contentapi.data.Views;
 using Dapper;
 using Dapper.Contrib.Extensions;
 

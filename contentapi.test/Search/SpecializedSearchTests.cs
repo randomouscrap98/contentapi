@@ -5,7 +5,8 @@ using System.Threading.Tasks;
 using AutoMapper;
 using contentapi.Main;
 using contentapi.Search;
-using contentapi.Views;
+using contentapi.data;
+using contentapi.data.Views;
 using Xunit;
 
 namespace contentapi.test;

@@ -1,4 +1,6 @@
-namespace contentapi.Search;
+using System;
+
+namespace contentapi.data;
 
 /// <summary>
 /// This attribute describes which request type should produce results in the form of this class

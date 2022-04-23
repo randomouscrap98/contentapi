@@ -1,7 +1,6 @@
-using AutoMapper;
 using contentapi.Db;
 
-namespace contentapi.Live;
+namespace contentapi.data;
 
 public class LiveEventView
 {
@@ -13,12 +12,4 @@ public class LiveEventView
     public long refId {get;set;}
 
     public LiveEventView() { }
-}
-
-public class EventDataViewProfile : Profile
-{
-    public EventDataViewProfile()
-    {
-        CreateMap<LiveEvent, LiveEventView>().ReverseMap();
-    }
 }

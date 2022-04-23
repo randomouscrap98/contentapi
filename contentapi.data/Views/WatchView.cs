@@ -1,7 +1,5 @@
 
-using contentapi.Search;
-
-namespace contentapi.Views;
+namespace contentapi.data.Views;
 
 [ResultFor(RequestType.watch)]
 [SelectFrom("content_watches as main")]

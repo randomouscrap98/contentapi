@@ -1,10 +1,9 @@
-using System;
 using System.Threading.Tasks;
 using AutoMapper;
+using contentapi.data.Views;
 using contentapi.Main;
 using contentapi.Search;
 using contentapi.Utilities;
-using contentapi.Views;
 using Xunit;
 
 namespace contentapi.test;

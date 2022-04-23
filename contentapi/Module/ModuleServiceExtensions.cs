@@ -1,6 +1,7 @@
+using contentapi.data;
+using contentapi.data.Views;
 using contentapi.Search;
 using contentapi.Utilities;
-using contentapi.Views;
 
 namespace contentapi.Module;
 

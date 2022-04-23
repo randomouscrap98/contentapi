@@ -6,7 +6,8 @@ using System.Threading.Tasks;
 using contentapi.Db;
 using contentapi.Search;
 using contentapi.Utilities;
-using contentapi.Views;
+using contentapi.data;
+using contentapi.data.Views;
 using Xunit;
 
 namespace contentapi.test;

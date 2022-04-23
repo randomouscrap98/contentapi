@@ -1,4 +1,7 @@
-namespace contentapi.Search;
+using System.Collections.Generic;
+using System.Linq;
+
+namespace contentapi.data;
 
 /// <summary>
 /// A single search request, for retrieving data from the database (sometimes tailored)

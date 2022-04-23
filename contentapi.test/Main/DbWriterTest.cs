@@ -9,7 +9,8 @@ using contentapi.Main;
 using contentapi.Search;
 using contentapi.test.Mock;
 using contentapi.Utilities;
-using contentapi.Views;
+using contentapi.data;
+using contentapi.data.Views;
 using Microsoft.Extensions.Logging;
 using Xunit;
 
@@ -50,7 +51,7 @@ public class DbWriterTest : ViewUnitTestBase
     protected async Task AssertHistoryMatchesAsync(ContentView content, UserAction expected, string? message = null)
     {
         Assert.True(content.lastRevisionId > 0, "Content didn't have lastRevisionId!"); //ALL content should have a revision id
-        var history = await searcher.GetById<ActivityView>(RequestType.activity, content.lastRevisionId, true);
+        var history = await searcher.GetById<ActivityView>(content.lastRevisionId, true);
         Assert.Equal(history.contentId, content.id);
         Assert.Equal(expected, history.action);
 

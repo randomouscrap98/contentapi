@@ -1,5 +1,6 @@
 using contentapi.Search;
-using contentapi.Views;
+using contentapi.data.Views;
+using contentapi.data;
 
 namespace contentapi.Live;
 

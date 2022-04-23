@@ -1,8 +1,6 @@
-
 using contentapi.Db;
-using contentapi.Search;
 
-namespace contentapi.Views;
+namespace contentapi.data.Views;
 
 [ResultFor(RequestType.adminlog)]
 [SelectFrom("admin_log")]

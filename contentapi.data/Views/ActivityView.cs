@@ -1,7 +1,7 @@
+using System;
 using contentapi.Db;
-using contentapi.Search;
 
-namespace contentapi.Views;
+namespace contentapi.data.Views;
 
 [ResultFor(RequestType.activity)]
 [SelectFrom("content_history")]

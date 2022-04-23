@@ -1,4 +1,6 @@
 
+using contentapi.data;
+
 namespace contentapi.Search;
 
 public class ViewTypeInfo

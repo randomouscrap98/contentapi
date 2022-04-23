@@ -1,4 +1,6 @@
-namespace contentapi.Search;
+using System.Collections.Generic;
+
+namespace contentapi.data;
 
 public class AboutSearch
 {

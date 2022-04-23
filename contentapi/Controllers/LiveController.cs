@@ -1,14 +1,13 @@
 using System.Net.WebSockets;
 using System.Threading.Tasks.Dataflow;
-using System.Linq;
 using contentapi.Live;
-using contentapi.Search;
 using contentapi.Utilities;
-using contentapi.Views;
+using contentapi.data.Views;
 using Microsoft.AspNetCore.Mvc;
 using Newtonsoft.Json;
 using System.Collections.Concurrent;
 using Newtonsoft.Json.Linq;
+using contentapi.data;
 
 namespace contentapi.Controllers;
 

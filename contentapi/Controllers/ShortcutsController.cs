@@ -1,7 +1,7 @@
 using contentapi.Db;
 using contentapi.Main;
 using contentapi.Utilities;
-using contentapi.Views;
+using contentapi.data.Views;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
 

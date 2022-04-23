@@ -1,10 +1,10 @@
-using contentapi.Main;
 using contentapi.Module;
 using contentapi.Search;
 using contentapi.Utilities;
-using contentapi.Views;
+using contentapi.data.Views;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
+using contentapi.data;
 
 namespace contentapi.Controllers;
 

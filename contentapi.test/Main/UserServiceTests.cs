@@ -1,11 +1,11 @@
 using System;
 using System.Threading.Tasks;
+using contentapi.data.Views;
 using contentapi.Db;
 using contentapi.Main;
 using contentapi.Search;
 using contentapi.Security;
 using contentapi.Utilities;
-using contentapi.Views;
 using Microsoft.Extensions.Logging;
 using Xunit;
 

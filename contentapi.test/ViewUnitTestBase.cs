@@ -3,8 +3,9 @@ using System;
 using System.Collections.Generic;
 using System.Data;
 using System.Linq;
+using contentapi.data;
 using contentapi.Db;
-using contentapi.Views;
+using contentapi.data.Views;
 using Xunit;
 
 namespace contentapi.test;

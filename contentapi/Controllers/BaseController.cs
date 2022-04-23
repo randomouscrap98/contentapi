@@ -1,11 +1,11 @@
-using System.Runtime.ExceptionServices;
 using AutoMapper;
 using contentapi.Main;
 using contentapi.Search;
 using contentapi.Security;
 using contentapi.Utilities;
-using contentapi.Views;
+using contentapi.data.Views;
 using Microsoft.AspNetCore.Mvc;
+using contentapi.data;
 
 namespace contentapi.Controllers;
 

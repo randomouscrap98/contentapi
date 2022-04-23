@@ -2,9 +2,10 @@ using System.Collections.Concurrent;
 using System.Text.RegularExpressions;
 using contentapi.Search;
 using contentapi.Utilities;
-using contentapi.Views;
+using contentapi.data.Views;
 using Microsoft.Data.Sqlite;
 using MoonSharp.Interpreter;
+using contentapi.data;
 
 namespace contentapi.Module;
 

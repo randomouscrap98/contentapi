@@ -1,6 +1,5 @@
-using contentapi.Search;
 
-namespace contentapi.Views;
+namespace contentapi.data.Views;
 
 [ResultFor(RequestType.message_aggregate)]
 [SelectFrom("messages")]

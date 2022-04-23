@@ -1,7 +1,7 @@
 using System.Runtime.ExceptionServices;
+using contentapi.data.Views;
 using contentapi.Main;
 using contentapi.Utilities;
-using contentapi.Views;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
 

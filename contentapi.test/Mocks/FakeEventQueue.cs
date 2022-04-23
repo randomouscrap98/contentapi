@@ -3,7 +3,8 @@ using System.Threading;
 using System.Threading.Tasks;
 using contentapi.Live;
 using contentapi.Search;
-using contentapi.Views;
+using contentapi.data.Views;
+using contentapi.data;
 
 namespace contentapi.test.Mock;
 

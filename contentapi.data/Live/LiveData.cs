@@ -1,7 +1,6 @@
 using QueryResultSet = System.Collections.Generic.IEnumerable<System.Collections.Generic.IDictionary<string, object>>;
 
-namespace contentapi.Live;
-
+namespace contentapi.data;
 
 public class LiveData
 {

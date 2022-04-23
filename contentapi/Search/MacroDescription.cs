@@ -1,3 +1,5 @@
+using contentapi.data;
+
 namespace contentapi.Search;
 
 public enum MacroArgumentType { field, value, fieldImmediate }

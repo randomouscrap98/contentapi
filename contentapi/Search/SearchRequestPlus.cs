@@ -1,5 +1,5 @@
 using AutoMapper;
-using contentapi.Utilities;
+using contentapi.data;
 
 namespace contentapi.Search;
 

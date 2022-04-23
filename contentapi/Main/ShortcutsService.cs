@@ -1,7 +1,8 @@
 using AutoMapper;
 using contentapi.Search;
 using contentapi.Utilities;
-using contentapi.Views;
+using contentapi.data.Views;
+using contentapi.data;
 
 namespace contentapi.Main;
 

@@ -1,8 +1,9 @@
 using contentapi.Main;
 using contentapi.Utilities;
-using contentapi.Views;
+using contentapi.data.Views;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
+using contentapi.data;
 
 namespace contentapi.Controllers;
 
@@ -87,7 +88,7 @@ public class UserController : BaseController
         return MatchExceptions(() =>
         {
             var uid = GetUserIdStrict();
-            return services.searcher.GetById<UserView>(Search.RequestType.user, uid, true);
+            return services.searcher.GetById<UserView>(RequestType.user, uid, true);
         });
     }
 
@@ -109,7 +110,7 @@ public class UserController : BaseController
                 throw new ForbiddenException("We're sorry, account creation is disabled at this time");
 
             var userId = await userService.CreateNewUser(credentials.username, credentials.password, credentials.email);
-            var result = await services.searcher.GetById<UserView>(Search.RequestType.user, userId);
+            var result = await services.searcher.GetById<UserView>(RequestType.user, userId);
 
             if(config.ConfirmationType == InstantConfirmation)
             {
@@ -140,7 +141,7 @@ public class UserController : BaseController
             {
                 var emails = config.ConfirmationType.Substring(RestrictedConfirmation.Length).Split(",", StringSplitOptions.RemoveEmptyEntries).Select(x => x.Trim());
 
-                var user = await services.searcher.GetById<UserView>(Search.RequestType.user, userId);
+                var user = await services.searcher.GetById<UserView>(RequestType.user, userId);
 
                 var message = new EmailMessage();
                 message.Recipients = emails.ToList();

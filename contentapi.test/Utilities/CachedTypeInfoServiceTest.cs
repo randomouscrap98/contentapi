@@ -2,8 +2,9 @@ using System;
 using System.Collections.Generic;
 using System.Linq;
 using contentapi.Search;
-using contentapi.Views;
+using contentapi.data.Views;
 using Xunit;
+using contentapi.data;
 
 namespace contentapi.test;
 

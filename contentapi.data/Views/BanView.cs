@@ -1,11 +1,11 @@
-using contentapi.Db;
-using contentapi.Search;
 
-namespace contentapi.Views;
+using contentapi.Db;
+
+namespace contentapi.data.Views;
 
 [ResultFor(RequestType.ban)]
 [SelectFrom("bans")]
-[WriteAs(typeof(Db.Ban))]
+[WriteAs(typeof(Ban))]
 public class BanView : IIdView
 {
     [FieldSelect]

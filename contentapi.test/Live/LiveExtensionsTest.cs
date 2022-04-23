@@ -2,7 +2,7 @@ using System.Linq;
 using System.Threading.Tasks;
 using contentapi.Live;
 using contentapi.Search;
-using contentapi.Views;
+using contentapi.data.Views;
 using Xunit;
 
 namespace contentapi.test;

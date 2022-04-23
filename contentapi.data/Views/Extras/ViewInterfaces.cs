@@ -1,4 +1,4 @@
-namespace contentapi.Views;
+namespace contentapi.data.Views;
 
 public interface IIdView
 {
