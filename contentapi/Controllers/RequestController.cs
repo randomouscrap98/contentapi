@@ -1,5 +1,6 @@
 using System.Diagnostics;
 using AutoMapper;
+using contentapi.data;
 using contentapi.Search;
 using Microsoft.AspNetCore.Mvc;
 

@@ -1,4 +1,5 @@
 using System.Reflection;
+using contentapi.data;
 
 namespace contentapi.Search;
 

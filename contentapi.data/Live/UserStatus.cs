@@ -1,4 +1,4 @@
-namespace contentapi.Live;
+namespace contentapi.data;
 
 public class UserStatus
 {
