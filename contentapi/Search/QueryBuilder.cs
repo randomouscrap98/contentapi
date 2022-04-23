@@ -60,11 +60,11 @@ public class QueryBuilder : IQueryBuilder
         this.parser = parser;
         this.permissionService = permissionService;
 
-        var assembly = System.Reflection.Assembly.GetAssembly(GetType()) ?? throw new InvalidOperationException("NO ASSEMBLY FOR QUERYBUILDER???");
+        var assembly = System.Reflection.Assembly.GetAssembly(typeof(contentapi.data.Views.UserView)) ?? throw new InvalidOperationException("NO ASSEMBLY FOR QUERYBUILDER???");
 
         //Pull the view types out, compute the STANDARD mapping of requests to views. Requests that don't have a standard mapping have something custom and don't go through
         //any of the standard codepaths (they do their own thing entirely)
-        ViewTypes = assembly.GetTypes().Where(t => String.Equals(t.Namespace, $"{nameof(contentapi)}.{nameof(contentapi.data.Views)}", StringComparison.Ordinal)).ToList();
+        ViewTypes = assembly.GetTypes().Where(t => String.Equals(t.Namespace, $"{nameof(contentapi)}.{nameof(contentapi.data)}.{nameof(contentapi.data.Views)}", StringComparison.Ordinal)).ToList();
         var typeInfos = ViewTypes.Select(x => typeInfoService.GetTypeInfo(x));
         StandardViewRequests = typeInfos.Where(x => x.requestType.HasValue).ToDictionary(
             k => k.requestType ?? throw new InvalidOperationException("How did the HasValue check fail on StandardViewRequest build??"), v => v.type);

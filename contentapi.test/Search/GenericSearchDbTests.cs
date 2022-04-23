@@ -37,7 +37,7 @@ public class GenericSearchDbTests : ViewUnitTestBase //, IClassFixture<DbUnitTes
     }
 
     [Fact]
-    public void GenericSearch_Search_AllFields()
+    public async Task GenericSearch_Search_AllFields()
     {
         foreach(var type in Enum.GetNames<RequestType>())
         {
@@ -49,8 +49,8 @@ public class GenericSearchDbTests : ViewUnitTestBase //, IClassFixture<DbUnitTes
                 fields = "*", //THIS is what we're testing
             });
 
-            var result = service.SearchUnrestricted(search).Result.objects["testStar"];
-            Assert.NotEmpty(result);
+            var result = await service.SearchUnrestricted(search);
+            Assert.NotEmpty(result.objects["testStar"]);
 
             //Here, we're just making sure that "*" didn't break anything. We assume
             //that "*" is implemented generically, and thus we can do some other test
