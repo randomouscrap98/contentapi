@@ -26,6 +26,7 @@ DefaultSetup.AddConfigBinding<FileServiceConfig>(builder.Services, builder.Confi
 DefaultSetup.AddConfigBinding<EmailConfig>(builder.Services, builder.Configuration);
 DefaultSetup.AddConfigBinding<RateLimitConfig>(builder.Services, builder.Configuration);
 DefaultSetup.AddConfigBinding<StatusControllerConfig>(builder.Services, builder.Configuration);
+DefaultSetup.AddConfigBinding<LiveControllerConfig>(builder.Services, builder.Configuration);
 builder.Services.AddTransient<BaseControllerServices>();
 
 // Set up configurable services, as in stuff that users might want to turn off/etc
@@ -38,7 +39,7 @@ else if(desiredEmailer == "default")
 else
     throw new InvalidOperationException($"Unknown emailer type {desiredEmailer}");
 
-string secretKey = builder.Configuration.GetValue<string>("SecretKey"); //"pleasechangethis";
+string secretKey = builder.Configuration.GetValue<string>("SecretKey"); 
 var validationParameters = DefaultSetup.AddSecurity(builder.Services, secretKey);
 
 //The default setup doesn't set up our database provider though

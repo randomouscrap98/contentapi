@@ -12,12 +12,18 @@ using Newtonsoft.Json.Linq;
 
 namespace contentapi.Controllers;
 
+public class LiveControllerConfig 
+{
+    public string AnonymousToken {get;set;} = ""; //With an empty string, no anonymous token is set
+}
+
 public class LiveController : BaseController
 {
     protected ILiveEventQueue eventQueue;
     protected IUserStatusTracker userStatuses;
     protected IPermissionService permissionService;
     protected IHostApplicationLifetime appLifetime;
+    protected LiveControllerConfig config;
     private static int nextId = 0;
     protected int trackerId = Interlocked.Increment(ref nextId);
 
@@ -30,18 +36,22 @@ public class LiveController : BaseController
     }
 
     public LiveController(BaseControllerServices services, ILiveEventQueue eventQueue, IUserStatusTracker userStatuses,
-        IPermissionService permissionService, IHostApplicationLifetime appLifetime) : base(services) 
+        IPermissionService permissionService, IHostApplicationLifetime appLifetime, LiveControllerConfig config) : base(services) 
     { 
         this.eventQueue = eventQueue;
         this.userStatuses = userStatuses;
         this.permissionService = permissionService;
         this.appLifetime = appLifetime;
+        this.config = config;
     }
 
     protected long ValidateToken(string token)
     {
         try
         {
+            //Simple validation, we got the anonymous token
+            if(!string.IsNullOrWhiteSpace(config.AnonymousToken) && token == config.AnonymousToken)
+                return 0;
             var claims = services.authService.ValidateToken(token) ?? throw new TokenException("Couldn't validate token!");
             var userId = services.authService.GetUserId(claims.Claims) ?? throw new TokenException("No valid userID assigned to token! Is it expired?");
             return userId;
@@ -63,6 +73,8 @@ public class LiveController : BaseController
 
     protected async Task AddUserStatusAsync(long userId, long contentId, string status)
     {
+        if(userId <= 0)
+            throw new InvalidOperationException($"Cannot set user status for user ID {userId}");
         await userStatuses.AddStatusAsync(userId, contentId, status, trackerId);
         await AlertUserlistUpdate(contentId);
     }
@@ -176,7 +188,7 @@ public class LiveController : BaseController
     protected async Task ListenLoop(CancellationToken cancelToken, int lastId, BufferBlock<object> sendQueue, string token)
     {
         var userId = ValidateToken(token);
-        var user = await services.searcher.GetById<UserView>(RequestType.user, userId, true);
+        var user = userId == 0 ? new UserView() { id = userId, super = false } : await services.searcher.GetById<UserView>(RequestType.user, userId, true);
 
         while(!cancelToken.IsCancellationRequested)
         {
