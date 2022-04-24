@@ -1,4 +1,4 @@
-namespace contentapi.Utilities;
+namespace contentapi.data;
 
 public class ForbiddenException : Exception
 {

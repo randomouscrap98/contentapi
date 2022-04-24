@@ -80,8 +80,8 @@ function WebsocketRequest(type, data, id)
 
 //Due to safety, the defaults are generated in the auto websocket function call. This is
 //JUST a container
-function WebsocketAutoConfig(liveHandler, userlistUpdateHandler, errorEventListener, reconnectIntervalGenerator,
-    openListener, closeListener)
+function WebsocketAutoConfig(liveHandler, userlistUpdateHandler, errorEventListener, selfBroadcastHandler,
+    reconnectIntervalGenerator, openListener, closeListener)
 {
     // The handler for live updates, meaning realtime comments, content update, etc.
     // Single parameter "response" represents all the data parsed from the websocket response
@@ -103,6 +103,11 @@ function WebsocketAutoConfig(liveHandler, userlistUpdateHandler, errorEventListe
     // Again you don't need this, and I don't give you access to the real onclose because it's very
     // particularly configured, but it's useful if you want to show a connection state
     this.closeListener = closeListener;
+
+    // The selfbroadcast is a special type: clients (any of them) can send arbitrary data out to
+    // all clients that are connected with the same user ID. They come in through this event, if
+    // you want to handle those. Some clients use these, you probably don't have to handle it if you don't want
+    this.selfBroadcastHandler = selfBroadcastHandler;
 }
 
 // -- API reference objects --
@@ -705,6 +710,8 @@ Api.prototype.AutoWebsocket = function(autoConfig, oldWs)
         (x => console.warn("Received userlist update from websocket but no handler set! Response:", x));
     autoConfig.errorEvent = autoConfig.errorEventListener || 
         ((m,r,nws,close) => console.warn(`No error handler set for websocket, got error: ${m}, closing: ${close}, response:`, r));
+    autoConfig.selfBroadcastHandler = autoConfig.selfBroadcastHandler ||
+        (x => console.warn("Received selfbroadcast event but no handler set! (broadcasts are only used by clients to communicate with each other). Response: ", x));
     autoConfig.reconnectIntervalGenerator = autoConfig.reconnectIntervalGenerator || 
         (x => Math.min(30000, x * 500));
     autoConfig.openListener = autoConfig.openListener || 
@@ -801,6 +808,10 @@ Api.prototype.AutoWebsocket = function(autoConfig, oldWs)
             else if(response.type == "userlistupdate")
             {
                 ws.autoConfig.userlistUpdateHandler(response);
+            }
+            else if (response.type == "selfbroadcast")
+            {
+                ws.autoConfig.selfBroadcastHandler(response);
             }
             else if(response.type === "lastId")
             {

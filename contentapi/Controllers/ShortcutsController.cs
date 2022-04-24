@@ -4,6 +4,7 @@ using contentapi.Utilities;
 using contentapi.data.Views;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
+using contentapi.data;
 
 namespace contentapi.Controllers;
 

@@ -1,5 +1,6 @@
 using System;
 using System.Threading.Tasks;
+using contentapi.data;
 using contentapi.data.Views;
 using contentapi.Db;
 using contentapi.Main;

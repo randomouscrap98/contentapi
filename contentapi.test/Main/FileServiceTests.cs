@@ -3,6 +3,7 @@ using System.IO;
 using System.Linq;
 using System.Threading.Tasks;
 using AutoMapper;
+using contentapi.data;
 using contentapi.Main;
 using contentapi.Search;
 using contentapi.test.Mock;

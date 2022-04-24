@@ -22,13 +22,14 @@ public class UserStatusTracker : IUserStatusTracker
     /// <param name="status"></param>
     /// <param name="trackerId"></param>
     /// <returns></returns>
-    public async Task<int> AddStatusAsync(long userId, long contentId, string? status, int trackerId)
+    public async Task<Tuple<int, bool>> AddStatusAsync(long userId, long contentId, string? status, int trackerId)
     {
         var statusCollection = statuses.GetOrAdd(contentId, x => new UserStatusCollection());
 
         await statusCollection.CollectionLock.WaitAsync();
 
         int removeCount = 0;
+        bool added = false;
 
         try
         {
@@ -38,6 +39,8 @@ public class UserStatusTracker : IUserStatusTracker
             //This allows us to remove statuses by setting them to null or otherwise.
             if(!string.IsNullOrWhiteSpace(status))
             {
+                added = true;
+
                 //Always add to end
                 statusCollection.Statuses.Add(new UserStatus()
                 {
@@ -52,7 +55,7 @@ public class UserStatusTracker : IUserStatusTracker
             statusCollection.CollectionLock.Release();
         }
 
-        return removeCount;
+        return Tuple.Create(removeCount, added);
     }
 
     /// <summary>

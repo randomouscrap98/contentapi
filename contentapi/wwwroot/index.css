@@ -26,6 +26,7 @@ img {
 .success { color: green; }
 .systemmsg { color: cornflowerblue; }
 .successmsg { color: darkseagreen; }
+.broadcastmsg { color: palevioletred; }
 .userlistmsg { color: coral; }
 .username::after { content: ":"; }
 

@@ -635,6 +635,9 @@ function websocket_onload(template, state)
                     console.debug("New websocket was created, tracking");
                     ws = newWs;
                 }
+            },
+            broadcast => {
+                wslog("Broadcast from client: \n" + JSON.stringify(broadcast.data, null, 2), "broadcastmsg")
             }
         ));
 

@@ -74,8 +74,12 @@ public class LiveController : BaseController
     {
         if(userId <= 0)
             throw new InvalidOperationException($"Cannot set user status for user ID {userId}");
-        await userStatuses.AddStatusAsync(userId, contentId, status, trackerId);
-        await AlertUserlistUpdate(contentId);
+        var addAbout = await userStatuses.AddStatusAsync(userId, contentId, status, trackerId);
+
+        //Alert the userlist if it's specifically not such that nothing was removed and nothing was added.
+        //If nothing was removed AND nothing was added, that's one of the few instances where we can be sure nothing changed
+        if(!(addAbout.Item1 == 0 && !addAbout.Item2))
+            await AlertUserlistUpdate(contentId);
     }
 
     protected async Task RemoveStatusesByTrackerAsync()
@@ -84,6 +88,21 @@ public class LiveController : BaseController
 
         foreach(var contentId in removals.Keys)
             await AlertUserlistUpdate(contentId);
+    }
+
+    protected async Task BroadcastToSelfClients(long userId, WebSocketResponse response)
+    {
+        foreach(var key in currentListeners.Keys.ToList())
+        {
+            WebsocketListenerData? listener;
+            if(currentListeners.TryGetValue(key, out listener))
+            {
+                if(listener.userId != userId)
+                    continue;
+
+                await listener.sendQueue.SendAsync(response);
+            }
+        }
     }
 
     //This is VERY inefficient, like oh my goodness, but until it becomes a problem, this is how it'll be.
@@ -130,6 +149,15 @@ public class LiveController : BaseController
                 response.data = new {
                     serverTime = DateTime.UtcNow
                 };
+            }
+            else if(receiveItem.type == "selfbroadcast")
+            {
+                response.data = receiveItem.data;
+
+                await BroadcastToSelfClients(userId, response);
+
+                //This skips the sending of the response, because in a broadcast, you'll receive it anyway
+                continue;
             }
             else if(receiveItem.type == "userlist")
             {
@@ -295,7 +323,7 @@ public class LiveController : BaseController
                 services.logger.LogError($"Token exception in websocket: {ex}");
                 sendQueue.Post(new WebSocketResponse() { type = "badtoken", error = ex.Message });
             }
-            catch(Utilities.ClosedException ex)
+            catch(data.ClosedException ex)
             {
                 services.logger.LogDebug($"User {userId} closed websocket on their end, this is normal: {ex.Message}");
             }

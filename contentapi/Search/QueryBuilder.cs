@@ -68,6 +68,9 @@ public class QueryBuilder : IQueryBuilder
         var typeInfos = ViewTypes.Select(x => typeInfoService.GetTypeInfo(x));
         StandardViewRequests = typeInfos.Where(x => x.requestType.HasValue).ToDictionary(
             k => k.requestType ?? throw new InvalidOperationException("How did the HasValue check fail on StandardViewRequest build??"), v => v.type);
+        
+        if(StandardViewRequests.Count == 0)
+            throw new InvalidOperationException("NO VIEWS FOUND FOR CACHING IN QUERY BUILDER!! Check the namespace!");
     }
 
 

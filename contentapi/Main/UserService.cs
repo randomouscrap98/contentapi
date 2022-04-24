@@ -8,6 +8,7 @@ using contentapi.Utilities;
 using contentapi.data.Views;
 using Dapper;
 using Dapper.Contrib.Extensions;
+using contentapi.data;
 
 namespace contentapi.Main;
 
