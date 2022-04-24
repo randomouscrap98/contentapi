@@ -289,7 +289,7 @@ public class LiveEventQueue : ILiveEventQueue
         {
             requests.requests.Add(basicRequest(RequestType.activity.ToString())); 
             requests.requests.Add(GetAutoContentRequest("id in @activity.contentId"));
-            requests.requests.Add(GetAutoContentRequest("id = @content.parentId", "parent"));
+            requests.requests.Add(GetAutoContentRequest("id in @content.parentId", "parent"));
             requests.requests.Add(new SearchRequest()
             {
                 type = RequestType.user.ToString(),

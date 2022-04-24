@@ -114,20 +114,28 @@ public class EventQueueTest : ViewUnitTestBase //, IClassFixture<DbUnitTestSearc
 
     //First, without actually doing anything with the event part, ensure the core of the service works. Does
     //building a request for events create something we expect?
-    [Fact]
-    public async Task GetSearchRequestForEvents_Activity()
+    [Theory] //A regression made me need to test this with other content
+    [InlineData(1, 1)] //This one has no parent
+    [InlineData(5, 1)] //This one SHOULD have a parent
+    [InlineData(1, 2)] //This one has no parent
+    [InlineData(5, 2)] //This one SHOULD have a parent
+    public async Task GetSearchRequestForEvents_Activity(long contentId, int skip)
     {
-        var content = await searcher.GetById<ContentView>(RequestType.content, 1);
-        var activities = await GetActivityForContentAsync(1);
+        var content = await searcher.GetById<ContentView>(RequestType.content, contentId);
+        var activities = await GetActivityForContentAsync(contentId);
         Assert.True(activities.Count > 1); //It should be greater than 1 for content 1, because of inverse activity amounts
 
-        foreach(var a in activities)
+        for(var i = 0; i < activities.Count; i += skip)
         {
+            var activitySlice = activities.Skip(i).Take(skip);
+            var events = activitySlice.Select(x => new LiveEvent(x.userId, Db.UserAction.create, EventType.activity_event, x.id));
+
             //The event user shouldn't matter but just in case...
-            var request = queue.GetSearchRequestsForEvents(new[] { new LiveEvent(a.userId, Db.UserAction.create, EventType.activity_event, a.id) });
+            var request = queue.GetSearchRequestsForEvents(events); //new[] { new LiveEvent(a.userId, Db.UserAction.create, EventType.activity_event, a.id) });
             var result = await searcher.SearchUnrestricted(request);
 
-            AssertSimpleActivityListenResult(result.objects, content, a);
+            foreach(var a in activitySlice)
+                AssertSimpleActivityListenResult(result.objects, content, a);
         }
     }
 
