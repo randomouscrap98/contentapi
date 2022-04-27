@@ -244,7 +244,7 @@ public class LiveEventQueue : ILiveEventQueue
         return new SearchRequest {
             name = name,
             type = RequestType.content.ToString(),
-            fields = "id,name,parentId,createDate,createUserId,deleted,permissions,contentType,literalType,hash,values",
+            fields = "id,name,parentId,lastRevisionId,createDate,createUserId,deleted,permissions,contentType,literalType,hash,values",
             query = query
         };
     }

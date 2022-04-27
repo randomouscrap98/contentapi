@@ -854,6 +854,8 @@ function page_editor_onload(template, state)
     template.querySelector("#page-editor-contenttype").value = state.contentType || 1;
     template.querySelector("#page-editor-name").value = state.name || "";
     template.querySelector("#page-editor-text").value = state.text || "";
+    template.querySelector("#page-editor-description").value = state.description || "";
+    template.querySelector("#page-editor-hash").value = state.hash || "";
     template.querySelector("#page-editor-type").value = state.literalType || "";
 
     if(state.keywords)
@@ -993,6 +995,8 @@ function t_page_editor_submit(form)
         text : form.querySelector("#page-editor-text").value,
         keywords : form.querySelector("#page-editor-keywords").value.split(" "),
         permissions : QuickInputToObject(form.querySelector("#page-editor-permissions").value),
+        hash: form.querySelector("#page-editor-hash").value,
+        description: form.querySelector("#page-editor-description").value,
         values : QuickInputToObject(form.querySelector("#page-editor-values").value)
     };
 

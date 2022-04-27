@@ -88,7 +88,7 @@ public class DbUnitTestBase : UnitTestBase, IDisposable
             if(allQueries.Count == 0)
             {
                 var files = System.IO.Directory.GetFiles(DbMigrationFolder, DbMigrationBlob);
-                allQueries = files.Select(x => System.IO.File.ReadAllText(x)).ToList();
+                allQueries = files.OrderBy(x => x).Select(x => System.IO.File.ReadAllText(x)).ToList();
             }
 
             return allQueries;
