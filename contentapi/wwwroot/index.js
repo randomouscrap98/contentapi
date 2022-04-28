@@ -294,6 +294,7 @@ function page_onload(template, state)
         else
         {
             var page = d.result.objects.content[0];
+            var parent = d.result.objects.parent[0];
             var originalPage = JSON.parse(JSON.stringify(page));
             title.textContent = page.name;
             content.appendChild(Parse.parseLang(page.text, page.values.markupLang || "plaintext"));
@@ -316,6 +317,11 @@ function page_onload(template, state)
                 filepagelink.href = filelink;
                 template.querySelector("#filepage-image").src = filelink;
             }
+
+            var parentLink = template.querySelector("#page-parent-link");
+            parentLink.removeAttribute("hidden");
+            parentLink.href = "?t=page&pid=" + page.parentId;
+            parentLink.textContent = "Parent: " + (parent ? parent.name : page.parentId == 0 ? "Root" : "???");
 
             //Display watch/unwatch based on if they're watching
             if(d.result.objects.watch.length)

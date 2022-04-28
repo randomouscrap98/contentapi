@@ -112,8 +112,11 @@
         </div>
         <div id="t_page" data-onload="page_onload">
             <h2 id="page-title"></h2>
-            <a href="#" id="page-chat-link" hidden="">Go to chat for this page</a>
-            <a hidden="" id="filepage-link"><img id="filepage-image"></a>
+            <div id="page-links" class="allblock">
+                <a id="page-parent-link" hidden =""></a>
+                <a href="#" id="page-chat-link" hidden="">Go to chat for this page</a>
+                <a hidden="" id="filepage-link"><img id="filepage-image"></a>
+            </div>
             <div id="page-content" title="This is lightly-rendered markup" class="content"></div>
             <table class="describe" id="page-table"></table>
             <div id="page-interactions" data-pageid="">

@@ -72,3 +72,7 @@ img {
     overflow-y: scroll;
     white-space: pre-wrap;
 }
+
+.allblock > *:not([hidden]) {
+    display: block;
+}
