@@ -297,7 +297,8 @@ function page_onload(template, state)
             var parent = d.result.objects.parent[0];
             var originalPage = JSON.parse(JSON.stringify(page));
             title.textContent = page.name;
-            content.appendChild(Parse.parseLang(page.text, page.values.markupLang || "plaintext"));
+            Markup.convert_lang(page.text, page.values.markupLang || "plaintext", content);
+            //content.appendChild(Parse.parseLang(page.text, page.values.markupLang || "plaintext"));
             delete page.name;
             delete page.text;
             page.votes = JSON.stringify(page.votes);

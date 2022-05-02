@@ -1,0 +1,203 @@
+L + ratio {}
+
+.Markup {
+	/* control text rendering */
+	word-break: break-word;
+	white-space: pre-wrap;
+	-moz-tab-size: 3.5; tab-size: 3.5;
+	
+	--bg: var(--mainbg, white);
+	color: var(--maincolor, black);
+	--image-max-height: 10vh;
+}
+
+/*** everything ***/
+.Markup * {
+	/* (override the defaults) */
+	font-family: inherit;
+	word-break: inherit;
+	white-space: inherit;
+	
+	margin: 0;
+}
+
+/************/
+/** Embeds **/
+/************/
+.Markup img, .Markup video, .Markup audio {
+	display: block;
+}
+.Markup img, .Markup video, .Markup youtube-embed figure {
+	border: 1px solid gray;
+	/* this feature is widely supported, but wasn't standard until recently */
+	max-width: 100%; /* fallback */
+	max-width: -webkit-fill-available;
+	max-width: -moz-available;
+	max-width: stretch; /* no browser supports this value yet */
+	
+	max-height: var(--image-max-height);
+}
+.Markup img, .Markup video {
+	/* these variables are set in element.style if supplied by user */
+	/* i.e. in !url[100x50] syntax */
+	box-sizing: content-box;
+	object-fit: scale-down;
+	width: var(--width);
+	height: var(--height);
+	/* prevent inheriting width/height from parent, if they aren't set */
+	--width: initial;
+	--height: initial;
+}
+/* before loading, assume image will be larger than --image-max-height */
+/* unless --height is set */
+.Markup img[data-loading], .Markup video[data-loading] {
+	height: var(--height, var(--image-max-height));
+}
+
+.Markup youtube-embed {
+	display: table;
+}
+.Markup youtube-embed figure {
+	overflow: hidden;
+	background-size: cover;
+	height: 270px;
+}
+.Markup youtube-embed iframe {
+	width: 480px;
+	height: 270px;
+	max-height: unset;
+	max-width: 100%;
+	display: inline-block;
+	overflow: hidden;
+}
+.Markup youtube-embed button {
+	vertical-align: top;
+}
+.Markup youtube-embed figcaption {
+	color: white;
+	background-color: rgba(0,0,0,0.3);
+	padding: 0 0.2em;
+	display: inline-block;
+}
+
+/* ruby text doesn't work if set to white-space: pre */
+.Markup rt {
+	white-space: pre-line;
+}
+
+/*** invalid tag ***/
+.Markup .invalid {
+	background: #F888;
+}
+
+/*** keyboard key ***/
+.Markup kbd {
+	display: inline-block;
+	border: 1px solid gray;
+	border-radius: 3px;
+	padding: 0.2rem 0.4rem;
+	font-family: monospace, monospace;
+	font-size: 0.8em;
+}
+
+/*** divider ***/
+.Markup hr {
+	margin: 0.5rem 0;
+}
+
+/**********/
+/** Code **/
+/**********/
+.Markup pre, .Markup code {
+	font-family: monospace, monospace; /* code font here */
+	font-size: 0.8em;
+}
+/* inline */
+.Markup code {
+	background: rgba(192,192,192,0.5);
+	padding: 0 0.2em;
+	vertical-align: 1px;
+}
+/* block */
+.Markup pre {
+	color: white;
+	background: black;
+	border: 1px solid black;
+	padding: 0.5em;
+	margin: 0.25em 0;
+	line-break: anywhere;
+}
+
+/*************/
+/** Spoiler **/
+/*************/
+.Markup summary {
+	padding: 0 0.3em;
+	background: white;
+	border: 2px outset gray !important;
+	border-left-width: 4px;
+	margin-top: 1px;
+	display: table;
+	cursor: pointer;
+}
+.Markup details[open] > summary {
+	border-style: inset;
+	border-bottom: none;
+}
+.Markup details > div {
+	padding: 0.4rem;
+	border: 2px solid gray;
+	border-left-width: 4px;
+	background: var(--spoiler-bg);
+	margin-bottom: 1px;
+}
+.Markup summary::before { content: "Show "; }
+.Markup details[open] > summary::before { content: "Hide "; }
+
+/***********/
+/** Quote **/
+/***********/
+.Markup blockquote {
+	border: 2px solid gray;
+	padding: 0.3rem;
+}
+.Markup cite {
+	unicode-bidi: embed;
+	font-weight: bold;
+	font-style: normal;
+}
+.Markup cite + div {
+	margin-left: 0.5rem;
+}
+
+/***********/
+/** Table **/
+/***********/
+.Markup table, .Markup td, .Markup th {
+	border: 1px solid currentColor;
+	border-collapse: collapse;
+}
+.Markup td, .Markup th {
+	padding: 0.2em 0.3em;
+}
+
+/**********************/
+/** Background Color **/
+/**********************/
+.Markup [data-bgcolor="red"]    { background: var(--bgred, #F888); }
+.Markup [data-bgcolor="orange"]  { background: var(--bggreen, #FA08); }
+.Markup [data-bgcolor="yellow"] { background: var(--bgyellow, #FF08); }
+.Markup [data-bgcolor="green"] { background: var(--bgorange, #0F08); }
+.Markup [data-bgcolor="blue"]   { background: var(--bgblue, #08F8); }
+.Markup [data-bgcolor="purple"] { background: var(--bgpurple, #C0F8); }
+.Markup [data-bgcolor="gray"]   { background: var(--bggray, #AAA8); }
+.Markup table { background: var(--bg); } /* reset */
+
+
+/***********/
+/** Links **/
+/***********/
+.Markup a[href] {
+	/*color: rgb(0, 80, 150);*/
+	text-decoration: underline;
+}

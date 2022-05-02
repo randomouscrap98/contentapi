@@ -14,11 +14,14 @@
         In particular, it has an auto websocket manager for building quick chatrooms -->
     <script src="api.js"></script>
     <!-- These are required for the 12y parser (markup) -->
-    <script src="https://12me21.github.io/sbs2-markup/parse.js"></script>
-    <script src="https://12me21.github.io/sbs2-markup/highlight.js"></script>
-    <script src="https://12me21.github.io/sbs2-markup/render.js"></script>
-    <script src="markup.js"></script>
+    <script src="markup/langs.js"></script>
+    <script src="markup/legacy.js"></script>
+    <script src="markup/parse.js"></script>
+    <script src="markup/render.js"></script>
+    <script src="markup/helpers.js"></script>
+    <link rel="stylesheet" href="markup/markup.css">
     <link rel="stylesheet" href="markup.css">
+    <script src="markup.js"></script>
 
     <!-- These are really unnecessary, and you can ignore them. They just add some quality of life
         updates to the chat while we lived there; they don't do anything for this example though! 
@@ -341,7 +344,8 @@ function createMessage(message)
 
     var content = document.createElement("div");
     content.className = "content";
-    content.appendChild(Parse.parseLang(message.text, message.values.m || "plaintext"));
+    Markup.convert_lang(message.text, message.values.m || "plaintext", content);
+    //content.appendChild(Parse.parseLang(message.text, message.values.m || "plaintext"));
 
     container.appendChild(userInfo);
     container.appendChild(content);
