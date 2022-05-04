@@ -18,7 +18,11 @@ html {
 	white-space: pre-wrap;
 }
 
-.content blockquote {
+.content img {
+	display: block;
+}*/
+
+/*.content blockquote {
 	padding: 0.3em;
 	padding-left: 0.5em;
 	background: var(--bar-bg);
@@ -27,10 +31,6 @@ html {
 }
 .content blockquote > cite {
 	margin-left: -1em;
-}
-
-.content img {
-	display: block;
 }
 
 .spoilerButton { display: block; }

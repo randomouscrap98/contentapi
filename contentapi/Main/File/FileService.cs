@@ -22,15 +22,20 @@ public class FileServiceConfig
     public TimeSpan QuantizeTimeout { get; set; } = TimeSpan.FromSeconds(20);
     public int MaxQuantize { get; set; } = 256;
     public int MinQuantize { get; set; } = 2;
+    public int MinJpegHighQualitySize {get;set;} = 100;
+    public int JpegHighQuality {get;set;} = 97;
     public double ResizeRepeatFactor { get; set; } = 0.8;
     //public string DefaultHash { get; set; } = "0";
     public string? DefaultImageFallback { get; set; } = null;
+
+    public bool HighQualityResize {get;set;} = true;
 }
 
 public class FileService : IFileService
 {
     public const string S3Prefix = "s3://";
     public const string GifMime = "image/gif";
+    public const string JpegMime = "image/jpeg";
     public const string FallbackMime = "image/png";
 
     protected Func<IDbWriter> writeProvider;
@@ -448,13 +453,19 @@ public class FileService : IFileService
                 {
                     using (var image = Image.Load(baseData, out format))
                     {
-                        var maxDim = Math.Max(image.Width, image.Height);
-                        var minDim = Math.Min(image.Width, image.Height);
+                        //var maxDim = Math.Max(image.Width, image.Height);
                         var isGif = format.DefaultMimeType == GifMime;
+                        var isJpg = format.DefaultMimeType == JpegMime;
 
                         //Square ALWAYS happens, it can happen before other things.
                         if (modify.crop)
+                        {
+                            var minDim = Math.Min(image.Width, image.Height);
                             image.Mutate(x => x.Crop(new Rectangle((image.Width - minDim) / 2, (image.Height - minDim) / 2, minDim, minDim)));
+                        }
+
+                        //This must come after the crop!
+                        var isNowLarger = (modify.size > Math.Max(image.Width, image.Height));
 
                         //Saving as png also works, but this preserves the format (even if it's a little heavier compute, it's only a one time thing)
                         if (modify.freeze && isGif)
@@ -463,7 +474,7 @@ public class FileService : IFileService
                                 image.Frames.RemoveFrame(1);
                         }
 
-                        if (modify.size > 0 && !(isGif && (modify.size > image.Width || modify.size > image.Height)))
+                        if (modify.size > 0 && !(isGif && isNowLarger)) //&& (modify.size > image.Width || modify.size > image.Height)))
                         {
                             var width = 0;
                             var height = 0;
@@ -474,12 +485,28 @@ public class FileService : IFileService
                             else
                                 height = modify.size;
 
-                            image.Mutate(x => x.Resize(width, height));
+                            if(config.HighQualityResize)
+                                image.Mutate(x => x.Resize(width, height, isNowLarger ? KnownResamplers.Spline : KnownResamplers.Lanczos3));
+                            else
+                                image.Mutate(x => x.Resize(width, height));
                         }
 
                         using (var stream = System.IO.File.OpenWrite(thumbnailPath))
                         {
-                            image.Save(stream, format);
+                            IImageEncoder? encoder = null;
+
+                            if(config.HighQualityResize && modify.size <= config.MinJpegHighQualitySize && isJpg)
+                            {
+                                encoder = new SixLabors.ImageSharp.Formats.Jpeg.JpegEncoder()
+                                {
+                                    Quality = config.JpegHighQuality,
+                                };
+                            }
+
+                            if(encoder != null)
+                                image.Save(stream, encoder);
+                            else
+                                image.Save(stream, format);
                         }
                     }
                 });

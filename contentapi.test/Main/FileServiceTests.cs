@@ -6,8 +6,6 @@ using AutoMapper;
 using contentapi.data;
 using contentapi.Main;
 using contentapi.Search;
-using contentapi.test.Mock;
-using contentapi.Utilities;
 using Microsoft.Extensions.Logging;
 using Xunit;
 
@@ -41,7 +39,9 @@ public class FileServiceTests : ViewUnitTestBase, IDisposable
 
         searcher = fixture.GetService<IGenericSearch>();
         writer = fixture.GetService<IDbWriter>();
-        config = new FileServiceConfig();
+        config = new FileServiceConfig(){
+            HighQualityResize = false
+        };
         service = new FileService(fixture.GetService<ILogger<FileService>>(), () => writer, () => searcher, config, s3provider);
 
         //Always want a fresh database!
