@@ -28,6 +28,7 @@ public class EventQueueTest : ViewUnitTestBase //, IClassFixture<DbUnitTestSearc
     protected IPermissionService permission;
     protected LiveEventQueueConfig config;
     protected CacheCheckpointTrackerConfig trackerConfig;
+    protected ShortcutsService shortcuts;
 
     //The tests here are rather complicated; we can probably simplify them in the future, but for now,
     //I just need a system that REALLY tests if this whole thing works, and that is most reliable if 
@@ -38,6 +39,8 @@ public class EventQueueTest : ViewUnitTestBase //, IClassFixture<DbUnitTestSearc
         this.mapper = fixture.GetService<IMapper>();
         this.searcher = fixture.GetService<IGenericSearch>();
         this.permission = fixture.GetService<IPermissionService>();
+        this.shortcuts = fixture.GetService<ShortcutsService>();
+
         this.config = new LiveEventQueueConfig()
         {
             //Ensure nothing ever expires
@@ -54,6 +57,7 @@ public class EventQueueTest : ViewUnitTestBase //, IClassFixture<DbUnitTestSearc
             fixture.GetService<Db.ContentApiDbConnection>(), fixture.GetService<IViewTypeInfoService>(), this.mapper,
             fixture.GetService<Db.History.IHistoryConverter>(), this.permission, this.queue,
             new DbWriterConfig(), new RandomGenerator(), fixture.GetService<IUserService>()); 
+
 
         //Reset it for every test
         fixture.ResetDatabase();
@@ -337,6 +341,38 @@ public class EventQueueTest : ViewUnitTestBase //, IClassFixture<DbUnitTestSearc
         {
             Assert.True(ex is OperationCanceledException || ex is TaskCanceledException, "LISTEN TASK DID NOT GET CANCELLED WHEN ASKED!");
         }
+    }
+
+    [Fact]
+    public async Task Regression_OldMessagesExposeNewParent()
+    {
+        //Force the cache to invalidate every time
+        config.DataCacheExpire = System.TimeSpan.Zero;
+
+        //Write comments to public room
+        const int COMMENTCOUNT = 5;
+        var comments = Enumerable.Range(0, COMMENTCOUNT).Select(x => GetNewCommentView(AllAccessContentId));
+        var writeComments = new List<MessageView>();
+
+        foreach(var c in comments)
+            writeComments.Add(await writer.WriteAsync(c, NormalUserId));
+        
+        //move comments to private room
+        await shortcuts.RethreadMessagesAsync(writeComments.Select(x => x.id).ToList(), SuperAccessContentId, SuperUserId);
+
+        //Now read by normal user. The resultset should not have the private room or messages
+        var user = await searcher.GetById<UserView>(RequestType.user, NormalUserId);
+        var events = await queue.ListenAsync(user, 0, safetySource.Token);
+
+        Assert.True(events.lastId >= COMMENTCOUNT); //We should've done multiple things
+
+        var allIds = writeComments.Select(x => x.id).ToList();
+        allIds.Add(SuperAccessContentId);
+
+        Assert.DoesNotContain(events.objects.SelectMany(x => x.Value.SelectMany(y => y.Value)), x => 
+        {
+            return x.ContainsKey("id") && allIds.Contains((long)x["id"]);
+        });
     }
 
     [Theory]

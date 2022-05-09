@@ -409,7 +409,7 @@ public class LiveEventQueue : ILiveEventQueue
                 foreach(var type in events.Select(x => x.type).Distinct())
                 {
                     var requests = GetSearchRequestsForEvents(events.Where(x => x.type == type));
-                    var searchData = await search.SearchUnrestricted(requests); //SKIPPING PERMISSIONS! IS THIS OK??? We're relying on the permissions in the events being accurate!
+                    var searchData = await search.Search(requests, listener.id);
                     result.objects.Add(type, searchData.objects);
                 }
             }
