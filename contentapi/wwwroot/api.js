@@ -1057,6 +1057,11 @@ Api.prototype.GetFileUrl = function(hash, modify)
     return encodeURI(url);
 };
 
+Api.prototype.GetRawContentUrl = function (hash)
+{
+    return this.url + `content/raw/${hash}`;
+};
+
 // Return the UID reported by the given token, or from the token within the API
 // object if none is given. Does NOT connect to the API, and does NOT verify 
 // that the token is valid, but it is very fast. Given generously by 12

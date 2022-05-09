@@ -309,6 +309,8 @@ function page_onload(template, state)
 
             setupEditor("edit", originalPage);
             template.querySelector("#page-chat-link").removeAttribute("hidden");
+            template.querySelector("#page-raw-link").removeAttribute("hidden");
+            template.querySelector("#page-raw-link").setAttribute("href", api.GetRawContentUrl(page.hash));
 
             if(page.contentType == 3) //A file
             {
