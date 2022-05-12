@@ -1,4 +1,5 @@
 using System;
+using contentapi.data;
 using Dapper.Contrib.Extensions;
 
 namespace contentapi.Db
@@ -19,7 +20,7 @@ namespace contentapi.Db
         public int snapshotVersion { get; set; }
 
         //Very helpful, users can put edit messages or the system can generate the revision redo messages
-        public string message {get;set;} //This can be null!
+        public string? message {get;set;} //This can be null!
 
         // The user that did the actions and when
         public long createUserId { get; set; }

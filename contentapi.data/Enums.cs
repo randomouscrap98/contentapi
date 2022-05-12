@@ -1,7 +1,6 @@
-
 using System;
 
-namespace contentapi.Db;
+namespace contentapi.data;
 
 //Make this a bitflag
 [Flags]
@@ -38,7 +37,8 @@ public enum UserType : long
 
 public enum UserRelationType : long
 {
-    in_group = 1
+    in_group = 1,
+    user_page = 2
 }
 
 public enum AdminLogType : long

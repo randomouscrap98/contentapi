@@ -1,11 +1,9 @@
 
-using contentapi.Db;
-
 namespace contentapi.data.Views;
 
 [ResultFor(RequestType.ban)]
 [SelectFrom("bans")]
-[WriteAs(typeof(Ban))]
+[WriteAs(typeof(Db.Ban))]
 public class BanView : IIdView
 {
     [FieldSelect]

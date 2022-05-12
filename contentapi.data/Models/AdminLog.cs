@@ -1,4 +1,5 @@
 using System;
+using contentapi.data;
 using Dapper.Contrib.Extensions;
 
 namespace contentapi.Db
@@ -9,7 +10,7 @@ namespace contentapi.Db
         [Key]
         public long id { get; set; }
         public AdminLogType type { get; set; }
-        public string text { get; set; }
+        public string? text { get; set; }
         public DateTime createDate { get; set; }
         public long initiator { get; set; }
         public long target { get; set; }

@@ -60,7 +60,7 @@ public class ModuleController : BaseController
                 module.id = 0;
             
             //Need to add this just in case they don't, since this is a SPECIFIC module endpoint
-            module.contentType = Db.InternalContentType.module;
+            module.contentType = InternalContentType.module;
             
             var result = await services.writer.WriteAsync(module, userId);
             modService.RefreshModule(result); //Make it ready immediately, just in case.
@@ -106,7 +106,7 @@ public class ModuleController : BaseController
         {
             var userId = GetUserIdStrict();
             var values = new Dictionary<string, object> {
-                { "type", Db.InternalContentType.module },
+                { "type", InternalContentType.module },
             };
 
             var query = "contentType = @type and !notdeleted()";

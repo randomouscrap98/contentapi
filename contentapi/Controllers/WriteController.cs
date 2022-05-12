@@ -45,7 +45,7 @@ public class WriteController : BaseController
             RateLimit(RateWrite);
             //THIS IS AWFUL! WHAT TO DO ABOUT THIS??? Or is it fine: files ARE written by the controllers after all...
             //so maybe it makes sense for the controllers to control this aspect as well
-            if(page.id == 0 && page.contentType == Db.InternalContentType.file)
+            if(page.id == 0 && page.contentType == InternalContentType.file)
                 throw new ForbiddenException("You cannot create files through this endpoint! Use the file controller!");
 
             return await writer.WriteAsync(page, GetUserIdStrict(), activityMessage);

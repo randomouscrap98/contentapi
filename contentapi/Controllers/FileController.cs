@@ -66,7 +66,7 @@ public class FileController : BaseController
             throw new RequestException("You must upload NEW content (nonzero id)");
          
          //But fix this one for them regardless
-         fileData.@object.contentType = Db.InternalContentType.file;
+         fileData.@object.contentType = InternalContentType.file;
 
          using var memstream = new MemoryStream(Convert.FromBase64String(fileData.base64blob));
          

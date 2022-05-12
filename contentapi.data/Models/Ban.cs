@@ -1,4 +1,5 @@
 using System;
+using contentapi.data;
 using Dapper.Contrib.Extensions;
 
 namespace contentapi.Db
@@ -12,7 +13,7 @@ namespace contentapi.Db
         public DateTime expireDate { get; set; }
         public long createUserId { get; set; }
         public long bannedUserId { get; set; }
-        public string message { get; set; } //message is nullable!
+        public string? message { get; set; } //message is nullable!
         public BanType type { get; set; }
     }
 }

@@ -1,4 +1,5 @@
 using System;
+using contentapi.data;
 using Dapper.Contrib.Extensions;
 
 namespace contentapi.Db

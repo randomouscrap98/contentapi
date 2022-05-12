@@ -1,4 +1,5 @@
 using System;
+using contentapi.data;
 using Dapper.Contrib.Extensions;
 
 namespace contentapi.Db
@@ -10,7 +11,7 @@ namespace contentapi.Db
         public virtual long id { get; set; }
         public string username { get; set; } = "";
         public string avatar { get; set; } = "0";
-        public string special { get; set; } //Special is nullable!
+        public string? special { get; set; } //Special is nullable!
         public bool super { get; set; }
         public bool deleted { get; set; }
         public UserType type { get; set; } = UserType.user;
@@ -21,7 +22,7 @@ namespace contentapi.Db
         public string email { get; set; } = "";
         public string password { get; set; } = ""; //Don't worry, just the salted hash
         public string salt { get; set; } = "";
-        public string registrationKey { get; set; } //Registration key is nullable!
+        public string? registrationKey { get; set; } //Registration key is nullable!
     }
 
     [Table("users")]

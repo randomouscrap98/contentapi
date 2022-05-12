@@ -1,5 +1,4 @@
 using System;
-using contentapi.Db;
 
 namespace contentapi.data.Views;
 

@@ -1,7 +1,11 @@
 <Project Sdk="Microsoft.NET.Sdk">
 
   <ItemGroup>
-    <ProjectReference Include="..\contentapi.db\contentapi.db.csproj" />
+    <!--<ProjectReference Include="..\contentapi.db\contentapi.db.csproj" />-->
+  </ItemGroup>
+
+  <ItemGroup>
+    <PackageReference Include="Dapper.Contrib" Version="2.0.78" />
   </ItemGroup>
 
   <PropertyGroup>

@@ -1,5 +1,3 @@
-using contentapi.Db;
-
 namespace contentapi.data.Views;
 
 [ResultFor(RequestType.content)]

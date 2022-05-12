@@ -1,4 +1,3 @@
-using contentapi.Db;
 
 namespace contentapi.data.Views;
 

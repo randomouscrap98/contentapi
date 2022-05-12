@@ -1,5 +1,6 @@
 using System.Runtime.ExceptionServices;
 using Amazon.S3;
+using contentapi.History;
 using contentapi.Live;
 using contentapi.Main;
 using contentapi.Module;
@@ -46,7 +47,8 @@ public static class DefaultSetup
     public static void AddDefaultServices(IServiceCollection services)
     {
         //Since we consume the db, also call their setup here
-        Db.Setup.DefaultSetup.AddDefaultServices(services);
+        services.AddSingleton<IHistoryConverter, HistoryConverter>();
+        services.AddAutoMapper(typeof(ContentHistorySnapshotProfile));
 
         services.AddAutoMapper(typeof(SearchRequestPlusProfile)); //You can pick ANY profile, it just needs some type from this binary
 
