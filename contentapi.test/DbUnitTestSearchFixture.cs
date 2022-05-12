@@ -1,6 +1,7 @@
 using System;
 using System.Collections.Generic;
 using System.Linq;
+using contentapi.data;
 using contentapi.Utilities;
 using Dapper.Contrib.Extensions;
 using Microsoft.Extensions.Logging;
@@ -97,7 +98,7 @@ public class DbUnitTestSearchFixture : DbUnitTestBase, IDisposable
                             username = $"user_{i}",
                             password = $"SECRETS_{i}",
                             avatar = "0", //NOTE: WE'RE ASSUMING THE DEFAULT HASH IS 0!!! //rng.GetAlphaSequence(5),//UserCount - i,
-                            type = Db.UserType.user,
+                            type = UserType.user,
                             createDate = DateTime.Now.AddDays(i - UserCount),
                             salt = $"SALTYSECRETS_{i}"
                         };
@@ -131,7 +132,7 @@ public class DbUnitTestSearchFixture : DbUnitTestBase, IDisposable
                         createUserId = 1 + (int)UserVariations.Super,
                         expireDate = DateTime.Now.AddDays(1),
                         bannedUserId = UserCount,
-                        type = Db.BanType.@public | Db.BanType.@private,
+                        type = BanType.@public | BanType.@private,
                         message = "You are banned"
                     });
 
@@ -143,7 +144,7 @@ public class DbUnitTestSearchFixture : DbUnitTestBase, IDisposable
                         var group = new Db.User()
                         {
                             username = $"group_{i}",
-                            type = Db.UserType.group,
+                            type = UserType.group,
                             super = (i & (int)UserVariations.Super) > 0 //This may not actually set the group to super FYI...
                         };
 
@@ -154,7 +155,7 @@ public class DbUnitTestSearchFixture : DbUnitTestBase, IDisposable
                             var userGroup = new Db.UserRelation()
                             {
                                 userId = j + 1 + i * UserCount / GroupCount,
-                                type = Db.UserRelationType.in_group,
+                                type = UserRelationType.in_group,
                                 relatedId = UserCount + i + 1
                             };
 
@@ -192,7 +193,7 @@ public class DbUnitTestSearchFixture : DbUnitTestBase, IDisposable
                         };
 
                         c.deleted = (i & (int)ContentVariations.Deleted) > 0;
-                        c.contentType = (Db.InternalContentType)(i % 4);
+                        c.contentType = (InternalContentType)(i % 4);
 
                         //The activity is inversely proportional to i, but only 1/16 of the whatevers.
                         //If the content is deleted, the last history inserted should be a delete
@@ -204,7 +205,7 @@ public class DbUnitTestSearchFixture : DbUnitTestBase, IDisposable
                                 contentId = i + 1,
                                 createDate = DateTime.Now.AddDays(j - i),
                                 createUserId = 1 + (i % UserCount), //All same user. Hm
-                                action = (j == historyCount - 1 && c.deleted) ? Db.UserAction.delete : Db.UserAction.update
+                                action = (j == historyCount - 1 && c.deleted) ? UserAction.delete : UserAction.update
                             });
                         }
 
@@ -229,7 +230,7 @@ public class DbUnitTestSearchFixture : DbUnitTestBase, IDisposable
                                 contentId = i + 1,
                                 userId = j % UserCount,
                                 createDate = DateTime.Now,
-                                vote = (Db.VoteType)(1 + random.Next() % 3)
+                                vote = (VoteType)(1 + random.Next() % 3)
                             });
                         }
 
@@ -343,9 +344,9 @@ public class DbUnitTestSearchFixture : DbUnitTestBase, IDisposable
                     conn.Insert(history, tsx);
 
                     var adminLogs = new List<Db.AdminLog>();
-                    AdminLogCount = Enum.GetValues<Db.AdminLogType>().Count();
+                    AdminLogCount = Enum.GetValues<AdminLogType>().Count();
 
-                    foreach (var type in Enum.GetValues<Db.AdminLogType>())
+                    foreach (var type in Enum.GetValues<AdminLogType>())
                     {
                         adminLogs.Add(new Db.AdminLog()
                         {

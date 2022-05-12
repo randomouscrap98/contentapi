@@ -1,6 +1,7 @@
 using contentapi.Db;
 using contentapi.Search;
 using contentapi.data.Views;
+using contentapi.data;
 
 namespace contentapi.Main;
 

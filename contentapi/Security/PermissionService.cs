@@ -1,3 +1,4 @@
+using contentapi.data;
 using contentapi.data.Views;
 using contentapi.Db;
 using contentapi.Search;

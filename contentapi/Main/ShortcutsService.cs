@@ -143,7 +143,7 @@ public class ShortcutsService
         
         //Now, verify them all. If ANY of them throw an error, it will happen BEFORE work was performed
         for(var i = 0; i < newMessages.Count; i++) 
-            await writer.ValidateWorkGeneral(newMessages[i], messages[i], user, Db.UserAction.update);
+            await writer.ValidateWorkGeneral(newMessages[i], messages[i], user, UserAction.update);
         
         //OK, now we can write them
         var result = new List<MessageView>();
@@ -152,7 +152,7 @@ public class ShortcutsService
 
         await writer.WriteAdminLog(new Db.AdminLog()
         {
-            type = Db.AdminLogType.rethread,
+            type = AdminLogType.rethread,
             initiator = requester,
             target = newParent,
             text = $"User {user.username} ({user.id}) rethreaded {result.Count} messages into content {newParent}" 

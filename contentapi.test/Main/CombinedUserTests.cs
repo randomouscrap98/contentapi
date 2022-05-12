@@ -161,7 +161,7 @@ public class CombinedUserTests : ViewUnitTestBase //, IClassFixture<DbUnitTestSe
         var group = new UserView()
         {
             username = "whatever_dude",
-            type = Db.UserType.group,
+            type = UserType.group,
             super = super
         };
 

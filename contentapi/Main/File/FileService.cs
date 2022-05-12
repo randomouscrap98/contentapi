@@ -181,7 +181,7 @@ public class FileService : IFileService
         var newView = new ContentView()
         {
             name = fileConfig.name ?? "",
-            contentType = Db.InternalContentType.file,
+            contentType = InternalContentType.file,
             hash = fileConfig.hash ?? "",
             values = fileConfig.values.ToDictionary(x => x.Key, y => (object)y.Value)
         };
@@ -390,7 +390,7 @@ public class FileService : IFileService
 
         if (hash == Constants.DefaultHash)
         {
-            fileData = new ContentView() { id = 0, literalType = FallbackMime, hash = hash, contentType = Db.InternalContentType.file };
+            fileData = new ContentView() { id = 0, literalType = FallbackMime, hash = hash, contentType = InternalContentType.file };
         }
         else
         {
@@ -398,7 +398,7 @@ public class FileService : IFileService
             fileData = (await searchProvider().GetByField<ContentView>(RequestType.content, "hash", hash)).FirstOrDefault();
         }
 
-        if (fileData == null || fileData.deleted || fileData.contentType != Db.InternalContentType.file)
+        if (fileData == null || fileData.deleted || fileData.contentType != InternalContentType.file)
             throw new NotFoundException($"Couldn't find file data with hash {hash}");
 
         var thumbnailPath = GetThumbnailPath(hash, modify);

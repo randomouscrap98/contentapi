@@ -2,7 +2,6 @@ using System.Data;
 using System.Text.RegularExpressions;
 using AutoMapper;
 using contentapi.Db;
-using contentapi.Db.History;
 using contentapi.Live;
 using contentapi.Search;
 using contentapi.Utilities;
@@ -11,6 +10,7 @@ using Dapper;
 using Dapper.Contrib.Extensions;
 using Newtonsoft.Json;
 using contentapi.data;
+using contentapi.History;
 
 namespace contentapi.Main;
 
@@ -173,7 +173,7 @@ public class DbWriter : IDbWriter
                     query = "name = @name and contentType = @type and id <> @id and !notdeleted()"
                 }, new Dictionary<string, object> {
                     { "name", cView.name },
-                    { "type", Db.InternalContentType.module },
+                    { "type", InternalContentType.module },
                     { "id", cView.id }
                 });
 

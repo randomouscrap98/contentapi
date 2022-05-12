@@ -55,7 +55,7 @@ public class EventQueueTest : ViewUnitTestBase //, IClassFixture<DbUnitTestSearc
         this.queue = new LiveEventQueue(fixture.GetService<ILogger<LiveEventQueue>>(), this.config, this.tracker, () => this.searcher, this.permission, this.mapper);
         writer = new DbWriter(fixture.GetService<ILogger<DbWriter>>(), this.searcher, 
             fixture.GetService<Db.ContentApiDbConnection>(), fixture.GetService<IViewTypeInfoService>(), this.mapper,
-            fixture.GetService<Db.History.IHistoryConverter>(), this.permission, this.queue,
+            fixture.GetService<History.IHistoryConverter>(), this.permission, this.queue,
             new DbWriterConfig(), new RandomGenerator(), fixture.GetService<IUserService>()); 
 
 
@@ -67,7 +67,7 @@ public class EventQueueTest : ViewUnitTestBase //, IClassFixture<DbUnitTestSearc
     public void GetSearchRequestForEvents_RunsWithoutException()
     {
         //Can we at LEAST run it without error? There should be a user and content by id 1, and content 1 is created by user 1
-        var request = queue.GetSearchRequestsForEvents(new [] { new LiveEvent(1, Db.UserAction.create, EventType.activity_event, 1) });
+        var request = queue.GetSearchRequestsForEvents(new [] { new LiveEvent(1, UserAction.create, EventType.activity_event, 1) });
         Assert.NotNull(request);
         Assert.NotEmpty(request.requests);
         Assert.NotEmpty(request.values);
@@ -132,7 +132,7 @@ public class EventQueueTest : ViewUnitTestBase //, IClassFixture<DbUnitTestSearc
         for(var i = 0; i < activities.Count; i += skip)
         {
             var activitySlice = activities.Skip(i).Take(skip);
-            var events = activitySlice.Select(x => new LiveEvent(x.userId, Db.UserAction.create, EventType.activity_event, x.id));
+            var events = activitySlice.Select(x => new LiveEvent(x.userId, UserAction.create, EventType.activity_event, x.id));
 
             //The event user shouldn't matter but just in case...
             var request = queue.GetSearchRequestsForEvents(events); //new[] { new LiveEvent(a.userId, Db.UserAction.create, EventType.activity_event, a.id) });
@@ -163,7 +163,7 @@ public class EventQueueTest : ViewUnitTestBase //, IClassFixture<DbUnitTestSearc
         foreach(var c in comments)
         {
             //The event user shouldn't matter but just in case...
-            var request = queue.GetSearchRequestsForEvents(new[] { new LiveEvent(c.createUserId, Db.UserAction.create, EventType.message_event, c.id) });
+            var request = queue.GetSearchRequestsForEvents(new[] { new LiveEvent(c.createUserId, UserAction.create, EventType.message_event, c.id) });
             var result = await searcher.SearchUnrestricted(request);
 
             //Now, make sure the result contains content, comment, and user results.
@@ -196,7 +196,7 @@ public class EventQueueTest : ViewUnitTestBase //, IClassFixture<DbUnitTestSearc
     {
         var activities = await GetActivityForContentAsync(1);
         var a = activities.First();
-        var evnt = new LiveEvent(a.userId, Db.UserAction.create, EventType.activity_event, a.id);
+        var evnt = new LiveEvent(a.userId, UserAction.create, EventType.activity_event, a.id);
         var result = await queue.AddEventAsync(evnt);
 
         var checkpoint = await queue.ListenEventsAsync(-1, safetySource.Token);

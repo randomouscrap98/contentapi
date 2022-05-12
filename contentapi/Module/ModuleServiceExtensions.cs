@@ -24,7 +24,7 @@ public static class ModuleServiceExtensions
         }; 
         var values = new Dictionary<string, object> {
             { "name", name },
-            { "type", Db.InternalContentType.module }
+            { "type", InternalContentType.module }
         };
 
         List<ContentView> modules = new List<ContentView>();
@@ -34,7 +34,7 @@ public static class ModuleServiceExtensions
         else
             modules = await search.SearchSingleType<ContentView>(userId, request, values);
 
-        return modules.FirstOrDefault(x => x.name == name && x.contentType == Db.InternalContentType.module); 
+        return modules.FirstOrDefault(x => x.name == name && x.contentType == InternalContentType.module); 
     }
 
     /// <summary>

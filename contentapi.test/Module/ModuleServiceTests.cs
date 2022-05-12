@@ -374,7 +374,7 @@ public class ModuleServiceTests : ViewUnitTestBase //, IClassFixture<DbUnitTestS
                 usermessage(receiver, ""hey"")
                 -- usermessage(uid + 1, ""hey NO"")
             end",
-            contentType = Db.InternalContentType.module
+            contentType = InternalContentType.module
         };
         var mod = service.UpdateModule(modview);
         var result = service.RunCommand("test", receiver.ToString(), sender, roomId); 
@@ -416,7 +416,7 @@ public class ModuleServiceTests : ViewUnitTestBase //, IClassFixture<DbUnitTestS
             function default(uid, data)
                 broadcastmessage(""hey"")
             end",
-            contentType = Db.InternalContentType.module
+            contentType = InternalContentType.module
         };
         var mod = service.UpdateModule(modview);
         var result = service.RunCommand("test", "whatever", sender, roomId); 
@@ -460,7 +460,7 @@ public class ModuleServiceTests : ViewUnitTestBase //, IClassFixture<DbUnitTestS
             function default(uid, data)
                 broadcastmessage(""hey"")
             end",
-            contentType = Db.InternalContentType.module
+            contentType = InternalContentType.module
         };
         var mod = service.UpdateModule(modview);
 

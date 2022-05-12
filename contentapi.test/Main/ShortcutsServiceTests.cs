@@ -88,7 +88,7 @@ public class ShortcutsServiceTests : ViewUnitTestBase //, IClassFixture<DbUnitTe
         //Shouldn't exist at first... we hope?
         await Assert.ThrowsAnyAsync<NotFoundException>(() => service.LookupVoteByContentIdAsync(uid, cid));
 
-        var vote =  new VoteView() { contentId = cid, vote = Db.VoteType.ok };
+        var vote =  new VoteView() { contentId = cid, vote = VoteType.ok };
         var writtenVote = await writer.WriteAsync(vote, uid);
 
         Assert.Equal(vote.vote, writtenVote.vote);

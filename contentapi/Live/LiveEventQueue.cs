@@ -368,7 +368,7 @@ public class LiveEventQueue : ILiveEventQueue
 
             //Thanks to us caching permissions with the events, we can filter out the events we're not allowed to see immediately, saving us from
             //weird situations where we get a data cache miss simply due to too many events going through the system that we're not even allowed to see.
-            var events = checkpoint.Data.Where(x => permissionService.CanUserStatic(listener, Db.UserAction.read, x.permissions)); 
+            var events = checkpoint.Data.Where(x => permissionService.CanUserStatic(listener, UserAction.read, x.permissions)); 
 
             if(events.Count() == 0)
                 continue;  //There is NOTHING to do for this run, because the event(s) in question don't pertain to us

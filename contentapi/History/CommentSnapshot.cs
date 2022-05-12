@@ -1,6 +1,5 @@
-using System;
-using System.Collections.Generic;
 using contentapi.data;
+using contentapi.Db;
 
 namespace contentapi.History;
 

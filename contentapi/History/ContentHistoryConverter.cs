@@ -50,7 +50,7 @@ public class HistoryConverter : IHistoryConverter
         List<CommentSnapshot> snapshots = new List<CommentSnapshot>();
 
         if(!string.IsNullOrWhiteSpace(current.history))
-            snapshots = JsonConvert.DeserializeObject<List<CommentSnapshot>>(current.history);
+            snapshots = GetCommentHistory(current);
         
         snapshots.Add(snapshot);
 
@@ -64,6 +64,10 @@ public class HistoryConverter : IHistoryConverter
 
     public List<CommentSnapshot> GetCommentHistory(Message current)
     {
-        return JsonConvert.DeserializeObject<List<CommentSnapshot>>(current.history);
+        if(string.IsNullOrEmpty(current.history))
+            return new List<CommentSnapshot>();
+
+        return JsonConvert.DeserializeObject<List<CommentSnapshot>>(current.history) ??
+            throw new InvalidOperationException("Couldn't convert history to list of snapshots!");
     }
 }

@@ -40,7 +40,7 @@ public class DbWriterTest : ViewUnitTestBase
         this.typeInfoService = fixture.GetService<IViewTypeInfoService>();
         writer = new DbWriter(fixture.GetService<ILogger<DbWriter>>(), fixture.GetService<IGenericSearch>(),
             fixture.GetService<Db.ContentApiDbConnection>(), typeInfoService, fixture.GetService<IMapper>(),
-            fixture.GetService<Db.History.IHistoryConverter>(), fixture.GetService<IPermissionService>(),
+            fixture.GetService<History.IHistoryConverter>(), fixture.GetService<IPermissionService>(),
             events, config, rng, fixture.GetService<IUserService>());
         searcher = fixture.GetService<IGenericSearch>();
 

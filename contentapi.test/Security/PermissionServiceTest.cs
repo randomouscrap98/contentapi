@@ -1,4 +1,5 @@
 using System;
+using contentapi.data;
 using contentapi.Db;
 using Xunit;
 

@@ -1,5 +1,5 @@
+using contentapi.data;
 using contentapi.data.Views;
-using contentapi.Db;
 
 namespace contentapi;
 
