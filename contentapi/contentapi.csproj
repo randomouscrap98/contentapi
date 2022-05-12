@@ -24,7 +24,6 @@
   </ItemGroup>
 
   <ItemGroup>
-    <ProjectReference Include="..\contentapi.db\contentapi.db.csproj" />
     <ProjectReference Include="..\contentapi.data\contentapi.data.csproj" />
   </ItemGroup>
 

@@ -173,16 +173,22 @@ public class UserService : IUserService
         return authTokenService.GetNewToken(uid, data, expireOverride ?? config.TokenExpireDefault);
     }
 
-    public async Task<string> GetRegistrationKeyAsync(long userId)
+    public async Task<string?> GetRegistrationKeyRawAsync(long userId)
     {
         //Go get the registration key
         var userRegistration = await GetUserById(userId); 
-        return (string)userRegistration.registrationKey;
+        return (string?)userRegistration.registrationKey;
+    }
+
+    public async Task<string> GetRegistrationKeyAsync(long userId)
+    {
+        return await GetRegistrationKeyRawAsync(userId) ?? 
+            throw new RequestException($"No registration key for user {userId}!");
     }
 
     public async Task<string> CompleteRegistration(long userId, string registrationKey)
     {
-        string realKey = await GetRegistrationKeyAsync(userId); 
+        string? realKey = await GetRegistrationKeyAsync(userId); 
 
         if(string.IsNullOrWhiteSpace(realKey))
             throw new RequestException($"User {userId} seems to already be registered!");

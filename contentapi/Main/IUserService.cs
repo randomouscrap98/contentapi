@@ -9,6 +9,13 @@ public interface IUserService
     Task<string> LoginEmailAsync(string email, string password, TimeSpan? expireOverride = null);
     Task<long> CreateNewUser(string username, string password, string email);
 
+    Task<string?> GetRegistrationKeyRawAsync(long userId);
+
+    /// <summary>
+    /// Get registration key, or throw exception if it doesn't exist
+    /// </summary>
+    /// <param name="userId"></param>
+    /// <returns></returns>
     Task<string> GetRegistrationKeyAsync(long userId);
 
     /// <summary>
