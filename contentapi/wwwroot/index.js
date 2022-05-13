@@ -9,6 +9,8 @@ const COMMENTSPERPAGE = 100;
 const SEARCHRESULTSPERPAGE = 100;
 const TINYAVATAR = 30;
 
+const LOGINEXPIRELONG = 60 * 60 * 24 * 365;
+
 //NOTE: although this is set up to use templates and dynamic loading as an example, this is NOT
 //SPA. It does not attempt to intercept URLS and do all the fanciness required for that.
 window.onload = function()
@@ -923,7 +925,15 @@ function t_login_submit(form)
     var username = document.getElementById("login-username").value;
     var password = document.getElementById("login-password").value;
 
-    api.Login(new LoginParameter(username, password), new ApiHandler(d => {
+    var loginParam = new LoginParameter(username, password);
+
+    if(document.getElementById("login-extended").checked)
+    {
+        loginParam.expireSeconds = LOGINEXPIRELONG;
+        console.debug(`LONG token expiration set to: ${loginParam.expireSeconds} seconds`);
+    }
+
+    api.Login(loginParam, new ApiHandler(d => {
         SetToken(d.result);
         location.href = "?t=user";
     }));

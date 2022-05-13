@@ -130,7 +130,7 @@ function fancyCreateUserlistUser(user, status)
 {
     var element = document.createElement("div");
     var img = document.createElement("img");
-    img.src = api.GetFileUrl(user.avatar, new FileModifyParameter(50, true));
+    img.src = api.GetFileUrl(user.avatar, new FileModifyParameter(AVATARSIZE, true));
     img.className = "avatar";
     element.appendChild(img);
     element.title = user.username;
