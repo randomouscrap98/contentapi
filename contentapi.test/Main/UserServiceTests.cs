@@ -327,4 +327,44 @@ public class UserServiceTests : UnitTestBase, IClassFixture<DbUnitTestBase>
     {
         await Assert.ThrowsAnyAsync<NotFoundException>(() => service.ExpirePasswordNow(userId + 1));
     });
+
+    [Fact]
+    public Task Login_TempPassword() => GeneralNewUserTest(async (username, password, userId, loginToken) =>
+    {
+        //Generate a temp password
+        var tempPassword = service.GetTemporaryPassword(userId);
+
+        //Should be able to login with that password now
+        var token = await service.LoginUsernameAsync(username, tempPassword.Key);
+
+        Assert.False(String.IsNullOrWhiteSpace(token));
+    });
+
+    [Fact]
+    public Task Login_TempPassword_NoRandoms() => GeneralNewUserTest(async (username, password, userId, loginToken) =>
+    {
+        //Generate a temp password
+        var tempPassword = service.GetTemporaryPassword(userId);
+
+        //Should not be able to login with some random password now
+        await Assert.ThrowsAnyAsync<RequestException>(() => service.LoginUsernameAsync(username, tempPassword.Key + "a"));
+    });
+
+    [Fact]
+    public Task Login_TempPassword_Expire() => GeneralNewUserTest(async (username, password, userId, loginToken) =>
+    {
+        config.TemporaryPasswordExpire = TimeSpan.FromMilliseconds(50);
+
+        //Generate a temp password
+        var tempPassword = service.GetTemporaryPassword(userId);
+
+        //Should be able to login with that password for now
+        var token = await service.LoginUsernameAsync(username, tempPassword.Key);
+
+        //Wait a bit
+        await Task.Delay(60);
+
+        //Should not be able to login with some random password now
+        await Assert.ThrowsAnyAsync<RequestException>(() => service.LoginUsernameAsync(username, tempPassword.Key));
+    });
 }

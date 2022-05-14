@@ -4,6 +4,7 @@ namespace contentapi.Main;
 
 public interface IUserService
 {
+    //TimeSpan UserTokenExpiration {get;}
     void InvalidateAllTokens(long userId);
     Task<string> LoginUsernameAsync(string username, string password, TimeSpan? expireOverride = null);
     Task<string> LoginEmailAsync(string email, string password, TimeSpan? expireOverride = null);
@@ -46,4 +47,6 @@ public interface IUserService
 
     Task<UserGetPrivateData> GetPrivateData(long userId);
     Task SetPrivateData(long userId, UserSetPrivateData data);
+
+    TemporaryPassword GetTemporaryPassword(long userId);
 }

@@ -123,6 +123,11 @@ public class UserController : BaseController
         });
     }
 
+    protected List<string> GetRestrictedEmails()
+    {
+        return config.ConfirmationType.Substring(RestrictedConfirmation.Length).Split(",", StringSplitOptions.RemoveEmptyEntries).Select(x => x.Trim()).ToList();
+    }
+
     [HttpPost("sendregistrationcode")]
     public Task<ActionResult<bool>> SendRegistrationCode([FromBody]string email)
     {
@@ -133,18 +138,15 @@ public class UserController : BaseController
             
             var userId = await userService.GetUserIdFromEmailAsync(email);
             var registrationCode = await userService.GetRegistrationKeyAsync(userId);
+            var user = await services.searcher.GetById<UserView>(RequestType.user, userId);
 
             if(string.IsNullOrWhiteSpace(registrationCode))
                 throw new RequestException("Couldn't find registration code for this email! Probably already registered!");
 
             if(config.ConfirmationType.StartsWith(RestrictedConfirmation))
             {
-                var emails = config.ConfirmationType.Substring(RestrictedConfirmation.Length).Split(",", StringSplitOptions.RemoveEmptyEntries).Select(x => x.Trim());
-
-                var user = await services.searcher.GetById<UserView>(RequestType.user, userId);
-
                 var message = new EmailMessage();
-                message.Recipients = emails.ToList();
+                message.Recipients = GetRestrictedEmails();
                 message.Title = $"User {user.username} would like to create an account";
                 message.Body = $"User {user.username} is trying to create an account using email {email} on {Request.Host}\n\nIf this looks acceptable, please send them " +
                     $"an email with instructions on how to create an account, using registration code:\n\n{registrationCode}";
@@ -187,6 +189,41 @@ public class UserController : BaseController
             var registrationCode = await userService.GetRegistrationKeyAsync(id);
 
             return registrationCode;
+        });
+    }
+
+    [HttpPost("sendpasswordrecovery")]
+    public Task<ActionResult<bool>> SendPasswordRecovery([FromBody]string email)
+    {
+        return MatchExceptions(async () =>
+        {
+            if(config.ConfirmationType == InstantConfirmation)
+                throw new RequestException("User account creation is instant, meaning there is no email system in place and no way to recover passwords!");
+            
+            var userId = await userService.GetUserIdFromEmailAsync(email);
+            var tempPassword = userService.GetTemporaryPassword(userId);
+            var user = await services.searcher.GetById<UserView>(RequestType.user, userId);
+            var utcExpire = tempPassword.ExpireDate.ToUniversalTime();
+
+            if(config.ConfirmationType.StartsWith(RestrictedConfirmation))
+            {
+                var message = new EmailMessage();
+                message.Recipients = GetRestrictedEmails();
+                message.Title = $"User {user.username} is trying to recover their account";
+                message.Body = $"User {user.username} is trying to recover their account using email {email} on {Request.Host}\n\nIf this looks acceptable, please send them " +
+                    $"an email stating they have a temporary password that will last until {utcExpire} UTC ({StaticUtils.HumanTime(utcExpire - DateTime.UtcNow)}):\n\n{tempPassword.Key}";
+
+                //TODO: language? Configuration? I don't know
+                await emailer.SendEmailAsync(message);
+            }
+            else
+            {
+                //TODO: language? Configuration? I don't know
+                await emailer.SendEmailAsync(new EmailMessage(email, "Account Recovery",
+                    $"You can temporarily access your account on '{Request.Host}' for another {StaticUtils.HumanTime(utcExpire - DateTime.UtcNow)} using temporary password:\n\n{tempPassword.Key}"));
+            }
+
+            return true;
         });
     }
 

@@ -390,7 +390,7 @@ public class UserService : IUserService
         return temporaryPassword;
     }
 
-    public string GetTemporaryPassword(long uid)
+    public TemporaryPassword GetTemporaryPassword(long uid)
     {
         var tempPassword = TempPasswordSet.GetOrAdd(uid, uid => RefreshPassword(new TemporaryPassword()));
 
@@ -398,7 +398,7 @@ public class UserService : IUserService
         if(tempPassword.ExpireDate > DateTime.Now)
             RefreshPassword(tempPassword);
 
-        return tempPassword.Key;
+        return tempPassword;
     }
 
     public bool TemporaryPasswordMatches(long uid, string key)
@@ -406,7 +406,9 @@ public class UserService : IUserService
         TemporaryPassword? temporaryPassword;
 
         if(TempPasswordSet.TryGetValue(uid, out temporaryPassword))
-            return temporaryPassword?.Key == key;
+        {
+            return temporaryPassword?.Key == key && temporaryPassword.ExpireDate >= DateTime.Now;
+        }
 
         return false;
     }
