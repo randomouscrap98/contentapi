@@ -1,4 +1,5 @@
 using System.Data;
+using System.Globalization;
 using Dapper;
 
 namespace contentapi;
@@ -10,7 +11,12 @@ public class DapperUtcDateTimeHandler : SqlMapper.TypeHandler<DateTime>
 {
     public override DateTime Parse(object value)
     {
-        return DateTime.Parse(value.ToString() ?? throw new InvalidOperationException("Cannot parse datetime from database!"));
+        DateTime dt;
+        if(!DateTime.TryParseExact(value.ToString(), Constants.DateFormat, CultureInfo.InvariantCulture, DateTimeStyles.AdjustToUniversal, out dt))
+            throw new InvalidOperationException("Cannot parse datetime from database!");
+        //var odt = DateTime.Parse(value.ToString() ?? throw new InvalidOperationException("Cannot parse datetime from database!"));
+        //var dt = odt.ToUniversalTime();
+        return dt;
     }
 
     public override void SetValue(IDbDataParameter parameter, DateTime value)

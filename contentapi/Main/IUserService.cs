@@ -11,6 +11,8 @@ public interface IUserService
 
     Task<string?> GetRegistrationKeyRawAsync(long userId);
 
+    Task ExpirePasswordNow(long userId);
+
     /// <summary>
     /// Get registration key, or throw exception if it doesn't exist
     /// </summary>

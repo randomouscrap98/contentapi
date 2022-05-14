@@ -279,4 +279,52 @@ public class UserServiceTests : UnitTestBase, IClassFixture<DbUnitTestBase>
     //    Assert.True(newHidelist.SequenceEqual(privateData.hideList!));
     //}
 
+    protected async Task GeneralNewUserTest(Func<string, string, long, string, Task> test)
+    {
+        const string username = "hello";
+        const string password = "short";
+
+        //Assume this goes OK
+        var userId = await service.CreateNewUser(username, password, "email@email.com");
+        var token = await service.CompleteRegistration(userId, service.RegistrationLog[userId]);
+
+        //This should be fine
+        var loginToken = await service.LoginUsernameAsync(username, password);
+
+        await test(username, password, userId, loginToken);
+    }
+
+    [Fact]
+    public Task Login_ZeroTimeNoPasswordExpire() => GeneralNewUserTest(async (username, password, userId, loginToken) =>
+    {
+        config.PasswordExpire = TimeSpan.FromTicks(0); //The expiration is only looked at if it's non-zero
+
+        //This should be fine, ticks 0 means "no expiration"
+        loginToken = await service.LoginUsernameAsync(username, password);
+    });
+
+    [Fact]
+    public Task Login_NaturalPasswordExpire() => GeneralNewUserTest(async (username, password, userId, loginToken) =>
+    {
+        //IMMEDIATE password expire
+        config.PasswordExpire = TimeSpan.FromTicks(1); //The expiration is only looked at if it's non-zero
+
+        //Now that expiration is instant, this should fail
+        await Assert.ThrowsAnyAsync<TokenException>(() => service.LoginUsernameAsync(username, password));
+    });
+
+    [Fact]
+    public Task Login_ForcedPasswordExpire() => GeneralNewUserTest(async (username, password, userId, loginToken) =>
+    {
+        await service.ExpirePasswordNow(userId);
+
+        //Now that expiration is instant, this should fail
+        await Assert.ThrowsAnyAsync<TokenException>(() => service.LoginUsernameAsync(username, password));
+    });
+
+    [Fact]
+    public Task Login_ForcedPasswordExpire_UserIdNotFound() => GeneralNewUserTest(async (username, password, userId, loginToken) =>
+    {
+        await Assert.ThrowsAnyAsync<NotFoundException>(() => service.ExpirePasswordNow(userId + 1));
+    });
 }

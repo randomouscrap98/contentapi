@@ -123,6 +123,18 @@ public class UserService : IUserService
         return Tuple.Create(Convert.ToBase64String(salt), Convert.ToBase64String(hashService.GetHash(password, salt)));
     }
 
+    public async Task ExpirePasswordNow(long userId)
+    {
+        var zero = new DateTime(0, DateTimeKind.Utc);
+
+        var count = await dbcon.ExecuteAsync($"update {userTable} set lastPasswordDate=@date where id = @id", new {
+            date = zero, id = userId
+        });
+
+        if(count != 1)
+            throw new NotFoundException($"Couldn't find user {userId}");
+    }
+
     public async Task<long> CreateNewUser(string username, string password, string email)
     {
         await CheckValidUsernameAsync(username);
@@ -249,7 +261,7 @@ public class UserService : IUserService
             throw new ForbiddenException("User not registered! Can't log in!");
         
         //BEFORE checking the password, we want to see if the password itself is expired. We throw a special exception if so
-        if(user.lastPasswordDate.Ticks == 0 || (config.PasswordExpire.Ticks > 0 && (user.lastPasswordDate + config.PasswordExpire) > DateTime.UtcNow))
+        if(user.lastPasswordDate.Ticks == 0 || (config.PasswordExpire.Ticks > 0 && (user.lastPasswordDate + config.PasswordExpire) < DateTime.UtcNow))
         {
             await WriteAdminLog(new AdminLog()
             {

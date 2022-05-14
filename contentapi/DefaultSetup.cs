@@ -30,6 +30,7 @@ public static class DefaultSetup
             SqlMapper.RemoveTypeMap(typeof(DateTime)); 
             SqlMapper.AddTypeHandler(typeof(DateTime), new DapperUtcDateTimeHandler());
 
+            //MappingSchema.Default
             //MappingSchema.Default.SetConverter<JToken, DataParameter>(json => new DataParameter { Value = json.ToString() });
             //MappingSchema.Default.SetConverter<string, JToken>(str => JToken.Parse(str));
 
