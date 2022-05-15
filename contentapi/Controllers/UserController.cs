@@ -211,7 +211,7 @@ public class UserController : BaseController
                 message.Recipients = GetRestrictedEmails();
                 message.Title = $"User {user.username} is trying to recover their account";
                 message.Body = $"User {user.username} is trying to recover their account using email {email} on {Request.Host}\n\nIf this looks acceptable, please send them " +
-                    $"an email stating they have a temporary password that will last until {utcExpire} UTC ({StaticUtils.HumanTime(utcExpire - DateTime.UtcNow)}):\n\n{tempPassword.Key}";
+                    $"an email stating they have a ONE TIME USE temporary password that will last until {utcExpire} UTC ({StaticUtils.HumanTime(utcExpire - DateTime.UtcNow)}):\n\n{tempPassword.Key}";
 
                 //TODO: language? Configuration? I don't know
                 await emailer.SendEmailAsync(message);
@@ -220,7 +220,7 @@ public class UserController : BaseController
             {
                 //TODO: language? Configuration? I don't know
                 await emailer.SendEmailAsync(new EmailMessage(email, "Account Recovery",
-                    $"You can temporarily access your account on '{Request.Host}' for another {StaticUtils.HumanTime(utcExpire - DateTime.UtcNow)} using temporary password:\n\n{tempPassword.Key}"));
+                    $"You can temporarily access your account on '{Request.Host}' for another {StaticUtils.HumanTime(utcExpire - DateTime.UtcNow)} using the ONE TIME USE temporary password:\n\n{tempPassword.Key}"));
             }
 
             return true;

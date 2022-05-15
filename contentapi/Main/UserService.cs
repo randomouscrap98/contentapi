@@ -298,6 +298,8 @@ public class UserService : IUserService
                     target = user.id,
                     text = $"User '{user.username}'({user.id}) logged in with a temporary password"
                 });
+
+                ExpireTemporaryPassword(user.id);
             }
         }
         
@@ -399,6 +401,12 @@ public class UserService : IUserService
             RefreshPassword(tempPassword);
 
         return tempPassword;
+    }
+
+    public void ExpireTemporaryPassword(long uid)
+    {
+        var tp = GetTemporaryPassword(uid);
+        tp.ExpireDate = new DateTime(0);
     }
 
     public bool TemporaryPasswordMatches(long uid, string key)

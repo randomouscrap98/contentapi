@@ -351,7 +351,7 @@ public class UserServiceTests : UnitTestBase, IClassFixture<DbUnitTestBase>
     });
 
     [Fact]
-    public Task Login_TempPassword_Expire() => GeneralNewUserTest(async (username, password, userId, loginToken) =>
+    public Task Login_TempPassword_ExpireTime() => GeneralNewUserTest(async (username, password, userId, loginToken) =>
     {
         config.TemporaryPasswordExpire = TimeSpan.FromMilliseconds(50);
 
@@ -363,6 +363,21 @@ public class UserServiceTests : UnitTestBase, IClassFixture<DbUnitTestBase>
 
         //Wait a bit
         await Task.Delay(60);
+
+        //Should not be able to login with some random password now
+        await Assert.ThrowsAnyAsync<RequestException>(() => service.LoginUsernameAsync(username, tempPassword.Key));
+    });
+
+    [Fact]
+    public Task Login_TempPassword_OneTimeUse() => GeneralNewUserTest(async (username, password, userId, loginToken) =>
+    {
+        //Generate a temp password
+        var tempPassword = service.GetTemporaryPassword(userId);
+
+        //Should be able to login with that password for now
+        var token = await service.LoginUsernameAsync(username, tempPassword.Key);
+
+        //Should NOT be able to login a second time with it
 
         //Should not be able to login with some random password now
         await Assert.ThrowsAnyAsync<RequestException>(() => service.LoginUsernameAsync(username, tempPassword.Key));

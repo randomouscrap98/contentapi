@@ -488,6 +488,11 @@ Api.prototype.ConfirmRegistration = function(confirmData, handler)
     this.Raw(`user/confirmregistration`, confirmData, handler, "POST");
 };
 
+Api.prototype.PasswordRecovery = function(email, handler)
+{
+    this.Raw(`user/sendpasswordrecovery`, email, handler, "POST")
+};
+
 Api.prototype.About = function(handler)
 {
     this.Raw("status", null, handler);

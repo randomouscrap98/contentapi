@@ -52,6 +52,7 @@
             the t parameter in the URL -->
     <template id="templates">
         <div id="t_login">
+            <h2>Login:</h2>
             <form data-loginform onsubmit="return t_login_submit(this)">
                 <label for="login-username">Username:</label>
                 <input id="login-username" name="username" required="">
@@ -60,6 +61,15 @@
                 <label for="login-extended">Stay logged in (1 year):</label>
                 <input id="login-extended" name="extended" type="checkbox">
                 <input type="submit" value="Login">
+            </form>
+            <hr>
+            <h2>Recover password:</h2>
+            <p>This will send an email (if an account is tied to it) with a 1 time use temporary password</p>
+            <form data-recoverform onsubmit="return t_recover_submit(this)">
+                <label for="recover-email">Email:</label>
+                <input id="recover-email" name="email" required="">
+                <input type="submit" value="Login">
+                <div id="recover-sent" hidden="">Email Sent!</div>
             </form>
         </div>
         <div id="t_register">

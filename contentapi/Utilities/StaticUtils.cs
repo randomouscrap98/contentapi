@@ -5,7 +5,7 @@ public static class StaticUtils
         double number = 0;
         string units = "???";
 
-        if(time.TotalDays > 365)
+        if(time.TotalDays >= 365)
         {
             number = time.TotalDays / 365;
             units = "year";
@@ -25,7 +25,7 @@ public static class StaticUtils
             number = time.TotalMinutes;
             units = "minute";
         }
-        else if(time.TotalSeconds >= 3)
+        else if(time.TotalSeconds >= 1)
         {
             number = time.TotalSeconds;
             units = "second";

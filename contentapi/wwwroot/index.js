@@ -941,6 +941,20 @@ function t_login_submit(form)
     return false;
 }
 
+function t_recover_submit(form)
+{
+    var email = document.getElementById("recover-email").value;
+    var sentDiv = document.getElementById("recover-sent");
+
+    sentDiv.setAttribute("hidden", "");
+
+    api.PasswordRecovery(email, new ApiHandler(d => {
+        sentDiv.removeAttribute("hidden");
+    }));
+
+    return false;
+}
+
 function t_register_submit(form)
 {
     var username = document.getElementById("register-username").value;
