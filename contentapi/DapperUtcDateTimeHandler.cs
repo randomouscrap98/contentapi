@@ -11,11 +11,8 @@ public class DapperUtcDateTimeHandler : SqlMapper.TypeHandler<DateTime>
 {
     public override DateTime Parse(object value)
     {
-        DateTime dt;
-        if(!DateTime.TryParseExact(value.ToString(), Constants.DateFormat, CultureInfo.InvariantCulture, DateTimeStyles.AdjustToUniversal, out dt))
-            throw new InvalidOperationException("Cannot parse datetime from database!");
-        //var odt = DateTime.Parse(value.ToString() ?? throw new InvalidOperationException("Cannot parse datetime from database!"));
-        //var dt = odt.ToUniversalTime();
+        DateTime dt = DateTime.Parse(value.ToString() ?? throw new InvalidOperationException("Cannot parse datetime from database!"),
+            CultureInfo.InvariantCulture, DateTimeStyles.AdjustToUniversal);
         return dt;
     }
 
