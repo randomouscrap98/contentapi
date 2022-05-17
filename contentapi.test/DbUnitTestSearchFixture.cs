@@ -193,7 +193,7 @@ public class DbUnitTestSearchFixture : DbUnitTestBase, IDisposable
                         };
 
                         c.deleted = (i & (int)ContentVariations.Deleted) > 0;
-                        c.contentType = (InternalContentType)(i % 4);
+                        c.contentType = (InternalContentType)(i % Enum.GetValues<InternalContentType>().Count());
 
                         //The activity is inversely proportional to i, but only 1/16 of the whatevers.
                         //If the content is deleted, the last history inserted should be a delete

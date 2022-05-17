@@ -29,6 +29,7 @@ public class QueryBuilder : IQueryBuilder
         { "valuekeynotin", new MacroDescription("v", "ValueKeyNotIn", new List<RequestType> { RequestType.content, RequestType.message }) }, 
         { "valuekeynotlike", new MacroDescription("v", "ValueKeyNotLike", new List<RequestType> { RequestType.content, RequestType.message }) }, 
         { "onlyparents", new MacroDescription("", "OnlyParents", new List<RequestType> { RequestType.content }) },
+        { "userpage", new MacroDescription("v", "OnlyUserpage", new List<RequestType> { RequestType.content }) },
         { "basichistory", new MacroDescription("", "BasicHistory", new List<RequestType> { RequestType.activity }) },
         { "notdeleted", new MacroDescription("", "NotDeletedMacro", new List<RequestType> { RequestType.content, RequestType.message, RequestType.user }) }, 
         { "notnull", new MacroDescription("f", "NotNullMacro", Enum.GetValues<RequestType>().ToList()) },
@@ -139,6 +140,18 @@ public class QueryBuilder : IQueryBuilder
             (select {nameof(Content.parentId)} 
              from {typeInfo.selfDbInfo?.modelTable}
              group by {nameof(Content.parentId)}
+            )";
+    }
+
+    public string OnlyUserpage(SearchRequestPlus request, string userIdValue)
+    {
+        var typeInfo = typeService.GetTypeInfo<Content>();
+        return $@"id =
+            (select min({nameof(Content.id)})
+             from {typeInfo.selfDbInfo?.modelTable}
+             where {nameof(Content.contentType)} = {(long)InternalContentType.userpage}
+             and {nameof(Content.createUserId)} = {userIdValue}
+             and deleted = 0
             )";
     }
 

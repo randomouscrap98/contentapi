@@ -17,8 +17,8 @@ public enum InternalContentType : long
     none = 0,
     page = 1,
     module = 2,
-    file = 3
-    //category = 4
+    file = 3,
+    userpage = 4
 }
 
 public enum UserAction : long
@@ -37,8 +37,7 @@ public enum UserType : long
 
 public enum UserRelationType : long
 {
-    in_group = 1,
-    user_page = 2
+    in_group = 1
 }
 
 public enum AdminLogType : long

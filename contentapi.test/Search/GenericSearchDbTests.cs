@@ -158,9 +158,14 @@ public class GenericSearchDbTests : ViewUnitTestBase //, IClassFixture<DbUnitTes
             Assert.True(x.createDate.Ticks > 0, "Content createdate not cast properly!");
         });
 
-        Assert.Equal(4, Enum.GetValues<InternalContentType>().Count());
+        var contentTypeCount = Enum.GetValues<InternalContentType>().Count();
+        //Assert.Equal(4, Enum.GetValues<InternalContentType>().Count());
         foreach(var type in Enum.GetValues<InternalContentType>())
-            Assert.Equal(fixture.ContentCount / 4, castResult.Where(x => x.contentType == type).Count());
+        {
+            var expectedCount = fixture.ContentCount / contentTypeCount;
+            var resultCount = castResult.Where(x => x.contentType == type).Count();
+            Assert.True(expectedCount <= resultCount);
+        }
         Assert.Equal(fixture.ContentCount / 2, castResult.Where(x => x.deleted).Count());
         Assert.Equal(fixture.ContentCount - 4, castResult.Where(x => x.parentId > 0).Count());
         //It's minus four because the parent id is actually divided by 4, so only the first 4 values will be 0
@@ -1200,17 +1205,17 @@ public class GenericSearchDbTests : ViewUnitTestBase //, IClassFixture<DbUnitTes
         });
         search.requests.Add(new SearchRequest()
         {
-            name = "createusers",
-            type = "user",
-            fields = "id, username, special, avatar",
-            query = "id in @allreadable.createUserId"
+            name = "allcomments",
+            type = "message",
+            fields = "id, text, contentId, createUserId",
+            query = "contentId in @allreadable.id"
         });
         search.requests.Add(new SearchRequest()
         {
-            name = "allcomments",
-            type = "message",
-            fields = "id, text, contentId",
-            query = "contentId in @allreadable.id"
+            name = "createusers",
+            type = "user",
+            fields = "id, username, special, avatar",
+            query = "id in @allreadable.createUserId or id in @allcomments.createUserId"
         });
 
         //Get results as "default" user (meaning not logged in)
@@ -1581,5 +1586,60 @@ public class GenericSearchDbTests : ViewUnitTestBase //, IClassFixture<DbUnitTes
         var bans = await service.SearchSingleType<BanView>(NormalUserId, search, values);
 
         Assert.NotEmpty(bans);
+    }
+
+    /*[Theory]
+    [InlineData(NormalUserId)]
+    [InlineData(SuperUserId)]
+    public async Task SearchAsync_UserpageMacro(long userId)
+    {
+        var search = new SearchRequest()
+        {
+            type = "content",
+            fields = "*",
+            query = "!userpage(@uid)"
+        };
+        var values = new Dictionary<string, object> { { "uid", userId } };
+
+        //You should be able to reuse the search and values
+        var userpages = await service.SearchSingleTypeUnrestricted<ContentView>(search, values);
+
+        Assert.NotEmpty(userpages);
+        Assert.All(userpages, x => {
+            Assert.Equal(InternalContentType.userpage, x.contentType);
+        });
+    }*/
+
+    [Fact]
+    public async Task SearchAsync_UserpageMacro()
+    {
+        var search = new SearchRequest()
+        {
+            type = "content",
+            fields = "id, createUserId, contentType",
+            query = "contentType = @userpage and !notdeleted()"
+        };
+        var values = new Dictionary<string, object> { { "userpage", InternalContentType.userpage } };
+
+        //You should be able to reuse the search and values
+        var userpages = await service.SearchSingleTypeUnrestricted<ContentView>(search, values);
+
+        //Now go try to lookup all the junk, there should be one userpage for each createuser in the userpage list
+        foreach(var up in userpages)
+        {
+            search = new SearchRequest()
+            {
+                type = "content",
+                fields = "id, createUserId, contentType",
+                query = "!userpage(@uid)"
+            };
+            values = new Dictionary<string, object> { { "uid", up.createUserId } };
+            var thisuserpages = await service.SearchSingleTypeUnrestricted<ContentView>(search, values);
+            Assert.NotEmpty(thisuserpages);
+            Assert.All(thisuserpages, x => {
+                Assert.Equal(InternalContentType.userpage, x.contentType);
+                Assert.Equal(up.createUserId, x.createUserId);
+            });
+        }
     }
 }
