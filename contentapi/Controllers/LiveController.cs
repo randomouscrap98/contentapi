@@ -250,6 +250,15 @@ public class LiveController : BaseController
         }
     }
 
+    [HttpGet("status")]
+    public ActionResult<object> GetStatus()
+    {
+        return new {
+            connections = currentListeners.Count,
+            currentTrackerId = trackerId
+        };
+    }
+
     [HttpGet("ws")]
     public async Task<ActionResult<string>> WebSocketListenAsync([FromQuery]string token, [FromQuery]int? lastId = null)
     {
