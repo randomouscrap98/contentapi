@@ -137,7 +137,7 @@ public class LiveController : BaseController
             //NOTE: the ReceiveObjectAsync throws an exception on close
             var receiveItem = await socket.ReceiveObjectAsync<WebSocketRequest>(memStream, cancelToken);
             var userId = ValidateToken(token); // Validate every time
-            services.logger.LogDebug($"Received WS request ID '{receiveItem.id}' from user {userId}");
+            services.logger.LogDebug($"WS request '{receiveItem.id}'({receiveItem.type}) from {userId}");
             var response = new WebSocketResponse()
             {
                 id = receiveItem.id,
