@@ -1,8 +1,6 @@
 using System.Diagnostics;
-using Amazon.S3;
 using Amazon.S3.Model;
 using contentapi.Search;
-using contentapi.Utilities;
 using contentapi.data.Views;
 using Newtonsoft.Json;
 using SixLabors.ImageSharp;
@@ -28,6 +26,8 @@ public class FileServiceConfig
     //public string DefaultHash { get; set; } = "0";
     public string? DefaultImageFallback { get; set; } = null;
 
+    public TimeSpan LoggingRetainment {get;set;} = TimeSpan.FromDays(1);
+
     public bool HighQualityResize {get;set;} = true;
 }
 
@@ -47,12 +47,14 @@ public class FileService : IFileService
 
     protected readonly SemaphoreSlim filelock = new SemaphoreSlim(1, 1);
 
-    public FileService(ILogger<FileService> logger, Func<IDbWriter> writer, Func<IGenericSearch> searcher, FileServiceConfig config, S3Provider provider) //IAmazonS3 s3client)
+    private static readonly List<DateTime> ImageRenders = new List<DateTime>();
+    private static readonly List<DateTime> ImageLoads = new List<DateTime>();
+
+    public FileService(ILogger<FileService> logger, Func<IDbWriter> writer, Func<IGenericSearch> searcher, FileServiceConfig config, S3Provider provider) 
     {
         this.writeProvider = writer;
         this.searchProvider = searcher;
         this.config = config;
-        //this.s3client = s3client;
         this.s3Provider = provider;
         this.logger = logger;
     }
@@ -92,9 +94,19 @@ public class FileService : IFileService
         return config.MainLocation.StartsWith(S3Prefix);
     }
 
+    public object GetImageLog(TimeSpan timeframe)
+    {
+        return new {
+            loadCount = ImageLoads.Count(x => x > DateTime.Now - timeframe),
+            renderCount = ImageRenders.Count(x => x > DateTime.Now - timeframe)
+        };
+    }
+
     //Whether main files come from S3 or local, use this function
     public async Task<byte[]> GetMainDataAsync(string name)
     {
+        AddImageLoad();
+
         if (IsS3())
         {
             try
@@ -193,6 +205,22 @@ public class FileService : IFileService
         return UploadFile(newView, fileConfig, fileData, requester);
     }
 
+    protected void AddGeneric(List<DateTime> logging)
+    {
+        logging.RemoveAll(x => x < DateTime.Now - config.LoggingRetainment);
+        logging.Add(DateTime.Now);
+    }
+
+    public void AddImageRender()
+    {
+        lock(ImageRenders) { AddGeneric(ImageRenders); }
+    }
+
+    public void AddImageLoad()
+    {
+        lock(ImageLoads) { AddGeneric(ImageLoads); }
+    }
+
     public async Task<ContentView> UploadFile(ContentView newView, UploadFileConfig fileConfig, Stream fileData, long requester)
     {
         fileData.Seek(0, SeekOrigin.Begin);
@@ -220,6 +248,7 @@ public class FileService : IFileService
             //This will throw an exception if it's not an image (most likely)
             using (var image = Image.Load(fileData, out format))
             {
+                AddImageRender();
                 newView.literalType = format.DefaultMimeType;
 
                 double sizeFactor = config.ResizeRepeatFactor;
@@ -453,6 +482,8 @@ public class FileService : IFileService
                 {
                     using (var image = Image.Load(baseData, out format))
                     {
+                        AddImageRender();
+
                         //var maxDim = Math.Max(image.Width, image.Height);
                         var isGif = format.DefaultMimeType == GifMime;
                         var isJpg = format.DefaultMimeType == JpegMime;

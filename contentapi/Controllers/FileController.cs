@@ -31,6 +31,15 @@ public class FileController : BaseController
       public ContentView @object {get;set;} = new ContentView();
    }
 
+   [HttpGet("status")]
+   public async Task<ActionResult<object>> GetStatus([FromQuery]int seconds = 60)
+   {
+      return await MatchExceptions(() =>
+      {
+         return Task.FromResult(service.GetImageLog(TimeSpan.FromSeconds(seconds)));
+      });
+   }
+
 
    [HttpPost]
    [Authorize]
