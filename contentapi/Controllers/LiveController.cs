@@ -137,6 +137,7 @@ public class LiveController : BaseController
             //NOTE: the ReceiveObjectAsync throws an exception on close
             var receiveItem = await socket.ReceiveObjectAsync<WebSocketRequest>(memStream, cancelToken);
             var userId = ValidateToken(token); // Validate every time
+            services.logger.LogDebug($"Received WS request ID '{receiveItem.id}' from user {userId}");
             var response = new WebSocketResponse()
             {
                 id = receiveItem.id,
@@ -277,11 +278,9 @@ public class LiveController : BaseController
             using var dualCancel = CancellationTokenSource.CreateLinkedTokenSource(cancelSource.Token, appLifetime.ApplicationStopping, appLifetime.ApplicationStopped);
             var sendQueue = new BufferBlock<object>();
             List<Task> runningTasks = new List<Task>();
-            //Task sendTask = Task.CompletedTask;
             long userId = 0;
             int realLastId = lastId == null ? eventQueue.GetCurrentLastId() : lastId.Value;
 
-            services.logger.LogInformation($"Websocket starting for {userId}");
             using var socket = await HttpContext.WebSockets.AcceptWebSocketAsync();
 
             try
@@ -292,6 +291,7 @@ public class LiveController : BaseController
                 //You want to keep this validation token thing inside the main exception handler, as ANY of the 
                 //below tasks could throw the token validation exception!
                 userId = ValidateToken(token);
+                services.logger.LogInformation($"Websocket started for user {userId}");
 
                 //ALWAYS send the lastId message, it's basically our "this is the websocket and you're connected"
                 var response = new WebSocketResponse()

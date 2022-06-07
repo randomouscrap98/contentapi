@@ -20,6 +20,7 @@ namespace contentapi.Search;
 public class GenericSearcherConfig
 {
     public int MaxIndividualResultSet {get;set;} = 1000;
+    public bool LogSql {get;set;} = false;
 }
 
 //Note to self: ALL query limiters NEED to go in THIS class, all together!
@@ -221,7 +222,9 @@ public class GenericSearcher : IGenericSearch
         {
             //Need to limit the 'limit'!
             var reqplus = queryBuilder.FullParseRequest(request, parameterValues);
-            logger.LogDebug($"Running SQL for {request.type}({request.name}): {reqplus.computedSql}");
+
+            if(config.LogSql)
+                logger.LogDebug($"Running SQL for {request.type}({request.name}): {reqplus.computedSql}");
 
             //Warn: we repeatedly do this because the FullParseRequest CAN modify parameter values
             var dp = new DynamicParameters(parameterValues);
