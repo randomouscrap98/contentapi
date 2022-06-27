@@ -387,56 +387,54 @@ public class QueryBuilder : IQueryBuilder
         //First, go down and down through the dot list and ensure each thing is a property of an object or a key
         //in a dictionary
         var dotParts = realValName.Split(".".ToCharArray(), StringSplitOptions.RemoveEmptyEntries);
-        object result = startingObject;
-        //var objectRetriever = new Func<object>(() => startingObject);
 
-        //var parentContainer = startingObject;
+        object result = startingObject;
+        object parentContainer = startingObject;
 
         //Each dot part needs to be a child of the current container.
-        foreach(var part in dotParts)
+        foreach(var part in dotParts) //(var i = 0; i < dotParts.Length; i++) //each(var part in dotParts)
         {
-            var parentContainer = result;
-            var parentType = result.GetType();
-            IEnumerable<object>? resultStronglyTyped = null;
+            var parentType = parentContainer.GetType();
 
-            //In the special case that the parentType is some kind of list, many things change
-            if(parentType.IsGenericEnumerable())
-            {
-                resultStronglyTyped = ((IEnumerable)result).Cast<object>();
+            ////In the special case that the parentType is some kind of list, we actually go one deeper, so we skip that
+            ////name and use the first element as the next parentContainer to check. 
+            //if(parentType.IsGenericEnumerable())
+            //{
+            //    var parentStronglyTyped = ((IEnumerable)parentContainer).Cast<object>();
 
-                //It was SUPPOSED to be a list but it was empty!!
-                if(resultStronglyTyped.Count() == 0)
-                {
-                    logger.LogDebug($"Asked for value '{valueKey}' but node at '{part}' was an empty list, so we're returning an empty list as the value");
-                    return new List<object>();
-                }
+            //    //It was SUPPOSED to be a list but it was empty!!
+            //    if(parentStronglyTyped.Count() == 0)
+            //    {
+            //        logger.LogDebug($"Asked for value '{valueKey}' but node at '{part}' was an empty list, so we're returning an empty list as the value");
+            //        return new List<object>();
+            //    }
 
-                parentContainer = resultStronglyTyped.First();
-                parentType = parentType.GetGenericArguments()[0];
-            }
+            //    parentContainer = parentStronglyTyped.First();
+            //    //parentType = parentType.GetGenericArguments()[0];
+            //    continue;
+            //    //i++;
+            //}
 
+            //var part = dotParts[i];
             var singleRetriever = new Func<object, object?>(o => null);
+            Func<object, IEnumerable<object>>? multiRetriever = null;
 
             //It's probably a dictionary... maybe
-            if(parentType.IsGenericDictionary())
+            if(parentType.IsGenericEnumerable())
+            {
+                multiRetriever = (o) =>
+                {
+                    var l = ((IEnumerable)o).Cast<object>();
+                    return l;
+                };
+            }
+            else if(parentType.IsGenericDictionary())
             {
                 singleRetriever = (o) => 
                 {
                     var d = o as IDictionary ?? throw new InvalidOperationException($"Couldn't cast value part '{part}' in '{valueKey}' to IDictionary!");
                     return d.Contains(part) ? d[part] : null;
                 };
-                //parentDictionary[part] ?? throw new InvalidOperationException($"Even after checking if key exists, dictionary didn't have key '{part}' in value '{valueKey}'");
-
-                //if(parentType.GetGenericArguments()[0] != typeof(string))
-                //    throw new ArgumentException($"Node '{part}' in value '{valueKey}' has non-string keys and thus is not a valid value to pull!");
-                
-                //var parentDictionary = parentType as IDictionary ?? throw new InvalidOperationException($"Couldn't cast value part '{part}' in '{valueKey}' to IDictionary!");
-
-                //if(!parentDictionary.Contains(part))
-                //    throw new ArgumentException($"Couldn't find '{part}' in value '{valueKey}");
-                
-                ////The only goal of this is to recurse down so we have a parent container for the leaf node
-                //singleRetriever = (o) => parentDictionary[part] ?? throw new InvalidOperationException($"Even after checking if key exists, dictionary didn't have key '{part}' in value '{valueKey}'");
             }
             //Otherwise, assume it is an object
             else
@@ -452,12 +450,27 @@ public class QueryBuilder : IQueryBuilder
                 );
             }
 
+            var resultType = result.GetType();
+
             //These two different assignments are for the list feature: either the value selector is applied across a whole list,
             //or it's just the normal way
-            if(resultStronglyTyped != null)
-                result = resultStronglyTyped.Select(x => singleRetriever(x)).Where(x => x != null);
+            if(resultType.IsGenericEnumerable())
+            {
+                var resultStronglyTyped = ((IEnumerable)result).Cast<object>();
+
+                if(multiRetriever != null) 
+                    result = resultStronglyTyped.SelectMany(x => multiRetriever(x)).Where(x => x != null);
+                else
+                    result = resultStronglyTyped.Select(x => singleRetriever(x)).Where(x => x != null);
+            }
             else
-                result = singleRetriever(result) ?? throw new InvalidOperationException($"Couldn't find node '{part}' in '{valueKey}'");
+            {
+                result = (multiRetriever != null ? multiRetriever(result) : singleRetriever(result)) ??
+                    throw new InvalidOperationException($"Couldn't find node '{part}' in '{valueKey}'");
+            }
+            
+            //move to the next parent by using the function to find the key
+            parentContainer = singleRetriever(parentContainer) ?? throw new InvalidOperationException($"Couldn't find node '{part}' in '{valueKey}' (parentContainer part)");
         }
 
         //At the end of the loop, the result should contain the complex 
