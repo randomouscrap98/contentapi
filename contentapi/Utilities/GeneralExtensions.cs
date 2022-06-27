@@ -1,3 +1,4 @@
+using System.Collections;
 using System.Net.WebSockets;
 using contentapi.data;
 using Newtonsoft.Json;
@@ -35,14 +36,14 @@ public static class GeneralExtensions
     /// </summary>
     /// <param name="type"></param>
     /// <returns></returns>
-    public static bool IsGenericDictionary(this Type type) => type.IsGenericType(typeof(IDictionary<,>));
+    public static bool IsGenericDictionary(this Type type) => type.IsGenericType(typeof(IDictionary<,>)) || type.IsGenericType(typeof(IDictionary));
 
     /// <summary>
     /// Check if given type is some kind of enumerable
     /// </summary>
     /// <param name="type"></param>
     /// <returns></returns>
-    public static bool IsGenericEnumerable(this Type type) => type.IsGenericType(typeof(IEnumerable<>));
+    public static bool IsGenericEnumerable(this Type type) => type.IsGenericType(typeof(IEnumerable)) && !type.IsGenericDictionary();
 
     /// <summary>
     /// Simple method for sending the given object as json over the given websocket

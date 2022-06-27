@@ -392,30 +392,11 @@ public class QueryBuilder : IQueryBuilder
         object parentContainer = startingObject;
 
         //Each dot part needs to be a child of the current container.
-        foreach(var part in dotParts) //(var i = 0; i < dotParts.Length; i++) //each(var part in dotParts)
+        for(var i = 0; i < dotParts.Length; i++) //each(var part in dotParts)
         {
+            var part = dotParts[i];
             var parentType = parentContainer.GetType();
 
-            ////In the special case that the parentType is some kind of list, we actually go one deeper, so we skip that
-            ////name and use the first element as the next parentContainer to check. 
-            //if(parentType.IsGenericEnumerable())
-            //{
-            //    var parentStronglyTyped = ((IEnumerable)parentContainer).Cast<object>();
-
-            //    //It was SUPPOSED to be a list but it was empty!!
-            //    if(parentStronglyTyped.Count() == 0)
-            //    {
-            //        logger.LogDebug($"Asked for value '{valueKey}' but node at '{part}' was an empty list, so we're returning an empty list as the value");
-            //        return new List<object>();
-            //    }
-
-            //    parentContainer = parentStronglyTyped.First();
-            //    //parentType = parentType.GetGenericArguments()[0];
-            //    continue;
-            //    //i++;
-            //}
-
-            //var part = dotParts[i];
             var singleRetriever = new Func<object, object?>(o => null);
             Func<object, IEnumerable<object>>? multiRetriever = null;
 
@@ -427,6 +408,12 @@ public class QueryBuilder : IQueryBuilder
                     var l = ((IEnumerable)o).Cast<object>();
                     return l;
                 };
+
+                //Have to run again 
+                i--;
+
+                //Still need to assign single retriever to use on parent
+                singleRetriever = (o) => multiRetriever(o).FirstOrDefault();
             }
             else if(parentType.IsGenericDictionary())
             {
@@ -469,8 +456,9 @@ public class QueryBuilder : IQueryBuilder
                     throw new InvalidOperationException($"Couldn't find node '{part}' in '{valueKey}'");
             }
             
-            //move to the next parent by using the function to find the key
-            parentContainer = singleRetriever(parentContainer) ?? throw new InvalidOperationException($"Couldn't find node '{part}' in '{valueKey}' (parentContainer part)");
+            //move to the next parent by using the function to find the key (only if we're not at the end, we don't need to calculate the next parent)
+            if(i < dotParts.Length - 1)
+                parentContainer = singleRetriever(parentContainer) ?? throw new InvalidOperationException($"Couldn't find node '{part}' in '{valueKey}' (parentContainer part)");
         }
 
         //At the end of the loop, the result should contain the complex 
