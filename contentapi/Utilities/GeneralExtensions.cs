@@ -9,6 +9,42 @@ public static class GeneralExtensions
     public const int ReceiveObjectAsyncBufferSize = 4096;
 
     /// <summary>
+    /// Returns whether or not the given type is the given generic type (probably some kind of container)
+    /// </summary>
+    /// <param name="type"></param>
+    /// <typeparam name="T"></typeparam>
+    /// <returns></returns>
+    public static bool IsGenericType(this Type type, Type genericType)
+    {
+        return type.IsGenericType && type.GetGenericTypeDefinition().IsAssignableTo(genericType);
+    }
+
+    /// <summary>
+    /// Returns whether or not the given type is the given generic type (probably some kind of container)
+    /// </summary>
+    /// <param name="type"></param>
+    /// <typeparam name="T"></typeparam>
+    /// <returns></returns>
+    public static bool IsGenericType<T>(this Type type)
+    {
+        return type.IsGenericType(typeof(T));
+    }
+
+    /// <summary>
+    /// Check if given type is some kind of dictionary
+    /// </summary>
+    /// <param name="type"></param>
+    /// <returns></returns>
+    public static bool IsGenericDictionary(this Type type) => type.IsGenericType(typeof(IDictionary<,>));
+
+    /// <summary>
+    /// Check if given type is some kind of enumerable
+    /// </summary>
+    /// <param name="type"></param>
+    /// <returns></returns>
+    public static bool IsGenericEnumerable(this Type type) => type.IsGenericType(typeof(IEnumerable<>));
+
+    /// <summary>
     /// Simple method for sending the given object as json over the given websocket
     /// </summary>
     /// <param name="ws"></param>

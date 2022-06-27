@@ -5,7 +5,7 @@ using System.Text;
 using AutoMapper;
 using contentapi.data;
 using contentapi.Db;
-using contentapi.Live;
+using contentapi.Utilities;
 
 namespace contentapi.Search;
 
@@ -368,58 +368,178 @@ public class QueryBuilder : IQueryBuilder
         return field;
     }
 
+    /// <summary>
+    /// Find the ACTUAL object the given "value" is looking for, assuming the given set of keys
+    /// is in order and the given startingObject is where to start looking for values. May simply be a single key,
+    /// in which case this is just a very slow dictionary lookup
+    /// </summary>
+    /// <remarks>
+    /// This function ISN'T just an object/key traveller, it ALSO can retrieve lists of values, such as if you do
+    /// @content.id where content is a list, it will return all the ids inside content.
+    /// </remarks>
+    /// <param name="valueKey"></param>
+    /// <param name="startingObject"></param>
+    /// <returns></returns>
+    public object FindValueObject(string valueKey, object startingObject)
+    {
+        var realValName = valueKey.TrimStart('@');
+
+        //First, go down and down through the dot list and ensure each thing is a property of an object or a key
+        //in a dictionary
+        var dotParts = realValName.Split(".".ToCharArray(), StringSplitOptions.RemoveEmptyEntries);
+        object result = startingObject;
+        //var objectRetriever = new Func<object>(() => startingObject);
+
+        //var parentContainer = startingObject;
+
+        //Each dot part needs to be a child of the current container.
+        foreach(var part in dotParts)
+        {
+            var parentContainer = result;
+            var parentType = result.GetType();
+            IEnumerable<object>? resultStronglyTyped = null;
+
+            //In the special case that the parentType is some kind of list, many things change
+            if(parentType.IsGenericEnumerable())
+            {
+                resultStronglyTyped = ((IEnumerable)result).Cast<object>();
+
+                //It was SUPPOSED to be a list but it was empty!!
+                if(resultStronglyTyped.Count() == 0)
+                {
+                    logger.LogDebug($"Asked for value '{valueKey}' but node at '{part}' was an empty list, so we're returning an empty list as the value");
+                    return new List<object>();
+                }
+
+                parentContainer = resultStronglyTyped.First();
+                parentType = parentType.GetGenericArguments()[0];
+            }
+
+            var singleRetriever = new Func<object, object?>(o => null);
+
+            //It's probably a dictionary... maybe
+            if(parentType.IsGenericDictionary())
+            {
+                singleRetriever = (o) => 
+                {
+                    var d = o as IDictionary ?? throw new InvalidOperationException($"Couldn't cast value part '{part}' in '{valueKey}' to IDictionary!");
+                    return d.Contains(part) ? d[part] : null;
+                };
+                //parentDictionary[part] ?? throw new InvalidOperationException($"Even after checking if key exists, dictionary didn't have key '{part}' in value '{valueKey}'");
+
+                //if(parentType.GetGenericArguments()[0] != typeof(string))
+                //    throw new ArgumentException($"Node '{part}' in value '{valueKey}' has non-string keys and thus is not a valid value to pull!");
+                
+                //var parentDictionary = parentType as IDictionary ?? throw new InvalidOperationException($"Couldn't cast value part '{part}' in '{valueKey}' to IDictionary!");
+
+                //if(!parentDictionary.Contains(part))
+                //    throw new ArgumentException($"Couldn't find '{part}' in value '{valueKey}");
+                
+                ////The only goal of this is to recurse down so we have a parent container for the leaf node
+                //singleRetriever = (o) => parentDictionary[part] ?? throw new InvalidOperationException($"Even after checking if key exists, dictionary didn't have key '{part}' in value '{valueKey}'");
+            }
+            //Otherwise, assume it is an object
+            else
+            {
+                var properties = parentType.GetProperties();
+                var partProperty = properties.FirstOrDefault(x => x.Name == part);
+
+                if(partProperty == null)
+                    throw new ArgumentException($"Couldn't find '{part}' in value '{valueKey}'");
+
+                singleRetriever = (o) => partProperty.GetValue(o) ?? throw new InvalidOperationException(
+                    $"Even after checking if property exists, object didn't have key '{part} in value '{valueKey}'"
+                );
+            }
+
+            //These two different assignments are for the list feature: either the value selector is applied across a whole list,
+            //or it's just the normal way
+            if(resultStronglyTyped != null)
+                result = resultStronglyTyped.Select(x => singleRetriever(x)).Where(x => x != null);
+            else
+                result = singleRetriever(result) ?? throw new InvalidOperationException($"Couldn't find node '{part}' in '{valueKey}'");
+        }
+
+        //At the end of the loop, the result should contain the complex 
+        return result;
+    }
+
     public string ParseValue(string value, SearchRequestPlus request, Dictionary<string, object> parameters)
     {
         var realValName = value.TrimStart('@');
+
         if (!parameters.ContainsKey(realValName))
         {
-            var dotParts = realValName.Split(".".ToCharArray(), StringSplitOptions.RemoveEmptyEntries);
-            var newName = realValName.Replace(".", "_");
+            var valueObject = FindValueObject(value, parameters);
+            var newName = value.Replace("@", "").Replace(".", "_");
 
-            if (dotParts.Length == 1)
-                throw new ArgumentException($"Value {value} not found for request {request.name}");
-
-            //For now, let's just assume when linking, they're going one deep
-            if (dotParts.Length != 2)
-                throw new ArgumentException($"For now, can only access 1 layer deep in results, fix {value} in {request.name}");
-
-            var resultName = dotParts[0];
-            var resultField = dotParts[1];
-
-            if (!parameters.ContainsKey(resultName))
-                throw new ArgumentException($"No base link {resultName} for {value} in {request.name}");
-
-            var testList = parameters[resultName];
-
-            if (!(testList is IEnumerable<IDictionary<string, object>>))
-                throw new ArgumentException($"Base link {resultName} improper type for {value} in {request.name}");
-
-            var valList = (IEnumerable<IDictionary<string, object>>)testList;
-
-            if (valList.Count() == 0)
-            {
-                //There's no results, so most things will fail, but whatever. In this case,
-                //we don't care about the field
-                parameters.Add(newName, new List<object>());
-                return $"@{newName}";
-            }
-
-            if (!valList.First().ContainsKey(resultField))
-                throw new ArgumentException($"Link result {resultName} has no field {resultField} for {value} in {request.name}");
-
-            //OK we finally have it, let's go
-            var fieldType = valList.First()[resultField]?.GetType();
-
-            if(fieldType != null && fieldType.IsAssignableTo(typeof(IEnumerable<long>)))
-                parameters.Add(newName, valList.SelectMany(x => (IEnumerable<long>)x[resultField]));
-            else if(fieldType != null && fieldType.IsAssignableTo(typeof(IEnumerable<string>)))
-                parameters.Add(newName, valList.SelectMany(x => (IEnumerable<string>)x[resultField]));
-            else
-                parameters.Add(newName, valList.Select(x => x[resultField]).Where(x => x != null));
+            parameters.Add(newName, valueObject);
 
             return $"@{newName}";
         }
-        return value;
+        else
+        {
+            return value;
+        }
+
+
+        //if(type != null && type.IsAssignableTo(typeof(IEnumerable<long>)))
+        //    parameters.Add(newName, (valueObject).SelectMany(x => (IEnumerable<long>)x[resultField]));
+        //else if(fieldType != null && fieldType.IsAssignableTo(typeof(IEnumerable<string>)))
+        //    parameters.Add(newName, valList.SelectMany(x => (IEnumerable<string>)x[resultField]));
+        //else
+        //    parameters.Add(newName, valList.Select(x => x[resultField]).Where(x => x != null));
+
+
+        //if (!parameters.ContainsKey(realValName))
+        //{
+        //    var dotParts = realValName.Split(".".ToCharArray(), StringSplitOptions.RemoveEmptyEntries);
+        //    var newName = realValName.Replace(".", "_");
+
+        //    if (dotParts.Length == 1)
+        //        throw new ArgumentException($"Value {value} not found for request {request.name}");
+
+        //    //For now, let's just assume when linking, they're going one deep
+        //    if (dotParts.Length != 2)
+        //        throw new ArgumentException($"For now, can only access 1 layer deep in results, fix {value} in {request.name}");
+
+        //    var resultName = dotParts[0];
+        //    var resultField = dotParts[1];
+
+        //    if (!parameters.ContainsKey(resultName))
+        //        throw new ArgumentException($"No base link {resultName} for {value} in {request.name}");
+
+        //    var testList = parameters[resultName];
+
+        //    if (!(testList is IEnumerable<IDictionary<string, object>>))
+        //        throw new ArgumentException($"Base link {resultName} improper type for {value} in {request.name}");
+
+        //    var valList = (IEnumerable<IDictionary<string, object>>)testList;
+
+        //    if (valList.Count() == 0)
+        //    {
+        //        //There's no results, so most things will fail, but whatever. In this case,
+        //        //we don't care about the field
+        //        parameters.Add(newName, new List<object>());
+        //        return $"@{newName}";
+        //    }
+
+        //    if (!valList.First().ContainsKey(resultField))
+        //        throw new ArgumentException($"Link result {resultName} has no field {resultField} for {value} in {request.name}");
+
+        //    //OK we finally have it, let's go
+        //    var fieldType = valList.First()[resultField]?.GetType();
+
+        //    if(fieldType != null && fieldType.IsAssignableTo(typeof(IEnumerable<long>)))
+        //        parameters.Add(newName, valList.SelectMany(x => (IEnumerable<long>)x[resultField]));
+        //    else if(fieldType != null && fieldType.IsAssignableTo(typeof(IEnumerable<string>)))
+        //        parameters.Add(newName, valList.SelectMany(x => (IEnumerable<string>)x[resultField]));
+        //    else
+        //        parameters.Add(newName, valList.Select(x => x[resultField]).Where(x => x != null));
+
+        //    return $"@{newName}";
+        //}
+        //return value;
     }
     
     public string ParseMacro(string m, string a, SearchRequestPlus request, Dictionary<string, object> parameters)
