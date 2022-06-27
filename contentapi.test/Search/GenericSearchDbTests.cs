@@ -1642,4 +1642,109 @@ public class GenericSearchDbTests : ViewUnitTestBase //, IClassFixture<DbUnitTes
             });
         }
     }
+
+    protected SearchRequests GetCountSearch(string type, string query = "", List<string>? extraFields = null)
+    {
+        var realFields = extraFields ?? new List<string>();
+        realFields.Add("id");
+        realFields.Add(QueryBuilder.CountField);
+
+        return new SearchRequests()
+        {
+            requests = new List<SearchRequest> {
+                new SearchRequest()
+                {
+                    type = type,
+                    fields = string.Join(",", realFields),
+                    query = query
+                }
+            }
+        };
+    }
+
+    protected async Task<long>SearchSimpleCount(SearchRequests request, long userId = NormalUserId)
+    {
+        var result = userId < 0 ? await service.SearchUnrestricted(request) : await service.Search(request, userId);
+
+        var type = request.requests.First().type;
+        Assert.Contains(type, result.objects.Keys);
+        Assert.Single(result.objects[type]);
+        Assert.Contains(QueryBuilder.CountField, result.objects[type].First());
+        return (long)result.objects[type].First()[QueryBuilder.CountField];
+    }
+
+    protected Task<long> SearchSimpleCount(string type, long userId = NormalUserId, string query = "", List<string>? extraFields = null)
+    {
+        var search = GetCountSearch(type, query, extraFields);
+        return SearchSimpleCount(search, userId);
+    }
+
+    [Fact]
+    public async Task SearchAsync_CountUsers()
+    {
+        var count = await SearchSimpleCount(nameof(RequestType.user));
+        Assert.Equal(fixture.UserCount + fixture.GroupCount, count);
+    }
+
+    [Fact]
+    public async Task SearchAsync_CountContent()
+    {
+        var count = await SearchSimpleCount(nameof(RequestType.content), NormalUserId);
+        Assert.Equal(fixture.ContentCount / 2, count);
+    }
+
+    [Fact]
+    public async Task SearchAsync_CountContentUnrestricted()
+    {
+        var count = await SearchSimpleCount(nameof(RequestType.content), -1);
+        Assert.Equal(fixture.ContentCount, count);
+    }
+
+    [Fact]
+    public async Task SearchAsync_CountMessages()
+    {
+        var messages = await service.SearchSingleType<Message>(NormalUserId, new SearchRequest()
+        {
+            type = nameof(RequestType.message),
+            fields = "id, contentId"
+        });
+
+        var count = await SearchSimpleCount(nameof(RequestType.message), NormalUserId, "", new List<string> { "contentId" });
+        Assert.Equal(messages.Count, count);
+    }
+
+    [Fact]
+    public async Task SearchAsync_CountMessagesUnrestricted()
+    {
+        var messages = await service.SearchSingleTypeUnrestricted<Message>(new SearchRequest()
+        {
+            type = nameof(RequestType.message),
+            fields = "id"
+        });
+
+        var count = await SearchSimpleCount(nameof(RequestType.message), -1);
+        Assert.Equal(messages.Count, count);
+    }
+
+    [Fact]
+    public async Task SearchAsync_CountMessages_Query1()
+    {
+        var query = "contentId > @minId";
+        var values = new Dictionary<string, object> {
+            { "minId", 23 }
+        };
+
+        var messages = await service.SearchSingleType<Message>(NormalUserId, new SearchRequest()
+        {
+            type = nameof(RequestType.message),
+            query = query,
+            fields = $"id, contentId"
+        }, values);
+
+        var countSearch = GetCountSearch(nameof(RequestType.message), query, new List<string> { "contentId"} );
+        countSearch.values = values;
+
+        var count = await SearchSimpleCount(countSearch, NormalUserId);
+        Assert.Equal(messages.Count, count);
+    }
 }

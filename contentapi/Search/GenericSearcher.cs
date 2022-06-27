@@ -61,7 +61,14 @@ public class GenericSearcher : IGenericSearch
     //WARN: should this be part of query builder?? who knows... it kinda doesn't need to be, it's not a big deal.
     public async Task AddExtraFields(SearchRequestPlus r, QueryResultSet result)
     {
-        //You CANNOT index results outside the if statements, since they might by default not have an id field!
+        if(!r.requestFields.Contains(nameof(IIdView.id)))
+        {
+            logger.LogDebug($"Skipping extra field addition for request '{r.name}'({r.requestId}), it is missing the {nameof(IIdView.id)} field");
+            return;
+        }
+
+        //We know that at this point, it's safe to index
+        var index = IndexResults(result);
 
         //This adds groups to users (if requested)
         if(r.requestType == RequestType.user)
@@ -71,7 +78,6 @@ public class GenericSearcher : IGenericSearch
             const string ridkey =  nameof(Db.UserRelation.relatedId);
             const string uidkey =  nameof(Db.UserRelation.userId);
             const string typekey = nameof(Db.UserRelation.type);
-            var index = IndexResults(result);
 
             if(r.requestFields.Contains(groupskey))
             {
@@ -103,7 +109,6 @@ public class GenericSearcher : IGenericSearch
             const string valkey = nameof(MessageView.values);
             const string uidskey = nameof(MessageView.uidsInText);
             const string textkey = nameof(MessageView.text);
-            var index = IndexResults(result);
 
             if(r.requestFields.Contains(valkey))
             {
@@ -123,15 +128,13 @@ public class GenericSearcher : IGenericSearch
             }
         }
 
-        if(r.requestType == RequestType.content) //queryBuilder.ContentRequestTypes.Contains(r.requestType))
+        if(r.requestType == RequestType.content)
         {
             const string keykey = nameof(ContentView.keywords);
             const string valkey = nameof(ContentView.values);
             const string permkey = nameof(ContentView.permissions);
             const string votekey = nameof(ContentView.votes);
-            //const string yourvotekey = nameof(ContentView.yourVote);
             const string cidkey = nameof(Db.ContentKeyword.contentId); //WARN: assuming it's the same for all!
-            var index = IndexResults(result);
             var ids = index.Keys.ToList();
             
             var voteinfo = typeService.GetTypeInfo<Db.ContentVote>();
@@ -167,7 +170,7 @@ public class GenericSearcher : IGenericSearch
                 var lookup = permissions.ToLookup(x => x.contentId);
 
                 foreach(var c in index)
-                    c.Value[permkey] = permissionService.ResultToPermissions(lookup.Contains(c.Key) ? lookup[c.Key] : new List<dynamic>());//permissions.Where(x => x.contentId.Equals(c["id"])));
+                    c.Value[permkey] = permissionService.ResultToPermissions(lookup.Contains(c.Key) ? lookup[c.Key] : new List<dynamic>());
             }
             if(r.requestFields.Contains(votekey))
             {
@@ -188,11 +191,6 @@ public class GenericSearcher : IGenericSearch
                     c.Value[votekey] = cvotes;
                 }
             }
-            //if(r.requestFields.Contains(yourvotekey))
-            //{
-            //    var yourVote = await dbcon.QueryAsync($"select {cidkey}, vote from {voteinfo.selfDbInfo?.modelTable} where {cidkey} in @ids and userId = @uid",
-            //        new { ids = ids, uid = r.}
-            //}
         }
     }
 

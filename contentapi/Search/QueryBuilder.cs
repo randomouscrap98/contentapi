@@ -20,6 +20,8 @@ public class QueryBuilder : IQueryBuilder
     protected IPermissionService permissionService;
 
     public const string DescendingAppend = "_desc";
+    public const string CountField = "specialCount";
+    public const string CountSelect = $"count(*) as {CountField}";
     
     protected readonly Dictionary<string, MacroDescription> StandardMacros = new Dictionary<string, MacroDescription>()
     {
@@ -272,7 +274,7 @@ public class QueryBuilder : IQueryBuilder
         reqplus.requestFields = ComputeRealFields(reqplus);
 
         //A special check: ids are required for non-query-builder fields. Assume ALL ids are named like Content's id
-        var nonBuildableFields = reqplus.requestFields.Where(x => !reqplus.typeInfo.fields[x].queryBuildable).ToList();
+        var nonBuildableFields = reqplus.requestFields.Where(x => reqplus.typeInfo.fields.ContainsKey(x) && !reqplus.typeInfo.fields[x].queryBuildable).ToList();
         if(nonBuildableFields.Count > 0 && !reqplus.requestFields.Contains(nameof(Content.id)))
             throw new ArgumentException($"You MUST select field '{nameof(Content.id)}' when also selecting complex fields such as '{nonBuildableFields.First()}' in request '{request.name}'");
 
@@ -291,6 +293,10 @@ public class QueryBuilder : IQueryBuilder
     /// <returns></returns>
     public string StandardFieldSelect(string fieldName, SearchRequestPlus r)
     {
+        //Just a simple count bypass; counts are a special thing that can be added to any query, so this is safe.
+        if(fieldName == CountField)
+            return CountSelect;
+
         var c = r.typeInfo.fields[fieldName].fieldSelect;
 
         if(string.IsNullOrWhiteSpace(c))
@@ -328,8 +334,20 @@ public class QueryBuilder : IQueryBuilder
         //Check for bad fields. NOTE: this means we can guarantee that future checks against the typeinfo are safe... or can we?
         //What about parsing fields from the query string?
         foreach (var field in fields)
-            if (!r.typeInfo.fields.ContainsKey(field))
+        {
+            //NOTE: doing the checks and the count field like this means that someone can always request the count field
+            //regardless of the request type (and from a db perspective, it SHOULD always work). But it won't be included
+            //with * or ~, which we DO want.
+            //if(field == CountField)
+            //{
+            //    if(fields.Count > 1)
+            //        throw new ArgumentException($"You cannot request other fields with the '{CountField}' field");
+            //}
+            if (!r.typeInfo.fields.ContainsKey(field) && field != CountField)
+            {
                 throw new ArgumentException($"Unknown field {field} in request {r.name}");
+            }
+        }
         
         return fields;
     }
@@ -637,7 +655,12 @@ public class QueryBuilder : IQueryBuilder
     /// <param name="r"></param>
     public void AddStandardSelect(StringBuilder queryStr, SearchRequestPlus r)
     {
-        var fieldSelect = r.requestFields.Where(x => r.typeInfo.fields[x].queryBuildable).Select(x => StandardFieldSelect(x, r)).ToList();
+        //This enforces the "count is the only field" thing
+        var fieldSelect = 
+            r.requestFields.Where(x => x == CountField || r.typeInfo.fields[x].queryBuildable).Select(x => StandardFieldSelect(x, r)).ToList();
+       // r.requestFields.Contains(CountField) ? 
+        //    new List<string> { CountSelect } :
+
         var selectFrom = r.typeInfo.selectFromSql ; 
 
         if(string.IsNullOrWhiteSpace(selectFrom))
