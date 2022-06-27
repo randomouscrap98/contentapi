@@ -389,7 +389,6 @@ public class QueryBuilder : IQueryBuilder
         var dotParts = realValName.Split(".".ToCharArray(), StringSplitOptions.RemoveEmptyEntries);
 
         object result = startingObject;
-        //object parentContainer = startingObject;
 
         //Each dot part needs to be a child of the current container.
         foreach(var part in dotParts)//(var i = 0; i < dotParts.Length; i++) //each(var part in dotParts)
@@ -398,7 +397,6 @@ public class QueryBuilder : IQueryBuilder
             var parentType = resultType;
             IEnumerable<object>? resultStronglyTyped = null;
             IEnumerable<IDictionary<string, object>>? resultStronglyTypedDic = null;
-            //IList? resultStronglyTyped = null;
 
             if(resultType.IsGenericEnumerable())
             {
@@ -408,19 +406,14 @@ public class QueryBuilder : IQueryBuilder
                 {
                     resultStronglyTypedDic = (IEnumerable<IDictionary<string, object>>)result;
                     empty = resultStronglyTypedDic.Count() == 0;
-                    //parentType = typeof(IDictionary<string, object>);
-                    //parentType = resultStronglyTypedDic.First().GetType();
                 }
                 else
                 {
                     resultStronglyTyped = (IEnumerable<object>)result;
                     empty = resultStronglyTyped.Count() == 0;
-                    //parentType = resultStronglyTyped.First().GetType();
                 }
 
                 parentType = resultType.GetGenericArguments()[0];
-
-                //(IList)result ?? throw new InvalidOperationException($"Can't cast {resultType} to IList"); //).Cast<object>();
 
                 if(empty)
                 {
@@ -474,6 +467,25 @@ public class QueryBuilder : IQueryBuilder
         }
 
         //At the end of the loop, the result should contain the complex 
+        var endResultType = result.GetType();
+
+        if(endResultType.IsGenericEnumerable())
+        {
+            var resultList = (IEnumerable<object>)result;
+
+            if(resultList.Count() == 0)
+                return new List<object>();
+
+            var resultInnerType = resultList.First().GetType();
+
+            if(resultInnerType.IsAssignableTo(typeof(IEnumerable<long>)))
+                return resultList.SelectMany(x => (IEnumerable<long>)x);
+            else if(resultInnerType.IsAssignableTo(typeof(IEnumerable<string>)))
+                return resultList.SelectMany(x => (IEnumerable<string>)x);
+            else if(resultInnerType.IsAssignableTo(typeof(IEnumerable<object>)))
+                return resultList.SelectMany(x => (IEnumerable<object>)x);
+        }
+
         return result;
     }
 
