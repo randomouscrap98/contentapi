@@ -115,4 +115,42 @@ public class SpecializedSearchTests : ViewUnitTestBase //, IClassFixture<DbUnitT
         Assert.NotEqual(0, deletedComment.contentId);
         Assert.False(deletedComment.edited);
     }
+
+    [Fact]
+    public async Task Regression_SearchValuesForPinned()
+    {
+        //Write a comment to a known content
+        var comment = GetNewCommentView(AllAccessContentId);
+        var writtenComment = await writer.WriteAsync(comment, NormalUserId);
+
+        //Now update said content to have more values
+        var content = await searcher.GetById<ContentView>(AllAccessContentId);
+        content.values.Add("pinned", new List<long> { writtenComment.id });
+        var writtenContent = await writer.WriteAsync(content, NormalUserId);
+
+        //Then construct a search for content and comments such that the comments are in the values
+        var search = new SearchRequests()
+        {
+            values = new Dictionary<string, object> { },
+            requests = new List<SearchRequest>() {
+                //This searches ALL content, many of which will NOT have the pinned
+                new SearchRequest() {
+                    type = nameof(RequestType.content),
+                    fields = "*"
+                },
+                new SearchRequest() {
+                    type = nameof(RequestType.message),
+                    fields = "*",
+                    query = "id in @content.values.pinned"
+                }
+            }
+        };
+
+        var searchResult = await searcher.SearchUnrestricted(search);
+        var searchMessages = searcher.ToStronglyTyped<MessageView>(searchResult.objects[nameof(RequestType.message)]);
+        var searchContent = searcher.ToStronglyTyped<MessageView>(searchResult.objects[nameof(RequestType.content)]);
+
+        Assert.Contains(writtenComment.id, searchMessages.Select(x => x.id));
+        Assert.Contains(AllAccessContentId, searchContent.Select(x => x.id));
+    }
 }

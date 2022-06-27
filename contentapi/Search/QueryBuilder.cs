@@ -6,6 +6,7 @@ using AutoMapper;
 using contentapi.data;
 using contentapi.Db;
 using contentapi.Utilities;
+using Newtonsoft.Json.Linq;
 
 namespace contentapi.Search;
 
@@ -391,7 +392,7 @@ public class QueryBuilder : IQueryBuilder
         object result = startingObject;
 
         //Each dot part needs to be a child of the current container.
-        foreach(var part in dotParts)//(var i = 0; i < dotParts.Length; i++) //each(var part in dotParts)
+        foreach(var part in dotParts)
         {
             var resultType = result.GetType();
             var parentType = resultType;
@@ -406,14 +407,15 @@ public class QueryBuilder : IQueryBuilder
                 {
                     resultStronglyTypedDic = (IEnumerable<IDictionary<string, object>>)result;
                     empty = resultStronglyTypedDic.Count() == 0;
+                    parentType = typeof(IDictionary<string, object>);
                 }
                 else
                 {
                     resultStronglyTyped = (IEnumerable<object>)result;
                     empty = resultStronglyTyped.Count() == 0;
+                    if(!empty)
+                        parentType = resultStronglyTyped.First().GetType();
                 }
-
-                parentType = resultType.GetGenericArguments()[0];
 
                 if(empty)
                 {
@@ -426,7 +428,7 @@ public class QueryBuilder : IQueryBuilder
             var singleRetriever = new Func<object, object?>(o => null);
 
             //It's probably a dictionary... maybe
-            if(parentType == typeof(IDictionary<string, object>))
+            if(parentType.IsAssignableTo(typeof(IDictionary<string, object>)))
             {
                 singleRetriever = (o) => 
                 {
@@ -467,8 +469,20 @@ public class QueryBuilder : IQueryBuilder
         }
 
         //At the end of the loop, the result should contain the complex 
+        return FlattenResult(result);
+    }
+
+    /// <summary>
+    /// Tries to flatten two-layer lists. If you pass a scalar, nothing is modified. If you pass a single-level list, nothing is 
+    /// modified. But, if you pass a nested list, it will flatten it to a single layer list
+    /// </summary>
+    /// <param name="result"></param>
+    /// <returns></returns>
+    public object FlattenResult(object result)
+    {
         var endResultType = result.GetType();
 
+        //Not necessarily complicated if it's an enumerable (it usually is)
         if(endResultType.IsGenericEnumerable())
         {
             var resultList = (IEnumerable<object>)result;
@@ -478,15 +492,40 @@ public class QueryBuilder : IQueryBuilder
 
             var resultInnerType = resultList.First().GetType();
 
-            if(resultInnerType.IsAssignableTo(typeof(IEnumerable<long>)))
-                return resultList.SelectMany(x => (IEnumerable<long>)x);
-            else if(resultInnerType.IsAssignableTo(typeof(IEnumerable<string>)))
-                return resultList.SelectMany(x => (IEnumerable<string>)x);
-            else if(resultInnerType.IsAssignableTo(typeof(IEnumerable<object>)))
-                return resultList.SelectMany(x => (IEnumerable<object>)x);
+            //Only if the list is a list of lists does it get super complicated
+            if(resultInnerType.IsGenericEnumerable())
+                return PrepareResultTyping(resultList.SelectMany(x => ((IEnumerable)x).Cast<object>()));
+            else
+                return PrepareResultTyping(resultList);
         }
 
         return result;
+    }
+
+    public List<object?> PrepareResultTyping(IEnumerable<object> results)
+    {
+        var flatResult = new List<object?>();
+
+        foreach (var r in results) //resultList.SelectMany(x => ((IEnumerable)x).Cast<object>()))
+        {
+            var rtype = r.GetType();
+
+            if (rtype == typeof(JValue))
+            {
+                var jval = (JValue)r;
+                flatResult.Add(jval.Value);
+            }
+            else if (rtype == typeof(JArray))
+            {
+                flatResult.AddRange(PrepareResultTyping((JArray)r));
+            }
+            else
+            {
+                flatResult.Add(r);
+            }
+        }
+
+        return flatResult;
     }
 
     public string ParseValue(string value, SearchRequestPlus request, Dictionary<string, object> parameters)
@@ -506,65 +545,6 @@ public class QueryBuilder : IQueryBuilder
         {
             return value;
         }
-
-
-        //if(type != null && type.IsAssignableTo(typeof(IEnumerable<long>)))
-        //    parameters.Add(newName, (valueObject).SelectMany(x => (IEnumerable<long>)x[resultField]));
-        //else if(fieldType != null && fieldType.IsAssignableTo(typeof(IEnumerable<string>)))
-        //    parameters.Add(newName, valList.SelectMany(x => (IEnumerable<string>)x[resultField]));
-        //else
-        //    parameters.Add(newName, valList.Select(x => x[resultField]).Where(x => x != null));
-
-
-        //if (!parameters.ContainsKey(realValName))
-        //{
-        //    var dotParts = realValName.Split(".".ToCharArray(), StringSplitOptions.RemoveEmptyEntries);
-        //    var newName = realValName.Replace(".", "_");
-
-        //    if (dotParts.Length == 1)
-        //        throw new ArgumentException($"Value {value} not found for request {request.name}");
-
-        //    //For now, let's just assume when linking, they're going one deep
-        //    if (dotParts.Length != 2)
-        //        throw new ArgumentException($"For now, can only access 1 layer deep in results, fix {value} in {request.name}");
-
-        //    var resultName = dotParts[0];
-        //    var resultField = dotParts[1];
-
-        //    if (!parameters.ContainsKey(resultName))
-        //        throw new ArgumentException($"No base link {resultName} for {value} in {request.name}");
-
-        //    var testList = parameters[resultName];
-
-        //    if (!(testList is IEnumerable<IDictionary<string, object>>))
-        //        throw new ArgumentException($"Base link {resultName} improper type for {value} in {request.name}");
-
-        //    var valList = (IEnumerable<IDictionary<string, object>>)testList;
-
-        //    if (valList.Count() == 0)
-        //    {
-        //        //There's no results, so most things will fail, but whatever. In this case,
-        //        //we don't care about the field
-        //        parameters.Add(newName, new List<object>());
-        //        return $"@{newName}";
-        //    }
-
-        //    if (!valList.First().ContainsKey(resultField))
-        //        throw new ArgumentException($"Link result {resultName} has no field {resultField} for {value} in {request.name}");
-
-        //    //OK we finally have it, let's go
-        //    var fieldType = valList.First()[resultField]?.GetType();
-
-        //    if(fieldType != null && fieldType.IsAssignableTo(typeof(IEnumerable<long>)))
-        //        parameters.Add(newName, valList.SelectMany(x => (IEnumerable<long>)x[resultField]));
-        //    else if(fieldType != null && fieldType.IsAssignableTo(typeof(IEnumerable<string>)))
-        //        parameters.Add(newName, valList.SelectMany(x => (IEnumerable<string>)x[resultField]));
-        //    else
-        //        parameters.Add(newName, valList.Select(x => x[resultField]).Where(x => x != null));
-
-        //    return $"@{newName}";
-        //}
-        //return value;
     }
     
     public string ParseMacro(string m, string a, SearchRequestPlus request, Dictionary<string, object> parameters)
