@@ -389,37 +389,63 @@ public class QueryBuilder : IQueryBuilder
         var dotParts = realValName.Split(".".ToCharArray(), StringSplitOptions.RemoveEmptyEntries);
 
         object result = startingObject;
-        object parentContainer = startingObject;
+        //object parentContainer = startingObject;
 
         //Each dot part needs to be a child of the current container.
-        for(var i = 0; i < dotParts.Length; i++) //each(var part in dotParts)
+        foreach(var part in dotParts)//(var i = 0; i < dotParts.Length; i++) //each(var part in dotParts)
         {
-            var part = dotParts[i];
-            var parentType = parentContainer.GetType();
+            var resultType = result.GetType();
+            var parentType = resultType;
+            IEnumerable<object>? resultStronglyTyped = null;
+            IEnumerable<IDictionary<string, object>>? resultStronglyTypedDic = null;
+            //IList? resultStronglyTyped = null;
+
+            if(resultType.IsGenericEnumerable())
+            {
+                var empty = false;
+
+                if(result is IEnumerable<IDictionary<string, object>>)
+                {
+                    resultStronglyTypedDic = (IEnumerable<IDictionary<string, object>>)result;
+                    empty = resultStronglyTypedDic.Count() == 0;
+                    //parentType = typeof(IDictionary<string, object>);
+                    //parentType = resultStronglyTypedDic.First().GetType();
+                }
+                else
+                {
+                    resultStronglyTyped = (IEnumerable<object>)result;
+                    empty = resultStronglyTyped.Count() == 0;
+                    //parentType = resultStronglyTyped.First().GetType();
+                }
+
+                parentType = resultType.GetGenericArguments()[0];
+
+                //(IList)result ?? throw new InvalidOperationException($"Can't cast {resultType} to IList"); //).Cast<object>();
+
+                if(empty)
+                {
+                    logger.LogDebug($"No resultset for value '{valueKey}', returning empty list while still on node '{part}'");
+                    return new List<object>();
+                }
+
+            }
 
             var singleRetriever = new Func<object, object?>(o => null);
-            Func<object, IEnumerable<object>>? multiRetriever = null;
 
             //It's probably a dictionary... maybe
-            if(parentType.IsGenericEnumerable())
+            if(parentType == typeof(IDictionary<string, object>))
             {
-                multiRetriever = (o) =>
+                singleRetriever = (o) => 
                 {
-                    var l = ((IEnumerable)o).Cast<object>();
-                    return l;
+                    var d = (o as IDictionary<string, object>) ?? throw new InvalidOperationException($"Couldn't cast value part '{part}' in '{valueKey}' to IDictionary<string, object>!");
+                    return d.ContainsKey(part) ? d[part] : null;
                 };
-
-                //Have to run again 
-                i--;
-
-                //Still need to assign single retriever to use on parent
-                singleRetriever = (o) => multiRetriever(o).FirstOrDefault();
             }
             else if(parentType.IsGenericDictionary())
             {
                 singleRetriever = (o) => 
                 {
-                    var d = o as IDictionary ?? throw new InvalidOperationException($"Couldn't cast value part '{part}' in '{valueKey}' to IDictionary!");
+                    var d = (o as IDictionary) ?? throw new InvalidOperationException($"Couldn't cast value part '{part}' in '{valueKey}' to IDictionary!");
                     return d.Contains(part) ? d[part] : null;
                 };
             }
@@ -437,28 +463,14 @@ public class QueryBuilder : IQueryBuilder
                 );
             }
 
-            var resultType = result.GetType();
-
             //These two different assignments are for the list feature: either the value selector is applied across a whole list,
             //or it's just the normal way
-            if(resultType.IsGenericEnumerable())
-            {
-                var resultStronglyTyped = ((IEnumerable)result).Cast<object>();
-
-                if(multiRetriever != null) 
-                    result = resultStronglyTyped.SelectMany(x => multiRetriever(x)).Where(x => x != null);
-                else
-                    result = resultStronglyTyped.Select(x => singleRetriever(x)).Where(x => x != null);
-            }
+            if(resultStronglyTyped != null)
+                result = resultStronglyTyped.Select(x => singleRetriever(x)).Where(x => x != null);
+            else if(resultStronglyTypedDic != null)
+                result = resultStronglyTypedDic.Select(x => singleRetriever(x)).Where(x => x != null);
             else
-            {
-                result = (multiRetriever != null ? multiRetriever(result) : singleRetriever(result)) ??
-                    throw new InvalidOperationException($"Couldn't find node '{part}' in '{valueKey}'");
-            }
-            
-            //move to the next parent by using the function to find the key (only if we're not at the end, we don't need to calculate the next parent)
-            if(i < dotParts.Length - 1)
-                parentContainer = singleRetriever(parentContainer) ?? throw new InvalidOperationException($"Couldn't find node '{part}' in '{valueKey}' (parentContainer part)");
+                result = singleRetriever(result) ??  throw new InvalidOperationException($"Couldn't find node '{part}' in '{valueKey}'");
         }
 
         //At the end of the loop, the result should contain the complex 

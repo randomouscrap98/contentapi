@@ -36,7 +36,7 @@ public static class GeneralExtensions
     /// </summary>
     /// <param name="type"></param>
     /// <returns></returns>
-    public static bool IsGenericDictionary(this Type type) => type.IsGenericType(typeof(IDictionary<,>)) || type.IsGenericType(typeof(IDictionary));
+    public static bool IsGenericDictionary(this Type type) => type is IDictionary || type.IsGenericType(typeof(IDictionary<,>)) || type.IsGenericType(typeof(IDictionary));
 
     /// <summary>
     /// Check if given type is some kind of enumerable
