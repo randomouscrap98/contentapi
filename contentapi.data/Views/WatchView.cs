@@ -34,7 +34,7 @@ public class WatchView : IContentUserRelatedView
 
     [FieldSelect]
     [Writable(WriteRule.Preserve, WriteRule.AutoDate)]
-    public DateTime editDate { get; set; }
+    public DateTime? editDate { get; set; }
 
     [Expensive(2)]
     [FieldSelect("select count(*) from " + MessageTable + " c where c.contentId = main.contentId and c.id > main.lastCommentId")]

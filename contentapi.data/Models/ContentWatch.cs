@@ -13,6 +13,6 @@ namespace contentapi.Db
         public long lastCommentId { get; set; }
         public long lastActivityId { get; set; }
         public DateTime createDate { get; set; }
-        public DateTime editDate { get; set; }
+        public DateTime? editDate { get; set; }
     }
 }
