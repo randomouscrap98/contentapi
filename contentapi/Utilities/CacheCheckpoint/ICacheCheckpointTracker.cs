@@ -14,5 +14,5 @@ public interface ICacheCheckpointTracker<T>
 
     int MinimumCacheCheckpoint(string checkpointName);
     int MaximumCacheCheckpoint(string checkpointName);
-    int CacheCount {get; }
+    int TotalCacheCount {get; }
 }

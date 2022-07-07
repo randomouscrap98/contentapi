@@ -10,6 +10,7 @@ public class LiveEventView
     public UserAction action {get;set;}
     public string type {get;set;} = "";
     public long refId {get;set;}
+    public long contentId {get;set;}
 
     public LiveEventView() { }
 }

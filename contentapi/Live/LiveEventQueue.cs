@@ -290,7 +290,7 @@ public class LiveEventQueue : ILiveEventQueue
         {
             requests.requests.Add(basicRequest(RequestType.activity.ToString())); 
             requests.requests.Add(GetAutoContentRequest("id in @activity.contentId"));
-            requests.requests.Add(GetAutoContentRequest("id in @content.parentId", "parent"));
+            requests.requests.Add(GetAutoContentRequest("id in @content.parentId", Constants.ParentsKey));
             requests.requests.Add(new SearchRequest()
             {
                 type = RequestType.user.ToString(),
@@ -309,7 +309,7 @@ public class LiveEventQueue : ILiveEventQueue
         else if(first.type == EventType.watch_event) 
         {
             requests.requests.Add(basicRequest(RequestType.watch.ToString())); 
-            requests.requests.Add(GetAutoContentRequest("id in @watch.contentId"));
+            requests.requests.Add(GetAutoContentRequest("id in @watch.contentId or id in @contentIds"));
         }
         else
         {
@@ -317,7 +317,7 @@ public class LiveEventQueue : ILiveEventQueue
         }
 
         //Also, add request for related content
-        requests.requests.Add(GetAutoContentRequest("id in @contentIds", "related_content"));
+        //requests.requests.Add(GetAutoContentRequest("id in @contentIds", Constants.RelatedContentKey));
 
         return requests;
     }
@@ -427,5 +427,5 @@ public class LiveEventQueue : ILiveEventQueue
         return eventTracker.MaximumCacheCheckpoint(MainCheckpointName);
     }
 
-    public int QueueSize => eventTracker.CacheCount;
+    public int QueueSize => eventTracker.TotalCacheCount;
 }

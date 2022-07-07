@@ -441,6 +441,34 @@ public class EventQueueTest : ViewUnitTestBase //, IClassFixture<DbUnitTestSearc
         catch(OperationCanceledException) {}
     }
 
+    [Fact]
+    public async Task ListenAsync_WatchRelatedContent_Delete()
+    {
+        var watch = await writer.WriteAsync(new WatchView() { contentId = AllAccessContentId }, NormalUserId);
+
+        var originalEvents = await queue.ListenAsync(new UserView() { id = NormalUserId }, -1, safetySource.Token);
+
+        //Then immediately delete it
+        var deletedWatch = await writer.DeleteAsync<WatchView>(watch.id, NormalUserId);
+
+        //See what events we can get. Use a fake user view because nothing in there matters
+        var events = await queue.ListenAsync(new UserView() { id = NormalUserId }, originalEvents.lastId, safetySource.Token);
+
+        Assert.Single(events.events);
+
+        //Make sure there's a watch delete event and that it has "related_content"
+        var deleteEvent = events.events.First(x => x.action == UserAction.delete && x.type == nameof(EventType.watch_event));
+
+        Assert.Equal(AllAccessContentId, deleteEvent.contentId);
+        Assert.Contains(nameof(RequestType.content), events.objects[EventType.watch_event].Keys);
+        Assert.Contains(events.objects[EventType.watch_event][nameof(RequestType.content)], x => (long)x["id"] == watch.contentId);
+
+        //Assert.All(originalEvents.objects, x => Assert.NotEqual("related_content", x));
+        //Also, make sure that related content doesn't leak into OTHER results
+        //Assert.Contains(Constants.RelatedContentKey, events.objects[EventType.activity_event].Keys);
+        //Assert.Empty(events.objects[EventType.activity_event][Constants.RelatedContentKey]);
+    }
+
     [Theory]
     [InlineData(0)]
     [InlineData(-1)]

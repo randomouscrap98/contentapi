@@ -110,7 +110,7 @@ public class CacheCheckpointTracker<T> : ICacheCheckpointTracker<T>
         return Interlocked.CompareExchange (ref thisCheckpoint.Checkpoint, 0, 0);
     }
     
-    public int CacheCount => checkpoints.Count;
+    public int TotalCacheCount => checkpoints.Sum(x => x.Value.Cache.Count);
 
     /// <summary>
     /// 
