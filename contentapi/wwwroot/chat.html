@@ -183,18 +183,7 @@ window.onload = function()
         }
     };
 
-    //Use a custom handler for posting to restore the textbox
-    var postHandler = new ApiHandler(d => {
-        if (d.error) {
-            alert("Error on post: " + d.error)
-            postbox.value = lastPostboxValue;
-        }
-    }, e => {
-        api.default_handler.error(e);
-        postbox.value = lastPostboxValue;
-    });
-
-    //This doesn't let you use markup, so take that into account
+    //What to do on message submit
     postsubmit.onclick = function()
     {
         if(!postbox.value)
@@ -207,14 +196,49 @@ window.onload = function()
 
         if(commandCheck)
         {
-            api.WriteModuleMessage(commandCheck[1], pid, commandCheck[2], postHandler); 
+            //Unfortunately, can't write module messages through websocket yet, so this still requires a normal handler
+            api.WriteModuleMessage(commandCheck[1], pid, commandCheck[2], new ApiHandler(d => 
+            {
+                if (d.error) {
+                    alert("Error on post: " + d.error)
+                    postbox.value = lastPostboxValue;
+                }
+            }, e => {
+                api.default_handler.error(e);
+                postbox.value = lastPostboxValue;
+            }));
         }
         else
         {
-            //NOTE: the "yourAvatar" here might be empty, or it might have a value (depending on how quickly all the async stuff happens).
+            //You can write certain object types (most) on the websocket. You don't have to: you can simply use the
+            //builtin API endpoints for writing. But you've already seen an example of that in the regular website (posting
+            //comments on pages), so here's an example of how to write on the websocket
+            //NOTE: the "userSelf.avatar" here might be empty, or it might have a value (depending on how quickly all the async stuff happens).
             //Both will work: if it's empty, it'll just not set the avatar field and use your current avatar whenever displaying. Or, if
             //it IS set, your avatar will be saved with the comment.
-            api.WriteType(APICONST.WRITETYPES.MESSAGE, new CommentBuilder(lastPostboxValue, pid, DEFAULTMARKUP, userSelf && userSelf.avatar), postHandler);
+            ws.sendRequest("write", {
+                type : APICONST.WRITETYPES.MESSAGE,
+                object :  new CommentBuilder(lastPostboxValue, pid, DEFAULTMARKUP, userSelf && userSelf.avatar)
+            }, response => {
+                if(response.error)
+                {
+                    //Restore
+                    alert("Error on post: " + response.error)
+                    postbox.value = lastPostboxValue;
+                    console.warning("Websocket write error response:", response);
+                }
+            });
+        //Websocket acts like a proxy, so your standard 'request' result is wrapped in the standard websocket result
+        console.log(response);
+        var sortedContent = api.KeyById(response.data.objects.content)
+        var pagetitle = document.getElementById("pagetitle");
+        var page = sortedContent[pid];
+        setTitle(pagetitle, page);
+
+        pagetitle.href = "index.html?t=page&pid=" + sortedContent[pid].id;
+
+        displayMessages(response.data.objects); //don't keep scroll, don't update notifications with unique messages
+            //api.WriteType(APICONST.WRITETYPES.MESSAGE, new CommentBuilder(lastPostboxValue, pid, DEFAULTMARKUP, userSelf && userSelf.avatar), postHandler);
         }
     };
 

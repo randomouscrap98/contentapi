@@ -227,19 +227,19 @@ public class LiveController : BaseController
 
                     //This sucks. Wonder if I can make it better
                     if(type == nameof(RequestType.message))
-                        await WriteAsync(writeObject.ToObject<MessageView>() ?? throw new RequestException($"Couldn't parse {type}!"), userId, writeData.activityMessage);
+                        response.data = await WriteAsync(writeObject.ToObject<MessageView>() ?? throw new RequestException($"Couldn't parse {type}!"), userId, writeData.activityMessage);
                     else if(type == nameof(RequestType.content))
-                        await WriteAsync(writeObject.ToObject<ContentView>() ?? throw new RequestException($"Couldn't parse {type}!"), userId, writeData.activityMessage);
+                        response.data = await WriteAsync(writeObject.ToObject<ContentView>() ?? throw new RequestException($"Couldn't parse {type}!"), userId, writeData.activityMessage);
                     else if(type == nameof(RequestType.user))
-                        await WriteAsync(writeObject.ToObject<UserView>() ?? throw new RequestException($"Couldn't parse {type}!"), userId, writeData.activityMessage);
+                        response.data = await WriteAsync(writeObject.ToObject<UserView>() ?? throw new RequestException($"Couldn't parse {type}!"), userId, writeData.activityMessage);
                     else if(type == nameof(RequestType.uservariable))
-                        await WriteAsync(writeObject.ToObject<UserVariableView>() ?? throw new RequestException($"Couldn't parse {type}!"), userId, writeData.activityMessage);
+                        response.data = await WriteAsync(writeObject.ToObject<UserVariableView>() ?? throw new RequestException($"Couldn't parse {type}!"), userId, writeData.activityMessage);
                     else if(type == nameof(RequestType.watch))
-                        await WriteAsync(writeObject.ToObject<WatchView>() ?? throw new RequestException($"Couldn't parse {type}!"), userId, writeData.activityMessage);
+                        response.data = await WriteAsync(writeObject.ToObject<WatchView>() ?? throw new RequestException($"Couldn't parse {type}!"), userId, writeData.activityMessage);
                     else if(type == nameof(RequestType.vote))
-                        await WriteAsync(writeObject.ToObject<VoteView>() ?? throw new RequestException($"Couldn't parse {type}!"), userId, writeData.activityMessage);
+                        response.data = await WriteAsync(writeObject.ToObject<VoteView>() ?? throw new RequestException($"Couldn't parse {type}!"), userId, writeData.activityMessage);
                     else if(type == nameof(RequestType.ban))
-                        await WriteAsync(writeObject.ToObject<BanView>() ?? throw new RequestException($"Couldn't parse {type}!"), userId, writeData.activityMessage);
+                        response.data = await WriteAsync(writeObject.ToObject<BanView>() ?? throw new RequestException($"Couldn't parse {type}!"), userId, writeData.activityMessage);
                     else
                         throw new RequestException($"Unknown write type {type}");
                 }
