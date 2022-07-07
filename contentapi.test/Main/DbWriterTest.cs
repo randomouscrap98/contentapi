@@ -1531,11 +1531,10 @@ public class DbWriterTest : ViewUnitTestBase
         Assert.Equal(NormalUserId, writtenWatch.userId);
 
         var deletedWatch = await writer.DeleteAsync<WatchView>(writtenWatch.id, NormalUserId);
-        //We don't really care what the watch looks like when it comes back right now, but 
-        //maybe someday... TODO
-        //Assert.Equal(AllAccessContentId, deletedWatch.contentId);
-        //Assert.Equal(NormalUserId, deletedWatch.userId);
-        //Assert.Equal(writtenWatch.id, deletedWatch.id);
+
+        //the returned watch NEEDS to display the contentId because it's necessary for frontends and
+        //such to like.. work on it 
+        Assert.Equal(AllAccessContentId, deletedWatch.contentId);
 
         await Assert.ThrowsAnyAsync<NotFoundException>(() => searcher.GetById<WatchView>(RequestType.watch, writtenWatch.id));
     }

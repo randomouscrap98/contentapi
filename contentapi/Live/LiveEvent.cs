@@ -1,5 +1,4 @@
 using contentapi.data;
-using contentapi.Db;
 using contentapi.Utilities;
 
 namespace contentapi.Live;
@@ -16,6 +15,12 @@ public class LiveEvent : ILinkedCheckpointId
     public UserAction action {get;set;}                             // 8
     public EventType type {get;set;}                              // 8
     public long refId {get;set;}                                    // 8
+
+    /// <summary>
+    /// An optional contentId field that can be used to signify related content for an event in
+    /// the absence of the real data (for instance, in pure deletes)
+    /// </summary>
+    public long contentId {get;set;}                                  // 8
 
     //managed by the internal system.
     public Dictionary<long, string> permissions {get;set;} = new Dictionary<long, string>();

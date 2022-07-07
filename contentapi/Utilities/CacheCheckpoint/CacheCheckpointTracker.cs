@@ -108,8 +108,9 @@ public class CacheCheckpointTracker<T> : ICacheCheckpointTracker<T>
     {
         var thisCheckpoint = GetCheckpoint(checkpointName);
         return Interlocked.CompareExchange (ref thisCheckpoint.Checkpoint, 0, 0);
-        //, Data = CacheAfter(thisCheckpoint, lastSeen) };
     }
+    
+    public int CacheCount => checkpoints.Count;
 
     /// <summary>
     /// 

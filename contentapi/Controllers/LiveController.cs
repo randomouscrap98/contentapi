@@ -300,6 +300,7 @@ public class LiveController : BaseController
     {
         return new {
             connections = currentListeners.Count,
+            queueSize = eventQueue.QueueSize,
             currentTrackerId = trackerId
         };
     }

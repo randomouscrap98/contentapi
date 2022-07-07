@@ -215,12 +215,6 @@ public class DbWriter : IDbWriter
                     throw new ForbiddenException($"You cannot modify module messages!");
             }
 
-            //Create is special, because we need the parent create permission. We also check updates so users can't 
-            //move a comment into an unusable room (if that ever gets allowed)
-            //if(action == UserAction.create)// || action == UserAction.update)
-            //{
-            //}
-
             await ValidateBanOnContent(cView.contentId, requesterBan);
 
             if(cView.deleted)
@@ -251,8 +245,6 @@ public class DbWriter : IDbWriter
 
             if(action != UserAction.delete)
             {
-                //Go make sure the username is fine
-
                 //Go lookup the avatar, make sure they can't set something junk
                 if(uView.avatar != Constants.DefaultHash)
                 {
@@ -855,7 +847,12 @@ public class DbWriter : IDbWriter
             tsx.Commit();
 
             if(evType != EventType.none)
-                await eventQueue.AddEventAsync(new LiveEvent(work.requester.id, work.action, evType, work.view.id));
+            {
+                //These are special: make sure you report the contentId since these types of things are purely deleted.
+                await eventQueue.AddEventAsync(new LiveEvent(work.requester.id, work.action, evType, work.view.id) {
+                    contentId = work.view.contentId
+                });
+            }
 
             //No admin log for contentuserrelated, so have to construct the message ourselves
             var actionWord = work.action == UserAction.create ? "added" : work.action == UserAction.update ? "modified" : "deleted";

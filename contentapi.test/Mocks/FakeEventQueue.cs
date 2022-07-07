@@ -2,7 +2,6 @@ using System.Collections.Generic;
 using System.Threading;
 using System.Threading.Tasks;
 using contentapi.Live;
-using contentapi.Search;
 using contentapi.data.Views;
 using contentapi.data;
 
@@ -12,6 +11,8 @@ public class FakeEventQueue : ILiveEventQueue
 {
     public List<LiveEvent> Events = new List<LiveEvent>();
     public object ReturnData = false;
+
+    public int QueueSize => throw new System.NotImplementedException();
 
     public Task<object> AddEventAsync(LiveEvent data)
     {

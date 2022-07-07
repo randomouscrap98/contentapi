@@ -264,7 +264,8 @@ public class LiveEventQueue : ILiveEventQueue
         var requests = new SearchRequests()
         {
             values = new Dictionary<string, object> {
-                { "ids", events.Select(x => x.refId) }
+                { "ids", events.Select(x => x.refId) },
+                { "contentIds", events.Select(x => x.contentId).Where(x => x > 0) }
             }
         };
 
@@ -314,6 +315,9 @@ public class LiveEventQueue : ILiveEventQueue
         {
             throw new InvalidOperationException($"Can't understand event type {first.type}, event references {string.Join(",", events.Select(x => x.refId))}");
         }
+
+        //Also, add request for related content
+        requests.requests.Add(GetAutoContentRequest("id in @contentIds", "related_content"));
 
         return requests;
     }
@@ -422,4 +426,6 @@ public class LiveEventQueue : ILiveEventQueue
     {
         return eventTracker.MaximumCacheCheckpoint(MainCheckpointName);
     }
+
+    public int QueueSize => eventTracker.CacheCount;
 }
