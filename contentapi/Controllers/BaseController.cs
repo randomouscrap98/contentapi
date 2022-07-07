@@ -115,6 +115,51 @@ public class BaseController : Controller
         }
     }
 
+    /// <summary>
+    /// A wrapper for writing items with additional protections required for the front-facing API
+    /// </summary>
+    /// <typeparam name="T"></typeparam>
+    protected Task<T> WriteAsync<T>(T item, long? userId = null, string? activityMessage = null) where T : class, IIdView, new()
+    {
+        var realUserId = userId ?? GetUserIdStrict();
+        var limiter = RateWrite;
+
+        if(item is MessageView)
+        {
+            var message = (item as MessageView)!;
+
+            if(message.module != null)
+                throw new ForbiddenException("You cannot create module messages yourself!");
+
+            if(message.receiveUserId != 0)
+                throw new ForbiddenException("Setting receiveUserId in a comment is not supported right now!");
+        }
+        else if(item is ContentView)
+        {
+            var page = (item as ContentView)!;
+
+            //THIS IS AWFUL! WHAT TO DO ABOUT THIS??? Or is it fine: files ARE written by the controllers after all...
+            //so maybe it makes sense for the controllers to control this aspect as well
+            if(page.id == 0 && page.contentType == InternalContentType.file)
+                throw new ForbiddenException("You cannot create files through this endpoint! Use the file controller!");
+        }
+        else if(item is WatchView)
+        {
+            limiter = RateInteract;
+        }
+        else if(item is VoteView)
+        {
+            limiter = RateInteract;
+        }
+        else if(item is UserVariableView)
+        {
+            limiter = RateUserVariable;
+        }
+
+        RateLimit(limiter, realUserId.ToString());
+        return services.writer.WriteAsync(item, realUserId, activityMessage);
+    }
+
     protected void RateLimit(string thing, string? id = null)
     {
         id = id ?? GetUserId()?.ToString() ?? "0";

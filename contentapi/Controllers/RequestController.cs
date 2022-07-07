@@ -58,7 +58,10 @@ public class RequestController : BaseController
                     "You can request data from any 'table', and the query is in a kind of SQL format rather than " +
                     "search objects. You must name each request, because you can reference requests in later " +
                     "requests to perform 'chaining'. You can use values in your query, but they must be parameters " +
-                    "in the form of @value. For examples, please see the unit tests in github: https://github.com/randomouscrap98/contentapi/blob/master/contentapi.test/Search/GenericSearchDbTests.cs",
+                    "in the form of @key, with the actual value put in the 'values' dictionary along with your request. " +
+                    "Or, for simple scalar values, you can substitute a literal inside {{}}, so for instance, " +
+                    "you can do 'id = {{123}}' or 'name = {{The Title}}'. " + 
+                    "For examples, please see the unit tests in github: https://github.com/randomouscrap98/contentapi/blob/master/contentapi.test/Search/GenericSearchDbTests.cs",
             details = queryBuilder.GetAboutSearch()
         };
     }
