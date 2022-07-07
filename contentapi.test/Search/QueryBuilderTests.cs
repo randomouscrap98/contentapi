@@ -207,4 +207,39 @@ public class QueryBuilderTests : UnitTestBase
             }
         }
     }
+
+    [Theory]
+    [InlineData("id = {{123}}", "123", true)]
+    [InlineData("name = {{abc}}", "abc", true)]
+    [InlineData("name = {{abc}} or id = {{123}}", "123", true)]
+    [InlineData("name = {{\"holy heck\"}}", "\"holy heck\"", true)]
+    [InlineData("name = {{%wow%}}", "%wow", true)]
+    [InlineData("name = {{something with spaces}}", "something with spaces", true)]
+    [InlineData("name = {nope}", null, false)]
+    public void FullParseRequest_LiteralSugar(string query, object value, bool allowed)
+    {
+        var request =new SearchRequest()
+        {
+            name = "contentTest",
+            type = "content",
+            fields = "*",
+            query = query
+        };
+
+        var values = new Dictionary<string, object>();
+        var result = new SearchRequestPlus();
+        var work = new Action(() => result = service.FullParseRequest(request, values));
+
+        if(allowed)
+        {
+            work();
+            Assert.NotEmpty(result.computedSql);
+            Assert.NotEmpty(values);
+            Assert.Contains(value, values.Values);
+        }
+        else
+        {
+            Assert.ThrowsAny<ArgumentException>(work);
+        }
+    }
 }

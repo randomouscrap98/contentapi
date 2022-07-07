@@ -1747,4 +1747,67 @@ public class GenericSearchDbTests : ViewUnitTestBase //, IClassFixture<DbUnitTes
         var count = await SearchSimpleCount(countSearch, NormalUserId);
         Assert.Equal(messages.Count, count);
     }
+
+    [Fact]
+    public async Task Regression_SearchAsync_DuplicateValues()
+    {
+        var search = new SearchRequests()
+        {
+        	values = new Dictionary<string, object> { { "pid", AllAccessContentId } },
+            requests = new List<SearchRequest> {
+                new SearchRequest { type = "content",fields = "*", query="id = @pid"},
+                new SearchRequest {type="watch", fields="*", query= "contentId IN @content.id"}, //This is fine
+                new SearchRequest {type="message", fields="*", query= "contentId IN @content.id", order= "id_desc", limit= 30}, //This broke
+            }
+        };
+
+        var result = await service.Search(search, SuperUserId);
+
+        Assert.NotEmpty(result.objects["content"]);
+        Assert.NotEmpty(result.objects["message"]);
+        //Assert.NotEmpty(result.objects["watch"]);
+    }
+
+    [Fact]
+    public async Task SearchAsync_QueryBuilder_LiteralSugar_Single()
+    {
+        var result = await service.SearchSingleType<ContentView>(SuperUserId, new SearchRequest()
+        {
+            type = nameof(RequestType.content),
+            fields = "*",
+            query = $"id = {{{AllAccessContentId}}}"
+        });
+
+        Assert.Single(result);
+        Assert.Contains(result, x => x.id == AllAccessContentId);
+    }
+
+    [Fact]
+    public async Task SearchAsync_QueryBuilder_LiteralSugar_Single_Unrestricted()
+    {
+        var result = await service.SearchSingleTypeUnrestricted<ContentView>(new SearchRequest()
+        {
+            type = nameof(RequestType.content),
+            fields = "*",
+            query = $"id = {{{AllAccessContentId}}}"
+        });
+
+        Assert.Single(result);
+        Assert.Contains(result, x => x.id == AllAccessContentId);
+    }
+
+    [Fact]
+    public async Task SearchAsync_QueryBuilder_LiteralSugar_Double()
+    {
+        var result = await service.SearchSingleType<ContentView>(SuperUserId, new SearchRequest()
+        {
+            type = nameof(RequestType.content),
+            fields = "*",
+            query = $"id = {{{AllAccessContentId}}} or id = {{{SuperAccessContentId}}}"
+        });
+
+        Assert.Equal(2, result.Count);
+        Assert.Contains(result, x => x.id == AllAccessContentId);
+        Assert.Contains(result, x => x.id == SuperAccessContentId);
+    }
 }

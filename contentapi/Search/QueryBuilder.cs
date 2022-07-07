@@ -2,6 +2,7 @@ using System.Collections;
 using System.Data;
 using System.Runtime.CompilerServices;
 using System.Text;
+using System.Text.RegularExpressions;
 using AutoMapper;
 using contentapi.data;
 using contentapi.Db;
@@ -22,6 +23,7 @@ public class QueryBuilder : IQueryBuilder
     public const string DescendingAppend = "_desc";
     public const string CountField = "specialCount";
     public const string CountSelect = $"count(*) as {CountField}";
+    public const string PreparseLiteralSugar = "{{.+?}}";
     
     protected readonly Dictionary<string, MacroDescription> StandardMacros = new Dictionary<string, MacroDescription>()
     {
@@ -335,14 +337,6 @@ public class QueryBuilder : IQueryBuilder
         //What about parsing fields from the query string?
         foreach (var field in fields)
         {
-            //NOTE: doing the checks and the count field like this means that someone can always request the count field
-            //regardless of the request type (and from a db perspective, it SHOULD always work). But it won't be included
-            //with * or ~, which we DO want.
-            //if(field == CountField)
-            //{
-            //    if(fields.Count > 1)
-            //        throw new ArgumentException($"You cannot request other fields with the '{CountField}' field");
-            //}
             if (!r.typeInfo.fields.ContainsKey(field) && field != CountField)
             {
                 throw new ArgumentException($"Unknown field {field} in request {r.name}");
@@ -524,7 +518,7 @@ public class QueryBuilder : IQueryBuilder
     {
         var flatResult = new List<object?>();
 
-        foreach (var r in results) //resultList.SelectMany(x => ((IEnumerable)x).Cast<object>()))
+        foreach (var r in results) 
         {
             var rtype = r.GetType();
 
@@ -549,20 +543,15 @@ public class QueryBuilder : IQueryBuilder
     public string ParseValue(string value, SearchRequestPlus request, Dictionary<string, object> parameters)
     {
         var realValName = value.TrimStart('@');
+        var newName = value.Replace("@", "").Replace(".", "_");
 
-        if (!parameters.ContainsKey(realValName))
+        if (!parameters.ContainsKey(newName))
         {
             var valueObject = FindValueObject(value, parameters);
-            var newName = value.Replace("@", "").Replace(".", "_");
-
             parameters.Add(newName, valueObject);
+        }
 
-            return $"@{newName}";
-        }
-        else
-        {
-            return value;
-        }
+        return $"@{newName}";
     }
     
     public string ParseMacro(string m, string a, SearchRequestPlus request, Dictionary<string, object> parameters)
@@ -739,6 +728,19 @@ public class QueryBuilder : IQueryBuilder
 
         //WARN: doing a standard preparse before knowing it's a standard request! fix some of this
         var reqplus = StandardRequestPreparse(request, parameters);
+
+        //Find all the shortcut preparser syntax sugar and convert to values
+        var literals = Regex.Match(reqplus.query, PreparseLiteralSugar);
+        var count = 1;
+
+        while(literals.Success)
+        {
+            var valueName = reqplus.UniqueRequestKey($"val{count}");
+            parameters.Add(valueName, literals.Value.Substring(2, literals.Value.Length - 4));
+            reqplus.query.Replace(literals.Value, $"@{valueName}");
+            count++;
+            literals = Regex.Match(reqplus.query, PreparseLiteralSugar);
+        }
 
         if(StandardViewRequests.ContainsKey(reqplus.requestType))
         {
