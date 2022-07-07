@@ -16,6 +16,7 @@ public class LiveControllerConfig
     public string AnonymousToken {get;set;} = ""; //With an empty string, no anonymous token is set
 }
 
+
 public class LiveController : BaseController
 {
     protected ILiveEventQueue eventQueue;
@@ -32,6 +33,13 @@ public class LiveController : BaseController
     {
         public long userId;
         public BufferBlock<object> sendQueue = new BufferBlock<object>();
+    }
+
+    protected class WebsocketWriteData
+    {
+        public string type {get;set;} = "";
+        public object @object {get;set;} = false;
+        public string? activityMessage {get;set;} = null;
     }
 
     public LiveController(BaseControllerServices services, ILiveEventQueue eventQueue, IUserStatusTracker userStatuses,
@@ -202,6 +210,42 @@ public class LiveController : BaseController
                 catch(Exception ex)
                 {
                     response.error = $"Error during search: {ex.Message}";
+                }
+            }
+            else if(receiveItem.type == "write")
+            {
+                try
+                {
+                    if(receiveItem.data == null)
+                        throw new RequestException("Must provide write item for request!");
+
+                    var writeData = ((JObject)receiveItem.data).ToObject<WebsocketWriteData>() ?? 
+                        throw new RequestException("Couldn't parse write data! Must provide type, etc");
+
+                    var writeObject = ((JObject)writeData.@object);
+                    var type = writeData.type;
+
+                    //This sucks. Wonder if I can make it better
+                    if(type == nameof(RequestType.message))
+                        await WriteAsync(writeObject.ToObject<MessageView>() ?? throw new RequestException($"Couldn't parse {type}!"), userId, writeData.activityMessage);
+                    else if(type == nameof(RequestType.content))
+                        await WriteAsync(writeObject.ToObject<ContentView>() ?? throw new RequestException($"Couldn't parse {type}!"), userId, writeData.activityMessage);
+                    else if(type == nameof(RequestType.user))
+                        await WriteAsync(writeObject.ToObject<UserView>() ?? throw new RequestException($"Couldn't parse {type}!"), userId, writeData.activityMessage);
+                    else if(type == nameof(RequestType.uservariable))
+                        await WriteAsync(writeObject.ToObject<UserVariableView>() ?? throw new RequestException($"Couldn't parse {type}!"), userId, writeData.activityMessage);
+                    else if(type == nameof(RequestType.watch))
+                        await WriteAsync(writeObject.ToObject<WatchView>() ?? throw new RequestException($"Couldn't parse {type}!"), userId, writeData.activityMessage);
+                    else if(type == nameof(RequestType.vote))
+                        await WriteAsync(writeObject.ToObject<VoteView>() ?? throw new RequestException($"Couldn't parse {type}!"), userId, writeData.activityMessage);
+                    else if(type == nameof(RequestType.ban))
+                        await WriteAsync(writeObject.ToObject<BanView>() ?? throw new RequestException($"Couldn't parse {type}!"), userId, writeData.activityMessage);
+                    else
+                        throw new RequestException($"Unknown write type {type}");
+                }
+                catch(Exception ex)
+                {
+                    response.error = $"{ex.GetType().Name}: {ex.Message}";
                 }
             }
             else
