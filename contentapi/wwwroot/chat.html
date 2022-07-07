@@ -194,6 +194,7 @@ window.onload = function()
         lastPostboxValue = postbox.value;
         postbox.value = "";
 
+        //This first part is for writing specifically module messages. If you don't care, go down to the "else"
         if(commandCheck)
         {
             //Unfortunately, can't write module messages through websocket yet, so this still requires a normal handler
@@ -208,6 +209,7 @@ window.onload = function()
                 postbox.value = lastPostboxValue;
             }));
         }
+        //This is how to write messages in chat.
         else
         {
             //You can write certain object types (most) on the websocket. You don't have to: you can simply use the
@@ -228,17 +230,6 @@ window.onload = function()
                     console.warning("Websocket write error response:", response);
                 }
             });
-        //Websocket acts like a proxy, so your standard 'request' result is wrapped in the standard websocket result
-        console.log(response);
-        var sortedContent = api.KeyById(response.data.objects.content)
-        var pagetitle = document.getElementById("pagetitle");
-        var page = sortedContent[pid];
-        setTitle(pagetitle, page);
-
-        pagetitle.href = "index.html?t=page&pid=" + sortedContent[pid].id;
-
-        displayMessages(response.data.objects); //don't keep scroll, don't update notifications with unique messages
-            //api.WriteType(APICONST.WRITETYPES.MESSAGE, new CommentBuilder(lastPostboxValue, pid, DEFAULTMARKUP, userSelf && userSelf.avatar), postHandler);
         }
     };
 

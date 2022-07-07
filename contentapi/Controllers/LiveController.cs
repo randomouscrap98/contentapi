@@ -38,7 +38,7 @@ public class LiveController : BaseController
     protected class WebsocketWriteData
     {
         public string type {get;set;} = "";
-        public object @object {get;set;} = false;
+        public JObject? @object {get;set;} = null;
         public string? activityMessage {get;set;} = null;
     }
 
@@ -222,7 +222,7 @@ public class LiveController : BaseController
                     var writeData = ((JObject)receiveItem.data).ToObject<WebsocketWriteData>() ?? 
                         throw new RequestException("Couldn't parse write data! Must provide type, etc");
 
-                    var writeObject = ((JObject)writeData.@object);
+                    var writeObject = writeData.@object ?? throw new RequestException("Couldn't parse 'object' before type is known!"); //((JObject)writeData.@object);
                     var type = writeData.type;
 
                     //This sucks. Wonder if I can make it better
