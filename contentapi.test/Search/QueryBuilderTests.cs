@@ -213,7 +213,7 @@ public class QueryBuilderTests : UnitTestBase
     [InlineData("name = {{abc}}", "abc", true)]
     [InlineData("name = {{abc}} or id = {{123}}", "123", true)]
     [InlineData("name = {{\"holy heck\"}}", "\"holy heck\"", true)]
-    [InlineData("name = {{%wow%}}", "%wow", true)]
+    [InlineData("name = {{%wow%}}", "%wow%", true)]
     [InlineData("name = {{something with spaces}}", "something with spaces", true)]
     [InlineData("name = {nope}", null, false)]
     public void FullParseRequest_LiteralSugar(string query, object value, bool allowed)
@@ -239,7 +239,7 @@ public class QueryBuilderTests : UnitTestBase
         }
         else
         {
-            Assert.ThrowsAny<ArgumentException>(work);
+            Assert.ThrowsAny<ParseException>(work);
         }
     }
 }

@@ -1775,7 +1775,7 @@ public class GenericSearchDbTests : ViewUnitTestBase //, IClassFixture<DbUnitTes
         {
             type = nameof(RequestType.content),
             fields = "*",
-            query = $"id = {{{AllAccessContentId}}}"
+            query = "id = {{"+AllAccessContentId+"}}"
         });
 
         Assert.Single(result);
@@ -1789,7 +1789,7 @@ public class GenericSearchDbTests : ViewUnitTestBase //, IClassFixture<DbUnitTes
         {
             type = nameof(RequestType.content),
             fields = "*",
-            query = $"id = {{{AllAccessContentId}}}"
+            query = "id = {{" + AllAccessContentId + "}}"
         });
 
         Assert.Single(result);
@@ -1803,7 +1803,7 @@ public class GenericSearchDbTests : ViewUnitTestBase //, IClassFixture<DbUnitTes
         {
             type = nameof(RequestType.content),
             fields = "*",
-            query = $"id = {{{AllAccessContentId}}} or id = {{{SuperAccessContentId}}}"
+            query = "id = {{" + AllAccessContentId + "}} or id = {{" + SuperAccessContentId + "}}"
         });
 
         Assert.Equal(2, result.Count);
