@@ -5,7 +5,7 @@ using SixLabors.ImageSharp.Processing;
 
 namespace contentapi.Utilities;
 
-public class ImageManipulator : IImageManipulator
+public class ImageManipulator_Direct : IImageManipulator
 {
     protected ILogger logger;
 
@@ -21,7 +21,7 @@ public class ImageManipulator : IImageManipulator
     //Don't really know what to do with this right now
     public bool HighQualityResize = true;
 
-    public ImageManipulator(ILogger<ImageManipulator> logger)
+    public ImageManipulator_Direct(ILogger<ImageManipulator_Direct> logger)
     {
         this.logger = logger;
     }

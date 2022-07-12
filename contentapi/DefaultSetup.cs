@@ -72,6 +72,7 @@ public static class DefaultSetup
         services.AddSingleton<IEventTracker, EventTracker>();
         services.AddSingleton<IUserStatusTracker, UserStatusTracker>();
         services.AddSingleton<IFileService, FileService>();
+        services.AddSingleton<IImageManipulator, ImageManipulator_Direct>();
 
         //This NEEDS to stay transient because it holds onto a DB connection! We want those recycled!
         services.AddTransient<IGenericSearch, GenericSearcher>();
