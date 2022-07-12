@@ -3,14 +3,23 @@ using contentapi;
 using contentapi.Controllers;
 using contentapi.Db;
 using contentapi.Main;
+using contentapi.Program;
 using contentapi.Search;
 using contentapi.Setup;
 using contentapi.Utilities;
-using Dapper;
 using Microsoft.AspNetCore.Authentication.JwtBearer;
 using Microsoft.Data.Sqlite;
 using Microsoft.OpenApi.Models;
 using Newtonsoft.Json;
+
+//Before doing ANYTHING, look at the arguments. If there's something special going on, do
+//something different.
+if(SelfRunSystem.ShouldRunSelf(args))
+{
+    //Go run the special "run" system
+    SelfRunSystem.RunSelf(args);
+    return;
+}
 
 var builder = WebApplication.CreateBuilder(args);
 

@@ -5,6 +5,10 @@ using SixLabors.ImageSharp.Processing;
 
 namespace contentapi.Utilities;
 
+/// <summary>
+/// An image manipulator that directly calls the ImageSharp library, doing all manipulation
+/// on threads rather than processes
+/// </summary>
 public class ImageManipulator_Direct : IImageManipulator
 {
     protected ILogger logger;
