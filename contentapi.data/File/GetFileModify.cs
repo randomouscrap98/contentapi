@@ -1,4 +1,4 @@
-namespace contentapi.Main;
+namespace contentapi.data;
 
 public class GetFileModify
 {

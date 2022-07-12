@@ -3,10 +3,8 @@ using Amazon.S3.Model;
 using contentapi.Search;
 using contentapi.data.Views;
 using Newtonsoft.Json;
-using SixLabors.ImageSharp;
-using SixLabors.ImageSharp.Formats;
-using SixLabors.ImageSharp.Processing;
 using contentapi.data;
+using contentapi.Utilities;
 
 namespace contentapi.Main;
 
@@ -20,10 +18,6 @@ public class FileServiceConfig
     public TimeSpan QuantizeTimeout { get; set; } = TimeSpan.FromSeconds(20);
     public int MaxQuantize { get; set; } = 256;
     public int MinQuantize { get; set; } = 2;
-    public int MinJpegHighQualitySize {get;set;} = 100;
-    public int JpegHighQuality {get;set;} = 97;
-    public double ResizeRepeatFactor { get; set; } = 0.8;
-    //public string DefaultHash { get; set; } = "0";
     public string? DefaultImageFallback { get; set; } = null;
 
     public TimeSpan LoggingRetainment {get;set;} = TimeSpan.FromDays(1);
@@ -34,14 +28,13 @@ public class FileServiceConfig
 public class FileService : IFileService
 {
     public const string S3Prefix = "s3://";
-    public const string GifMime = "image/gif";
-    public const string JpegMime = "image/jpeg";
     public const string FallbackMime = "image/png";
 
     protected Func<IDbWriter> writeProvider;
     protected Func<IGenericSearch> searchProvider;
     protected S3Provider s3Provider;
     protected ILogger logger;
+    protected IImageManipulator imageManip;
 
     protected FileServiceConfig config;
 
@@ -50,13 +43,15 @@ public class FileService : IFileService
     private static readonly List<DateTime> ImageRenders = new List<DateTime>();
     private static readonly List<DateTime> ImageLoads = new List<DateTime>();
 
-    public FileService(ILogger<FileService> logger, Func<IDbWriter> writer, Func<IGenericSearch> searcher, FileServiceConfig config, S3Provider provider) 
+    public FileService(ILogger<FileService> logger, Func<IDbWriter> writer, Func<IGenericSearch> searcher, FileServiceConfig config, 
+        S3Provider provider, IImageManipulator imageManip) 
     {
         this.writeProvider = writer;
         this.searchProvider = searcher;
         this.config = config;
         this.s3Provider = provider;
         this.logger = logger;
+        this.imageManip = imageManip;
     }
 
     public string GetBucketName()
@@ -231,68 +226,19 @@ public class FileService : IFileService
         if (fileConfig.quantize >= 0 && (fileConfig.quantize < config.MinQuantize || fileConfig.quantize > config.MaxQuantize))
             throw new RequestException($"Quantize must be between {config.MinQuantize} and {config.MaxQuantize}");
 
-        IImageFormat? format = null;
-        long imageByteCount = fileData.Length;
-        int width = 0;
-        int height = 0;
         int trueQuantize = 0;
         var tempLocation = GetAndMakeTempPath(); //Work is done locally for quantize/etc
 
-        //The memory stream is our temporary working space for things like resize, etc. I don't want to use
-        //the stream they gave us
-        using (var memStream = new MemoryStream())
-        {
-            await fileData.CopyToAsync(memStream);
-            fileData.Seek(0, SeekOrigin.Begin);
-
-            //This will throw an exception if it's not an image (most likely)
-            using (var image = Image.Load(fileData, out format))
-            {
-                AddImageRender();
-                newView.literalType = format.DefaultMimeType;
-
-                double sizeFactor = config.ResizeRepeatFactor;
-                width = image.Width;
-                height = image.Height;
-
-                while (fileConfig.tryResize && imageByteCount > config.MaxSize && sizeFactor > 0)
-                {
-                    double resize = 1 / Math.Sqrt(imageByteCount / (config.MaxSize * sizeFactor));
-                    logger.LogWarning($"User image too large ({imageByteCount}), trying ONE resize by {resize}");
-                    width = (int)(width * resize);
-                    height = (int)(height * resize);
-                    image.Mutate(x => x.Resize(width, height, KnownResamplers.Lanczos3));
-
-                    memStream.SetLength(0);
-                    image.Save(memStream, format);
-                    imageByteCount = memStream.Length;
-
-                    //Keep targeting an EVEN more harsh error margin (even if it's incorrect because
-                    //it stacks with previous resizes), also this makes the loop guaranteed to end
-                    sizeFactor -= 0.2;
-                }
-
-                //If the image is still too big, bad ok bye
-                if (imageByteCount > config.MaxSize)
-                    throw new RequestException("File too large!");
-            }
-
-            logger.LogDebug($"New image size: {imageByteCount}");
-            memStream.Seek(0, SeekOrigin.Begin);
-
-            using (var stream = System.IO.File.Create(tempLocation))
-            {
-                await memStream.CopyToAsync(stream);
-            }
-        }
+        var manipResult = await imageManip.FitToSizeAndSave(fileData, tempLocation, config.MaxSize);
+        newView.literalType = manipResult.MimeType;
 
         try
         {
             var meta = new Dictionary<string, object>()
             {
-               { "size", imageByteCount },
-               { "width", width },
-               { "height", height }
+               { "size", manipResult.SizeInBytes },
+               { "width", manipResult.Width },
+               { "height", manipResult.Height }
             };
 
             //OK the quantization step. This SHOULD modify the view for us!
@@ -463,7 +409,6 @@ public class FileService : IFileService
 
     public async Task<byte[]> GetThumbnailAsync(string hash, string thumbnailPath, GetFileModify modify)
     {
-        //Ok NOW we can go get it. We may need to perform a resize beforehand if we can't find the file.
         //NOTE: locking on the entire write may increase wait times for brand new images (and image uploads) but it saves cpu cycles
         //in those cases by only resizing an image once.
         await filelock.WaitAsync();
@@ -474,73 +419,11 @@ public class FileService : IFileService
             if (!System.IO.File.Exists(thumbnailPath) || (new FileInfo(thumbnailPath)).Length == 0)
             {
                 Directory.CreateDirectory(Path.GetDirectoryName(thumbnailPath) ?? throw new InvalidOperationException("No parent for thumbail path?"));
-                IImageFormat format;
 
-                var baseData = await GetMainDataAsync(hash);
-
-                await Task.Run(() =>
+                using(var memStream = new MemoryStream(await GetMainDataAsync(hash)))
                 {
-                    using (var image = Image.Load(baseData, out format))
-                    {
-                        AddImageRender();
-
-                        //var maxDim = Math.Max(image.Width, image.Height);
-                        var isGif = format.DefaultMimeType == GifMime;
-                        var isJpg = format.DefaultMimeType == JpegMime;
-
-                        //Square ALWAYS happens, it can happen before other things.
-                        if (modify.crop)
-                        {
-                            var minDim = Math.Min(image.Width, image.Height);
-                            image.Mutate(x => x.Crop(new Rectangle((image.Width - minDim) / 2, (image.Height - minDim) / 2, minDim, minDim)));
-                        }
-
-                        //This must come after the crop!
-                        var isNowLarger = (modify.size > Math.Max(image.Width, image.Height));
-
-                        //Saving as png also works, but this preserves the format (even if it's a little heavier compute, it's only a one time thing)
-                        if (modify.freeze && isGif)
-                        {
-                            while (image.Frames.Count > 1)
-                                image.Frames.RemoveFrame(1);
-                        }
-
-                        if (modify.size > 0 && !(isGif && isNowLarger)) //&& (modify.size > image.Width || modify.size > image.Height)))
-                        {
-                            var width = 0;
-                            var height = 0;
-
-                            //Preserve aspect ratio when not square
-                            if (image.Width > image.Height)
-                                width = modify.size;
-                            else
-                                height = modify.size;
-
-                            if(config.HighQualityResize)
-                                image.Mutate(x => x.Resize(width, height, isNowLarger ? KnownResamplers.Spline : KnownResamplers.Lanczos3));
-                            else
-                                image.Mutate(x => x.Resize(width, height));
-                        }
-
-                        using (var stream = System.IO.File.OpenWrite(thumbnailPath))
-                        {
-                            IImageEncoder? encoder = null;
-
-                            if(config.HighQualityResize && modify.size <= config.MinJpegHighQualitySize && isJpg)
-                            {
-                                encoder = new SixLabors.ImageSharp.Formats.Jpeg.JpegEncoder()
-                                {
-                                    Quality = config.JpegHighQuality,
-                                };
-                            }
-
-                            if(encoder != null)
-                                image.Save(stream, encoder);
-                            else
-                                image.Save(stream, format);
-                        }
-                    }
-                });
+                    await imageManip.MakeThumbnailAndSave(memStream, thumbnailPath, modify);
+                }
             }
         }
         finally
