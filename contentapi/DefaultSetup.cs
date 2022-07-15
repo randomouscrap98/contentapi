@@ -1,5 +1,7 @@
+using System.Data;
 using System.Runtime.ExceptionServices;
 using Amazon.S3;
+using AutoMapper;
 using contentapi.History;
 using contentapi.Live;
 using contentapi.Main;
@@ -12,7 +14,6 @@ using Dapper;
 using Microsoft.Extensions.DependencyInjection.Extensions;
 using Microsoft.Extensions.Options;
 using Microsoft.IdentityModel.Tokens;
-using Newtonsoft.Json.Linq;
 
 namespace contentapi.Setup;
 
@@ -46,19 +47,31 @@ public static class DefaultSetup
     /// To replace services (such as for unit tests), you can do: services.Replace(ServiceDescriptor.Transient<IFoo, FooB>());i
     /// </remarks>
     /// <param name="services"></param>
-    public static void AddDefaultServices(IServiceCollection services, IConfiguration? configuration = null)
+    public static void AddDefaultServices(IServiceCollection services, Func<IDbConnection> connectionProvider, IConfiguration? configuration = null)
     {
-        //Since we consume the db, also call their setup here
-        services.AddSingleton<IHistoryConverter, HistoryConverter>();
         services.AddAutoMapper(typeof(ContentHistorySnapshotProfile));
-
         services.AddAutoMapper(typeof(SearchRequestPlusProfile)); //You can pick ANY profile, it just needs some type from this binary
 
-        //For anything that just needs a simple search here and there, but doesn't want to be transient
-        services.AddSingleton(p => new Func<IGenericSearch>(() => p.GetService<IGenericSearch>() ?? throw new InvalidOperationException("Couldn't create IGenericSearch somehow!")));
-        services.AddSingleton(p => new Func<IDbWriter>(() => p.GetService<IDbWriter>() ?? throw new InvalidOperationException("Couldn't create IDbWriter somehow!")));
+        //The factory itself is a singleton, but the things it creates aren't. All things created by the factory
+        //have user-controlled lifetimes, you MUST dispose them when you create them!
+        services.AddSingleton<IDbServicesFactory>(p => 
+        {
+            var factory = new ConfigurableDbServicesFactory() {
+                DbConnectionCreator = () => { var c = connectionProvider(); c.Open(); return c; },
+                GenericSearchCreator = () => new GenericSearcher(p.GetRequiredService<ILogger<GenericSearcher>>(), connectionProvider(),
+                    p.GetRequiredService<IViewTypeInfoService>(), p.GetRequiredService<GenericSearcherConfig>(), p.GetRequiredService<IMapper>(),
+                    p.GetRequiredService<IQueryBuilder>(), p.GetRequiredService<IPermissionService>()),
+            };
+            factory.DbWriterCreator = () => new DbWriter(p.GetRequiredService<ILogger<DbWriter>>(), factory.CreateSearch(),
+                connectionProvider(), p.GetRequiredService<IViewTypeInfoService>(), p.GetRequiredService<IMapper>(),
+                p.GetRequiredService<IHistoryConverter>(), p.GetRequiredService<IPermissionService>(), 
+                p.GetRequiredService<ILiveEventQueue>(), p.GetRequiredService<DbWriterConfig>(), p.GetRequiredService<IRandomGenerator>(),
+                p.GetRequiredService<IUserService>());
+            return factory;
+        });
         services.AddSingleton(p => new S3Provider() { GetRawProvider = new Func<IAmazonS3>(() => p.GetService<IAmazonS3>() ?? throw new InvalidOperationException("Couldn't create IAmazonS3!")) } );
 
+        services.AddSingleton<IHistoryConverter, HistoryConverter>();
         services.AddSingleton<IRuntimeInformation>(new MyRuntimeInformation(DateTime.Now));
         services.AddSingleton<IViewTypeInfoService, ViewTypeInfoService_Cached>();
         services.AddSingleton<IQueryBuilder, QueryBuilder>();
@@ -67,12 +80,12 @@ public static class DefaultSetup
         services.AddSingleton(typeof(ICacheCheckpointTracker<>), typeof(CacheCheckpointTracker<>));
         services.AddSingleton<IRandomGenerator, RandomGenerator>();
         services.AddSingleton<IHashService, HashService>();
-        services.AddSingleton<IUserService, UserService>();
         services.AddSingleton<IPermissionService, PermissionService>();
         services.AddSingleton<ILiveEventQueue, LiveEventQueue>();
         services.AddSingleton<IEventTracker, EventTracker>();
         services.AddSingleton<IUserStatusTracker, UserStatusTracker>();
         services.AddSingleton<IFileService, FileService>();
+        services.AddSingleton<IUserService, UserService>();
 
         var emailType = configuration?.GetValue<string>("EmailSender");
         var imageManipulator = configuration?.GetValue<string>("ImageManipulator");
@@ -88,8 +101,6 @@ public static class DefaultSetup
             services.AddSingleton<IImageManipulator, ImageManipulator_Direct>();
 
         //This NEEDS to stay transient because it holds onto a DB connection! We want those recycled!
-        services.AddTransient<IGenericSearch, GenericSearcher>();
-        services.AddTransient<IDbWriter, DbWriter>();
         services.AddTransient<ShortcutsService>();
 
         //Configs (these have default values given in configs)

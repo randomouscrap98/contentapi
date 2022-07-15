@@ -51,14 +51,14 @@ public class DbWriter : IDbWriter
         RequestType.uservariable
     };
 
-    public DbWriter(ILogger<DbWriter> logger, IGenericSearch searcher, ContentApiDbConnection connection,
+    public DbWriter(ILogger<DbWriter> logger, IGenericSearch searcher, IDbConnection connection,
         IViewTypeInfoService typeInfoService, IMapper mapper, IHistoryConverter historyConverter,
         IPermissionService permissionService, ILiveEventQueue eventQueue, DbWriterConfig config,
         IRandomGenerator rng, IUserService userService)
     {
         this.logger = logger;
         this.searcher = searcher;
-        this.dbcon = connection.Connection;
+        this.dbcon = connection;
         this.typeInfoService = typeInfoService;
         this.mapper = mapper;
         this.historyConverter = historyConverter;
@@ -70,6 +70,12 @@ public class DbWriter : IDbWriter
     
         //Preemptively open this, we know us (as a writer) SHOULD BE short-lived, so...
         this.dbcon.Open();
+    }
+
+    public void Dispose()
+    {
+        searcher.Dispose();
+        dbcon.Dispose();
     }
 
     //Consider how to write a user? Users are one of the only things that have private information, so 

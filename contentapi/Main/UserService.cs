@@ -4,7 +4,6 @@ using System.Text.RegularExpressions;
 using contentapi.Db;
 using contentapi.Search;
 using contentapi.Security;
-using contentapi.Utilities;
 using contentapi.data.Views;
 using Dapper;
 using Dapper.Contrib.Extensions;
@@ -36,36 +35,33 @@ public class UserService : IUserService
     protected IHashService hashService;
     protected IAuthTokenService<long> authTokenService;
     protected UserServiceConfig config;
-    protected IDbConnection dbcon;
     protected IViewTypeInfoService typeInfoService;
-    protected string userTable;
+    protected IDbServicesFactory dbFactory;
 
+    protected string? userTable = null;
     public ConcurrentDictionary<long, string> RegistrationLog = new ConcurrentDictionary<long, string>();
     public ConcurrentDictionary<long, TemporaryPassword> TempPasswordSet = new ConcurrentDictionary<long, TemporaryPassword>();
 
     //DO NOT ADD IDBWRITER, IT CAUSED A MILLION FAILURES!!!
     public UserService(ILogger<UserService> logger, IHashService hashService, IAuthTokenService<long> authTokenService,
-        UserServiceConfig config, ContentApiDbConnection wrapper, IViewTypeInfoService typeInfoService)
+        UserServiceConfig config, IDbServicesFactory factory, IViewTypeInfoService typeInfoService)
     {
         this.logger = logger;
         this.hashService = hashService;
         this.authTokenService = authTokenService;
         this.config = config;
-        this.dbcon = wrapper.Connection;
+        this.dbFactory = factory;
         this.typeInfoService = typeInfoService;
-        //this.writer = writer;
-
         userTable = typeInfoService.GetDatabaseForType<UserView>();
-
-        this.dbcon.Open();
     }
 
     public async Task<User> GetUserByWhatever(string whereClause, object parameters)
     {
+        using var dbcon = dbFactory.CreateRaw();
         var user = (await dbcon.QueryAsync<User>($"select * from {userTable} {whereClause}", parameters)).FirstOrDefault();
-        if(user == null || user.deleted)
+        if (user == null || user.deleted)
             throw new NotFoundException($"User not found");
-        if(user.type != UserType.user)
+        if (user.type != UserType.user)
             throw new ForbiddenException("Can only perform user session actions with real users!");
         return user;
     }
@@ -76,6 +72,8 @@ public class UserService : IUserService
 
     public async Task CheckValidUsernameAsync(string username, long existingUserId = 0)
     {
+        using var dbcon = dbFactory.CreateRaw();
+
         if(string.IsNullOrWhiteSpace(username))
             throw new ArgumentException("Username can't be null or whitespace only!");
         if(username.Length < config.MinUsernameLength)
@@ -93,6 +91,8 @@ public class UserService : IUserService
 
     public async Task CheckValidEmailAsync(string email)
     {
+        using var dbcon = dbFactory.CreateRaw();
+
         if(string.IsNullOrWhiteSpace(email))
             throw new ArgumentException("Must provide email to create new user!");
 
@@ -125,6 +125,8 @@ public class UserService : IUserService
 
     public async Task ExpirePasswordNow(long userId)
     {
+        using var dbcon = dbFactory.CreateRaw();
+
         var zero = new DateTime(0, DateTimeKind.Utc);
 
         var count = await dbcon.ExecuteAsync($"update {userTable} set lastPasswordDate=@date where id = @id", new {
@@ -156,11 +158,12 @@ public class UserService : IUserService
 
         long id;
 
-        using(var tsx = dbcon.BeginTransaction())
+        using var dbcon = dbFactory.CreateRaw();
+        using (var tsx = dbcon.BeginTransaction())
         {
             id = await dbcon.InsertAsync(user, tsx);
 
-            if(id <= 0) 
+            if (id <= 0)
                 throw new InvalidOperationException("For some reason, writing the user to the database failed!");
 
             tsx.Commit();
@@ -174,7 +177,7 @@ public class UserService : IUserService
             initiator = id, 
             target = id, 
             text = $"User '{username}'({id}) created an account"
-        });
+        }, dbcon);
 
         return id;
     }
@@ -208,6 +211,7 @@ public class UserService : IUserService
         if(realKey != registrationKey)       
             throw new RequestException($"Invalid registration key!");
         
+        using var dbcon = dbFactory.CreateRaw();
         var count = await dbcon.ExecuteAsync($"update {userTable} set {nameof(User.registrationKey)} = NULL where {nameof(User.id)} = @id", new { id = userId });
 
         if(count <= 0)
@@ -223,7 +227,7 @@ public class UserService : IUserService
             initiator = userId,
             target = userId,
             text = $"User '{user.username}'({user.id}) completed account registration"
-        });
+        }, dbcon);
 
         return GetNewTokenForUser(userId);
    }
@@ -231,6 +235,7 @@ public class UserService : IUserService
     protected async Task<string> LoginGeneric(string fieldname, object value, string password, TimeSpan? expireOverride)
     {
         //First, find the user they're even talking about. 
+        using var dbcon = dbFactory.CreateRaw();
 
         //TODO: Consider making a special user view specifically for working with real user data, so we don't have to keep doing raw database
         //stuff when it comes to private user data. For instance, you have to check if "salt" is non-empty here, but that's very dependent on
@@ -251,7 +256,7 @@ public class UserService : IUserService
                 initiator = 0,
                 target = 0,
                 text = $"Failed login attempt for {value}: user not found!"
-            });
+            }, dbcon);
 
             throw;
         }
@@ -269,7 +274,7 @@ public class UserService : IUserService
                 initiator = user.id,
                 target = user.id,
                 text = $"Aborted login attempt for '{user.username}'({user.id}): password expired"
-            });
+            }, dbcon);
 
             throw new TokenException("Your password is expired, please send the recovery password to your email associated with this account");
         }
@@ -285,7 +290,7 @@ public class UserService : IUserService
                     initiator = user.id,
                     target = user.id,
                     text = $"Failed login attempt for '{user.username}'({user.id}): incorrect password"
-                });
+                }, dbcon);
 
                 throw new RequestException("Password incorrect!");
             }
@@ -297,7 +302,7 @@ public class UserService : IUserService
                     initiator = user.id,
                     target = user.id,
                     text = $"User '{user.username}'({user.id}) logged in with a temporary password"
-                });
+                }, dbcon);
 
                 ExpireTemporaryPassword(user.id);
             }
@@ -368,6 +373,7 @@ public class UserService : IUserService
         
         //WARN: this technically lets you set private data for groups!
 
+        using var dbcon = dbFactory.CreateRaw();
         var count = await dbcon.ExecuteAsync($"update {userTable} set {string.Join(",", sets.Select(x => $"{x.Key} = @{x.Key}"))} where id = @id", parameters);
 
         if(count != 1)
@@ -375,7 +381,7 @@ public class UserService : IUserService
     }
 
     //Just yet another admin log writer... probably need to fix this
-    public async Task<AdminLog> WriteAdminLog(AdminLog log)
+    public async Task<AdminLog> WriteAdminLog(AdminLog log, IDbConnection dbcon)
     {
         logger.LogDebug($"Admin log: {log.text}");
         log.id = 0;

@@ -5,7 +5,6 @@ using AutoMapper;
 using contentapi.data;
 using contentapi.data.Views;
 using contentapi.Db;
-using contentapi.Utilities;
 using Dapper;
 using Newtonsoft.Json;
 using Newtonsoft.Json.Linq;
@@ -37,17 +36,22 @@ public class GenericSearcher : IGenericSearch
     protected IQueryBuilder queryBuilder;
     protected SemaphoreSlim queryLock = new SemaphoreSlim(1, 1);
 
-    public GenericSearcher(ILogger<GenericSearcher> logger, ContentApiDbConnection connection,
+    public GenericSearcher(ILogger<GenericSearcher> logger, IDbConnection connection,
         IViewTypeInfoService typeInfoService, GenericSearcherConfig config, IMapper mapper,
         IQueryBuilder queryBuilder, IPermissionService permissionService)
     {
         this.logger = logger;
-        this.dbcon = connection.Connection;
+        this.dbcon = connection;
         this.typeService = typeInfoService;
         this.config = config;
         this.mapper = mapper;
         this.queryBuilder = queryBuilder;
         this.permissionService = permissionService;
+    }
+
+    public void Dispose()
+    {
+        this.dbcon.Dispose();
     }
 
     public async Task<QueryResultSet> QueryAsyncCast(string query, object parameters)
@@ -418,4 +422,5 @@ public class GenericSearcher : IGenericSearch
     {
         return singleResults.Select(x => mapper.Map<T>(x)).ToList();
     }
+
 }

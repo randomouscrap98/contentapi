@@ -358,8 +358,6 @@ public class LiveEventQueue : ILiveEventQueue
     /// <returns></returns>
     public async Task<LiveData> ListenAsync(UserView listener, int lastId = -1, CancellationToken? token = null)
     {
-        //Use only ONE searcher for each listen call! Hopefully this isn't a problem!
-        var search = searchProducer();
         var result = new LiveData() { lastId = lastId }; 
 
         //No tail recursion optimization, don't do recursive call to self! Easier to just do loop anyway!
@@ -410,6 +408,10 @@ public class LiveEventQueue : ILiveEventQueue
             //Oh, we weren't able to be cool and optimal. Go look up stuff manually!
             if(!optimalRoute)
             {
+                //Use only ONE searcher for each listen call! Hopefully this isn't a problem!
+                //NOTE: moved down after the listen so we don't have dangling sqlite connections while waiting for data
+                var search = searchProducer();
+
                 foreach(var type in events.Select(x => x.type).Distinct())
                 {
                     var requests = GetSearchRequestsForEvents(events.Where(x => x.type == type));

@@ -1,10 +1,7 @@
-using contentapi.data.Views;
-
 namespace contentapi.Main;
 
 public interface IUserService
 {
-    //TimeSpan UserTokenExpiration {get;}
     void InvalidateAllTokens(long userId);
     Task<string> LoginUsernameAsync(string username, string password, TimeSpan? expireOverride = null);
     Task<string> LoginEmailAsync(string email, string password, TimeSpan? expireOverride = null);

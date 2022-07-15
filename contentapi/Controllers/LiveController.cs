@@ -45,6 +45,7 @@ public class LiveController : BaseController
     public LiveController(BaseControllerServices services, ILiveEventQueue eventQueue, IUserStatusTracker userStatuses,
         IPermissionService permissionService, IHostApplicationLifetime appLifetime, LiveControllerConfig config) : base(services) 
     { 
+        services.CacheDbServices = false;
         this.eventQueue = eventQueue;
         this.userStatuses = userStatuses;
         this.permissionService = permissionService;

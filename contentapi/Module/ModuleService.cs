@@ -135,16 +135,12 @@ public class ModuleService : IModuleService
             addMessage(new MessageView()
             {
                 createUserId = mod.currentUserId,
-                //sendUserId = mod.currentRequester.userId,
-                //parentId = room,
                 contentId = room,
                 receiveUserId = uid,
-                //message = message,
                 text = message,
                 module = module.name,
                 createDate = DateTime.Now
             }, mod.currentUserId);
-            //mod.currentRequester);
         });
 
         mod.script.Globals["getdata"] = new Func<string, string?>((k) =>

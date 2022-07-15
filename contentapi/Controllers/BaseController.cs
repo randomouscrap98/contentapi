@@ -17,20 +17,62 @@ public class BaseControllerServices
     public IEventTracker tracker;
     public RateLimitConfig rateConfig;
 
-    public IDbWriter writer;
-    public IGenericSearch searcher;
+    //This MIGHT be held onto for a long time (long lived controllers), so these should be GENERATORS
+    public Func<IDbWriter> getWriter;
+    public Func<IGenericSearch> getSearch;
+
+    private IDbWriter? cachedWriter = null;
+    private IGenericSearch? cachedSearcher = null;
+
+    public bool CacheDbServices {get;set;} = true;
+
+    public IDbWriter writer { get 
+    {
+        if(CacheDbServices)
+        {
+            lock(getWriter)
+            {
+                if(cachedWriter == null)
+                    cachedWriter = getWriter();
+            }
+
+            return cachedWriter;
+        }
+        else
+        {
+            return getWriter();
+        }
+    } }
+
+    public IGenericSearch searcher { get
+    {
+        if(CacheDbServices)
+        {
+            lock(getSearch)
+            {
+                if(cachedSearcher == null)
+                    cachedSearcher = getSearch();
+            }
+
+            return cachedSearcher;
+        }
+        else
+        {
+            return getSearch();
+        }
+    } }
 
     public BaseControllerServices(ILogger<BaseController> logger, IAuthTokenService<long> authService, 
-        IMapper mapper, IEventTracker tracker, RateLimitConfig rateConfig, IDbWriter writer,
-        IGenericSearch search)
+        IMapper mapper, IEventTracker tracker, RateLimitConfig rateConfig, Func<IDbWriter> getWriter,
+        Func<IGenericSearch> getSearch)
     {
         this.logger = logger;
         this.authService = authService;
         this.mapper = mapper;
         this.tracker = tracker;
         this.rateConfig = rateConfig;
-        this.writer = writer;
-        this.searcher = search;
+        this.getWriter = getWriter;
+        this.getSearch = getSearch;
     }
 }
 

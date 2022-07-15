@@ -8,7 +8,7 @@ namespace contentapi.Main;
 /// A DbWriter should perform all the actions necessary to allow USERS (specifically users) to modify data.
 /// Thus, you should expect an IDbWriter to perform all permission and format checks necessary, it's an "all in one" package
 /// </summary>
-public interface IDbWriter
+public interface IDbWriter : IDisposable
 {
     Task<T> WriteAsync<T>(T view, long requestUserId, string? message = null) where T : class, IIdView, new();
 

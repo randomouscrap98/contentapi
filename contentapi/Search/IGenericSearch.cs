@@ -3,7 +3,7 @@ using QueryResultSet = System.Collections.Generic.IEnumerable<System.Collections
 
 namespace contentapi.Search;
 
-public interface IGenericSearch
+public interface IGenericSearch : IDisposable
 {
     //NOTE: in the past, I wanted this to be able to return all different kinds of results.
     //Now, I would like it to be far more simplified, as much of the aggregation can be 
