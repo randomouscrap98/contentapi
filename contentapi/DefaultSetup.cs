@@ -46,7 +46,7 @@ public static class DefaultSetup
     /// To replace services (such as for unit tests), you can do: services.Replace(ServiceDescriptor.Transient<IFoo, FooB>());i
     /// </remarks>
     /// <param name="services"></param>
-    public static void AddDefaultServices(IServiceCollection services)
+    public static void AddDefaultServices(IServiceCollection services, IConfiguration? configuration = null)
     {
         //Since we consume the db, also call their setup here
         services.AddSingleton<IHistoryConverter, HistoryConverter>();
@@ -73,7 +73,19 @@ public static class DefaultSetup
         services.AddSingleton<IEventTracker, EventTracker>();
         services.AddSingleton<IUserStatusTracker, UserStatusTracker>();
         services.AddSingleton<IFileService, FileService>();
-        services.AddSingleton<IImageManipulator, ImageManipulator_Process>();
+
+        var emailType = configuration?.GetValue<string>("EmailSender");
+        var imageManipulator = configuration?.GetValue<string>("ImageManipulator");
+
+        if(emailType == "functional")
+            services.AddSingleton<IEmailService, EmailService>();
+        else
+            services.AddSingleton<IEmailService, NullEmailService>();
+
+        if(imageManipulator == "selfprocess")
+            services.AddSingleton<IImageManipulator, ImageManipulator_Process>();
+        else
+            services.AddSingleton<IImageManipulator, ImageManipulator_Direct>();
 
         //This NEEDS to stay transient because it holds onto a DB connection! We want those recycled!
         services.AddTransient<IGenericSearch, GenericSearcher>();

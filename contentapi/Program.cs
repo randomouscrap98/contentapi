@@ -28,7 +28,7 @@ var builder = WebApplication.CreateBuilder(args);
 
 // We only use defaults for our regular runtime stuff! Overriding defaults is for testing
 // or special deploys or whatever.
-DefaultSetup.AddDefaultServices(builder.Services);
+DefaultSetup.AddDefaultServices(builder.Services, builder.Configuration);
 DefaultSetup.AddConfigBinding<GenericSearcherConfig>(builder.Services, builder.Configuration);
 DefaultSetup.AddConfigBinding<UserServiceConfig>(builder.Services, builder.Configuration);
 DefaultSetup.AddConfigBinding<UserControllerConfig>(builder.Services, builder.Configuration);
@@ -38,16 +38,6 @@ DefaultSetup.AddConfigBinding<RateLimitConfig>(builder.Services, builder.Configu
 DefaultSetup.AddConfigBinding<StatusControllerConfig>(builder.Services, builder.Configuration);
 DefaultSetup.AddConfigBinding<LiveControllerConfig>(builder.Services, builder.Configuration);
 builder.Services.AddTransient<BaseControllerServices>();
-
-// Set up configurable services, as in stuff that users might want to turn off/etc
-var desiredEmailer = builder.Configuration.GetValue<string>("EmailSender");
-
-if(desiredEmailer == "null")
-    builder.Services.AddSingleton<IEmailService, NullEmailService>();
-else if(desiredEmailer == "default")
-    builder.Services.AddSingleton<IEmailService, EmailService>();
-else
-    throw new InvalidOperationException($"Unknown emailer type {desiredEmailer}");
 
 string secretKey = builder.Configuration.GetValue<string>("SecretKey"); 
 var validationParameters = DefaultSetup.AddSecurity(builder.Services, secretKey);
