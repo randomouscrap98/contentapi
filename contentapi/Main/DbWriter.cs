@@ -8,7 +8,6 @@ using contentapi.Utilities;
 using contentapi.data.Views;
 using Dapper;
 using Dapper.Contrib.Extensions;
-using Newtonsoft.Json;
 using contentapi.data;
 using contentapi.History;
 
@@ -38,6 +37,7 @@ public class DbWriter : IDbWriter
     protected ILiveEventQueue eventQueue;
     protected DbWriterConfig config;
     protected IRandomGenerator rng;
+    protected IJsonService jsonService;
 
     //TODO: THIS IS A TEMPORARY INJECTION! I don't think I want the writer dependent on the user service, since
     //the user service MAY someday be dependent on the writer!!
@@ -54,7 +54,7 @@ public class DbWriter : IDbWriter
     public DbWriter(ILogger<DbWriter> logger, IGenericSearch searcher, IDbConnection connection,
         IViewTypeInfoService typeInfoService, IMapper mapper, IHistoryConverter historyConverter,
         IPermissionService permissionService, ILiveEventQueue eventQueue, DbWriterConfig config,
-        IRandomGenerator rng, IUserService userService)
+        IRandomGenerator rng, IUserService userService, IJsonService jsonService)
     {
         this.logger = logger;
         this.searcher = searcher;
@@ -67,6 +67,7 @@ public class DbWriter : IDbWriter
         this.config = config;
         this.rng = rng;
         this.userService = userService;
+        this.jsonService = jsonService;
     
         //Preemptively open this, we know us (as a writer) SHOULD BE short-lived, so...
         this.dbcon.Open();
@@ -1157,7 +1158,7 @@ public class DbWriter : IDbWriter
 
         snapshot.values = originalView.values.Select(x => new Db.ContentValue {
             key = x.Key,
-            value = JsonConvert.SerializeObject(x.Value),
+            value = jsonService.Serialize(x.Value),
             contentId = originalView.id
         }).ToList();
 
@@ -1175,7 +1176,7 @@ public class DbWriter : IDbWriter
     {
         return view.values.Select(x => new Db.MessageValue {
             key = x.Key,
-            value = JsonConvert.SerializeObject(x.Value),
+            value = jsonService.Serialize(x.Value),
             messageId = view.id
         }).ToList();
     }

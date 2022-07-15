@@ -1,4 +1,5 @@
 using System.Data;
+using System.Text.Json;
 using Amazon.S3;
 using AutoMapper;
 using contentapi.History;
@@ -59,13 +60,13 @@ public static class DefaultSetup
                 DbConnectionCreator = () => { var c = connectionProvider(); c.Open(); return c; },
                 GenericSearchCreator = () => new GenericSearcher(p.GetRequiredService<ILogger<GenericSearcher>>(), connectionProvider(),
                     p.GetRequiredService<IViewTypeInfoService>(), p.GetRequiredService<GenericSearcherConfig>(), p.GetRequiredService<IMapper>(),
-                    p.GetRequiredService<IQueryBuilder>(), p.GetRequiredService<IPermissionService>()),
+                    p.GetRequiredService<IQueryBuilder>(), p.GetRequiredService<IPermissionService>(), p.GetRequiredService<IJsonService>()),
             };
             factory.DbWriterCreator = () => new DbWriter(p.GetRequiredService<ILogger<DbWriter>>(), factory.CreateSearch(),
                 connectionProvider(), p.GetRequiredService<IViewTypeInfoService>(), p.GetRequiredService<IMapper>(),
                 p.GetRequiredService<IHistoryConverter>(), p.GetRequiredService<IPermissionService>(), 
                 p.GetRequiredService<ILiveEventQueue>(), p.GetRequiredService<DbWriterConfig>(), p.GetRequiredService<IRandomGenerator>(),
-                p.GetRequiredService<IUserService>());
+                p.GetRequiredService<IUserService>(), p.GetRequiredService<IJsonService>());
             return factory;
         });
         services.AddSingleton(p => new S3Provider() { GetRawProvider = new Func<IAmazonS3>(() => p.GetService<IAmazonS3>() ?? throw new InvalidOperationException("Couldn't create IAmazonS3!")) } );
@@ -85,6 +86,8 @@ public static class DefaultSetup
         services.AddSingleton<IUserStatusTracker, UserStatusTracker>();
         services.AddSingleton<IFileService, FileService>();
         services.AddSingleton<IUserService, UserService>();
+        services.AddSingleton<IJsonService, SystemTextJsonService>();
+        services.AddSingleton<JsonSerializerOptions>(p => SetupJsonOptions(new JsonSerializerOptions()));
 
         var emailType = configuration?.GetValue<string>("EmailSender");
         var imageManipulator = configuration?.GetValue<string>("ImageManipulator");
@@ -173,4 +176,12 @@ public static class DefaultSetup
         else
             services.AddSingleton<T>(generator);
     }
+
+    public static JsonSerializerOptions SetupJsonOptions(JsonSerializerOptions options)
+    {
+        options.Converters.Add(new DateTimeJsonConverter());
+        options.PropertyNameCaseInsensitive = true;
+        return options;
+    }
+
 }

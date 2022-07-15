@@ -7,7 +7,6 @@ using AutoMapper;
 using contentapi.data;
 using contentapi.Db;
 using contentapi.Utilities;
-using Newtonsoft.Json.Linq;
 
 namespace contentapi.Search;
 

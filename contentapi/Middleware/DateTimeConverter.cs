@@ -1,27 +1,15 @@
 using System.Globalization;
-using Newtonsoft.Json;
-using Newtonsoft.Json.Converters;
+using System.Text.Json;
+using System.Text.Json.Serialization;
 
 namespace contentapi;
 
-/// <summary>
-/// Custom DateTime JSON serializer/deserializer
-/// </summary>
-/// <remarks>Taken mostly from https://blog.kulman.sk/custom-datetime-deserialization-with-json-net/</remarks>
-public class CustomDateTimeConverter : DateTimeConverterBase
+public class DateTimeJsonConverter : JsonConverter<DateTime>
 {
-    public override void WriteJson(JsonWriter writer, object? value, JsonSerializer serializer)
-    {
-        if(value == null)
-            writer.WriteValue((string?)null);
-        else
-            writer.WriteValue(((DateTime)value).ToUniversalTime().ToString("yyyy-MM-ddTHH:mm:ss.ffZ", CultureInfo.InvariantCulture));
-    }
+    public override DateTime Read(ref Utf8JsonReader reader, Type typeToConvert, JsonSerializerOptions options) =>
+        DateTime.Parse(reader.GetString()!);
 
-    public override bool CanRead => false;
-
-    public override object ReadJson(JsonReader reader, Type objectType, object? existingValue, JsonSerializer serializer)
-    {
-        throw new NotImplementedException("Shouldn't be reading");
-    }
+    public override void Write( Utf8JsonWriter writer, DateTime dateTimeValue, JsonSerializerOptions options) =>
+            //writer.WriteStringValue(dateTimeValue.ToString("MM/dd/yyyy", CultureInfo.InvariantCulture));
+        writer.WriteStringValue(dateTimeValue.ToUniversalTime().ToString("yyyy-MM-ddTHH:mm:ss.ffZ", CultureInfo.InvariantCulture));
 }

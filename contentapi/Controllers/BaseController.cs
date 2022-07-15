@@ -16,11 +16,13 @@ public class BaseControllerServices
     public IAuthTokenService<long> authService;
     public IEventTracker tracker;
     public RateLimitConfig rateConfig;
+    public IJsonService jsonConvert;
 
     public IDbServicesFactory dbFactory;
 
     public BaseControllerServices(ILogger<BaseController> logger, IAuthTokenService<long> authService, 
-        IMapper mapper, IEventTracker tracker, RateLimitConfig rateConfig, IDbServicesFactory factory)
+        IMapper mapper, IEventTracker tracker, RateLimitConfig rateConfig, IDbServicesFactory factory,
+        IJsonService jsonConvert)
     {
         this.logger = logger;
         this.authService = authService;
@@ -28,6 +30,7 @@ public class BaseControllerServices
         this.tracker = tracker;
         this.rateConfig = rateConfig;
         this.dbFactory = factory;
+        this.jsonConvert = jsonConvert;
     }
 }
 

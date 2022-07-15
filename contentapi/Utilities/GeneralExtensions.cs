@@ -1,7 +1,6 @@
 using System.Collections;
 using System.Net.WebSockets;
 using contentapi.data;
-using Newtonsoft.Json;
 
 namespace contentapi.Utilities;
 
@@ -54,11 +53,13 @@ public static class GeneralExtensions
     /// <param name="token"></param>
     /// <typeparam name="T"></typeparam>
     /// <returns></returns>
-    public static Task SendObjectAsync<T>(this WebSocket ws, T sendItem, WebSocketMessageType type = WebSocketMessageType.Text, 
+    public static Task SendObjectAsync<T>(this WebSocket ws, IJsonService jsonService, T sendItem, WebSocketMessageType type = WebSocketMessageType.Text, 
         CancellationToken? token = null)
     {
+        if(sendItem == null)
+            throw new InvalidOperationException("Can't send null over websocket!");
         var realToken = token ?? CancellationToken.None;
-        return ws.SendAsync(System.Text.Encoding.UTF8.GetBytes(JsonConvert.SerializeObject(sendItem)), type, true, realToken);
+        return ws.SendAsync(System.Text.Encoding.UTF8.GetBytes(jsonService.Serialize(sendItem)), type, true, realToken);
     }
 
     /// <summary>
@@ -70,14 +71,13 @@ public static class GeneralExtensions
     /// <param name="token"></param>
     /// <typeparam name="T"></typeparam>
     /// <returns></returns>
-    public static async Task<T> ReceiveObjectAsync<T>(this WebSocket ws, Stream? buffer, CancellationToken? token = null)
+    public static async Task<T> ReceiveObjectAsync<T>(this WebSocket ws, IJsonService jsonService, Stream? buffer, CancellationToken? token = null)
     {
         var realBuffer = buffer ?? new MemoryStream();
 
         try
         {
             var tempBuffer = new ArraySegment<byte>(new byte[ReceiveObjectAsyncBufferSize]);
-            //var tempBuffer = new byte[ReceiveObjectAsyncBufferSize];
             var realToken = token ?? CancellationToken.None;
 
             //Use the whole buffer! Hope you don't mind!
@@ -103,7 +103,7 @@ public static class GeneralExtensions
             using var reader = new StreamReader(realBuffer, leaveOpen : true);
             var readString = await reader.ReadToEndAsync();
             try {
-                return JsonConvert.DeserializeObject<T>(readString) ?? throw new RequestException($"Couldn't parse an object of type {typeof(T)}");
+                return jsonService.Deserialize<T>(readString) ?? throw new RequestException($"Couldn't parse an object of type {typeof(T)}");
             }
             catch(Exception ex) {
                 throw new RequestException($"Readstring failure, string = '{readString}'", ex);

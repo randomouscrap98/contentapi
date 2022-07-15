@@ -1,13 +1,12 @@
 using System.Data;
 using System.Diagnostics;
+using System.Text.Json;
 using System.Text.RegularExpressions;
 using AutoMapper;
 using contentapi.data;
 using contentapi.data.Views;
-using contentapi.Db;
+using contentapi.Utilities;
 using Dapper;
-using Newtonsoft.Json;
-using Newtonsoft.Json.Linq;
 using QueryResult = System.Collections.Generic.IDictionary<string, object>;
 using QueryResultSet = System.Collections.Generic.IEnumerable<System.Collections.Generic.IDictionary<string, object>>;
 
@@ -34,11 +33,13 @@ public class GenericSearcher : IGenericSearch
     protected GenericSearcherConfig config;
     protected IMapper mapper;
     protected IQueryBuilder queryBuilder;
+    protected IJsonService jsonService;
     protected SemaphoreSlim queryLock = new SemaphoreSlim(1, 1);
 
     public GenericSearcher(ILogger<GenericSearcher> logger, IDbConnection connection,
         IViewTypeInfoService typeInfoService, GenericSearcherConfig config, IMapper mapper,
-        IQueryBuilder queryBuilder, IPermissionService permissionService)
+        IQueryBuilder queryBuilder, IPermissionService permissionService,
+        IJsonService jsonService)
     {
         this.logger = logger;
         this.dbcon = connection;
@@ -47,6 +48,7 @@ public class GenericSearcher : IGenericSearch
         this.mapper = mapper;
         this.queryBuilder = queryBuilder;
         this.permissionService = permissionService;
+        this.jsonService = jsonService;
     }
 
     public void Dispose()
@@ -123,7 +125,7 @@ public class GenericSearcher : IGenericSearch
                 var lookup = values.ToLookup(x => x.messageId);
 
                 foreach(var c in index) 
-                    c.Value[valkey] = lookup.Contains(c.Key) ? lookup[c.Key].ToDictionary(x => x.key, y => JsonConvert.DeserializeObject(y.value)) : new Dictionary<string, object?>();
+                    c.Value[valkey] = lookup.Contains(c.Key) ? lookup[c.Key].ToDictionary(x => x.key, y => jsonService.DeserializeArbitrary(y.value)) : new Dictionary<string, object?>();
             }
             if(r.requestFields.Contains(uidskey) && r.requestFields.Contains(textkey))
             {
@@ -163,7 +165,7 @@ public class GenericSearcher : IGenericSearch
                 var lookup = values.ToLookup(x => x.contentId);
 
                 foreach(var c in index)
-                    c.Value[valkey] = lookup.Contains(c.Key) ? lookup[c.Key].ToDictionary(x => x.key, y => JsonConvert.DeserializeObject(y.value)) : new Dictionary<string, object?>();
+                    c.Value[valkey] = lookup.Contains(c.Key) ? lookup[c.Key].ToDictionary(x => x.key, y => jsonService.DeserializeArbitrary(y.value)) : new Dictionary<string, object?>();
             }
             if(r.requestFields.Contains(permkey))
             {

@@ -1,8 +1,6 @@
 using System.Diagnostics;
 using Amazon.S3.Model;
-using contentapi.Search;
 using contentapi.data.Views;
-using Newtonsoft.Json;
 using contentapi.data;
 using contentapi.Utilities;
 
@@ -34,6 +32,7 @@ public class FileService : IFileService
     protected S3Provider s3Provider;
     protected ILogger logger;
     protected IImageManipulator imageManip;
+    protected IJsonService jsonService;
 
     protected FileServiceConfig config;
 
@@ -43,13 +42,14 @@ public class FileService : IFileService
     private static readonly List<DateTime> ImageLoads = new List<DateTime>();
 
     public FileService(ILogger<FileService> logger, IDbServicesFactory factory, FileServiceConfig config, 
-        S3Provider provider, IImageManipulator imageManip) 
+        S3Provider provider, IImageManipulator imageManip, IJsonService jsonService) 
     {
         this.dbFactory = factory;
         this.config = config;
         this.s3Provider = provider;
         this.logger = logger;
         this.imageManip = imageManip;
+        this.jsonService = jsonService;
     }
 
     public string GetBucketName()
@@ -247,7 +247,7 @@ public class FileService : IFileService
                 meta["quantize"] = trueQuantize;
 
             //We now have the metadata
-            newView.meta = JsonConvert.SerializeObject(meta);
+            newView.meta = jsonService.Serialize(meta);
 
             using var tempWriter = dbFactory.CreateWriter();
             //This is QUITE dangerous: a file could be created in the api first and THEN the file write fails!

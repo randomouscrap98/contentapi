@@ -1,17 +1,20 @@
 using System.IO.Compression;
+using System.Text.Json;
 using contentapi.data;
 using contentapi.Db;
-using Newtonsoft.Json;
+using contentapi.Utilities;
 
 namespace contentapi.History;
 
 public class HistoryConverter : IHistoryConverter
 {
     protected ILogger logger;
+    protected IJsonService jsonService;
 
-    public HistoryConverter(ILogger<HistoryConverter> logger)
+    public HistoryConverter(ILogger<HistoryConverter> logger, IJsonService jsonConvert)
     {
         this.logger = logger;
+        this.jsonService = jsonConvert;
     }
 
     public async Task<ContentHistory> ContentToHistoryAsync(ContentSnapshot content, long user, UserAction action, DateTime? specificTime)
@@ -32,7 +35,8 @@ public class HistoryConverter : IHistoryConverter
     public async Task<byte[]> GetV1Snapshot<T>(T content)
     {
         //Snapshot this time is a simple compressed json object.
-        var jsonString = JsonConvert.SerializeObject(content);
+        //var jsonString = JsonConvert.SerializeObject(content);
+        var jsonString = JsonSerializer.Serialize(content); //SerializeObject(content);
         var jsonBytes = System.Text.Encoding.UTF8.GetBytes(jsonString);
         using (var memstream = new MemoryStream())
         {
@@ -59,7 +63,7 @@ public class HistoryConverter : IHistoryConverter
 
     public void SetCommentHistory(List<CommentSnapshot> snapshots, Message current)
     {
-        current.history = JsonConvert.SerializeObject(snapshots);
+        current.history = jsonService.Serialize(snapshots);
     }
 
     public List<CommentSnapshot> GetCommentHistory(Message current)
@@ -67,7 +71,7 @@ public class HistoryConverter : IHistoryConverter
         if(string.IsNullOrEmpty(current.history))
             return new List<CommentSnapshot>();
 
-        return JsonConvert.DeserializeObject<List<CommentSnapshot>>(current.history) ??
+        return jsonService.Deserialize<List<CommentSnapshot>>(current.history) ??
             throw new InvalidOperationException("Couldn't convert history to list of snapshots!");
     }
 }

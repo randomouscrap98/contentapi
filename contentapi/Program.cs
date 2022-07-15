@@ -1,7 +1,5 @@
 using Amazon.S3;
-using contentapi;
 using contentapi.Controllers;
-using contentapi.Db;
 using contentapi.Main;
 using contentapi.Search;
 using contentapi.SelfRun;
@@ -10,7 +8,6 @@ using contentapi.Utilities;
 using Microsoft.AspNetCore.Authentication.JwtBearer;
 using Microsoft.Data.Sqlite;
 using Microsoft.OpenApi.Models;
-using Newtonsoft.Json;
 
 //Before doing ANYTHING, look at the arguments. Some things in the contentapi system are run by spawning
 //ourselves again, because of stupid memory issues in third party libraries. So, if it looks like we're
@@ -62,19 +59,7 @@ builder.Services.AddAuthentication(x =>
     x.TokenValidationParameters = validationParameters; 
 });
 
-Action<Newtonsoft.Json.JsonSerializerSettings> setupJsonOptions = opts =>
-{
-    opts.Converters.Add(new CustomDateTimeConverter());
-    //opts.Converters.Add(new StringEnumConverter());
-};
-JsonConvert.DefaultSettings = () => {
-    var settings = new JsonSerializerSettings();
-    setupJsonOptions(settings);
-    return settings;
-};
-
-//// System.Text STILL does not do what I want it to do
-builder.Services.AddControllers().AddNewtonsoftJson(options => setupJsonOptions(options.SerializerSettings));
+builder.Services.AddControllers().AddJsonOptions(opt => DefaultSetup.SetupJsonOptions(opt.JsonSerializerOptions));
 builder.Services.AddEndpointsApiExplorer();
 
 //This section sets up JWT to be used in swagger
