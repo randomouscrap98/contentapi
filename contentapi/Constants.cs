@@ -11,10 +11,5 @@ public static class Constants
 
     public static class SelfRun
     {
-        public const string RunPrefix = "run=";
-        public const string ArgsPrefix = "args=";
-        public const string RunImagePrefix = "image.";
-        public const string RunImageResize = RunImagePrefix + "size";
-        public const string RunImageThumbnail = RunImagePrefix + "thumbnail";
     }
 }
