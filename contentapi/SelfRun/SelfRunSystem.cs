@@ -83,8 +83,8 @@ public class SelfRunSystem
     /// <returns></returns>
     public static async Task<T> RunProcessWithFileAsync<T>(Stream fileData, string runType, IInfileArgument args)
     {
-        Directory.CreateDirectory(TempLocation);
-        var tempFile = Path.Combine(TempLocation, Guid.NewGuid().ToString().Replace("-", ""));
+        var tempFile = Path.GetFullPath(Path.Combine(TempLocation, Guid.NewGuid().ToString().Replace("-", "")));
+        Directory.CreateDirectory(Path.GetDirectoryName(tempFile) ?? throw new InvalidOperationException("No temp file path!"));
 
         using(var file = File.Create(tempFile))
         {
@@ -125,7 +125,7 @@ public class SelfRunSystem
     /// What the PROGRAM calls if it detects that it is trying to run with a self-run system. This is ONLY called by the Program.Main!
     /// </summary>
     /// <param name="args"></param>
-    public static async void RunSelf(string[] args)
+    public static async Task RunSelf(string[] args)
     {
         try
         {
@@ -138,7 +138,6 @@ public class SelfRunSystem
             //This is the image runtime stuff. 
             if (runType.StartsWith(RunImagePrefix))
             {
-                //Console.WriteLine($"Running image type: {runType}");
                 if(argument == null)
                     throw new InvalidOperationException("Not enough arguments!");
 
@@ -148,6 +147,7 @@ public class SelfRunSystem
             //If a result was produced, output it as json. We always return json from the self run system
             if (result != null)
             {
+                //Console.WriteLine($"Got a result of type {result.GetType()}");
                 Console.WriteLine(JsonConvert.SerializeObject(result));
             }
             else

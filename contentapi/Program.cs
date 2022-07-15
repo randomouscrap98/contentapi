@@ -18,7 +18,7 @@ using Newtonsoft.Json;
 if(SelfRunSystem.ShouldRunSelf(args))
 {
     //Go run the special "run" system
-    SelfRunSystem.RunSelf(args);
+    await SelfRunSystem.RunSelf(args);
     return;
 }
 

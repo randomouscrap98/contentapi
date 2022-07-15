@@ -28,7 +28,7 @@ public class ImageManipulator_Process : IImageManipulator
         return SelfRunSystem.RunProcessWithFileAsync<ImageManipulationInfo>(fileData, SelfRunSystem.RunImageResize, new ImageManipulationFitToSizeArgument
         {
             maxSize = maxSize,
-            savePath = savePath
+            savePath = Path.GetFullPath(savePath)
         });
     }
 
@@ -37,7 +37,7 @@ public class ImageManipulator_Process : IImageManipulator
         return SelfRunSystem.RunProcessWithFileAsync<ImageManipulationInfo>(fileData, SelfRunSystem.RunImageThumbnail, new ImageManipulationMakeThumbnailArgument
         {
             modify = modify,
-            savePath = savePath
+            savePath = Path.GetFullPath(savePath)
         });
     }
 
