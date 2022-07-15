@@ -10,14 +10,7 @@ namespace contentapi.Controllers;
 [Authorize()]
 public class WriteController : BaseController
 {
-    protected IDbWriter writer;
-    protected IGenericSearch searcher;
-
-    public WriteController(BaseControllerServices services, IGenericSearch search, IDbWriter writer) : base(services)
-    {
-        this.searcher = search;
-        this.writer = writer;
-    }
+    public WriteController(BaseControllerServices services) : base(services) { }
 
     [HttpPost("message")]
     public Task<ActionResult<MessageView>> WriteMessageAsync([FromBody]MessageView message) =>
