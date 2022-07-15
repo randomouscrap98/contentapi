@@ -8,21 +8,20 @@ namespace contentapi.Main;
 
 public class ShortcutsService
 {
-    protected IDbWriter writer;
-    protected IGenericSearch search;
+    protected IDbServicesFactory dbFactory;
     protected IMapper mapper;
     protected ILogger logger;
 
-    public ShortcutsService(ILogger<ShortcutsService> logger, IDbWriter writer, IGenericSearch search, IMapper mapper)
+    public ShortcutsService(ILogger<ShortcutsService> logger, IDbServicesFactory factory, IMapper mapper)
     {
-        this.writer = writer;
-        this.search = search;
+        this.dbFactory = factory;
         this.logger = logger;
         this.mapper = mapper;
     }
 
     public async Task ClearNotificationsAsync(WatchView watch, long uid)
     {
+        using var search = dbFactory.CreateSearch();
         var getRequest = new Func<string, SearchRequest>(t => new SearchRequest()
         {
             type = t,
@@ -48,6 +47,7 @@ public class ShortcutsService
 
     public async Task<WatchView> LookupWatchByContentIdAsync(long uid, long contentId)
     {
+        using var search = dbFactory.CreateSearch();
         var watches = await search.SearchSingleType<WatchView>(uid, new SearchRequest()
         {
             type = "watch",
@@ -66,6 +66,7 @@ public class ShortcutsService
 
     public async Task<VoteView> LookupVoteByContentIdAsync(long uid, long contentId)
     {
+        using var search = dbFactory.CreateSearch();
         var votes = await search.SearchSingleType<VoteView>(uid, new SearchRequest()
         {
             type = "vote",
@@ -84,6 +85,7 @@ public class ShortcutsService
 
     public async Task<UserVariableView> LookupVariableByKeyAsync(long uid, string key)
     {
+        using var search = dbFactory.CreateSearch();
         var variables = await search.SearchSingleType<UserVariableView>(uid, new SearchRequest()
         {
             type = "uservariable",
@@ -111,6 +113,8 @@ public class ShortcutsService
     /// <returns></returns>
     public async Task<List<MessageView>> RethreadMessagesAsync(List<long> messageIds, long newParent, long requester, string message = "")
     {
+        using var search = dbFactory.CreateSearch();
+        using var writer = dbFactory.CreateWriter();
         var user = await search.GetById<UserView>(RequestType.user, requester, true);
 
         if(string.IsNullOrWhiteSpace(message))

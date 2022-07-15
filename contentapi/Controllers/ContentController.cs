@@ -20,7 +20,7 @@ public class ContentController : BaseController
         try
         {
             var requester = GetUserId() ?? 0;
-            var result = await services.searcher.SearchSingleType<ContentView>(requester, new SearchRequest()
+            var result = await CachedSearcher.SearchSingleType<ContentView>(requester, new SearchRequest()
             {
                 type = nameof(RequestType.content),
                 query = "hash = @hash",

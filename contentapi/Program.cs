@@ -28,7 +28,8 @@ var builder = WebApplication.CreateBuilder(args);
 
 // We only use defaults for our regular runtime stuff! Overriding defaults is for testing
 // or special deploys or whatever.
-DefaultSetup.AddDefaultServices(builder.Services, builder.Configuration);
+var constring = builder.Configuration.GetConnectionString("contentapi");
+DefaultSetup.AddDefaultServices(builder.Services, () => new SqliteConnection(constring), builder.Configuration);
 DefaultSetup.AddConfigBinding<GenericSearcherConfig>(builder.Services, builder.Configuration);
 DefaultSetup.AddConfigBinding<UserServiceConfig>(builder.Services, builder.Configuration);
 DefaultSetup.AddConfigBinding<UserControllerConfig>(builder.Services, builder.Configuration);
@@ -41,10 +42,6 @@ builder.Services.AddTransient<BaseControllerServices>();
 
 string secretKey = builder.Configuration.GetValue<string>("SecretKey"); 
 var validationParameters = DefaultSetup.AddSecurity(builder.Services, secretKey);
-
-//The default setup doesn't set up our database provider though
-builder.Services.AddTransient<ContentApiDbConnection>(ctx => 
-    new ContentApiDbConnection(new SqliteConnection(builder.Configuration.GetConnectionString("contentapi"))));
 
 DefaultSetup.OneTimeSetup();
 

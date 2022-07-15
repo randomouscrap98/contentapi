@@ -17,62 +17,17 @@ public class BaseControllerServices
     public IEventTracker tracker;
     public RateLimitConfig rateConfig;
 
-    //This MIGHT be held onto for a long time (long lived controllers), so these should be GENERATORS
-    public Func<IDbWriter> getWriter;
-    public Func<IGenericSearch> getSearch;
-
-    private IDbWriter? cachedWriter = null;
-    private IGenericSearch? cachedSearcher = null;
-
-    public bool CacheDbServices {get;set;} = true;
-
-    public IDbWriter writer { get 
-    {
-        if(CacheDbServices)
-        {
-            lock(getWriter)
-            {
-                if(cachedWriter == null)
-                    cachedWriter = getWriter();
-            }
-
-            return cachedWriter;
-        }
-        else
-        {
-            return getWriter();
-        }
-    } }
-
-    public IGenericSearch searcher { get
-    {
-        if(CacheDbServices)
-        {
-            lock(getSearch)
-            {
-                if(cachedSearcher == null)
-                    cachedSearcher = getSearch();
-            }
-
-            return cachedSearcher;
-        }
-        else
-        {
-            return getSearch();
-        }
-    } }
+    public IDbServicesFactory dbFactory;
 
     public BaseControllerServices(ILogger<BaseController> logger, IAuthTokenService<long> authService, 
-        IMapper mapper, IEventTracker tracker, RateLimitConfig rateConfig, Func<IDbWriter> getWriter,
-        Func<IGenericSearch> getSearch)
+        IMapper mapper, IEventTracker tracker, RateLimitConfig rateConfig, IDbServicesFactory factory)
     {
         this.logger = logger;
         this.authService = authService;
         this.mapper = mapper;
         this.tracker = tracker;
         this.rateConfig = rateConfig;
-        this.getWriter = getWriter;
-        this.getSearch = getSearch;
+        this.dbFactory = factory;
     }
 }
 
@@ -117,10 +72,60 @@ public class BaseController : Controller
     protected bool IsUserLoggedIn() => GetUserId() != null;
     protected long GetUserIdStrict() => services.authService.GetUserId(User.Claims) ?? throw new InvalidOperationException("User not logged in! Strict mode on: MUST be logged in for this call!");
 
+    private IGenericSearch? _cachedSearch = null;
+    private IDbWriter? _cachedWriter = null;
+
+    /// <summary>
+    /// WARN: ONLY USE THIS IF YOU ARE A SHORT LIVED CONTROLLER!
+    /// </summary>
+    /// <value></value>
+    protected IGenericSearch CachedSearcher { get 
+    {
+        if(_cachedSearch == null) {
+            lock(services) { _cachedSearch = services.dbFactory.CreateSearch(); }
+        }
+
+        return _cachedSearch;
+    }}
+
+    /// <summary>
+    /// WARN: ONLY USE THIS IF YOU ARE A SHORT LIVED CONTROLLER!
+    /// </summary>
+    /// <value></value>
+    protected IDbWriter CachedWriter { get 
+    {
+        if(_cachedWriter == null) {
+            lock(services) { _cachedWriter = services.dbFactory.CreateWriter(); }
+        }
+
+        return _cachedWriter;
+    }}
+
+    protected override void Dispose(bool disposing)
+    {
+        if(disposing)
+        {
+            lock(services)
+            {
+                if (_cachedSearch != null)
+                {
+                    _cachedSearch.Dispose();
+                    _cachedSearch = null;
+                }
+                if (_cachedWriter != null)
+                {
+                    _cachedWriter.Dispose();
+                    _cachedWriter= null;
+                }
+            }
+        }
+        base.Dispose(disposing);
+    }
+
     protected async Task<UserView> GetUserViewStrictAsync()
     {
         var userId = GetUserIdStrict();
-        return await services.searcher.GetById<UserView>(RequestType.user, userId) ?? throw new RequestException($"Couldn't find user with id {userId}");
+        return await CachedSearcher.GetById<UserView>(RequestType.user, userId) ?? throw new RequestException($"Couldn't find user with id {userId}");
     }
 
     protected async Task<ActionResult<T>> MatchExceptions<T>(Func<Task<T>> perform)
@@ -199,7 +204,8 @@ public class BaseController : Controller
         }
 
         RateLimit(limiter, realUserId.ToString());
-        return services.writer.WriteAsync(item, realUserId, activityMessage);
+        using var writer = services.dbFactory.CreateWriter();
+        return writer.WriteAsync(item, realUserId, activityMessage);
     }
 
     protected void RateLimit(string thing, string? id = null)

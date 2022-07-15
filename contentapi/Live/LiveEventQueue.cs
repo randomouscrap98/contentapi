@@ -1,6 +1,7 @@
 using AutoMapper;
 using contentapi.data;
 using contentapi.data.Views;
+using contentapi.Main;
 using contentapi.Search;
 using contentapi.Utilities;
 using QueryResultSet = System.Collections.Generic.IEnumerable<System.Collections.Generic.IDictionary<string, object>>;
@@ -90,7 +91,7 @@ public class LiveEventQueue : ILiveEventQueue
 
     protected ILogger<LiveEventQueue> logger;
     protected ICacheCheckpointTracker<LiveEvent> eventTracker; //THIS is the event queue!
-    protected Func<IGenericSearch> searchProducer; //A search generator to ensure this queue can be any lifetime it wants (this is an anti-pattern maybe?)
+    protected IDbServicesFactory dbFactory; //A search generator to ensure this queue can be any lifetime it wants (this is an anti-pattern maybe?)
     protected IPermissionService permissionService;
     protected IMapper mapper;
     protected LiveEventQueueConfig config;
@@ -101,12 +102,12 @@ public class LiveEventQueue : ILiveEventQueue
     protected readonly object dataCacheLock = new Object();
     protected readonly object permissionCacheLock = new Object();
 
-    public LiveEventQueue(ILogger<LiveEventQueue> logger, LiveEventQueueConfig config, ICacheCheckpointTracker<LiveEvent> tracker, Func<IGenericSearch> searchProducer, 
+    public LiveEventQueue(ILogger<LiveEventQueue> logger, LiveEventQueueConfig config, ICacheCheckpointTracker<LiveEvent> tracker, IDbServicesFactory factory, 
         IPermissionService permissionService, IMapper mapper)
     {
         this.logger = logger;
         this.eventTracker = tracker;
-        this.searchProducer = searchProducer;
+        this.dbFactory = factory;
         this.permissionService = permissionService; 
         this.config = config;
         this.mapper = mapper;
@@ -325,7 +326,7 @@ public class LiveEventQueue : ILiveEventQueue
     public async Task<LiveEventCachedData> LookupEventDataAsync(LiveEvent evnt)
     {
         var requests = GetSearchRequestsForEvents(new List<LiveEvent> { evnt });
-        var search = searchProducer();
+        using var search = dbFactory.CreateSearch();
 
         var searchData = await search.SearchUnrestricted(requests);
         return new LiveEventCachedData() { evnt = evnt, data = searchData.objects };
@@ -410,7 +411,7 @@ public class LiveEventQueue : ILiveEventQueue
             {
                 //Use only ONE searcher for each listen call! Hopefully this isn't a problem!
                 //NOTE: moved down after the listen so we don't have dangling sqlite connections while waiting for data
-                var search = searchProducer();
+                using var search = dbFactory.CreateSearch();
 
                 foreach(var type in events.Select(x => x.type).Distinct())
                 {

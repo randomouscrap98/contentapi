@@ -38,7 +38,7 @@ public class RequestController : BaseController
 
         return MatchExceptions(async () =>
         {
-            var data = await services.searcher.Search(search, GetUserId() ?? 0);
+            var data = await CachedSearcher.Search(search, GetUserId() ?? 0);
             var result = services.mapper.Map<RequestResponse>(data);
             result.requestUser = GetUserId();
             sw.Stop();

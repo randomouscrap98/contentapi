@@ -88,7 +88,7 @@ public class UserController : BaseController
         return MatchExceptions(() =>
         {
             var uid = GetUserIdStrict();
-            return services.searcher.GetById<UserView>(RequestType.user, uid, true);
+            return CachedSearcher.GetById<UserView>(RequestType.user, uid, true);
         });
     }
 
@@ -110,7 +110,7 @@ public class UserController : BaseController
                 throw new ForbiddenException("We're sorry, account creation is disabled at this time");
 
             var userId = await userService.CreateNewUser(credentials.username, credentials.password, credentials.email);
-            var result = await services.searcher.GetById<UserView>(RequestType.user, userId);
+            var result = await CachedSearcher.GetById<UserView>(RequestType.user, userId);
 
             if(config.ConfirmationType == InstantConfirmation)
             {
@@ -138,7 +138,7 @@ public class UserController : BaseController
             
             var userId = await userService.GetUserIdFromEmailAsync(email);
             var registrationCode = await userService.GetRegistrationKeyAsync(userId);
-            var user = await services.searcher.GetById<UserView>(RequestType.user, userId);
+            var user = await CachedSearcher.GetById<UserView>(RequestType.user, userId);
 
             if(string.IsNullOrWhiteSpace(registrationCode))
                 throw new RequestException("Couldn't find registration code for this email! Probably already registered!");
@@ -202,7 +202,7 @@ public class UserController : BaseController
             
             var userId = await userService.GetUserIdFromEmailAsync(email);
             var tempPassword = userService.GetTemporaryPassword(userId);
-            var user = await services.searcher.GetById<UserView>(RequestType.user, userId);
+            var user = await CachedSearcher.GetById<UserView>(RequestType.user, userId);
             var utcExpire = tempPassword.ExpireDate.ToUniversalTime();
 
             if(config.ConfirmationType.StartsWith(RestrictedConfirmation))

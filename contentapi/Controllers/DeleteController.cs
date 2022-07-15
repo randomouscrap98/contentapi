@@ -16,7 +16,7 @@ public class DeleteController : BaseController
         return MatchExceptions(async () => 
         {
             RateLimit(RateWrite);
-            return await services.writer.DeleteAsync<MessageView>(id, GetUserIdStrict()); //message used for activity and such
+            return await CachedWriter.DeleteAsync<MessageView>(id, GetUserIdStrict()); //message used for activity and such
         });
     }
 
@@ -26,7 +26,7 @@ public class DeleteController : BaseController
         return MatchExceptions(async () => 
         {
             RateLimit(RateWrite);
-            return await services.writer.DeleteAsync<ContentView>(id, GetUserIdStrict(), message); //message used for activity and such
+            return await CachedWriter.DeleteAsync<ContentView>(id, GetUserIdStrict(), message); //message used for activity and such
         });
     }
 
@@ -37,7 +37,7 @@ public class DeleteController : BaseController
         return MatchExceptions(async () => 
         {
             RateLimit(RateWrite);
-            return await services.writer.DeleteAsync<UserView>(id, GetUserIdStrict()); //message used for activity and such
+            return await CachedWriter.DeleteAsync<UserView>(id, GetUserIdStrict()); //message used for activity and such
         });
     }
 
@@ -47,7 +47,7 @@ public class DeleteController : BaseController
         return MatchExceptions(async () => 
         {
             RateLimit(RateInteract); //watches are different I guess?
-            return await services.writer.DeleteAsync<WatchView>(id, GetUserIdStrict()); 
+            return await CachedWriter.DeleteAsync<WatchView>(id, GetUserIdStrict()); 
         });
     }
 
@@ -57,7 +57,7 @@ public class DeleteController : BaseController
         return MatchExceptions(async () => 
         {
             RateLimit(RateInteract); //watches are different I guess?
-            return await services.writer.DeleteAsync<VoteView>(id, GetUserIdStrict()); 
+            return await CachedWriter.DeleteAsync<VoteView>(id, GetUserIdStrict()); 
         });
     }
 
@@ -67,7 +67,7 @@ public class DeleteController : BaseController
         return MatchExceptions(async () => 
         {
             RateLimit(RateUserVariable);
-            return await services.writer.DeleteAsync<UserVariableView>(id, GetUserIdStrict()); 
+            return await CachedWriter.DeleteAsync<UserVariableView>(id, GetUserIdStrict()); 
         });
     }
 }

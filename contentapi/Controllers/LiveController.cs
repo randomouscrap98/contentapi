@@ -45,7 +45,6 @@ public class LiveController : BaseController
     public LiveController(BaseControllerServices services, ILiveEventQueue eventQueue, IUserStatusTracker userStatuses,
         IPermissionService permissionService, IHostApplicationLifetime appLifetime, LiveControllerConfig config) : base(services) 
     { 
-        services.CacheDbServices = false;
         this.eventQueue = eventQueue;
         this.userStatuses = userStatuses;
         this.permissionService = permissionService;
@@ -76,7 +75,10 @@ public class LiveController : BaseController
 
     protected Task<UserlistResult> GetUserStatusesAsync(long uid, params long[] contentIds)
     {
-        return userStatuses.GetUserStatusesAsync(services.searcher, uid, eventQueue.GetAutoContentRequest().fields, "*", contentIds);
+        using(var searcher = services.dbFactory.CreateSearch())
+        {
+            return userStatuses.GetUserStatusesAsync(searcher, uid, eventQueue.GetAutoContentRequest().fields, "*", contentIds);
+        }
     }
 
     protected async Task AddUserStatusAsync(long userId, long contentId, string status)
@@ -205,8 +207,11 @@ public class LiveController : BaseController
                     var searchRequest = ((JObject)receiveItem.data).ToObject<SearchRequests>() ?? 
                         throw new RequestException("Couldn't parse search criteria!");
 
-                    var searchResult = await services.searcher.Search(searchRequest, userId);
-                    response.data = searchResult;
+                    using(var search = services.dbFactory.CreateSearch())
+                    {
+                        var searchResult = await search.Search(searchRequest, userId);
+                        response.data = searchResult;
+                    }
                 }
                 catch(Exception ex)
                 {
@@ -261,7 +266,19 @@ public class LiveController : BaseController
     protected async Task ListenLoop(CancellationToken cancelToken, int lastId, BufferBlock<object> sendQueue, string token)
     {
         var userId = ValidateToken(token);
-        var user = userId == 0 ? new UserView() { id = userId, super = false } : await services.searcher.GetById<UserView>(RequestType.user, userId, true);
+        UserView user;
+
+        if(userId == 0)
+        {
+            user = new UserView() { id = userId, super = false };
+        }
+        else
+        {
+            using(var search = services.dbFactory.CreateSearch())
+            {
+                user = await search.GetById<UserView>(RequestType.user, userId, true);
+            }
+        }
 
         while(!cancelToken.IsCancellationRequested)
         {
