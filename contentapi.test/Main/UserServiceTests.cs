@@ -30,11 +30,11 @@ public class UserServiceTests : UnitTestBase, IClassFixture<DbUnitTestBase>
             UsernameRegex = "^[a-zA-Z0-9]+$"
         };
 
-        searcher = fixture.GetService<IGenericSearch>();
+        searcher = fixture.GetGenericSearcher();
         this.fixture = fixture;
 
         this.service = new UserService(fixture.GetService<ILogger<UserService>>(), fixture.GetService<IHashService>(), 
-            fixture.GetService<IAuthTokenService<long>>(), config, fixture.GetService<ContentApiDbConnection>(),
+            fixture.GetService<IAuthTokenService<long>>(), config, fixture.dbFactory,
             fixture.GetService<IViewTypeInfoService>()); //, fixture.GetService<IDbWriter>());
 
         //Always want a fresh database!

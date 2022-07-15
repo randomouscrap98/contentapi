@@ -5,7 +5,6 @@ using System.Threading.Tasks;
 using AutoMapper;
 using contentapi.Main;
 using contentapi.Search;
-using contentapi.Utilities;
 using contentapi.data.Views;
 using Microsoft.Extensions.Logging;
 using Xunit;
@@ -14,7 +13,7 @@ using contentapi.data;
 namespace contentapi.test;
 
 [Collection("PremadeDatabase")]
-public class ShortcutsServiceTests : ViewUnitTestBase //, IClassFixture<DbUnitTestSearchFixture>
+public class ShortcutsServiceTests : ViewUnitTestBase 
 {
     protected DbUnitTestSearchFixture fixture;
     protected ShortcutsService service;
@@ -25,10 +24,10 @@ public class ShortcutsServiceTests : ViewUnitTestBase //, IClassFixture<DbUnitTe
     public ShortcutsServiceTests(DbUnitTestSearchFixture fixture)
     {
         this.fixture = fixture;
-        this.writer = fixture.GetService<IDbWriter>();
-        this.search = fixture.GetService<IGenericSearch>();
+        this.writer = fixture.GetWriter();
+        this.search = fixture.GetGenericSearcher();
         this.mapper = fixture.GetService<IMapper>();
-        this.service = new ShortcutsService(fixture.GetService<ILogger<ShortcutsService>>(), writer, search, mapper);
+        this.service = new ShortcutsService(fixture.GetService<ILogger<ShortcutsService>>(), fixture.dbFactory, mapper);
     }
 
     [Theory]

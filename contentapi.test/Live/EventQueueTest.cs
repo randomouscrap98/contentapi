@@ -36,8 +36,8 @@ public class EventQueueTest : ViewUnitTestBase //, IClassFixture<DbUnitTestSearc
     public EventQueueTest(DbUnitTestSearchFixture fixture)
     {
         this.fixture = fixture;
+        this.searcher = fixture.GetGenericSearcher();
         this.mapper = fixture.GetService<IMapper>();
-        this.searcher = fixture.GetService<IGenericSearch>();
         this.permission = fixture.GetService<IPermissionService>();
         this.shortcuts = fixture.GetService<ShortcutsService>();
 
@@ -52,9 +52,9 @@ public class EventQueueTest : ViewUnitTestBase //, IClassFixture<DbUnitTestSearc
         };
         //Note: WE HAVE TO create a new tracker every time! We don't want old data clogging this up!!
         this.tracker = new CacheCheckpointTracker<LiveEvent>(fixture.GetService<ILogger<CacheCheckpointTracker<LiveEvent>>>(), trackerConfig);
-        this.queue = new LiveEventQueue(fixture.GetService<ILogger<LiveEventQueue>>(), this.config, this.tracker, () => this.searcher, this.permission, this.mapper);
+        this.queue = new LiveEventQueue(fixture.GetService<ILogger<LiveEventQueue>>(), this.config, this.tracker, fixture.dbFactory, this.permission, this.mapper);
         writer = new DbWriter(fixture.GetService<ILogger<DbWriter>>(), this.searcher, 
-            fixture.GetService<Db.ContentApiDbConnection>(), fixture.GetService<IViewTypeInfoService>(), this.mapper,
+            fixture.GetConnection(), fixture.GetService<IViewTypeInfoService>(), this.mapper,
             fixture.GetService<History.IHistoryConverter>(), this.permission, this.queue,
             new DbWriterConfig(), new RandomGenerator(), fixture.GetService<IUserService>()); 
 

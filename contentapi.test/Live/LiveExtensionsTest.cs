@@ -20,7 +20,7 @@ public class LiveExtensionsTest : ViewUnitTestBase //, IClassFixture<DbUnitTestS
     {
         this.fixture = fixture;
         userStatuses = GetService<IUserStatusTracker>(); //DON'T use the fixture! want NEW service every time!
-        searcher = fixture.GetService<IGenericSearch>();
+        searcher = fixture.GetGenericSearcher();
         fixture.ResetDatabase();
     }
 

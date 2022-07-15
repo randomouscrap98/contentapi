@@ -38,12 +38,12 @@ public class FileServiceTests : ViewUnitTestBase, IDisposable
         //s3Mock = new FakeS3Client();
         s3provider = new S3Provider(); //As is, it will returned NotImplemented for IAmazonS3
 
-        searcher = fixture.GetService<IGenericSearch>();
-        writer = fixture.GetService<IDbWriter>();
+        searcher = fixture.GetGenericSearcher();
+        writer = fixture.GetWriter();
         config = new FileServiceConfig(){
             HighQualityResize = false
         };
-        service = new FileService(fixture.GetService<ILogger<FileService>>(), () => writer, () => searcher, config, s3provider,
+        service = new FileService(fixture.GetService<ILogger<FileService>>(), fixture.dbFactory, config, s3provider,
             new ImageManipulator_Direct(fixture.GetService<ILogger<ImageManipulator_Direct>>()));
 
         //Always want a fresh database!
