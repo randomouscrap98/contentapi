@@ -25,8 +25,9 @@ public class CombinedUserTests : ViewUnitTestBase //, IClassFixture<DbUnitTestSe
         this.fixture = fixture;
         this.mapper = fixture.GetService<IMapper>();
 
-        searcher = fixture.GetService<IGenericSearch>();
-        writer = fixture.GetService<IDbWriter>();
+        searcher = fixture.GetGenericSearcher(); 
+        writer = fixture.GetWriter(); 
+
         service = fixture.GetService<IUserService>();
 
         //Always want a fresh database!

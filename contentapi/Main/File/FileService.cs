@@ -30,8 +30,7 @@ public class FileService : IFileService
     public const string S3Prefix = "s3://";
     public const string FallbackMime = "image/png";
 
-    protected Func<IDbWriter> writeProvider;
-    protected Func<IGenericSearch> searchProvider;
+    protected IDbServicesFactory dbFactory;
     protected S3Provider s3Provider;
     protected ILogger logger;
     protected IImageManipulator imageManip;
@@ -43,11 +42,10 @@ public class FileService : IFileService
     private static readonly List<DateTime> ImageRenders = new List<DateTime>();
     private static readonly List<DateTime> ImageLoads = new List<DateTime>();
 
-    public FileService(ILogger<FileService> logger, Func<IDbWriter> writer, Func<IGenericSearch> searcher, FileServiceConfig config, 
+    public FileService(ILogger<FileService> logger, IDbServicesFactory factory, FileServiceConfig config, 
         S3Provider provider, IImageManipulator imageManip) 
     {
-        this.writeProvider = writer;
-        this.searchProvider = searcher;
+        this.dbFactory = factory;
         this.config = config;
         this.s3Provider = provider;
         this.logger = logger;
@@ -251,7 +249,7 @@ public class FileService : IFileService
             //We now have the metadata
             newView.meta = JsonConvert.SerializeObject(meta);
 
-            var tempWriter = writeProvider();
+            using var tempWriter = dbFactory.CreateWriter();
             //This is QUITE dangerous: a file could be created in the api first and THEN the file write fails!
             newView = await tempWriter.WriteAsync(newView, requester);
 
@@ -370,7 +368,8 @@ public class FileService : IFileService
         else
         {
             //Doesn't matter who the requester is, ANY file with this hash is fine... what about deleted though?
-            fileData = (await searchProvider().GetByField<ContentView>(RequestType.content, "hash", hash)).FirstOrDefault();
+            using var searcher = dbFactory.CreateSearch();
+            fileData = (await searcher.GetByField<ContentView>(RequestType.content, "hash", hash)).FirstOrDefault();
         }
 
         if (fileData == null || fileData.deleted || fileData.contentType != InternalContentType.file)

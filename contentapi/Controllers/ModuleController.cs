@@ -33,7 +33,7 @@ public class ModuleController : BaseController
             var user = await GetUserViewStrictAsync();
             if(!user.super)
                 throw new ForbiddenException("Can't read debug information unless super!");
-            var modData = await modService.RefreshModuleAsync(services.searcher, name, user.id);
+            var modData = await modService.RefreshModuleAsync(CachedSearcher, name, user.id);
             return modData.debug.ToList();
         });
     }
@@ -52,7 +52,7 @@ public class ModuleController : BaseController
             RateLimit(RateWrite);
             //Go find by name first
             var userId = GetUserIdStrict();
-            var existing = await services.searcher.GetModuleForSystemByNameAsync(module.name, userId);
+            var existing = await CachedSearcher.GetModuleForSystemByNameAsync(module.name, userId);
 
             if(existing != null)
                 module.id = existing.id;
@@ -62,7 +62,7 @@ public class ModuleController : BaseController
             //Need to add this just in case they don't, since this is a SPECIFIC module endpoint
             module.contentType = InternalContentType.module;
             
-            var result = await services.writer.WriteAsync(module, userId);
+            var result = await CachedWriter.WriteAsync(module, userId);
             modService.RefreshModule(result); //Make it ready immediately, just in case.
             return result;
         });
@@ -84,7 +84,7 @@ public class ModuleController : BaseController
             var requester = GetUserIdStrict();
             string result = "";
             //RunCommand should be thread safe, so just... run it async!
-            var modData = await modService.RefreshModuleAsync(services.searcher, name, requester);
+            var modData = await modService.RefreshModuleAsync(CachedSearcher, name, requester);
             await Task.Run(() => result = modService.RunCommand(name, arguments, requester, parentId));
             return result;
         });
@@ -117,7 +117,7 @@ public class ModuleController : BaseController
                 values.Add("name", name);
             }
 
-            var modules = await services.searcher.SearchSingleType<ModuleContentView>(userId, new SearchRequest()
+            var modules = await CachedSearcher.SearchSingleType<ModuleContentView>(userId, new SearchRequest()
             {
                 type = "content",
                 fields = fields ?? "*",

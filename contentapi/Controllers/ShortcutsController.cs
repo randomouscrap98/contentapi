@@ -34,7 +34,7 @@ public class ShortcutsController : BaseController
 
             await shortcuts.ClearNotificationsAsync(watch, uid);
 
-            return await services.writer.WriteAsync(watch, uid); //message used for activity and such
+            return await CachedWriter.WriteAsync(watch, uid); //message used for activity and such
         });
     }
 
@@ -48,7 +48,7 @@ public class ShortcutsController : BaseController
             var uid = GetUserIdStrict();
             var watch = await shortcuts.LookupWatchByContentIdAsync(uid, contentId);
 
-            return await services.writer.DeleteAsync<WatchView>(watch.id, uid); //message used for activity and such
+            return await CachedWriter.DeleteAsync<WatchView>(watch.id, uid); //message used for activity and such
         });
     }
 
@@ -63,7 +63,7 @@ public class ShortcutsController : BaseController
             var watch = await shortcuts.LookupWatchByContentIdAsync(uid, contentId);
             await shortcuts.ClearNotificationsAsync(watch, uid);
 
-            return await services.writer.WriteAsync(watch, uid); //message used for activity and such
+            return await CachedWriter.WriteAsync(watch, uid); //message used for activity and such
         });
     }
 
@@ -96,7 +96,7 @@ public class ShortcutsController : BaseController
             //Actually set the vote to what they wanted
             writeVote.vote = vote;
 
-            return await services.writer.WriteAsync(writeVote, uid); //message used for activity and such
+            return await CachedWriter.WriteAsync(writeVote, uid); //message used for activity and such
         });
     }
 
@@ -110,7 +110,7 @@ public class ShortcutsController : BaseController
             var uid = GetUserIdStrict();
             var vote = await shortcuts.LookupVoteByContentIdAsync(uid, contentId);
 
-            return await services.writer.DeleteAsync<VoteView>(vote.id, uid); //message used for activity and such
+            return await CachedWriter.DeleteAsync<VoteView>(vote.id, uid); //message used for activity and such
         });
     }
 
@@ -133,7 +133,7 @@ public class ShortcutsController : BaseController
         {
             var uid = GetUserIdStrict();
             var variable = await shortcuts.LookupVariableByKeyAsync(uid, key);
-            return await services.writer.DeleteAsync<UserVariableView>(variable.id, uid);
+            return await CachedWriter.DeleteAsync<UserVariableView>(variable.id, uid);
         });
     }
 
@@ -163,7 +163,7 @@ public class ShortcutsController : BaseController
                 };
             }
 
-            return await services.writer.WriteAsync(variable, uid);
+            return await CachedWriter.WriteAsync(variable, uid);
         });
     }
 
@@ -212,7 +212,7 @@ public class ShortcutsController : BaseController
                 expireDate = DateTime.UtcNow.AddHours(banData.banHours),
                 message = banData.message
             };
-            return await services.writer.WriteAsync(realBan, uid);
+            return await CachedWriter.WriteAsync(realBan, uid);
         });
     }
 }

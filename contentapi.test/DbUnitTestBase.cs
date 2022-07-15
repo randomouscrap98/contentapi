@@ -1,31 +1,34 @@
 using System;
+using System.Collections.Concurrent;
 using System.Collections.Generic;
 using System.Data;
 using System.Linq;
 using System.Threading.Tasks;
-using contentapi.Db;
+using contentapi.Main;
+using contentapi.Search;
 using Dapper;
 using Dapper.Contrib.Extensions;
 using Microsoft.Data.Sqlite;
-using Microsoft.Extensions.DependencyInjection;
 
 namespace contentapi.test;
 public class DbUnitTestBase : UnitTestBase, IDisposable
 {
     protected SqliteConnection masterConnection;
     protected SqliteConnection masterBackupConnection;
-    public readonly string MasterConnectionString;
-    public readonly string MasterBackupConnectionString;
     public const string DbMigrationFolder = "dbmigrations";
     public const string DbMigrationBlob = "*.sql";
     public static List<string> allQueries = new List<string>();
     public static readonly object allQueryLock = new Object();
 
-    public DbUnitTestBase()
+    private ConcurrentBag<GenericSearcher> spawnedSearches = new ConcurrentBag<GenericSearcher>();
+    private ConcurrentBag<DbWriter> spawnedWriters = new ConcurrentBag<DbWriter>();
+    private ConcurrentBag<IDbConnection> spawnedConnections = new ConcurrentBag<IDbConnection>();
+
+    public IDbServicesFactory dbFactory;
+
+    public DbUnitTestBase() 
     {
         //Ensure the connection for this particular class is DEFINITELY unique for this class!
-        MasterConnectionString = $"Data Source=master_{Guid.NewGuid().ToString().Replace("-", "")};Mode=Memory;Cache=Shared";
-        MasterBackupConnectionString = MasterConnectionString.Replace("master", "master_backup");
         masterConnection = new SqliteConnection(MasterConnectionString);
         masterConnection.Open(); //We need to keep the master connection open so it doesn't delete the in memory database
 
@@ -36,36 +39,18 @@ public class DbUnitTestBase : UnitTestBase, IDisposable
         foreach(var q in queries)
             masterConnection.Execute(q, null); //, trans);
 
-        //using(var trans = masterConnection.BeginTransaction())
-        //{
-        //    trans.Commit();
-        //}
-
         masterBackupConnection = new SqliteConnection(MasterBackupConnectionString);
         masterBackupConnection.Open(); //We need to keep the master connection open so it doesn't delete the in memory database
         SetBackupNow();
 
-        //masterConnection.Execute("PRAGMA synchronous = OFF");
-        //masterConnection.Execute("PRAGMA journal_mode = MEMORY");
-
-        UpdateServices(s =>
-        {
-            s.AddTransient<ContentApiDbConnection>(ctx => 
-                new ContentApiDbConnection(new SqliteConnection(MasterConnectionString)));
-        });
-    }
-
-    public IDbConnection CreateNewConnection()
-    {
-        var result = GetService<ContentApiDbConnection>().Connection; //new SqliteConnection(MasterConnectionString);
-        result.Open();
-        return result;
+        dbFactory = GetService<IDbServicesFactory>();
     }
 
     public async Task<int> WriteSingle<T>(T thing) where T : class
     {
-        using(var conn = CreateNewConnection())
+        using(var conn = dbFactory.CreateRaw())
         {
+            conn.Open();
             return await conn.InsertAsync(thing);
         }
     }
@@ -95,9 +80,50 @@ public class DbUnitTestBase : UnitTestBase, IDisposable
         }
     }
 
+    public GenericSearcher GetGenericSearcher()
+    {
+        var searcher = (GenericSearcher)dbFactory.CreateSearch(); 
+        spawnedSearches.Add(searcher);
+        return searcher;
+    }
+
+    public DbWriter GetWriter()
+    {
+        var writer = (DbWriter)dbFactory.CreateWriter(); 
+        spawnedWriters.Add(writer);
+        return writer;
+    }
+
+    public IDbConnection GetConnection()
+    {
+        var con = dbFactory.CreateRaw();
+        con.Open();
+        spawnedConnections.Add(con);
+        return con;
+    }
+
     public void Dispose()
     {
         masterConnection.Close();
         masterBackupConnection.Close();
+
+        while(!spawnedSearches.IsEmpty)
+        {
+            GenericSearcher item;
+            if(spawnedSearches.TryTake(out item!))
+                item.Dispose();
+        }
+        while(!spawnedWriters.IsEmpty)
+        {
+            DbWriter item;
+            if(spawnedWriters.TryTake(out item!))
+                item.Dispose();
+        }
+        while(!spawnedConnections.IsEmpty)
+        {
+            IDbConnection item;
+            if(spawnedConnections.TryTake(out item!))
+                item.Dispose();
+        }
     }
 }

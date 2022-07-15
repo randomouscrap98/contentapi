@@ -1,6 +1,5 @@
 using AutoMapper;
 using contentapi.Search;
-using contentapi.Utilities;
 using contentapi.data.Views;
 using contentapi.data;
 

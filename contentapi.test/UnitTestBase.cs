@@ -1,9 +1,8 @@
 using System;
+using System.Data;
 using System.Threading;
-using AutoMapper;
-using contentapi.Db;
-using contentapi.Search;
 using contentapi.Setup;
+using Microsoft.Data.Sqlite;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Logging;
 using Xunit;
@@ -21,33 +20,39 @@ public class UnitTestBase
 
     public const string SecretKey = "Not very secret, now is it? 7483927932";
 
-    public UnitTestBase()
+    //This sucks, it used to be in DbUnitTestBase
+    public readonly string MasterConnectionString;
+    public readonly string MasterBackupConnectionString;
+
+    public UnitTestBase()//bool defaultSetup = true) //Func<IDbConnection>? connectionBuilder = null)
     {
+        MasterConnectionString = $"Data Source=master_{Guid.NewGuid().ToString().Replace("-", "")};Mode=Memory;Cache=Shared";
+        MasterBackupConnectionString = MasterConnectionString.Replace("master", "master_backup");
+
         baseCollection = new ServiceCollection();
-        DefaultSetup.AddDefaultServices(baseCollection);
-        DefaultSetup.AddSecurity(baseCollection, SecretKey);
-        DefaultSetup.OneTimeSetup();
+        cancelSource = new CancellationTokenSource();
+        safetySource = new CancellationTokenSource();
+        safetySource.CancelAfter(5000);
 
         baseCollection.AddLogging(builder => {
             builder.AddDebug();
             builder.SetMinimumLevel(LogLevel.Debug);
         });
 
+        DefaultSetup.OneTimeSetup();
+
+        DefaultSetup.AddDefaultServices(baseCollection, () => new SqliteConnection(MasterConnectionString));
+        DefaultSetup.AddSecurity(baseCollection, SecretKey);
+
         baseProvider = baseCollection.BuildServiceProvider();
         logger = GetService<ILogger<UnitTestBase>>();
-
-        cancelSource = new CancellationTokenSource();
-        safetySource = new CancellationTokenSource();
-        safetySource.CancelAfter(5000);
-        //cancelToken = cancelSource.Token;
     }
 
-
-    public void UpdateServices(Action<IServiceCollection> modify)
-    {
-        modify(baseCollection);
-        baseProvider = baseCollection.BuildServiceProvider();
-    }
+    //public void UpdateServices(Action<IServiceCollection> modify)
+    //{
+    //    modify(baseCollection);
+    //    baseProvider = baseCollection.BuildServiceProvider();
+    //}
 
     public T GetService<T>()
     {
@@ -62,12 +67,12 @@ public class UnitTestBase
         Assert.True(Math.Abs((dt1 - dt2r).TotalSeconds) < seconds, $"Dates were not within an acceptable closeness in range! DT1: {dt1}, DT2: {dt2r}");
     }
 
-    public GenericSearcher GetGenericSearcher()
-    {
-        return new GenericSearcher(GetService<ILogger<GenericSearcher>>(), 
-            GetService<ContentApiDbConnection>(), GetService<IViewTypeInfoService>(), GetService<GenericSearcherConfig>(),
-            GetService<IMapper>(), GetService<IQueryBuilder>(), 
-            GetService<IPermissionService>());
-    }
+    //public GenericSearcher GetGenericSearcher()
+    //{
+    //    return new GenericSearcher(GetService<ILogger<GenericSearcher>>(), 
+    //        GetService<ContentApiDbConnection>(), GetService<IViewTypeInfoService>(), GetService<GenericSearcherConfig>(),
+    //        GetService<IMapper>(), GetService<IQueryBuilder>(), 
+    //        GetService<IPermissionService>());
+    //}
 
 }

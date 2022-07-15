@@ -16,7 +16,7 @@ namespace contentapi.test;
 //will be created for EVERY class that uses the fixture, increasing the test time! Just
 //keep it together, even if the class gets large!
 [Collection("PremadeDatabase")]
-public class GenericSearchDbTests : ViewUnitTestBase //, IClassFixture<DbUnitTestSearchFixture>
+public class GenericSearchDbTests : ViewUnitTestBase 
 {
     protected GenericSearcher service;
     protected DbUnitTestSearchFixture fixture;
@@ -24,7 +24,7 @@ public class GenericSearchDbTests : ViewUnitTestBase //, IClassFixture<DbUnitTes
     public GenericSearchDbTests(DbUnitTestSearchFixture fixture)
     {
         this.fixture = fixture;
-        service = fixture.GetGenericSearcher();
+        service = fixture.GetGenericSearcher(); 
     }
 
     [Fact]

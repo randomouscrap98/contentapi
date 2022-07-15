@@ -42,7 +42,6 @@ public class UserService : IUserService
     public ConcurrentDictionary<long, string> RegistrationLog = new ConcurrentDictionary<long, string>();
     public ConcurrentDictionary<long, TemporaryPassword> TempPasswordSet = new ConcurrentDictionary<long, TemporaryPassword>();
 
-    //DO NOT ADD IDBWRITER, IT CAUSED A MILLION FAILURES!!!
     public UserService(ILogger<UserService> logger, IHashService hashService, IAuthTokenService<long> authTokenService,
         UserServiceConfig config, IDbServicesFactory factory, IViewTypeInfoService typeInfoService)
     {

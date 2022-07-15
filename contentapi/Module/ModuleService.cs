@@ -1,11 +1,11 @@
 using System.Collections.Concurrent;
 using System.Text.RegularExpressions;
-using contentapi.Search;
-using contentapi.Utilities;
 using contentapi.data.Views;
 using Microsoft.Data.Sqlite;
 using MoonSharp.Interpreter;
 using contentapi.data;
+using contentapi.Main;
+using System.Runtime.ExceptionServices;
 
 namespace contentapi.Module;
 
@@ -24,7 +24,7 @@ public class ModuleServiceConfig
     public string DescriptionKey {get;set;} = "description";
 }
 
-public delegate void ModuleMessageAdder (MessageView view, long requester);
+//public delegate void ModuleMessageAdder (MessageView view, long requester);
 
 public class ModuleService : IModuleService
 {
@@ -32,16 +32,16 @@ public class ModuleService : IModuleService
     protected ConcurrentDictionary<string, LoadedModule> loadedModules = new ConcurrentDictionary<string, LoadedModule>();
     protected ILogger logger;
     protected ModuleServiceConfig config;
-    protected ModuleMessageAdder addMessage;
-    protected IGenericSearch searcher;
+    //protected ModuleMessageAdder addMessage;
+    protected IDbServicesFactory dbFactory;
 
-    public ModuleService(ModuleServiceConfig config, ILogger<ModuleService> logger, ModuleMessageAdder addMessage,
-        IGenericSearch searcher)
+    public ModuleService(ModuleServiceConfig config, ILogger<ModuleService> logger, //ModuleMessageAdder addMessage,
+        IDbServicesFactory factory)
     {
         this.config = config;
         this.logger = logger;
-        this.addMessage = addMessage;
-        this.searcher = searcher;
+        //this.addMessage = addMessage;
+        this.dbFactory = factory;
     }
 
     public LoadedModule? GetModule(string name)
@@ -132,7 +132,8 @@ public class ModuleService : IModuleService
         
         var sendRawMessage = new Action<long, long, string>((uid, room, message) =>
         {
-            addMessage(new MessageView()
+            using var writer = dbFactory.CreateWriter();
+            var realMessage = new MessageView()
             {
                 createUserId = mod.currentUserId,
                 contentId = room,
@@ -140,7 +141,14 @@ public class ModuleService : IModuleService
                 text = message,
                 module = module.name,
                 createDate = DateTime.Now
-            }, mod.currentUserId);
+            }; //, mod.currentUserId);
+            try {
+                writer.WriteAsync(realMessage, mod.currentUserId).Wait();
+            }
+            catch(AggregateException ex) {
+                ExceptionDispatchInfo.Capture(ex.InnerException ?? ex).Throw();
+            }
+            //addMessage(
         });
 
         mod.script.Globals["getdata"] = new Func<string, string?>((k) =>
@@ -352,6 +360,7 @@ public class ModuleService : IModuleService
     /// <param name="existingArgs"></param>
     public void ParseArgs(ModuleSubcommandInfo subcommandInfo, string arglist, List<object> existingArgs)
     {
+        using var search = dbFactory.CreateSearch();
         var forcedFinal = false;
 
         foreach(var argInfo in subcommandInfo.Arguments)
@@ -398,7 +407,7 @@ public class ModuleService : IModuleService
                         //Yes this is BLOCKING, this entire module system is blocking because lua/etc
                         //var users = userSource.SimpleSearchAsync(new UserSearch() { Ids = new List<long>{uid}}).Result;
                         try {
-                            var user = searcher.GetById<UserView>(RequestType.user, uid);
+                            var user = search.GetById<UserView>(RequestType.user, uid);
                         }
                         catch(NotFoundException ex) {
                             throw new RequestException($"User not found: {uid}", ex);
@@ -432,7 +441,7 @@ public class ModuleService : IModuleService
     /// <param name="arglist"></param>
     /// <param name="requester"></param>
     /// <returns></returns>
-    public string RunCommand(string module, string? arglist, long userId, long parentId = 0) //Requester requester, long parentId = 0)
+    public string RunCommand(string module, string? arglist, long userId, long parentId = 0)
     {
         LoadedModule? mod = GetModule(module);
 
@@ -456,14 +465,13 @@ public class ModuleService : IModuleService
             {
                 var newArglist = match.Groups[2].Value.Trim();
                 ModuleSubcommandInfo? subcommandInfo = null;
-                mod.subcommands.TryGetValue(match.Groups[1].Value, out subcommandInfo); //ParseSubcommandInfo(mod, match.Groups[1].Value);
+                mod.subcommands.TryGetValue(match.Groups[1].Value, out subcommandInfo); 
 
                 //Special re-check: sometimes, we can have commands that have NO subcommand name, or the "blank" subcommand. Try that one.
-                if(subcommandInfo == null) //subcommandExists == true)
+                if(subcommandInfo == null) 
                 {
                     newArglist = arglist; //undo the parsing
                     mod.subcommands.TryGetValue("", out subcommandInfo);
-                    //subcommandInfo = ParseSubcommandInfo(mod, "");
                 }
 
                 //There is a defined subcommand, which means we may need to parse the input and call
@@ -494,7 +502,6 @@ public class ModuleService : IModuleService
             using(mod.dataConnection = new SqliteConnection(config.ModuleDataConnectionString))
             {
                 mod.dataConnection.Open();
-                //mod.currentRequester = requester;
                 mod.currentUserId = userId;
                 mod.currentFunction = cmdfuncname;
                 mod.currentParentId = parentId;

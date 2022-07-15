@@ -38,6 +38,7 @@ public class PremadeDatabaseCollection : ICollectionFixture<DbUnitTestSearchFixt
     // ICollectionFixture<> interfaces.
 }
 
+//The IDisposable comes from DbUnitTestBase, it just needs to be explicitly stated... I think
 public class DbUnitTestSearchFixture : DbUnitTestBase, IDisposable
 {
     public readonly List<string> StandardKeywords = new List<string> {
@@ -81,8 +82,9 @@ public class DbUnitTestSearchFixture : DbUnitTestBase, IDisposable
             //Create tables for the in-memory database we're testing against
             //for this particular test. Note that ALL tests that use this 
             //fixture will get the SAME database!
-            using (var conn = CreateNewConnection())
+            using (var conn = dbFactory.CreateRaw()) //CreateNewConnection())
             {
+                conn.Open();
                 using (var tsx = conn.BeginTransaction())
                 {
                     var users = new List<Db.User>();

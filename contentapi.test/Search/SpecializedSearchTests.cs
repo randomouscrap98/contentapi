@@ -24,8 +24,8 @@ public class SpecializedSearchTests : ViewUnitTestBase //, IClassFixture<DbUnitT
         this.fixture = fixture;
         this.mapper = fixture.GetService<IMapper>();
 
-        searcher = fixture.GetService<IGenericSearch>();
-        writer = fixture.GetService<IDbWriter>();
+        searcher = fixture.GetGenericSearcher(); //GetService<IGenericSearch>();
+        writer = fixture.GetWriter();
 
         //Always want a fresh database!
         fixture.ResetDatabase();

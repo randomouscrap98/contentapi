@@ -28,14 +28,14 @@ public class ModuleServiceTests : ViewUnitTestBase //, IClassFixture<DbUnitTestS
     public ModuleServiceTests(DbUnitTestSearchFixture fixture)
     {
         this.fixture = fixture;
-        this.writer = fixture.GetService<IDbWriter>();
+        this.writer = fixture.GetWriter();
+        this.searcher = fixture.GetGenericSearcher();
 
         config = new ModuleServiceConfig() {
             ModuleDataConnectionString = "Data Source=moduledata;Mode=Memory;Cache=Shared"
         };
 
-        searcher = fixture.GetService<IGenericSearch>();
-        service = new ModuleService(config, fixture.GetService<ILogger<ModuleService>>(), fixture.GetService<ModuleMessageAdder>(), searcher);
+        service = new ModuleService(config, fixture.GetService<ILogger<ModuleService>>(), fixture.dbFactory);
         masterconnection = new SqliteConnection(config.ModuleDataConnectionString);
         masterconnection.Open();
 

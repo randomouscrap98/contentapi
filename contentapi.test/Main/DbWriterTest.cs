@@ -17,7 +17,7 @@ using Xunit;
 namespace contentapi.test;
 
 [Collection("PremadeDatabase")]
-public class DbWriterTest : ViewUnitTestBase
+public class DbWriterTest : ViewUnitTestBase, IDisposable
 {
     protected DbUnitTestSearchFixture fixture;
     protected FakeEventQueue events;
@@ -38,14 +38,20 @@ public class DbWriterTest : ViewUnitTestBase
         this.config = new DbWriterConfig();
         this.rng = new RandomGenerator();
         this.typeInfoService = fixture.GetService<IViewTypeInfoService>();
-        writer = new DbWriter(fixture.GetService<ILogger<DbWriter>>(), fixture.GetService<IGenericSearch>(),
-            fixture.GetService<Db.ContentApiDbConnection>(), typeInfoService, fixture.GetService<IMapper>(),
+        this.searcher = fixture.GetGenericSearcher();
+        writer = new DbWriter(fixture.GetService<ILogger<DbWriter>>(), searcher,
+            fixture.GetConnection(), typeInfoService, fixture.GetService<IMapper>(),
             fixture.GetService<History.IHistoryConverter>(), fixture.GetService<IPermissionService>(),
             events, config, rng, fixture.GetService<IUserService>());
-        searcher = fixture.GetService<IGenericSearch>();
 
         //Reset it for every test
         fixture.ResetDatabase();
+    }
+
+    public void Dispose()
+    {
+        //Since we created our own writer
+        writer.Dispose();
     }
 
     protected async Task AssertHistoryMatchesAsync(ContentView content, UserAction expected, string? message = null)
