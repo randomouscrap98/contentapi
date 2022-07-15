@@ -55,13 +55,20 @@ public class SelfRunSystem
         var output = await process.StandardOutput.ReadToEndAsync();
         await process.WaitForExitAsync();
 
-        if(process.ExitCode != 0)
+        try
         {
-            throw new InvalidOperationException($"Process exited with code {process.ExitCode}: {output}");
+            if(process.ExitCode != 0)
+            {
+                throw new InvalidOperationException($"Process exited with code {process.ExitCode}");
+            }
+            else
+            {
+                return JsonConvert.DeserializeObject<T>(output) ?? throw new InvalidOperationException($"Couldn't parse output to type {typeof(T)}");
+            }
         }
-        else
+        catch(Exception ex)
         {
-            return JsonConvert.DeserializeObject<T>(output) ?? throw new InvalidOperationException($"Couldn't parse output to type {typeof(T)}: {output}");
+            throw new InvalidOperationException($"EXCEPTION DURING SELFRUN: {ex.Message}. Output: '{output}'");
         }
 
     }
@@ -111,7 +118,7 @@ public class SelfRunSystem
     /// <returns></returns>
     public static bool ShouldRunSelf(string[] args)
     {
-        return args.Length >= 2 && args[1].StartsWith(RunPrefix);
+        return args.Length >= 1 && args[0].StartsWith(RunPrefix);
     }
 
     /// <summary>
@@ -124,22 +131,28 @@ public class SelfRunSystem
         {
             //Create a simple write to debug logger (might be syslog, who knows)
             var factory = LoggerFactory.Create(b => b.AddDebug());
-            var runType = args[1].Substring(RunPrefix.Length);
+            var runType = args[0].Substring(RunPrefix.Length);
+            var argument = args.Length >= 2 ? args[1].Substring(ArgsPrefix.Length) : null;
             Object? result = null;
 
             //This is the image runtime stuff. 
             if (runType.StartsWith(RunImagePrefix))
             {
-                if(args.Length < 3)
+                //Console.WriteLine($"Running image type: {runType}");
+                if(argument == null)
                     throw new InvalidOperationException("Not enough arguments!");
 
-                result = await ImageManipulator_Process.SelfRunCall(runType, args[2], factory);
+                result = await ImageManipulator_Process.SelfRunCall(runType, argument, factory);
             }
 
             //If a result was produced, output it as json. We always return json from the self run system
             if (result != null)
             {
                 Console.WriteLine(JsonConvert.SerializeObject(result));
+            }
+            else
+            {
+                Console.WriteLine("NO RESULT RETURNED!!");
             }
 
             Environment.Exit(0);
