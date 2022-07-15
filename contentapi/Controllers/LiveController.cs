@@ -4,9 +4,7 @@ using contentapi.Live;
 using contentapi.Utilities;
 using contentapi.data.Views;
 using Microsoft.AspNetCore.Mvc;
-//using Newtonsoft.Json;
 using System.Collections.Concurrent;
-//using Newtonsoft.Json.Linq;
 using contentapi.data;
 
 namespace contentapi.Controllers;
@@ -146,7 +144,7 @@ public class LiveController : BaseController
         while(!cancelToken.IsCancellationRequested)
         {
             //NOTE: the ReceiveObjectAsync throws an exception on close
-            var receiveItem = await socket.ReceiveObjectAsync<WebSocketRequest>(memStream, cancelToken);
+            var receiveItem = await socket.ReceiveObjectAsync<WebSocketRequest>(services.jsonConvert, memStream, cancelToken);
             var userId = ValidateToken(token); // Validate every time
             services.logger.LogDebug($"WS request '{receiveItem.id}'({receiveItem.type}) from {userId}");
             var response = new WebSocketResponse()
@@ -309,7 +307,7 @@ public class LiveController : BaseController
         while(!token.IsCancellationRequested)
         {
             var sendItem = await sendQueue.ReceiveAsync(token);
-            await socket.SendObjectAsync(sendItem, WebSocketMessageType.Text, token);
+            await socket.SendObjectAsync(services.jsonConvert, sendItem, WebSocketMessageType.Text, token);
         }
     }
 
@@ -328,9 +326,9 @@ public class LiveController : BaseController
     {
         try
         {
-            services.logger.LogDebug($"ws METHOD: {HttpContext.Request.Method}, HEADERS: " +
-                JsonConvert.SerializeObject(HttpContext.Request.Headers,
-                    Formatting.None, new JsonSerializerSettings() { ReferenceLoopHandling = ReferenceLoopHandling.Ignore }));
+            //services.logger.LogDebug($"ws METHOD: {HttpContext.Request.Method}, HEADERS: " +
+            //    services.jsonConvert.Serialize(HttpContext.Request.Headers,
+            //        Formatting.None, new JsonSerializerSettings() { ReferenceLoopHandling = ReferenceLoopHandling.Ignore }));
 
             if (!HttpContext.WebSockets.IsWebSocketRequest)
                 return BadRequest("You must send a websocket request to this endpoint!");
