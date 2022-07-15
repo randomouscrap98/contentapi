@@ -17,6 +17,10 @@ public class ImageManipulationMakeThumbnailArgument : IInfileArgument
     public GetFileModify modify {get;set;} = new GetFileModify();
 }
 
+/// <summary>
+/// An image manipulator that runs the modifications through a separate process rather than directly through
+/// library calls.
+/// </summary>
 public class ImageManipulator_Process : IImageManipulator
 {
     public Task<ImageManipulationInfo> FitToSizeAndSave(Stream fileData, string savePath, int maxSize)

@@ -12,8 +12,9 @@ using Microsoft.Data.Sqlite;
 using Microsoft.OpenApi.Models;
 using Newtonsoft.Json;
 
-//Before doing ANYTHING, look at the arguments. If there's something special going on, do
-//something different.
+//Before doing ANYTHING, look at the arguments. Some things in the contentapi system are run by spawning
+//ourselves again, because of stupid memory issues in third party libraries. So, if it looks like we're
+//being spawned from ourselves with some work in mind, do that instead of running contentapi
 if(SelfRunSystem.ShouldRunSelf(args))
 {
     //Go run the special "run" system

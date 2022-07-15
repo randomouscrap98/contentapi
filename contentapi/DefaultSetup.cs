@@ -6,6 +6,7 @@ using contentapi.Main;
 using contentapi.Module;
 using contentapi.Search;
 using contentapi.Security;
+using contentapi.SelfRun;
 using contentapi.Utilities;
 using Dapper;
 using Microsoft.Extensions.DependencyInjection.Extensions;
@@ -72,7 +73,7 @@ public static class DefaultSetup
         services.AddSingleton<IEventTracker, EventTracker>();
         services.AddSingleton<IUserStatusTracker, UserStatusTracker>();
         services.AddSingleton<IFileService, FileService>();
-        services.AddSingleton<IImageManipulator, ImageManipulator_Direct>();
+        services.AddSingleton<IImageManipulator, ImageManipulator_Process>();
 
         //This NEEDS to stay transient because it holds onto a DB connection! We want those recycled!
         services.AddTransient<IGenericSearch, GenericSearcher>();

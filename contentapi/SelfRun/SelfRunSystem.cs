@@ -40,6 +40,12 @@ public class SelfRunSystem
             UseShellExecute = false
         };
 
+        //WARN: ASSUMES THERE IS AN EXECUTABLE WITH THE SAME NAME!
+        if(startInfo.FileName.EndsWith(".dll"))
+            startInfo.FileName = startInfo.FileName.Substring(0, startInfo.FileName.Length - ".dll".Length);
+
+        startInfo.WorkingDirectory = Path.GetDirectoryName(startInfo.FileName);
+
         startInfo.ArgumentList.Add($"{RunPrefix}{runType}");
 
         if(runArgs != null)
@@ -51,7 +57,7 @@ public class SelfRunSystem
 
         if(process.ExitCode != 0)
         {
-            throw new InvalidOperationException(output);
+            throw new InvalidOperationException($"Process exited with code {process.ExitCode}: {output}");
         }
         else
         {
