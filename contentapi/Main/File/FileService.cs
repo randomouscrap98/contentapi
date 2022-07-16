@@ -198,20 +198,20 @@ public class FileService : IFileService
         return UploadFile(newView, fileConfig, fileData, requester);
     }
 
-    protected void AddGeneric(List<DateTime> logging)
+    protected void AddGeneric(List<DateTime> logging, int count)
     {
         logging.RemoveAll(x => x < DateTime.Now - config.LoggingRetainment);
         logging.Add(DateTime.Now);
     }
 
-    public void AddImageRender()
+    public void AddImageRender(int count = 1)
     {
-        lock(ImageRenders) { AddGeneric(ImageRenders); }
+        lock(ImageRenders) { AddGeneric(ImageRenders, count); }
     }
 
-    public void AddImageLoad()
+    public void AddImageLoad(int count = 1)
     {
-        lock(ImageLoads) { AddGeneric(ImageLoads); }
+        lock(ImageLoads) { AddGeneric(ImageLoads, count); }
     }
 
     public async Task<ContentView> UploadFile(ContentView newView, UploadFileConfig fileConfig, Stream fileData, long requester)
@@ -229,6 +229,7 @@ public class FileService : IFileService
 
         var manipResult = await imageManip.FitToSizeAndSave(fileData, tempLocation, config.MaxSize);
         newView.literalType = manipResult.MimeType;
+        AddImageRender(manipResult.RenderCount + manipResult.LoadCount);
 
         try
         {
@@ -421,7 +422,8 @@ public class FileService : IFileService
 
                 using(var memStream = new MemoryStream(await GetMainDataAsync(hash)))
                 {
-                    await imageManip.MakeThumbnailAndSave(memStream, thumbnailPath, modify);
+                    var manipResult = await imageManip.MakeThumbnailAndSave(memStream, thumbnailPath, modify);
+                    AddImageRender(manipResult.RenderCount + manipResult.LoadCount);
                 }
             }
         }
