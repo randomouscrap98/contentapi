@@ -8,8 +8,5 @@ public static class Constants
     //public const string RelatedContentKey = "related_content";
     public const string ParentsKey = "parent";
 
-
-    public static class SelfRun
-    {
-    }
+    public const int GeneralCacheAge = 13824000; //Six months
 }

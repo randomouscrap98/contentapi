@@ -2,7 +2,6 @@ using System.Runtime.ExceptionServices;
 using contentapi.data;
 using contentapi.data.Views;
 using contentapi.Main;
-using contentapi.Utilities;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
 
@@ -85,9 +84,10 @@ public class FileController : BaseController
    }
 
    [HttpGet("raw/{hash}")]
-   [ResponseCache(Duration = 13824000)] //six months
+   [ResponseCache(Duration = Constants.GeneralCacheAge)] 
    public async Task<ActionResult<bool>> GetFileAsync([FromRoute] string hash, [FromQuery] GetFileModify modify)
    {
+      //This is fine because files contents will never change, BUT isn't appropriate for most other things!
       Response.Headers.Add("ETag", hash);
 
       try
