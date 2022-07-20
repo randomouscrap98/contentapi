@@ -25,6 +25,8 @@ public class ImageManipulator_Direct : IImageManipulator
     //Don't really know what to do with this right now
     public bool HighQualityResize = true;
 
+    protected static SemaphoreSlim SingleManipLock = new SemaphoreSlim(1, 1);
+
     public ImageManipulator_Direct(ILogger<ImageManipulator_Direct> logger)
     {
         this.logger = logger;
@@ -46,8 +48,12 @@ public class ImageManipulator_Direct : IImageManipulator
 
         logger.LogTrace($"FitToSize called with size {maxSize}, image bytes {result.SizeInBytes}");
 
-        using (var memStream = new MemoryStream())
+        await SingleManipLock.WaitAsync();
+
+        try
         {
+            using var memStream = new MemoryStream();
+
             await fileData.CopyToAsync(memStream);
             fileData.Seek(0, SeekOrigin.Begin);
 
@@ -93,6 +99,10 @@ public class ImageManipulator_Direct : IImageManipulator
                 await memStream.CopyToAsync(stream);
             }
         }
+        finally
+        {
+            SingleManipLock.Release();
+        }
 
         return result; 
     }
@@ -111,12 +121,16 @@ public class ImageManipulator_Direct : IImageManipulator
             LoadCount = 1
         };
 
-        await Task.Run(() =>
-        {
-            IImageFormat? format;
+        await SingleManipLock.WaitAsync();
 
-            using (var image = Image.Load(fileData, out format))
+        try
+        {
+            await Task.Run(() =>
             {
+                IImageFormat? format;
+
+                using var image = Image.Load(fileData, out format);
+
                 result.MimeType = format.DefaultMimeType;
 
                 //var maxDim = Math.Max(image.Width, image.Height);
@@ -183,8 +197,13 @@ public class ImageManipulator_Direct : IImageManipulator
 
                     result.SizeInBytes = stream.Length;
                 }
-            }
-        });
+            });
+        }
+        finally
+        {
+            SingleManipLock.Release();
+        }
+
 
         return result;
     }

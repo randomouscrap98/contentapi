@@ -12,6 +12,13 @@ using Microsoft.Data.Sqlite;
 using Microsoft.OpenApi.Models;
 using Newtonsoft.Json;
 
+//Be careful with imagesharp buffers, don't need such huge ones
+SixLabors.ImageSharp.Configuration.Default.MemoryAllocator = SixLabors.ImageSharp.Memory.MemoryAllocator.Create(
+    new SixLabors.ImageSharp.Memory.MemoryAllocatorOptions()
+    {
+        MaximumPoolSizeMegabytes = 64
+    });
+
 //Before doing ANYTHING, look at the arguments. Some things in the contentapi system are run by spawning
 //ourselves again, because of stupid memory issues in third party libraries. So, if it looks like we're
 //being spawned from ourselves with some work in mind, do that instead of running contentapi
