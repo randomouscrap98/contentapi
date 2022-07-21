@@ -25,6 +25,12 @@ var APICONST = {
         RATELIMIT : 429,
         NETWORKERROR : 9999
     },
+    ACTIONS : {
+        CREATE : 1,
+        READ : 2,
+        UPDATE : 4,
+        DELETE : 8
+    },
     FIELDSETS : {
         CONTENTQUICK : "~values,keywords,votes,text,commentCount"
     },
@@ -288,6 +294,7 @@ function Api(url, tokenGet)
     //The list of fields in ANY type of object that usually links to a user (not exhaustive, probably)
     this.userAutolinks = {
         createUserId: "createUser",
+        userId: "user",
         editUserId: "editUser",
         bannedUserId : "bannedUser"
     };
@@ -947,8 +954,22 @@ Api.prototype.Notifications = function(contentPerPage, page, handler)
 {
     var search = new RequestParameter({ }, [
         new RequestSearchParameter("watch", "*", "", "commentNotifications_desc,activityNotifications_desc", contentPerPage, contentPerPage * page), //all your personal watches
-        new RequestSearchParameter("content", "~values,keywords,votes", "id in @watch.contentId"),
+        new RequestSearchParameter("content", APICONST.FIELDSETS.CONTENTQUICK, "id in @watch.contentId"),
         new RequestSearchParameter("user", "*", "id in @content.createUserId"),
+    ]);
+
+    this.Search(search, handler);
+};
+
+Api.prototype.Activity = function(pageId, activityPerPage, page, handler)
+{
+    var search = new RequestParameter({ pageId : pageId }, [
+        //Notice the special search we have. If you're asking for activity on a particular page, you don't need to filter history.
+        //BUT, if you're asking for all history (ie pageId is falsey), we use the !basichistory() macro, which limits the scope of the
+        //activity to reasonable defaults (ie don't show file uploads, deleted content, etc)
+        new RequestSearchParameter("activity", "*", pageId ? "pageId = @pageId" : "!basichistory()", "id_desc", activityPerPage, activityPerPage * page), 
+        new RequestSearchParameter("content", APICONST.FIELDSETS.CONTENTQUICK, "id in @activity.contentId"),
+        new RequestSearchParameter("user", "*", "id in @activity.userId"),
     ]);
 
     this.Search(search, handler);
@@ -1083,6 +1104,21 @@ Api.prototype.KeyById = function(data, idField)
     var result = {};
     data.forEach(x => { result[x[idField]] = x; });
     return result;
+};
+
+// Simply convert an activity action to the verb you should display
+Api.prototype.ActionToVerb = function(action)
+{
+    if(action === APICONST.ACTIONS.CREATE)
+        return "created";
+    else if(action === APICONST.ACTIONS.READ)
+        return "read";
+    else if(action === APICONST.ACTIONS.UPDATE)
+        return "edited";
+    else if(action === APICONST.ACTIONS.DELETE)
+        return "deleted";
+    else
+        return "???";
 };
 
 // Given a dictionary of link ID fields to linked field names, automatically link the 

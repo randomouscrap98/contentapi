@@ -585,6 +585,24 @@ function groupmanage_onload(template, state)
     }));
 }
 
+function activity_onload(template, state)
+{
+    SetupPagination(template.querySelector("#activity-older"), template.querySelector("#activity-newer"), state, "actp");
+
+    var container = template.querySelector("#activity-list");
+    api.Activity(0, SEARCHRESULTSPERPAGE, state.actp, new ApiHandler(d =>
+    {
+        api.AutoLinkContent(d.result.objects.activity, d.result.objects.content);
+        api.AutoLinkUsers(d.result.objects.activity, d.result.objects.user);
+        console.log(d.result.objects);
+        d.result.objects.activity.forEach(x =>
+        {
+            var item = LoadTemplate(`activity_item`, x);
+            container.appendChild(item);
+        });
+    }));
+}
+
 // This function is an excellent example for auto websocket usage. This is the
 // onload function for the websocket tester page, and utilizes the basic features
 // of the auto websocket.
@@ -741,6 +759,34 @@ function comment_item_onload(template, state)
     comment.title = state.id;
     time.textContent = state.createDate;
     contentid.textContent = `(${state.contentId})`;
+}
+
+function activity_item_onload(template, state)
+{
+    var avatar = template.querySelector("[data-avatar]");
+    var username = template.querySelector("[data-username]");
+    var action = template.querySelector("[data-action]");
+    var time = template.querySelector("[data-time]");
+    var pagelink = template.querySelector("[data-pagelink]");
+
+    if(state.user)
+    {
+        avatar.src = api.GetFileUrl(state.user.avatar, new FileModifyParameter(TINYAVATAR, true));
+        username.textContent = state.user.username;
+    }
+    else
+    {
+        username.textContent = "???";
+    }
+    username.title = state.userId;
+    action.textContent = api.ActionToVerb(state.action);
+    action.title = state.id;
+    pagelink.href = `?t=page&pid=${state.contentId}`;
+    if(state.content) 
+    {
+        pagelink.textContent = state.content.name;
+    }
+    time.textContent = state.date;
 }
 
 function user_item_onload(template, state)

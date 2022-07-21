@@ -28,7 +28,6 @@ img {
 .successmsg { color: darkseagreen; }
 .broadcastmsg { color: palevioletred; }
 .userlistmsg { color: coral; }
-.username::after { content: ":"; }
 
 .describe tr td:first-of-type {
     font-weight: bold;
@@ -40,6 +39,7 @@ img {
 }
 
 .important { font-weight: bold;; }
+.label::after { content: ":"; }
 
 .annotation {
     font-size: 0.8em;

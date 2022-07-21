@@ -27,6 +27,7 @@
         <a href="?t=login">Login</a>
         <a href="?t=register">Register</a>
         <a href="?t=user">User</a>
+        <a href="?t=activity&pid=0">Activity</a>
         <a href="?t=page&pid=0">Pages</a>
         <a href="?t=search">Search</a>
         <a href="?t=groupmanage">Groups</a>
@@ -290,6 +291,14 @@
                 <a href="#" id="group-up">Back</a>
             </div>
         </div>
+        <div id="t_activity" data-onload="activity_onload">
+            <h2>Page activity</h2>
+            <div id="activity-list"></div>
+            <div id="activity-nav" class="nav">
+                <a href="#" id="activity-newer">Newer</a>
+                <a href="#" id="activity-older">Older</a>
+            </div>
+        </div>
         <!-- The rest of this stuff are sort of "subtemplates", like little repeated items used within the page -->
         <div id="page_item" data-onload="page_item_onload">
             <a data-title></a>
@@ -299,10 +308,19 @@
         </div>
         <div id="comment_item" data-onload="comment_item_onload">
             <img data-avatar>
-            <span data-username class="important username"></span>
+            <span data-username class="important label username"></span>
             <span data-comment></span>
             <time data-time class="annotation"></time>
             <span data-contentid class="annotation"></span>
+        </div>
+        <div id="activity_item" data-onload="activity_item_onload">
+            <img data-avatar>
+            <span data-username class="important username"></span>
+            <span data-activty>
+                <span data-action></span>
+                <a href="#" data-pagelink></a>
+            </span>
+            <time data-time class="annotation"></time>
         </div>
         <div id="user_item" data-onload="user_item_onload">
             <img data-avatar>
