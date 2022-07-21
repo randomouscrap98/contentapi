@@ -46,6 +46,11 @@ DefaultSetup.AddConfigBinding<RateLimitConfig>(builder.Services, builder.Configu
 DefaultSetup.AddConfigBinding<StatusControllerConfig>(builder.Services, builder.Configuration);
 DefaultSetup.AddConfigBinding<LiveControllerConfig>(builder.Services, builder.Configuration);
 builder.Services.AddTransient<BaseControllerServices>();
+builder.Services.AddSingleton<Func<WebSocketAcceptContext>>(() => new WebSocketAcceptContext()
+{
+    DangerousEnableCompression = true,
+    //DisableServerContextTakeover = true
+});
 
 string secretKey = builder.Configuration.GetValue<string>("SecretKey"); 
 var validationParameters = DefaultSetup.AddSecurity(builder.Services, secretKey);
@@ -151,7 +156,7 @@ app.UseAuthorization();
 app.UseWebSockets(new WebSocketOptions()
 {
     //Make this configurable later?
-    KeepAliveInterval = TimeSpan.FromSeconds(15)
+    KeepAliveInterval = TimeSpan.FromSeconds(15),
 });
 
 app.MapControllers();

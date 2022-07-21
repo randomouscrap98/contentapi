@@ -26,6 +26,7 @@ public class LiveController : BaseController
     protected LiveControllerConfig config;
     private static int nextId = 0;
     protected int trackerId = Interlocked.Increment(ref nextId);
+    protected Func<WebSocketAcceptContext> acceptContextGenerator;
 
     protected static ConcurrentDictionary<int, WebsocketListenerData> currentListeners = new ConcurrentDictionary<int, WebsocketListenerData>();
 
@@ -43,13 +44,15 @@ public class LiveController : BaseController
     }
 
     public LiveController(BaseControllerServices services, ILiveEventQueue eventQueue, IUserStatusTracker userStatuses,
-        IPermissionService permissionService, IHostApplicationLifetime appLifetime, LiveControllerConfig config) : base(services) 
+        IPermissionService permissionService, IHostApplicationLifetime appLifetime, LiveControllerConfig config,
+        Func<WebSocketAcceptContext> contextGenerator) : base(services) 
     { 
         this.eventQueue = eventQueue;
         this.userStatuses = userStatuses;
         this.permissionService = permissionService;
         this.appLifetime = appLifetime;
         this.config = config;
+        this.acceptContextGenerator = contextGenerator;
     }
 
     protected long ValidateToken(string token)
@@ -344,7 +347,7 @@ public class LiveController : BaseController
             long userId = 0;
             int realLastId = lastId == null ? eventQueue.GetCurrentLastId() : lastId.Value;
 
-            using var socket = await HttpContext.WebSockets.AcceptWebSocketAsync();
+            using var socket = await HttpContext.WebSockets.AcceptWebSocketAsync(acceptContextGenerator());
 
             try
             {
