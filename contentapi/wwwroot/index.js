@@ -250,6 +250,7 @@ function page_onload(template, state)
 
     SetupPagination(template.querySelector("#page-subpageup"), template.querySelector("#page-subpagedown"), state, "sp");
     SetupPagination(template.querySelector("#page-commentup"), template.querySelector("#page-commentdown"), state, "cp");
+    SetupPagination(template.querySelector("#history-older"), template.querySelector("#history-newer"), state, "hp");
 
     template.querySelector("#page-interactions").setAttribute("data-pageid", state.pid);
     template.querySelector("#page-chat-link").setAttribute("href", "chat.html?pid=" + state.pid);
@@ -260,6 +261,9 @@ function page_onload(template, state)
     var subpagesElement = template.querySelector("#page-subpages");
     var commentsElement = template.querySelector("#page-comments");
     var voteOptionsElement = template.querySelector("#vote-options-page");
+    var historyList = template.querySelector("#page-history-list");
+
+    SetCollapseButton(template.querySelector(`#page-history-toggle`), template.querySelector("#page-history-container"), state.hp);
 
     var setupEditor = function(type, page)
     {
@@ -295,6 +299,10 @@ function page_onload(template, state)
         }
         else
         {
+            api.Activity(state.pid, SEARCHRESULTSPERPAGE, state.hp, new ApiHandler(dd =>
+            {
+                activity_loadinto(historyList, dd.result, true);
+            }));
             var page = d.result.objects.content[0];
             var parent = d.result.objects.parent[0];
             var originalPage = JSON.parse(JSON.stringify(page));
@@ -310,8 +318,10 @@ function page_onload(template, state)
             MakeTable(page, table);
 
             setupEditor("edit", originalPage);
+            content.removeAttribute('hidden');
             template.querySelector("#page-chat-link").removeAttribute("hidden");
             template.querySelector("#page-raw-link").removeAttribute("hidden");
+            template.querySelector("#page-history-section").removeAttribute("hidden");
             template.querySelector("#page-raw-link").setAttribute("href", api.GetRawContentUrl(page.hash));
 
             if(page.contentType == 3) //A file
@@ -585,6 +595,21 @@ function groupmanage_onload(template, state)
     }));
 }
 
+function activity_loadinto(container, result, restorable)
+{
+    api.AutoLinkContent(result.objects.activity, result.objects.content);
+    api.AutoLinkUsers(result.objects.activity, result.objects.user);
+    console.log(result.objects);
+    result.objects.activity.forEach(x =>
+    {
+        if(restorable && x.content && x.id != x.content.lastRevisionId)
+            x.restorable = true;
+
+        var item = LoadTemplate(`activity_item`, x);
+        container.appendChild(item);
+    });
+}
+
 function activity_onload(template, state)
 {
     SetupPagination(template.querySelector("#activity-older"), template.querySelector("#activity-newer"), state, "actp");
@@ -592,14 +617,7 @@ function activity_onload(template, state)
     var container = template.querySelector("#activity-list");
     api.Activity(0, SEARCHRESULTSPERPAGE, state.actp, new ApiHandler(d =>
     {
-        api.AutoLinkContent(d.result.objects.activity, d.result.objects.content);
-        api.AutoLinkUsers(d.result.objects.activity, d.result.objects.user);
-        console.log(d.result.objects);
-        d.result.objects.activity.forEach(x =>
-        {
-            var item = LoadTemplate(`activity_item`, x);
-            container.appendChild(item);
-        });
+        activity_loadinto(container, d.result);
     }));
 }
 
@@ -768,6 +786,10 @@ function activity_item_onload(template, state)
     var action = template.querySelector("[data-action]");
     var time = template.querySelector("[data-time]");
     var pagelink = template.querySelector("[data-pagelink]");
+    var restoreLink = template.querySelector("[data-restore]")
+
+    template.setAttribute("data-id", state.id);
+    template.setAttribute("data-contentid", state.contentId);
 
     if(state.user)
     {
@@ -783,9 +805,9 @@ function activity_item_onload(template, state)
     action.title = state.id;
     pagelink.href = `?t=page&pid=${state.contentId}`;
     if(state.content) 
-    {
         pagelink.textContent = state.content.name;
-    }
+    if(state.restorable)
+        restoreLink.removeAttribute("hidden");
     time.textContent = state.date;
 }
 
@@ -1140,6 +1162,17 @@ function t_notification_item_clear(button)
     api.ClearNotifications(pid, new ApiHandler(d => {
         location.reload();
     }));
+}
+
+function t_activity_item_restore(button)
+{
+    var revision = button.parentNode.getAttribute("data-id");
+    if(confirm(`Are you sure you want to rollback this content to revision ${revision}?`))
+    {
+        api.RestoreContent(revision, null, new ApiHandler(d => {
+            location.reload();
+        }));
+    }
 }
 
 function t_uservariable_submit(form)

@@ -134,7 +134,7 @@
                 <a href="#" id="page-raw-link" hidden="">View raw content</a>
                 <a hidden="" id="filepage-link"><img id="filepage-image"></a>
             </div>
-            <div id="page-content" title="This is lightly-rendered markup" class="content"></div>
+            <div id="page-content" title="This is lightly-rendered markup" hidden="" class="content"></div>
             <table class="describe" id="page-table"></table>
             <div id="page-interactions" data-pageid="">
                 <button id="watch-page" hidden="" onclick="return t_page_watch(this, true)">Watch</button>
@@ -148,6 +148,16 @@
             <div id="page-edit-section" class="hidden">
                 <h3>Edit: <button id="page-edit-toggle"></button></h3>
                 <div id="page-edit-container"></div>
+            </div>
+            <div id="page-history-section" hidden="">
+                <h3>Page history: <button id="page-history-toggle"></button></h3>
+                <div id="page-history-container">
+                    <div id="page-history-list"></div>
+                    <div id="page-history-nav" class="nav">
+                        <a href="#" id="history-newer">Newer</a>
+                        <a href="#" id="history-older">Older</a>
+                    </div>
+                </div>
             </div>
             <!-- The editor goes here (in this container) -->
             <h3>New Page Here: <button id="page-submit-toggle"></button></h3>
@@ -321,6 +331,7 @@
                 <a href="#" data-pagelink></a>
             </span>
             <time data-time class="annotation"></time>
+            <button data-restore="" hidden="" onclick="return t_activity_item_restore(this)">Restore</button>
         </div>
         <div id="user_item" data-onload="user_item_onload">
             <img data-avatar>

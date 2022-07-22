@@ -630,6 +630,15 @@ Api.prototype.Ban = function(banData, handler)
     this.Raw("shortcuts/ban", banData, handler, "POST");
 };
 
+Api.prototype.RestoreContent = function(revision, message, handler)
+{
+    var endpoint = `content/restore/${revision}`;
+    var params = new URLSearchParams();
+    if(message)
+       params.set("message", message);
+    this.Raw(`${endpoint}?${params.toString()}`, null, handler, "POST");
+};
+
 
 
 //You can ALSO get modules from the request/search endpoint, however you won't
@@ -969,7 +978,7 @@ Api.prototype.Activity = function(pageId, activityPerPage, page, handler)
         //activity to reasonable defaults (ie don't show file uploads, deleted content, etc)
         //ALSO NOTE: YOU CANNOT SORT BY ID!! Unfortunately, because of the conversion, the ids are a little incorrect, and will not
         //give you a reasonable order, you HAVE to sort by date
-        new RequestSearchParameter("activity", "*", pageId ? "pageId = @pageId" : "!basichistory()", "date_desc", activityPerPage, activityPerPage * page), 
+        new RequestSearchParameter("activity", "*", pageId ? "contentId = @pageId" : "!basichistory()", "date_desc", activityPerPage, activityPerPage * page), 
         new RequestSearchParameter("content", APICONST.FIELDSETS.CONTENTQUICK, "id in @activity.contentId"),
         new RequestSearchParameter("user", "*", "id in @activity.userId"),
     ]);
