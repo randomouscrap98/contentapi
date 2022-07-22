@@ -34,6 +34,7 @@ public class QueryBuilder : IQueryBuilder
         { "valuekeynotin", new MacroDescription("v", "ValueKeyNotIn", new List<RequestType> { RequestType.content, RequestType.message }) }, 
         { "valuekeynotlike", new MacroDescription("v", "ValueKeyNotLike", new List<RequestType> { RequestType.content, RequestType.message }) }, 
         { "onlyparents", new MacroDescription("", "OnlyParents", new List<RequestType> { RequestType.content }) },
+        { "onlynotparents", new MacroDescription("", "OnlyNotParents", new List<RequestType> { RequestType.content }) },
         { "userpage", new MacroDescription("v", "OnlyUserpage", new List<RequestType> { RequestType.content }) },
         { "basichistory", new MacroDescription("", "BasicHistory", new List<RequestType> { RequestType.activity }) },
         { "notdeleted", new MacroDescription("", "NotDeletedMacro", new List<RequestType> { RequestType.content, RequestType.message, RequestType.user }) }, 
@@ -138,15 +139,18 @@ public class QueryBuilder : IQueryBuilder
         return ValueKeySearchGeneric(request, key, "LIKE", "not in");
     }
 
-    public string OnlyParents(SearchRequestPlus request)
+    public string ParentQueryGenericMacro(SearchRequestPlus request, bool parents)
     {
         var typeInfo = typeService.GetTypeInfo<Content>();
-        return $@"id in 
+        return $@"id {(parents ? "" : "not")} in 
             (select {nameof(Content.parentId)} 
              from {typeInfo.selfDbInfo?.modelTable}
              group by {nameof(Content.parentId)}
             )";
     }
+
+    public string OnlyParents(SearchRequestPlus request) => ParentQueryGenericMacro(request, true);
+    public string OnlyNotParents(SearchRequestPlus request) => ParentQueryGenericMacro(request, false);
 
     public string OnlyUserpage(SearchRequestPlus request, string userIdValue)
     {

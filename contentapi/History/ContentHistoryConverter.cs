@@ -29,6 +29,14 @@ public class HistoryConverter : IHistoryConverter
         return history;
     }
 
+    public Task<ContentSnapshot> HistoryToContentAsync(ContentHistory history)
+    {
+        if(history.snapshotVersion == 1)
+            return ExtractV1Snapshot<ContentSnapshot>(history.snapshot);
+        else 
+            throw new InvalidOperationException($"Unknown snapshot version {history.snapshotVersion}");
+    }
+
     public async Task<byte[]> GetV1Snapshot<T>(T content)
     {
         //Snapshot this time is a simple compressed json object.
@@ -44,6 +52,18 @@ public class HistoryConverter : IHistoryConverter
             return memstream.ToArray();
         }
     }
+
+    public async Task<T> ExtractV1Snapshot<T>(byte[] snapshot)
+    {
+        using var memstream = new MemoryStream(snapshot);
+        using var gzip = new GZipStream(memstream, CompressionMode.Decompress, true);
+        using var outputStream = new MemoryStream();
+        await gzip.CopyToAsync(outputStream);
+        var result = outputStream.ToArray();
+        var jsonString = System.Text.Encoding.UTF8.GetString(result);
+        return JsonConvert.DeserializeObject<T>(jsonString) ?? throw new InvalidOperationException($"Couldn't convert decompressed snapshot v1 to {typeof(T)}!");
+    }
+
 
     public void AddCommentHistory(CommentSnapshot snapshot, Message current)
     {

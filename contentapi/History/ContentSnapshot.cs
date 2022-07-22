@@ -1,4 +1,3 @@
-using System.Collections.Generic;
 using contentapi.Db;
 
 namespace contentapi.History;

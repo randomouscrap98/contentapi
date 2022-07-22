@@ -1,6 +1,9 @@
 using System;
 using System.Data;
+using System.Linq;
 using System.Threading;
+using contentapi.Db;
+using contentapi.History;
 using contentapi.Setup;
 using Microsoft.Data.Sqlite;
 using Microsoft.Extensions.DependencyInjection;
@@ -67,12 +70,52 @@ public class UnitTestBase
         Assert.True(Math.Abs((dt1 - dt2r).TotalSeconds) < seconds, $"Dates were not within an acceptable closeness in range! DT1: {dt1}, DT2: {dt2r}");
     }
 
-    //public GenericSearcher GetGenericSearcher()
-    //{
-    //    return new GenericSearcher(GetService<ILogger<GenericSearcher>>(), 
-    //        GetService<ContentApiDbConnection>(), GetService<IViewTypeInfoService>(), GetService<GenericSearcherConfig>(),
-    //        GetService<IMapper>(), GetService<IQueryBuilder>(), 
-    //        GetService<IPermissionService>());
-    //}
+    public void AssertSnapshotsEqual(ContentSnapshot expected, ContentSnapshot actual)
+    {
+        Assert.Equal(expected.id, actual.id);
+        Assert.Equal(expected.name, actual.name);
+        Assert.Equal(expected.createDate, actual.createDate);
+        Assert.Equal(expected.description, actual.description);
+        Assert.Equal(expected.text, actual.text);
+        Assert.Equal(expected.createUserId, actual.createUserId);
+        Assert.Equal(expected.values.Count, actual.values.Count);
+        Assert.Equal(expected.keywords.Count, actual.keywords.Count);
+        Assert.Equal(expected.permissions.Count, actual.permissions.Count);
+        expected.values.ForEach(x => {
+            var v = actual.values.First(y => y.id == x.id);
+            AssertContentValuesEqual(x, v);
+        });
+        expected.keywords.ForEach(x => {
+            var v = actual.keywords.First(y => y.id == x.id);
+            AssertContentKeywordsEqual(x, v);
+        });
+        expected.permissions.ForEach(x => {
+            var v = actual.permissions.First(y => y.id == x.id);
+            AssertContentPermissionsEqual(x, v);
+        });
+    }
+
+    public void AssertContentValuesEqual(ContentValue expected, ContentValue actual)
+    {
+        Assert.Equal(expected.id, actual.id);
+        Assert.Equal(expected.key, actual.key);
+        Assert.Equal(expected.value, actual.value);
+    }
+
+    public void AssertContentKeywordsEqual(ContentKeyword expected, ContentKeyword actual)
+    {
+        Assert.Equal(expected.id, actual.id);
+        Assert.Equal(expected.value, actual.value);
+    }
+
+    public void AssertContentPermissionsEqual(ContentPermission expected, ContentPermission actual)
+    {
+        Assert.Equal(expected.id, actual.id);
+        Assert.Equal(expected.userId, actual.userId);
+        Assert.Equal(expected.create, actual.create);
+        Assert.Equal(expected.update, actual.update);
+        Assert.Equal(expected.delete, actual.delete);
+        Assert.Equal(expected.read, actual.read);
+    }
 
 }
