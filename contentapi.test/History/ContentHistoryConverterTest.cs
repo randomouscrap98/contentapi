@@ -2,6 +2,7 @@ using System;
 using System.Collections.Generic;
 using System.Linq;
 using System.Threading.Tasks;
+using contentapi.data;
 using contentapi.Db;
 using contentapi.History;
 using Microsoft.Extensions.Logging;
@@ -51,6 +52,18 @@ public class ContentHistoryConverterTest : UnitTestBase
         var compressed = await converter.GetV1Snapshot(snapshot);
         Assert.True(compressed.Length > 0);
         var result = await converter.ExtractV1Snapshot<ContentSnapshot>(compressed);
+        AssertSnapshotsEqual(snapshot, result);
+    }
+
+    [Fact]
+    public async Task ActualUsageTransparent()
+    {
+        var snapshot = GetGenericSnapshot();
+        var history = await converter.ContentToHistoryAsync(snapshot, 123, UserAction.create);
+        Assert.Equal(123, history.createUserId);
+        Assert.Equal(UserAction.create, history.action);
+        Assert.True(history.snapshot.Length > 0);
+        var result = await converter.HistoryToContentAsync(history);
         AssertSnapshotsEqual(snapshot, result);
     }
 }

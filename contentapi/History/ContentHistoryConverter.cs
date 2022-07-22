@@ -14,7 +14,7 @@ public class HistoryConverter : IHistoryConverter
         this.logger = logger;
     }
 
-    public async Task<ContentHistory> ContentToHistoryAsync(ContentSnapshot content, long user, UserAction action, DateTime? specificTime)
+    public async Task<ContentHistory> ContentToHistoryAsync(ContentSnapshot content, long user, UserAction action, DateTime? specificTime = null)
     {
         var history = new ContentHistory()
         {

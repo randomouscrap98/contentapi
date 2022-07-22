@@ -30,4 +30,7 @@ public interface IDbWriter : IDisposable
     Task VerifyHash(string hash);
 
     Task<AdminLog> WriteAdminLog(AdminLog log);
+
+    //Task<ContentView> GetDiff(long revisionA, long revisionB);
+    Task<ContentView> RestoreContent(long revision, long requestUserId, string? message = null);
 }

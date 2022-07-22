@@ -1,5 +1,3 @@
-using System;
-
 namespace contentapi.data;
 
 //Make this a bitflag
@@ -57,7 +55,8 @@ public enum AdminLogType : long
     ban_create = 12,
     ban_edit = 13,
     login_temporary = 14,
-    login_passwordexpired = 15
+    login_passwordexpired = 15,
+    content_restore = 16
 }
 
 public enum VoteType : long

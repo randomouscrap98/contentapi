@@ -755,6 +755,67 @@ public class DbWriter : IDbWriter
             return work.view.id;
         }
     }
+
+    public async Task<ContentView> RestoreContent(long revision, long requestUserId, string? message = null)
+    {
+        var user = await GetRequestUser(requestUserId);
+
+        //Go find the revision and figure out the original content
+        var htype = typeInfoService.GetTypeInfo<ContentHistory>();
+        var revisions = await dbcon.QueryAsync<ContentHistory>($"select * from {htype.selfDbInfo!.modelTable} where {nameof(ContentHistory.id)} = @id", new {id = revision});
+        var history = revisions.FirstOrDefault(x => x.id == revision);
+
+        if(history == null)
+            throw new NotFoundException($"Couldn't find revision {revision}!");
+
+        if(!(await CanUserAsync(user, UserAction.update, history.contentId)))
+            throw new ForbiddenException($"You're not allowed to update content {history.contentId}!");
+
+        var maxRevision = await dbcon.QuerySingleAsync<long>($"select max({nameof(ContentHistory.id)}) from {htype.selfDbInfo!.modelTable} where {nameof(ContentHistory.contentId)} = @id", new {id = history.contentId});
+
+        if(maxRevision == revision)
+            throw new RequestException("You can't restore content to the revision it's already at!");
+        
+        var restoredContent = await historyConverter.HistoryToContentAsync(history);
+
+        //OK, at this point we have all the stuff we need to update. We just clear out the old values, update the content, etc
+        using(var tsx = dbcon.BeginTransaction())
+        {
+            //Remove the old associated values, update the content
+            await DeleteContentAssociatedAll(restoredContent.id, tsx);
+            await dbcon.UpdateAsync(restoredContent, tsx);
+
+            //insert the old values/permissions etc. These reuse the OLD ids from before, but should be fine!
+            await dbcon.InsertAsync(restoredContent.values, tsx);
+            await dbcon.InsertAsync(restoredContent.permissions, tsx);
+            await dbcon.InsertAsync(restoredContent.keywords, tsx);
+
+            //Still need to produce the update event
+            var activity = await historyConverter.ContentToHistoryAsync(restoredContent, requestUserId, UserAction.update);
+            activity.message = message;
+
+            var activityId = await dbcon.InsertAsync(activity, tsx);
+
+            var adminLog = new AdminLog()
+            {
+                text = $"User '{user.username}'({user.id}) restored {restoredContent.contentType} '{restoredContent.name}'({restoredContent.id}) from revision {revision}, was {maxRevision}",
+                type = AdminLogType.content_restore,
+                target = restoredContent.id,
+                initiator = requestUserId,
+                createDate = DateTime.UtcNow
+            };
+            await dbcon.InsertAsync(adminLog, tsx);
+
+            tsx.Commit();
+
+            //Content events are reported as activity
+            await eventQueue.AddEventAsync(new LiveEvent(requestUserId, UserAction.update, EventType.activity_event, activityId));
+
+            logger.LogDebug(adminLog.text); //The admin log actually has the log text we want!
+        }
+
+        return await searcher.GetById<ContentView>(RequestType.content, history.contentId);
+    }
     
     public async Task<long> DatabaseWork_Message(DbWorkUnit<MessageView> work)
     {
