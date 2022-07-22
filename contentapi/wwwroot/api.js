@@ -967,7 +967,9 @@ Api.prototype.Activity = function(pageId, activityPerPage, page, handler)
         //Notice the special search we have. If you're asking for activity on a particular page, you don't need to filter history.
         //BUT, if you're asking for all history (ie pageId is falsey), we use the !basichistory() macro, which limits the scope of the
         //activity to reasonable defaults (ie don't show file uploads, deleted content, etc)
-        new RequestSearchParameter("activity", "*", pageId ? "pageId = @pageId" : "!basichistory()", "id_desc", activityPerPage, activityPerPage * page), 
+        //ALSO NOTE: YOU CANNOT SORT BY ID!! Unfortunately, because of the conversion, the ids are a little incorrect, and will not
+        //give you a reasonable order, you HAVE to sort by date
+        new RequestSearchParameter("activity", "*", pageId ? "pageId = @pageId" : "!basichistory()", "date_desc", activityPerPage, activityPerPage * page), 
         new RequestSearchParameter("content", APICONST.FIELDSETS.CONTENTQUICK, "id in @activity.contentId"),
         new RequestSearchParameter("user", "*", "id in @activity.userId"),
     ]);
