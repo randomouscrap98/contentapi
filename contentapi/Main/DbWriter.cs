@@ -756,6 +756,13 @@ public class DbWriter : IDbWriter
         }
     }
 
+    /// <summary>
+    /// A simple method to restore whatever content the given revision points to
+    /// </summary>
+    /// <param name="revision"></param>
+    /// <param name="requestUserId"></param>
+    /// <param name="message"></param>
+    /// <returns></returns>
     public async Task<ContentView> RestoreContent(long revision, long requestUserId, string? message = null)
     {
         var user = await GetRequestUser(requestUserId);
@@ -783,7 +790,7 @@ public class DbWriter : IDbWriter
         {
             //Remove the old associated values, update the content
             await DeleteContentAssociatedAll(restoredContent.id, tsx);
-            await dbcon.UpdateAsync(restoredContent, tsx);
+            await dbcon.UpdateAsync((Content)restoredContent, tsx);
 
             //insert the old values/permissions etc. These reuse the OLD ids from before, but should be fine!
             await dbcon.InsertAsync(restoredContent.values, tsx);

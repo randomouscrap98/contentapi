@@ -1976,4 +1976,60 @@ public class DbWriterTest : ViewUnitTestBase, IDisposable
             await Assert.ThrowsAnyAsync<BannedException>(() => writer.WriteAsync(writtenContent, NormalUserId));
         }
     }
+
+    [Fact]
+    public async Task RestoreContent_NotFound()
+    {
+        await Assert.ThrowsAnyAsync<NotFoundException>(() => writer.RestoreContent(99999, NormalUserId));
+    }
+
+    [Fact]
+    public async Task RestoreContent_DisallowSameRevision()
+    {
+        var content = await searcher.GetById<ContentView>(AllAccessContentId, true);
+        await Assert.ThrowsAnyAsync<RequestException>(() => writer.RestoreContent(content.lastRevisionId, NormalUserId));
+    }
+
+    [Fact]
+    public async Task RestoreContent_DisallowForbiddenContent()
+    {
+        var content = await searcher.GetById<ContentView>(SuperAccessContentId, true);
+        var oldRevision = content.lastRevisionId;
+        content.text = "haha something new";
+        var newRevision = await writer.WriteAsync(content, SuperUserId);
+        await Assert.ThrowsAnyAsync<ForbiddenException>(() => writer.RestoreContent(oldRevision, NormalUserId));
+    }
+
+    [Fact]
+    public async Task RestoreContent_General()
+    {
+        var content = await searcher.GetById<ContentView>(AllAccessContentId, true);
+        //Generate a new revisionID since the existing is bogus, ugh
+        content = await writer.WriteAsync(content, SuperUserId);
+        var oldRevision = content.lastRevisionId;
+        var oldText = content.text;
+        var oldValues = content.values;
+        var oldKeywords = content.keywords;
+        var oldPermissions = content.permissions;
+        content.text = "haha something new";
+        content.values = new Dictionary<string, object> { {"abc", 123}};
+        content.keywords = new List<string> { "ugh", "ugh2", "help"};
+        content.permissions = new Dictionary<long, string> { { NormalUserId, "CRUD"} };
+        var newContent = await writer.WriteAsync(content, SuperUserId);
+        Assert.NotEqual(oldRevision, newContent.lastRevisionId);
+        Assert.NotEqual(oldText, newContent.text);
+        Assert.False(content.keywords.OrderBy(x => x).SequenceEqual(oldKeywords.OrderBy(x => x)));
+        Assert.False(content.values.Keys.OrderBy(x => x).SequenceEqual(oldValues.Keys.OrderBy(x => x)));
+        Assert.False(content.permissions.Keys.OrderBy(x => x).SequenceEqual(oldPermissions.Keys.OrderBy(x => x)));
+        var resultContent = await writer.RestoreContent(oldRevision, NormalUserId);
+        Assert.NotEqual(oldRevision, resultContent.lastRevisionId);
+        Assert.NotEqual(newContent.text, resultContent.text);
+        Assert.False(newContent.keywords.OrderBy(x => x).SequenceEqual(resultContent.keywords.OrderBy(x => x)));
+        Assert.False(newContent.values.Keys.OrderBy(x => x).SequenceEqual(resultContent.values.Keys.OrderBy(x => x)));
+        Assert.False(newContent.permissions.Keys.OrderBy(x => x).SequenceEqual(resultContent.permissions.Keys.OrderBy(x => x)));
+        Assert.Equal(oldText, resultContent.text);
+        Assert.True(resultContent.keywords.OrderBy(x => x).SequenceEqual(oldKeywords.OrderBy(x => x)));
+        Assert.True(resultContent.values.Keys.OrderBy(x => x).SequenceEqual(oldValues.Keys.OrderBy(x => x)));
+        Assert.True(resultContent.permissions.Keys.OrderBy(x => x).SequenceEqual(oldPermissions.Keys.OrderBy(x => x)));
+    }
 }

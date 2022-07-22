@@ -2,6 +2,7 @@ using System.Runtime.ExceptionServices;
 using contentapi.data;
 using contentapi.data.Views;
 using contentapi.Search;
+using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
 
 namespace contentapi.Controllers;
@@ -45,5 +46,17 @@ public class ContentController : BaseController
                 return Task.FromResult(true);
             });
         }
+    }
+
+    [Authorize()]
+    [HttpPost("restore/{revision}")]
+    public Task<ActionResult<ContentView>> RestoreRevisionAsync([FromRoute]long revision, [FromQuery]string? message = null)
+    {
+        return MatchExceptions<ContentView>(async () =>
+        {
+            RateLimit(RateWrite);
+            var requester = GetUserIdStrict();
+            return await CachedWriter.RestoreContent(revision, requester, message);
+        });
     }
 }
