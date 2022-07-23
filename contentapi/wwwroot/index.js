@@ -26,10 +26,13 @@ window.onload = function()
     //Load a template! Otherwise, just leave the page as-is
     if(parameters.has("t"))
     {
-        LoadPage(parameters.get("t"), state);
-        //var oldHash = location.hash;
-        //location.hash = "";
-        //setTimeout(() => location.hash = oldHash, 500);
+        var t = parameters.get("t");
+        LoadPage(t, state);
+        document.querySelector(`header a[href*="${t}"]`).className += " active";
+    }
+    else
+    {
+        document.querySelector('header a[href="?"]').className += " active";
     }
 };
 
@@ -322,6 +325,7 @@ function page_onload(template, state)
             template.querySelector("#page-chat-link").removeAttribute("hidden");
             template.querySelector("#page-raw-link").removeAttribute("hidden");
             template.querySelector("#page-history-section").removeAttribute("hidden");
+            template.querySelector("#page-delete").removeAttribute("hidden");
             template.querySelector("#page-raw-link").setAttribute("href", api.GetRawContentUrl(page.hash));
 
             if(page.contentType == 3) //A file
@@ -1154,6 +1158,15 @@ function t_page_watch(button, watch)
         api.WatchPage(pid, handler);
     else
         api.UnwatchPage(pid, handler);
+}
+
+function t_page_delete(button)
+{
+    if(!confirm("Are you SURE you want to delete this page? Only super users can restore deleted pages!"))
+        return;
+
+    var pid = button.parentNode.getAttribute("data-pageid");
+    api.DeleteType(APICONST.WRITETYPES.CONTENT, pid, new ApiHandler(d => { location.reload(); }));
 }
 
 function t_notification_item_clear(button)

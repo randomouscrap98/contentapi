@@ -200,7 +200,8 @@ class Markup_Render_Dom { constructor() {
 			}
 			
 			get_youtube(id, data=>{
-				caption.textContent = data.title+"\n"+data.author_name
+				if (data)
+					caption.textContent = data.title+"\n"+data.author_name
 			})
 			
 			return e

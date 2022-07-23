@@ -1,5 +1,10 @@
 body {
     font-family: monospace;
+    margin: 0;
+}
+
+#main {
+    margin: 1em;
 }
 
 label, input:not([type="checkbox"]), textarea, select {
@@ -15,6 +20,18 @@ textarea {
 
 header {
     margin-bottom: 0.5em;
+    padding: 0.25em 0.5em;
+    background-color: #333;
+}
+
+header a:visited, header a:link {
+    color: #CCC;
+    text-decoration: none;
+    font-weight: bold;
+}
+
+header a.active {
+    color: limegreen;
 }
 
 img {

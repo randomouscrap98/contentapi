@@ -9,6 +9,7 @@ L + ratio {}
 	--bg: var(--mainbg, white);
 	color: var(--maincolor, black);
 	--image-max-height: 10vh;
+	
 }
 
 /*** everything ***/
@@ -27,24 +28,26 @@ L + ratio {}
 .Markup img, .Markup video, .Markup audio {
 	display: block;
 }
+/* styles and maximum sizes for embedded media */
 .Markup img, .Markup video, .Markup youtube-embed figure {
-	border: 1px solid gray;
-	/* this feature is widely supported, but wasn't standard until recently */
+	border: 1px solid var(--border-color);
+	max-height: var(--image-max-height);
+	/* this feature is widely supported */
+	/* but wasn't standard until recently: */
 	max-width: 100%; /* fallback */
 	max-width: -webkit-fill-available;
 	max-width: -moz-available;
 	max-width: stretch; /* no browser supports this value yet */
-	
-	max-height: var(--image-max-height);
 }
+/* sizes for <img> (and <video>, maybe) */
 .Markup img, .Markup video {
-	/* these variables are set in element.style if supplied by user */
-	/* i.e. in !url[100x50] syntax */
-	box-sizing: content-box;
-	object-fit: scale-down;
+	/* these variables are set in element.style if supplied by the user */
+	/* ex: using !http://example.com/image.png[100x50] syntax */
 	width: var(--width);
 	height: var(--height);
-	/* prevent inheriting width/height from parent, if they aren't set */
+	box-sizing: content-box;
+	object-fit: scale-down;
+	/* prevent inheriting width/height from parent */
 	--width: initial;
 	--height: initial;
 }
@@ -54,6 +57,9 @@ L + ratio {}
 	height: var(--height, var(--image-max-height));
 }
 
+/*************/
+/** Youtube **/
+/*************/
 .Markup youtube-embed {
 	display: table;
 }
@@ -93,7 +99,7 @@ L + ratio {}
 /*** keyboard key ***/
 .Markup kbd {
 	display: inline-block;
-	border: 1px solid gray;
+	border: 1px solid var(--border-color);
 	border-radius: 3px;
 	padding: 0.2rem 0.4rem;
 	font-family: monospace, monospace;
@@ -134,7 +140,7 @@ L + ratio {}
 .Markup summary {
 	padding: 0 0.3em;
 	background: white;
-	border: 2px outset gray !important;
+	border: 2px outset var(--border-color);
 	border-left-width: 4px;
 	margin-top: 1px;
 	display: table;
@@ -146,7 +152,7 @@ L + ratio {}
 }
 .Markup details > div {
 	padding: 0.4rem;
-	border: 2px solid gray;
+	border: 2px solid var(--border-color);
 	border-left-width: 4px;
 	background: var(--spoiler-bg);
 	margin-bottom: 1px;
@@ -158,7 +164,7 @@ L + ratio {}
 /** Quote **/
 /***********/
 .Markup blockquote {
-	border: 2px solid gray;
+	border: 2px solid var(--border-color);
 	padding: 0.3rem;
 }
 .Markup cite {
