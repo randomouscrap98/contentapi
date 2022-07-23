@@ -1,6 +1,12 @@
 #!/bin/sh
 
 udate=`date +%s`
-files=contentapi/wwwroot/index.html
-cp "${files}" "${files}.bak"
-sed -i "s/?v=[[:digit:]]\+/?v=${udate}/g" "${files}"
+wwwroot="../contentapi/wwwroot"
+files="$wwwroot/index.html $wwwroot/chat.html"
+
+for f in $files
+do
+   echo "Recaching links in $f"
+   cp "${f}" "${f}.bak"
+   sed -i "s/?v=[[:digit:]]\+/?v=${udate}/g" "${f}"
+done
