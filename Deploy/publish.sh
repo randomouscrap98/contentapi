@@ -48,6 +48,8 @@ cd ..
 # Increment the last digit of the "version" xml (yeah yeah regex whatever, I know what's in csproj)
 sed -i "s/<Version>[0-9]*[0-9]\.[0-9]*[0-9]\.[0-9]*[0-9]\.[0-9]*[0-9]/&@/g;:a {s/0@/1/g;s/1@/2/g;s/2@/3/g;s/3@/4/g;s/4@/5/g;s/5@/6/g;s/6@/7/g;s/7@/8/g;s/8@/9/g;s/9@/@0/g;t a};s/@/1/g" ${projfile}
 
+sh recache.sh
+
 # We REMOVE the local publish folder to get rid of old, no longer needed files
 # (don't want to sync unnecessary or even harmful things).
 # A dotnet publish SHOULD do everything required to make the product. It just

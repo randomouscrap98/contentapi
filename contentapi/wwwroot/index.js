@@ -28,14 +28,13 @@ window.onload = function()
     {
         var t = parameters.get("t");
         LoadPage(t, state);
-        document.querySelector(`header a[href*="${t}"]`).className += " active";
+        (document.querySelector(`header a[href*="${t}"]`) || {}).className += " active";
     }
     else
     {
         document.querySelector('header a[href="?"]').className += " active";
     }
 };
-
 
 // -- Getters and setters for stateful (cross page load) stuff --
 
