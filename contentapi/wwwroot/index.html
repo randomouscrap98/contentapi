@@ -6,19 +6,19 @@
     <meta name="rating" content="general">
     <meta name="description" content="SBS default implementation">
     <link rel="icon" href="favicon.ico" type="image/x-icon">
-    <script src="api.js?v=1658536669"></script>
+    <script src="api.js?v=1658536711"></script>
     <!-- These are required for the 12y parser (markup) -->
-    <script src="markup/langs.js?v=1658536669"></script>
-    <script src="markup/legacy.js?v=1658536669"></script>
-    <script src="markup/parse.js?v=1658536669"></script>
-    <script src="markup/render.js?v=1658536669"></script>
-    <script src="markup/helpers.js?v=1658536669"></script>
-    <link rel="stylesheet" href="markup/markup.css?v=1658536669">
-    <link rel="stylesheet" href="markup.css?v=1658536669">
-    <script src="markup.js?v=1658536669"></script>
+    <script src="markup/langs.js?v=1658536711"></script>
+    <script src="markup/legacy.js?v=1658536711"></script>
+    <script src="markup/parse.js?v=1658536711"></script>
+    <script src="markup/render.js?v=1658536711"></script>
+    <script src="markup/helpers.js?v=1658536711"></script>
+    <link rel="stylesheet" href="markup/markup.css?v=1658536711">
+    <link rel="stylesheet" href="markup.css?v=1658536711">
+    <script src="markup.js?v=1658536711"></script>
     <!-- The scripts and styling for this page in particular -->
-    <script src="index.js?v=1658536669"></script>
-    <link rel="stylesheet" href="index.css?v=1658536669">
+    <script src="index.js?v=1658536711"></script>
+    <link rel="stylesheet" href="index.css?v=1658536711">
 </head>
 
 <body>
@@ -252,6 +252,12 @@
         <div id="t_admin" data-onload="admin_onload">
             <h2>Admin log:</h2>
             <div id="adminlog-container"></div>
+            <div id="adminlog-controls" class="marginvertical">
+                <!--<form onsubmit="return t_filter_adminlog_submit(this)">-->
+                <select id="filter-logtype"></select>
+                <button id="filter-submit">Filter</button>
+                <!--</form>-->
+            </div>
             <div id="adminlog-nav" class="nav">
                 <a href="#" id="adminlog-down">Newer</a>
                 <a href="#" id="adminlog-up">Older</a>
@@ -284,6 +290,12 @@
                 </label>
                 <input type="submit" value="Submit">
             </form>
+            <!--<h3>Delete activity (restore)</h3>
+            <div id="activity-list"></div>
+            <div id="activity-nav" class="nav">
+                <a href="#" id="activity-newer">Newer</a>
+                <a href="#" id="activity-older">Older</a>
+            </div>-->
         </div>
         <div id="t_groupmanage" data-onload="groupmanage_onload">
             <h2>Group Editor</h2>
@@ -333,6 +345,7 @@
             </span>
             <time data-time class="annotation"></time>
             <button data-restore="" hidden="" onclick="return t_activity_item_restore(this)">Restore</button>
+            <!--<button data-undelete="" class="error" hidden="" onclick="return t_activity_item_undelete(this)">Undelete</button>-->
         </div>
         <div id="user_item" data-onload="user_item_onload">
             <img data-avatar>

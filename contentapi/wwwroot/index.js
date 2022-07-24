@@ -76,6 +76,33 @@ function QuickInputToObject(value)
     else return {};
 }
 
+function AboutToOptions(codes, container)
+{
+    Object.keys(codes).forEach(k =>
+    {
+        var option = document.createElement("option");
+        option.textContent = codes[k];
+        option.value = k;
+        container.appendChild(option);
+    });
+}
+
+function activity_loadinto(container, result, restorable)
+{
+    api.AutoLinkContent(result.objects.activity, result.objects.content);
+    api.AutoLinkUsers(result.objects.activity, result.objects.user);
+    console.log(result.objects);
+    result.objects.activity.forEach(x =>
+    {
+        if(restorable && x.content && x.id != x.content.lastRevisionId)
+            x.restorable = true;
+
+        var item = LoadTemplate(`activity_item`, x);
+        container.appendChild(item);
+    });
+}
+
+
 // Essentially a spoiler maker, useful for collapsible elements. The button is the control for showing or hiding
 // the cointainer, and the visibleState is the initial visibility (set to false to hide initially). Note: the
 // button's text content is overwritten for this.
@@ -355,13 +382,7 @@ function page_onload(template, state)
             api.AboutSearch(new ApiHandler(dd =>
             {
                 var voteCodes = dd.result.details.codes.VoteType;
-                Object.keys(voteCodes).forEach(k =>
-                {
-                    var option = document.createElement("option");
-                    option.textContent = voteCodes[k];
-                    option.value = k;
-                    voteOptionsElement.appendChild(option);
-                });
+                AboutToOptions(voteCodes, voteOptionsElement);
                 template.querySelector("#vote-page").onclick = function()
                 {
                     api.VoteOnPage(state.pid, voteOptionsElement.value, new ApiHandler(ddd =>
@@ -538,6 +559,7 @@ function admin_onload(template, state)
 {
     SetupPagination(template.querySelector("#adminlog-up"), template.querySelector("#adminlog-down"), state, "alp");
     SetupPagination(template.querySelector("#ban-up"), template.querySelector("#ban-down"), state, "bp", "ban-title");
+    //SetupPagination(template.querySelector("#activity-older"), template.querySelector("#activity-newer"), state, "actp");
 
     var activeOnlyInput = template.querySelector("#ban-activeonly");
     activeOnlyInput.checked = state.abonly;
@@ -547,7 +569,32 @@ function admin_onload(template, state)
         location.href = StateToUrl(state) + "#ban-title";
     };
 
-    api.Search_AllByType("adminlog", "*", "id_desc", SEARCHRESULTSPERPAGE, state.alp, new ApiHandler(d =>
+    var adminLogTypeElement = template.querySelector("#filter-logtype")
+    var adminFilterSubmit = template.querySelector("#filter-submit")
+
+    api.AboutSearch(new ApiHandler(dd =>
+    {
+        AboutToOptions(dd.result.details.codes.AdminLogType, adminLogTypeElement);
+        if(state.logtype) adminLogTypeElement.value = state.logtype;
+    }));
+
+    adminFilterSubmit.onclick = function()
+    {
+        state.logtype = adminLogTypeElement.value;
+        location.href = StateToUrl(state);
+    };
+
+    var logValues = { logtype : state.logtype };
+    var logSearch = new RequestSearchParameter("adminlog", "*", "", "id_desc", SEARCHRESULTSPERPAGE, state.alp * SEARCHRESULTSPERPAGE);
+    var logQueries= [];
+
+    if(logValues.logtype)
+        logQueries.push("type = @logtype");
+    
+    if(logQueries.length)
+        logSearch.query = logQueries.join(" AND ");
+
+    api.Search(new RequestParameter(logValues, [ logSearch ]), new ApiHandler(d =>
     {
         console.log(d.result.objects);
         var container = template.querySelector("#adminlog-container");
@@ -557,6 +604,16 @@ function admin_onload(template, state)
             container.appendChild(item);
         });
     }));
+
+    //api.Search(new RequestParameter({ delete : APICONST.ACTIONS.DELETE }, [
+    //    new RequestSearchParameter("activity", "*", "action = @delete", "date_desc", SEARCHRESULTSPERPAGE, SEARCHRESULTSPERPAGE * state.actp),
+    //    new RequestSearchParameter("activity", "*", "contentId in @activity.contentId", "date_desc", 1, 1, "previous"),
+    //    new RequestSearchParameter("content", APICONST.FIELDSETS.CONTENTQUICK, "id in @activity.contentId"),
+    //    new RequestSearchParameter("user", "*", "id in @activity.userId or id in @previous.userId")
+    //]), new ApiHandler(d =>
+    //{
+    //    activity_loadinto(template.querySelector("#activity-list"), d.result);
+    //}));
 
     api.Search(new RequestParameter({ }, [
         new RequestSearchParameter("ban", "*", state.abonly ? "!activebans()" : "", "id_desc", SEARCHRESULTSPERPAGE, SEARCHRESULTSPERPAGE * state.bp),
@@ -596,21 +653,6 @@ function groupmanage_onload(template, state)
             container.appendChild(item);
         });
     }));
-}
-
-function activity_loadinto(container, result, restorable)
-{
-    api.AutoLinkContent(result.objects.activity, result.objects.content);
-    api.AutoLinkUsers(result.objects.activity, result.objects.user);
-    console.log(result.objects);
-    result.objects.activity.forEach(x =>
-    {
-        if(restorable && x.content && x.id != x.content.lastRevisionId)
-            x.restorable = true;
-
-        var item = LoadTemplate(`activity_item`, x);
-        container.appendChild(item);
-    });
 }
 
 function activity_onload(template, state)
@@ -789,10 +831,10 @@ function activity_item_onload(template, state)
     var action = template.querySelector("[data-action]");
     var time = template.querySelector("[data-time]");
     var pagelink = template.querySelector("[data-pagelink]");
-    var restoreLink = template.querySelector("[data-restore]")
 
     template.setAttribute("data-id", state.id);
     template.setAttribute("data-contentid", state.contentId);
+    //template.setAttribute("data-undeleteid", state.undeleteId);
 
     if(state.user)
     {
@@ -809,8 +851,13 @@ function activity_item_onload(template, state)
     pagelink.href = `?t=page&pid=${state.contentId}`;
     if(state.content) 
         pagelink.textContent = state.content.name;
+    else
+        pagelink.textContent = `??? (${state.contentId})`;
     if(state.restorable)
-        restoreLink.removeAttribute("hidden");
+        template.querySelector("[data-restore]").removeAttribute("hidden");
+    //if(state.undeleteId)
+    //    template.querySelector("[data-undelete]").removeAttribute("hidden");
+        
     time.textContent = state.date;
 }
 
@@ -1165,7 +1212,7 @@ function t_page_delete(button)
         return;
 
     var pid = button.parentNode.getAttribute("data-pageid");
-    api.DeleteType(APICONST.WRITETYPES.CONTENT, pid, new ApiHandler(d => { location.reload(); }));
+    api.DeleteType(APICONST.WRITETYPES.CONTENT, pid, new ApiHandler(d => { location.href = document.querySelector("#page-parent-link").href; }));
 }
 
 function t_notification_item_clear(button)
@@ -1211,3 +1258,8 @@ function t_ban_submit(form)
 
     return false;
 }
+
+//function t_filter_adminlog_submit(form)
+//{
+//    return false;
+//}
