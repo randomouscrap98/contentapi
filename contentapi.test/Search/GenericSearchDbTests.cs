@@ -1647,7 +1647,7 @@ public class GenericSearchDbTests : ViewUnitTestBase
     {
         var realFields = extraFields ?? new List<string>();
         realFields.Add("id");
-        realFields.Add(QueryBuilder.CountField);
+        realFields.Add(Constants.CountField);
 
         return new SearchRequests()
         {
@@ -1669,8 +1669,8 @@ public class GenericSearchDbTests : ViewUnitTestBase
         var type = request.requests.First().type;
         Assert.Contains(type, result.objects.Keys);
         Assert.Single(result.objects[type]);
-        Assert.Contains(QueryBuilder.CountField, result.objects[type].First());
-        return (long)result.objects[type].First()[QueryBuilder.CountField];
+        Assert.Contains(Constants.CountField, result.objects[type].First());
+        return (long)result.objects[type].First()[Constants.CountField];
     }
 
     protected Task<long> SearchSimpleCount(string type, long userId = NormalUserId, string query = "", List<string>? extraFields = null)
@@ -1809,5 +1809,22 @@ public class GenericSearchDbTests : ViewUnitTestBase
         Assert.Equal(2, result.Count);
         Assert.Contains(result, x => x.id == AllAccessContentId);
         Assert.Contains(result, x => x.id == SuperAccessContentId);
+    }
+
+    [Fact]
+    public async Task Regression_SearchAsync_ZeroSpecialCount()
+    {
+        var result = await service.Search(new SearchRequests() {
+            requests = new List<SearchRequest>() {
+                new SearchRequest() {
+                    type = nameof(RequestType.content),
+                    fields = $"{nameof(ContentView.id)},{Constants.CountField}",
+                    query = "id > {{9999}}"
+                }
+            }
+        }, NormalUserId);
+
+        Assert.Contains(nameof(RequestType.content), result.objects.Keys);
+        Assert.Equal(0, (long)result.objects[nameof(RequestType.content)].First()[Constants.CountField]);
     }
 }

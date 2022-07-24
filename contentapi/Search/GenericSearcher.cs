@@ -70,6 +70,11 @@ public class GenericSearcher : IGenericSearch
             logger.LogDebug($"Skipping extra field addition for request '{r.name}'({r.requestId}), it is missing the {nameof(IIdView.id)} field");
             return;
         }
+        else if(r.requestFields.Contains(Constants.CountField))
+        {
+            logger.LogDebug($"Skipping extra field addition for request '{r.name}'({r.requestId}), using {Constants.CountField}");
+            return;
+        }
 
         //We know that at this point, it's safe to index
         var index = IndexResults(result);

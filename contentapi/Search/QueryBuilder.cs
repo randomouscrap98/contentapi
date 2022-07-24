@@ -21,8 +21,7 @@ public class QueryBuilder : IQueryBuilder
     protected IPermissionService permissionService;
 
     public const string DescendingAppend = "_desc";
-    public const string CountField = "specialCount";
-    public const string CountSelect = $"count(*) as {CountField}";
+    public const string CountSelect = $"count(*) as {Constants.CountField}";
     public const string PreparseLiteralSugar = "{{.+?}}";
     
     protected readonly Dictionary<string, MacroDescription> StandardMacros = new Dictionary<string, MacroDescription>()
@@ -300,7 +299,7 @@ public class QueryBuilder : IQueryBuilder
     public string StandardFieldSelect(string fieldName, SearchRequestPlus r)
     {
         //Just a simple count bypass; counts are a special thing that can be added to any query, so this is safe.
-        if(fieldName == CountField)
+        if(fieldName == Constants.CountField)
             return CountSelect;
 
         var c = r.typeInfo.fields[fieldName].fieldSelect;
@@ -341,7 +340,7 @@ public class QueryBuilder : IQueryBuilder
         //What about parsing fields from the query string?
         foreach (var field in fields)
         {
-            if (!r.typeInfo.fields.ContainsKey(field) && field != CountField)
+            if (!r.typeInfo.fields.ContainsKey(field) && field != Constants.CountField)
             {
                 throw new ArgumentException($"Unknown field {field} in request {r.name}");
             }
@@ -650,7 +649,7 @@ public class QueryBuilder : IQueryBuilder
     {
         //This enforces the "count is the only field" thing
         var fieldSelect = 
-            r.requestFields.Where(x => x == CountField || r.typeInfo.fields[x].queryBuildable).Select(x => StandardFieldSelect(x, r)).ToList();
+            r.requestFields.Where(x => x == Constants.CountField || r.typeInfo.fields[x].queryBuildable).Select(x => StandardFieldSelect(x, r)).ToList();
        // r.requestFields.Contains(CountField) ? 
         //    new List<string> { CountSelect } :
 
