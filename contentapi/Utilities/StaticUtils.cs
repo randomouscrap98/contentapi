@@ -1,3 +1,5 @@
+using System.Text;
+
 public static class StaticUtils
 {
     public static string HumanTime(TimeSpan time, int decimals = 1)
@@ -40,4 +42,27 @@ public static class StaticUtils
 
         return $"{numberString} {units}{(number == 1 ? "" : "s")}";
     }
+
+    public static string SafeFolderName(string name)
+    {
+        var result = new StringBuilder(name);
+
+        foreach(var c in Path.GetInvalidPathChars())
+            result.Replace(c, '-');
+        
+        result.Replace(Path.DirectorySeparatorChar, '-');
+
+        return result.ToString();
+    }
+
+    public static string SafeFileName(string name)
+    {
+        var result = new StringBuilder(name);
+
+        foreach(var c in Path.GetInvalidFileNameChars())
+            result.Replace(c, '-');
+
+        return result.ToString();
+    }
+
 }

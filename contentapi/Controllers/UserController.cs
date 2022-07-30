@@ -10,7 +10,6 @@ namespace contentapi.Controllers;
 public class UserControllerConfig 
 {
     public bool BackdoorRegistration {get;set;}
-    public bool BackdoorEmailLog {get;set;}
     public bool AccountCreationEnabled {get;set;} = true;
     public string ConfirmationType {get;set;} = "Standard";
     //Also accepts "Instant" and "Restricted:email,email,etc"

@@ -35,9 +35,9 @@ public class FileEmailService : IEmailService
 
         foreach(var recipient in message.Recipients)
         {
-            var folder = Path.Combine(config.Folder, GeneralExtensions.SafeFolderName(recipient));
+            var folder = Path.Combine(config.Folder, StaticUtils.SafeFolderName(recipient));
             Directory.CreateDirectory(folder);
-            var filename = GeneralExtensions.SafeFileName(DateTime.Now.ToString("yyyyMMddTHHmmss") + "_" + message.Title + ".txt");
+            var filename = StaticUtils.SafeFileName(DateTime.Now.ToString("yyyyMMddTHHmmss") + "_" + message.Title + ".txt");
             var fullPath = Path.Combine(folder, filename);
             await File.WriteAllTextAsync(fullPath, message.Body);
         }

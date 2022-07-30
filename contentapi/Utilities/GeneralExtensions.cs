@@ -1,6 +1,5 @@
 using System.Collections;
 using System.Net.WebSockets;
-using System.Text;
 using contentapi.data;
 using Newtonsoft.Json;
 
@@ -116,28 +115,4 @@ public static class GeneralExtensions
                 await realBuffer.DisposeAsync();
         }
     }
-
-
-    public static string SafeFolderName(string name)
-    {
-        var result = new StringBuilder(name);
-
-        foreach(var c in Path.GetInvalidPathChars())
-            result.Replace(c, '-');
-        
-        result.Replace(Path.DirectorySeparatorChar, '-');
-
-        return result.ToString();
-    }
-
-    public static string SafeFileName(string name)
-    {
-        var result = new StringBuilder(name);
-
-        foreach(var c in Path.GetInvalidFileNameChars())
-            result.Replace(c, '-');
-
-        return result.ToString();
-    }
-
 }
