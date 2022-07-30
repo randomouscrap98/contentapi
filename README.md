@@ -30,6 +30,16 @@ Again, modify to your desired use case. Don't forget to run `sudo systemctl enab
 with it, so the service is active. You run `sudo systemctl daemon-reload` to refresh the system after editing the file AFTER
 enabling it.
 
+Depending on the environment settings (see the `Deploy/contentapi.service` files for the environment variables set), you can add 
+either an `appsettings.Development.json` or an `appsettings.Production.json` to override various settings from `appsettings.json`.
+You don't have to redefine all the settings, just put the ones you want to change. Furthermore, you may notice a lot of settings
+in `appsettings.json` that are seemingly unused; these settings are there either as an example or to provide reasonable defaults. 
+For instance, by default, `appsettings.json` defines the "file" email service, so no email server is required. However, there's
+still a section in the settings for the email server, "EmailConfig". This is perfectly acceptable, as only the configurations
+that are needed will be used when services are configured, so you can include settings for services you're not using without
+issue. Another is the IMagick section for image manipulation; imagemagick is not used by default (to reduce dependencies), but
+is included in case you do swap to it.
+
 **Full steps:**
 1. Set up the directory on your server/wherever which will house the binaries, settings, and sqlite database. You probably don't want global read on this folder...
 2. Set up a `postinstall.sh` script in that same folder. The post install script will be called after the app is installed. 
@@ -37,13 +47,15 @@ enabling it.
    - To run the dbmigrations, just call `./dbmigrate.sh`. It can be run as many times as you want, it keeps track of which sql has been run already.
      It also makes a backup, but only once per call, each call overwrites the last backup. Be careful!
 3. Run the `Deploy/publish.sh` script to get the files onto the server. This also copies resource files and the dbmigrations scripts (sql and sh)
-4. After modifying to suit your needs, copy the service file to `/etc/systemd/system`, then as a first time install, run
+4. Set up your own `appsettings.Development.json` or `appsettings.Production.json` (depending on the environment you choose in your .service file) with 
+   setting overrides. You really should override at least the secret key and anonymous live token.
+5. After modifying to suit your needs, copy the service file to `/etc/systemd/system`, then as a first time install, run
    `sudo systemctl enable contentapi`
-5. (Optional) Set up nginx or some other proxy to proxy connections to http://localhost:5000. Or whatever url you set in your service files
-6. Check to make sure you have a `content.db` file in your server publish folder. Make sure the large amount of binaries are there. Make
+6. (Optional) Set up nginx or some other proxy to proxy connections to http://localhost:5000. Or whatever url you set in your service files
+7. Check to make sure you have a `content.db` file in your server publish folder. Make sure the large amount of binaries are there. Make
    sure your appsettings.json and appsettings.Production.json (or whatever you're using) look fine. Then you can start your service
    with `sudo systemctl start contentapi`
-7. Check if it's running by going to your proxied (or whatever) endpoint and going to /api/status. You should see json output with information
+8. Check if it's running by going to your proxied (or whatever) endpoint and going to /api/status. You should see json output with information
    on the server.
 
 **To RE-publish:**
