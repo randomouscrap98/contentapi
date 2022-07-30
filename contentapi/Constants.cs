@@ -10,4 +10,7 @@ public static class Constants
     public const string CountField = "specialCount";
 
     public const int GeneralCacheAge = 13824000; //Six months
+
+    public const string GifMime = "image/gif";
+    public const string JpegMime = "image/jpeg";
 }

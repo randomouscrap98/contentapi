@@ -1,5 +1,7 @@
 using System;
 using System.Collections.Generic;
+using System.IO;
+using System.Threading.Tasks;
 using contentapi.Utilities;
 using Xunit;
 
@@ -51,5 +53,23 @@ public class GeneralExtensionsTest : UnitTestBase
             Assert.True(type.IsGenericDictionary(), message);
         else
             Assert.False(type.IsGenericDictionary(), message);
+    }
+
+    [Fact]
+    public async Task TemporaryFileTask_AllTest()
+    {
+        var folder = GetTempFolder(false);
+        var filecontents = "Hello, this is a file\nAnd stuff is happening with it!!";
+        using(var stream = new MemoryStream(System.Text.Encoding.UTF8.GetBytes(filecontents)))
+        {
+            var generatedPath = "";
+            await stream.TemporaryFileTask(folder, async (path) =>
+            {
+                generatedPath = path;
+                Assert.True(File.Exists(generatedPath));
+                Assert.Equal(filecontents, await File.ReadAllTextAsync(path));
+            });
+            Assert.False(File.Exists(generatedPath));
+        }
     }
 }

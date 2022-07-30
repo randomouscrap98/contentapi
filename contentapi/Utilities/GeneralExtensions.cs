@@ -115,4 +115,33 @@ public static class GeneralExtensions
                 await realBuffer.DisposeAsync();
         }
     }
+
+    /// <summary>
+    /// Run the given function by creating a file from the filestream, passing the path to the runnable, then
+    /// removing the temp file afterwards
+    /// </summary>
+    /// <param name="fileData"></param>
+    /// <param name="runnable"></param>
+    /// <returns></returns>
+    public static async Task TemporaryFileTask(this Stream fileData, string tempFolder, Func<string, Task> runnable)
+    {
+        var tempFile = Path.GetFullPath(Path.Combine(tempFolder, Guid.NewGuid().ToString().Replace("-", "")));
+        Directory.CreateDirectory(Path.GetDirectoryName(tempFile) ?? throw new InvalidOperationException("No temp file path!"));
+
+        using(var file = File.Create(tempFile))
+        {
+            fileData.Seek(0, SeekOrigin.Begin);
+            await fileData.CopyToAsync(file);
+        }
+
+        try
+        {
+            await runnable(tempFile);
+        }
+        finally
+        {
+            File.Delete(tempFile);
+        }
+    }
+
 }

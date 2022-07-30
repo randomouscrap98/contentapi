@@ -118,4 +118,11 @@ public class UnitTestBase
         Assert.Equal(expected.read, actual.read);
     }
 
+    public string GetTempFolder(bool create = true)
+    {
+        var folder = System.IO.Path.Combine("UnitTestTempFiles", Guid.NewGuid().ToString());
+        if(create) System.IO.Directory.CreateDirectory(folder);
+        return folder;
+    }
+
 }

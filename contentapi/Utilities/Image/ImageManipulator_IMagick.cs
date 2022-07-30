@@ -8,6 +8,9 @@ public class ImageManipulator_IMagickConfig
 {
     public string IMagickPath {get;set;} = "";
     public string TempPath {get;set;} = "";
+    public double InitialResize {get;set;} = 0.7;
+    public double ResizeStep {get;set;} = 0.15;
+    public double MaxResizes {get;set;} = 4;
 }
 
 public class ImageManipulator_IMagick : IImageManipulator
@@ -25,6 +28,9 @@ public class ImageManipulator_IMagick : IImageManipulator
     {
         this.logger = logger;
         this.config = config;
+
+        if(config.MaxResizes * config.ResizeStep >= config.InitialResize)
+            throw new InvalidOperationException("Configuration error: ResizeStep * MaxResizes >= InitialResize! Image shrink goes to negative!");
     }
 
     /// <summary>
@@ -75,7 +81,9 @@ public class ImageManipulator_IMagick : IImageManipulator
     public async Task<ImageManipulationInfo> FillImageManipulationInfo(string filename, ImageManipulationInfo? info = null)
     {
         var raw = await RunImagick(new List<string> { filename + "[0]", "json:"});
-        return ParseImageManipulationInfo(raw, info);
+        var result = ParseImageManipulationInfo(raw, info);
+        result.LoadCount++;
+        return result;
     }
 
     /// <summary>
@@ -100,32 +108,18 @@ public class ImageManipulator_IMagick : IImageManipulator
         return realInfo;
     }
 
-    /// <summary>
-    /// Run the given function by creating a file from the filestream, passing the path to the runnable, then
-    /// removing the temp file afterwards
-    /// </summary>
-    /// <param name="fileData"></param>
-    /// <param name="runnable"></param>
-    /// <returns></returns>
-    public async Task RunWithFile(Stream fileData, Func<string, Task> runnable) 
+    public async Task GeneralIMagickResize(string filename, string resize, bool crop, bool freeze, string outfile, ImageManipulationInfo baseInfo)
     {
-        var tempFile = Path.GetFullPath(Path.Combine(config.TempPath, Guid.NewGuid().ToString().Replace("-", "")));
-        Directory.CreateDirectory(Path.GetDirectoryName(tempFile) ?? throw new InvalidOperationException("No temp file path!"));
+        //NOTE: LOOKUP HOW TO CROP IN IMAGICK, IT MIGHT CHANGE HOW THIS FUNCTION OPERATES!
 
-        using(var file = File.Create(tempFile))
-        {
-            fileData.Seek(0, SeekOrigin.Begin);
-            await fileData.CopyToAsync(file);
-        }
+        //Always lookup the initial info first, need the mimetype and maybe other things
+        await FillImageManipulationInfo(filename, baseInfo);
 
-        try
-        {
-            await runnable(tempFile);
-        }
-        finally
-        {
-            File.Delete(tempFile);
-        }
+        //Now that we know the mimetype, maybe we can do special things. gif requires a different kind of resize, and
+        //additional flags
+
+        baseInfo.RenderCount++;
+        baseInfo.SizeInBytes = new FileInfo(outfile).Length;
     }
 
     public async Task<ImageManipulationInfo> FitToSizeAndSave(Stream fileData, string savePath, int maxSize)
@@ -133,14 +127,24 @@ public class ImageManipulator_IMagick : IImageManipulator
         var result = new ImageManipulationInfo()
         {
             RenderCount = 0,
-            LoadCount = 1,
+            LoadCount = 0,
             SizeInBytes = fileData.Length
         };
 
         logger.LogTrace($"FitToSize called with size {maxSize}, image bytes {result.SizeInBytes}");
 
-        await RunWithFile(fileData, async (path) =>
+        await fileData.TemporaryFileTask(config.TempPath, async (path) =>
         {
+            var resizeFactor = config.InitialResize;
+
+            while(result.SizeInBytes > maxSize)
+            {
+                if(result.RenderCount > config.MaxResizes)
+                    throw new RequestException("Tried to resize too many times, couldn't ");
+
+                result.RenderCount++;
+                resizeFactor = resizeFactor - config.ResizeStep;
+            }
             //Spawn imagick process for fitting the file to the given size. This may still require imagesharp to 
             //get information about the file! Unless this is something imagick can report...
         });
@@ -153,11 +157,11 @@ public class ImageManipulator_IMagick : IImageManipulator
         var result = new ImageManipulationInfo()
         {
             RenderCount = 0,
-            LoadCount = 1,
+            LoadCount = 0,
             SizeInBytes = fileData.Length
         };
 
-        await RunWithFile(fileData, async (path) =>
+        await fileData.TemporaryFileTask(config.TempPath, async (path) =>
         {
             //Spawn imagick process for producing the needed file. This may still require imagesharp to 
             //get information about the file!

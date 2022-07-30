@@ -15,8 +15,6 @@ public class ImageManipulator_Direct : IImageManipulator
 
     public const double ResizeFactor = 0.8;
     public const double ResizeFactorReduce = 0.2;
-    public const string GifMime = "image/gif";
-    public const string JpegMime = "image/jpeg";
 
     //These may not be constants someday, idk
     public const int JpegHighQuality = 97;
@@ -134,8 +132,8 @@ public class ImageManipulator_Direct : IImageManipulator
                 result.MimeType = format.DefaultMimeType;
 
                 //var maxDim = Math.Max(image.Width, image.Height);
-                var isGif = format.DefaultMimeType == GifMime;
-                var isJpg = format.DefaultMimeType == JpegMime;
+                var isGif = format.DefaultMimeType == Constants.GifMime;
+                var isJpg = format.DefaultMimeType == Constants.JpegMime;
 
                 //Square ALWAYS happens, it can happen before other things.
                 if (modify.crop)
