@@ -1,10 +1,8 @@
 using Amazon.S3;
 using contentapi;
 using contentapi.Controllers;
-using contentapi.Db;
 using contentapi.Main;
 using contentapi.Search;
-using contentapi.SelfRun;
 using contentapi.Setup;
 using contentapi.Utilities;
 using Microsoft.AspNetCore.Authentication.JwtBearer;
@@ -13,21 +11,12 @@ using Microsoft.OpenApi.Models;
 using Newtonsoft.Json;
 
 //Be careful with imagesharp buffers, don't need such huge ones
-SixLabors.ImageSharp.Configuration.Default.MemoryAllocator = SixLabors.ImageSharp.Memory.MemoryAllocator.Create(
-    new SixLabors.ImageSharp.Memory.MemoryAllocatorOptions()
-    {
-        MaximumPoolSizeMegabytes = 64
-    });
+//SixLabors.ImageSharp.Configuration.Default.MemoryAllocator = SixLabors.ImageSharp.Memory.MemoryAllocator.Create(
+//    new SixLabors.ImageSharp.Memory.MemoryAllocatorOptions()
+//    {
+//        MaximumPoolSizeMegabytes = 64
+//    });
 
-//Before doing ANYTHING, look at the arguments. Some things in the contentapi system are run by spawning
-//ourselves again, because of stupid memory issues in third party libraries. So, if it looks like we're
-//being spawned from ourselves with some work in mind, do that instead of running contentapi
-if(SelfRunSystem.ShouldRunSelf(args))
-{
-    //Go run the special "run" system
-    await SelfRunSystem.RunSelf(args);
-    return;
-}
 
 var builder = WebApplication.CreateBuilder(args);
 

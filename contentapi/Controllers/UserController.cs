@@ -227,18 +227,18 @@ public class UserController : BaseController
         });
     }
 
-    [HttpGet("emaillog")]
-    public Task<ActionResult<List<EmailLog>>> GetEmailLog()
-    {
-        return MatchExceptions(() =>
-        {
-            if(!config.BackdoorEmailLog)
-                throw new ForbiddenException("This is a debug endpoint that has been deactivated!");
-            
-            return Task.FromResult((emailer as NullEmailService ?? 
-                throw new InvalidOperationException("The emailer is not set up for logging! This endpoint is only for the null email service")).Log);
-        });
-    }
+    //[HttpGet("emaillog")]
+    //public Task<ActionResult<List<EmailLog>>> GetEmailLog()
+    //{
+    //    return MatchExceptions(() =>
+    //    {
+    //        if(!config.BackdoorEmailLog)
+    //            throw new ForbiddenException("This is a debug endpoint that has been deactivated!");
+    //        
+    //        return Task.FromResult((emailer as NullEmailService ?? 
+    //            throw new InvalidOperationException("The emailer is not set up for logging! This endpoint is only for the null email service")).Log);
+    //    });
+    //}
 
     [Authorize()]
     [HttpGet("privatedata")]

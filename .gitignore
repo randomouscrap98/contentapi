@@ -53,7 +53,8 @@ moduledata.db
 profiler.txt
 *.done
 contentapi/dbmigrate.sh
-filecontroller_temp
+tempfiles
+emails
 
 # Now, ALWAYS ignore content.db! we have dbmigrations set up, people can run them on their own
 content.db

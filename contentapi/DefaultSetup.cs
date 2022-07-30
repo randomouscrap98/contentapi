@@ -7,7 +7,6 @@ using contentapi.Main;
 using contentapi.Module;
 using contentapi.Search;
 using contentapi.Security;
-using contentapi.SelfRun;
 using contentapi.Utilities;
 using Dapper;
 using Microsoft.Extensions.DependencyInjection.Extensions;
@@ -85,6 +84,7 @@ public static class DefaultSetup
         services.AddSingleton<IUserStatusTracker, UserStatusTracker>();
         services.AddSingleton<IFileService, FileService>();
         services.AddSingleton<IUserService, UserService>();
+        services.AddSingleton<IModuleService, ModuleService>();
 
         var emailType = configuration?.GetValue<string>("EmailSender");
         var imageManipulator = configuration?.GetValue<string>("ImageManipulator");
@@ -92,10 +92,10 @@ public static class DefaultSetup
         if(emailType == "functional")
             services.AddSingleton<IEmailService, EmailService>();
         else
-            services.AddSingleton<IEmailService, NullEmailService>();
+            services.AddSingleton<IEmailService, FileEmailService>();
 
-        if(imageManipulator == "selfprocess")
-            services.AddSingleton<IImageManipulator, ImageManipulator_Process>();
+        if(imageManipulator == "imagick")
+            services.AddSingleton<IImageManipulator, ImageManipulator_IMagick>();
         else
             services.AddSingleton<IImageManipulator, ImageManipulator_Direct>();
 
@@ -113,22 +113,7 @@ public static class DefaultSetup
         services.AddSingleton<ModuleServiceConfig>();
         services.AddSingleton<EventTrackerConfig>();
         services.AddSingleton<FileServiceConfig>();
-        services.AddSingleton<IModuleService, ModuleService>();
-        //services.AddSingleton<ModuleMessageAdder>((p) => (m, r) =>
-        //{
-        //    //This is EXCEPTIONALLY inefficient: a new database context (not to mention other services)
-        //    //will need to be created EVERY TIME someone sends a module message. That is awful...
-        //    //I mean it's not MUCH worse IF the module is only sending a single message... eh, if you
-        //    //notice bad cpu usage, go fix this.
-        //    var creator = p.CreateScope().ServiceProvider.GetService<IDbWriter>() ?? throw new InvalidOperationException("No db writer for modules!!");
-
-        //    try {
-        //        creator.WriteAsync(m, r).Wait();
-        //    }
-        //    catch(AggregateException ex) {
-        //        ExceptionDispatchInfo.Capture(ex.InnerException ?? ex).Throw();
-        //    }
-        //});
+        services.AddSingleton<FileEmailServiceConfig>();
 
         //NOTE: do NOT just add all configs to the service! Only configs which have 
         //reasonable defaults! For instance: the EmailConfig should NOT be added!
