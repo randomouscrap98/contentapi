@@ -54,7 +54,7 @@ enabling it.
 Assuming you have it running, there's some neat stuff you can do:
 
 ### Local Frontend
-Navigate to the root and go to `/api/run/index.html`. This is a rudimentary frontend that consumes the api. You can do almost anything from here, including registering an account. By default, running from vscode uses a "null" emailer, so any user accounts you create will need to use the "backdoor" functions to get the registration key. Backdoor functions are only enabled for the local service, and maybe not even that (let me know if you have trouble). You can find your registration key by searching through the emails at `/api/user/emaillog` (you can just visit it in your browser).
+Navigate to the root and go to `/api/run/index.html`. This is a rudimentary frontend that consumes the api. You can do almost anything from here, including registering an account. By default, running from vscode uses "Instant" account creation, so as soon as you sign up, you are a fully registered non-super user. If the frontend sends any emails (such as password reset), it by default sends fake emails by writing the contents to files which you can then read. This is so the API doesn't immediately fail due to missing email credentials.
 
 The local frontend has VERY LITTLE error handling, and that's on purpose. I probably won't be adding it, even if issues are opened, because the point is to show you how to consume the api. Error handling muddies up the code examples.
 
