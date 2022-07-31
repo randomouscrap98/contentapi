@@ -94,6 +94,13 @@ public class ImageManipulator_IMagick : IImageManipulator
     /// <returns></returns>
     public ImageManipulationInfo ParseImageManipulationInfo(string rawImagickOutput, ImageManipulationInfo? info = null)
     {
+        if(!rawImagickOutput.Trim().StartsWith("["))
+        {
+            //This is probably the legacy format, which has several errors. Strip most of it out and slap the array stuff around it
+            var firstBlock = rawImagickOutput.IndexOf("},\n");
+            rawImagickOutput = "[" + rawImagickOutput.Substring(0, firstBlock) + "}}}]";
+        }
+        
         var parsed = JsonConvert.DeserializeObject<List<IMagickJson>>(rawImagickOutput) ?? throw new InvalidOperationException("Couldn't parse output of imagick info!");
         var jsonInfo = parsed.FirstOrDefault() ?? throw new InvalidOperationException("Couldn't find any json objects within the output array!");
         var imageInfo = jsonInfo.image ?? throw new InvalidOperationException("No 'image' info parsed out of the json!");
@@ -122,7 +129,7 @@ public class ImageManipulator_IMagick : IImageManipulator
         if(string.IsNullOrWhiteSpace(baseInfo.MimeType))
             throw new InvalidOperationException("baseInfo must contain the image mimeType!");
 
-        var arglist = new List<string>() { filename + (!(baseInfo.MimeType == Constants.GifMime && !modify.freeze) ? "[0]" : "") };
+        var arglist = new List<string>() { filename + (baseInfo.MimeType == Constants.GifMime && !modify.freeze ? "" : "[0]") };
 
         //Cropping can be done with the resize arg, add ^ to the end
         var resize = $"{modify.size}x{modify.size}";

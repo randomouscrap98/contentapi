@@ -97,6 +97,8 @@ public class FileController : BaseController
       }
       catch(Exception ex)
       {
+         services.logger.LogError($"Exception during file retrieve: {ex}");
+
          return await MatchExceptions(() =>
          {
             ExceptionDispatchInfo.Capture(ex).Throw();
