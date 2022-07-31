@@ -122,8 +122,7 @@ public class ImageManipulator_IMagick : IImageManipulator
         if(string.IsNullOrWhiteSpace(baseInfo.MimeType))
             throw new InvalidOperationException("baseInfo must contain the image mimeType!");
 
-        var resizeType = "-resize";
-        var arglist = new List<string>();
+        var arglist = new List<string>() { filename + (!(baseInfo.MimeType == Constants.GifMime && !modify.freeze) ? "[0]" : "") };
 
         //Cropping can be done with the resize arg, add ^ to the end
         var resize = $"{modify.size}x{modify.size}";
@@ -134,18 +133,29 @@ public class ImageManipulator_IMagick : IImageManipulator
         if(baseInfo.MimeType == Constants.GifMime)
         {
             resize += ">"; //Only size downwards
-            resizeType = "-sample";
+            arglist.AddRange(new [] { "-coalesce", "-sample", resize});
         }
-        
-        arglist.Add(resizeType);
-        arglist.Add(resize);
+        else
+        {
+            arglist.AddRange(new[] {"-resize", resize});
+        }
 
         if(modify.crop)
             arglist.AddRange(new [] { "-gravity", "center", "-extent", $"{modify.size}x{modify.size}"});
         
-        arglist.AddRange(new[] {filename,  "-write", outfile, "json:" });
-        
-        ParseImageManipulationInfo(await RunImagick(arglist), baseInfo);
+        if(baseInfo.MimeType == Constants.GifMime && !modify.freeze)
+        {
+            //Special considerations for the dang animated gif resizes 
+            arglist.AddRange(new[] {"-layers", "Optimize", outfile});
+            await RunImagick(arglist);
+            await FillImageManipulationInfo(outfile, baseInfo); //Have to get the info in a second step, UGH
+        }
+        else
+        {
+            //This other (faster) version works for all single-image resizes
+            arglist.AddRange(new[] { "-write", outfile, "json:" }); //Can get image info directly!
+            ParseImageManipulationInfo(await RunImagick(arglist), baseInfo);
+        }
 
         baseInfo.LoadCount++;
         baseInfo.RenderCount++;
@@ -166,6 +176,14 @@ public class ImageManipulator_IMagick : IImageManipulator
         await fileData.TemporaryFileTask(config.TempPath, async (path) =>
         {
             await FillImageManipulationInfo(path, result);
+
+            //Oh good, no resize required. Just get out of here
+            if(result.SizeInBytes <= maxSize)
+            {
+                File.Copy(path, savePath);
+                return;
+            }
+
             var resizeFactor = config.InitialResize;
             var resizeBasis = Math.Max(result.Width, result.Height);
             var modify = new GetFileModify()
