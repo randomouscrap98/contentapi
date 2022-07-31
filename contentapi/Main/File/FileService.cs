@@ -168,7 +168,7 @@ public class FileService : IFileService
                 extraFolder += "f";
 
             if (extraFolder != "_")
-                return Path.Join(config.ThumbnailLocation, extraFolder, hash);
+                return Path.GetFullPath(Path.Join(config.ThumbnailLocation, extraFolder, hash));
         }
 
         return "";
@@ -176,7 +176,7 @@ public class FileService : IFileService
 
     protected string GetAndMakeTempPath()
     {
-        var result = Path.Join(config.TempLocation, DateTime.Now.Ticks.ToString());
+        var result = Path.GetFullPath(Path.Join(config.TempLocation, DateTime.Now.Ticks.ToString()));
         System.IO.Directory.CreateDirectory(config.TempLocation);
         return result;
     }

@@ -56,7 +56,7 @@ public class ImageManipulator_IMagick : IImageManipulator
 
         try
         {
-            logger.LogDebug($"Starting imagick process {startInfo.FileName} {startInfo.Arguments}");
+            logger.LogDebug($"Starting imagick process {startInfo.FileName} {string.Join(" ", startInfo.ArgumentList)}");
             var process = Process.Start(startInfo) ?? throw new InvalidOperationException($"Can't spawn process {startInfo.FileName} with arguments {string.Join(",", startInfo.ArgumentList)}!");
             var output = await process.StandardOutput.ReadToEndAsync();
             await process.WaitForExitAsync();
@@ -112,17 +112,17 @@ public class ImageManipulator_IMagick : IImageManipulator
     /// Perform a resize of the file at the given location, with the given resize arg, saving to the given outfile.
     /// Note that "baseInfo" MUST be pre-filled with image information for this to function properly!
     /// </summary>
-    /// <param name="filename"></param>
-    /// <param name="resize"></param>
-    /// <param name="freeze"></param>
-    /// <param name="outfile"></param>
-    /// <param name="baseInfo"></param>
+    /// <param name="filename">The FULLPATH to the input file</param>
+    /// <param name="baseInfo">The prefilled image manipulation info. This function WILL modify it!</param>
+    /// <param name="modify">The modifications you want to make. Size is the length of the edge of a square within which the image will fit</param>
+    /// <param name="outfile">The FULLPATH to the output file</param>
     /// <returns></returns>
     public async Task GeneralIMagickResize(string filename, ImageManipulationInfo baseInfo, GetFileModify modify, string outfile) //string resize, bool freeze, string outfile)
     {
         if(string.IsNullOrWhiteSpace(baseInfo.MimeType))
             throw new InvalidOperationException("baseInfo must contain the image mimeType!");
 
+        var resizeType = "-resize";
         var arglist = new List<string>();
 
         //Cropping can be done with the resize arg, add ^ to the end
@@ -132,14 +132,18 @@ public class ImageManipulator_IMagick : IImageManipulator
             resize += "^";
         
         if(baseInfo.MimeType == Constants.GifMime)
+        {
             resize += ">"; //Only size downwards
+            resizeType = "-sample";
+        }
         
+        arglist.Add(resizeType);
         arglist.Add(resize);
 
         if(modify.crop)
             arglist.AddRange(new [] { "-gravity", "center", "-extent", $"{modify.size}x{modify.size}"});
         
-        arglist.AddRange(new[] { "-write", outfile, "json:" });
+        arglist.AddRange(new[] {filename,  "-write", outfile, "json:" });
         
         ParseImageManipulationInfo(await RunImagick(arglist), baseInfo);
 

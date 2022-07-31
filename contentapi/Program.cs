@@ -34,6 +34,8 @@ DefaultSetup.AddConfigBinding<EmailConfig>(builder.Services, builder.Configurati
 DefaultSetup.AddConfigBinding<RateLimitConfig>(builder.Services, builder.Configuration);
 DefaultSetup.AddConfigBinding<StatusControllerConfig>(builder.Services, builder.Configuration);
 DefaultSetup.AddConfigBinding<LiveControllerConfig>(builder.Services, builder.Configuration);
+DefaultSetup.AddConfigBinding<FileEmailServiceConfig>(builder.Services, builder.Configuration);
+DefaultSetup.AddConfigBinding<ImageManipulator_IMagickConfig>(builder.Services, builder.Configuration);
 builder.Services.AddTransient<BaseControllerServices>();
 builder.Services.AddSingleton<Func<WebSocketAcceptContext>>(() => new WebSocketAcceptContext()
 {

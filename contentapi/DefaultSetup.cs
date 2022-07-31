@@ -113,7 +113,6 @@ public static class DefaultSetup
         services.AddSingleton<ModuleServiceConfig>();
         services.AddSingleton<EventTrackerConfig>();
         services.AddSingleton<FileServiceConfig>();
-        services.AddSingleton<FileEmailServiceConfig>();
 
         //NOTE: do NOT just add all configs to the service! Only configs which have 
         //reasonable defaults! For instance: the EmailConfig should NOT be added!
