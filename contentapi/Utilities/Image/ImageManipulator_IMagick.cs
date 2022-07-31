@@ -108,16 +108,42 @@ public class ImageManipulator_IMagick : IImageManipulator
         return realInfo;
     }
 
-    public async Task GeneralIMagickResize(string filename, string resize, bool crop, bool freeze, string outfile, ImageManipulationInfo baseInfo)
+    /// <summary>
+    /// Perform a resize of the file at the given location, with the given resize arg, saving to the given outfile.
+    /// Note that "baseInfo" MUST be pre-filled with image information for this to function properly!
+    /// </summary>
+    /// <param name="filename"></param>
+    /// <param name="resize"></param>
+    /// <param name="freeze"></param>
+    /// <param name="outfile"></param>
+    /// <param name="baseInfo"></param>
+    /// <returns></returns>
+    public async Task GeneralIMagickResize(string filename, ImageManipulationInfo baseInfo, GetFileModify modify, string outfile) //string resize, bool freeze, string outfile)
     {
-        //NOTE: LOOKUP HOW TO CROP IN IMAGICK, IT MIGHT CHANGE HOW THIS FUNCTION OPERATES!
+        if(string.IsNullOrWhiteSpace(baseInfo.MimeType))
+            throw new InvalidOperationException("baseInfo must contain the image mimeType!");
 
-        //Always lookup the initial info first, need the mimetype and maybe other things
-        await FillImageManipulationInfo(filename, baseInfo);
+        var arglist = new List<string>();
 
-        //Now that we know the mimetype, maybe we can do special things. gif requires a different kind of resize, and
-        //additional flags
+        //Cropping can be done with the resize arg, add ^ to the end
+        var resize = $"{modify.size}x{modify.size}";
 
+        if(modify.crop)
+            resize += "^";
+        
+        if(baseInfo.MimeType == Constants.GifMime)
+            resize += ">"; //Only size downwards
+        
+        arglist.Add(resize);
+
+        if(modify.crop)
+            arglist.AddRange(new [] { "-gravity", "center", "-extent", $"{modify.size}x{modify.size}"});
+        
+        arglist.AddRange(new[] { "-write", outfile, "json:" });
+        
+        ParseImageManipulationInfo(await RunImagick(arglist), baseInfo);
+
+        baseInfo.LoadCount++;
         baseInfo.RenderCount++;
         baseInfo.SizeInBytes = new FileInfo(outfile).Length;
     }
@@ -135,18 +161,27 @@ public class ImageManipulator_IMagick : IImageManipulator
 
         await fileData.TemporaryFileTask(config.TempPath, async (path) =>
         {
+            await FillImageManipulationInfo(path, result);
             var resizeFactor = config.InitialResize;
+            var resizeBasis = Math.Max(result.Width, result.Height);
+            var modify = new GetFileModify()
+            {
+                crop = false,
+                freeze = false
+            };
 
             while(result.SizeInBytes > maxSize)
             {
                 if(result.RenderCount > config.MaxResizes)
                     throw new RequestException("Tried to resize too many times, couldn't ");
 
-                result.RenderCount++;
+                modify.size = (int)(resizeBasis * resizeFactor);
+
+                //Resize here
+                await GeneralIMagickResize(path, result, modify, savePath);
+
                 resizeFactor = resizeFactor - config.ResizeStep;
             }
-            //Spawn imagick process for fitting the file to the given size. This may still require imagesharp to 
-            //get information about the file! Unless this is something imagick can report...
         });
 
         return result;
@@ -163,8 +198,8 @@ public class ImageManipulator_IMagick : IImageManipulator
 
         await fileData.TemporaryFileTask(config.TempPath, async (path) =>
         {
-            //Spawn imagick process for producing the needed file. This may still require imagesharp to 
-            //get information about the file!
+            await FillImageManipulationInfo(path, result);
+            await GeneralIMagickResize(path, result, modify, savePath);
         });
 
         return result;
