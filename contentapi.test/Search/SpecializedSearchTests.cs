@@ -153,4 +153,40 @@ public class SpecializedSearchTests : ViewUnitTestBase //, IClassFixture<DbUnitT
         Assert.Contains(writtenComment.id, searchMessages.Select(x => x.id));
         Assert.Contains(AllAccessContentId, searchContent.Select(x => x.id));
     }
+
+    [Theory]
+    [InlineData("!valuelike({{hello}},{{\"%KENOBI%\"}})", true)]
+    [InlineData("!valuekeyin(@keys)", true)]
+    [InlineData("!valuekeynotin(@keys)", false)]
+    [InlineData("!valuekeynotlike({{hello}})", false)]
+    public async Task Regression_CommentValueSearch(string query, bool shouldFind)
+    {
+        //write a simple comment
+        var comment = GetNewCommentView(AllAccessContentId);
+        comment.values.Add("hello", "GENERAL KENOBI");
+        var writtenComment = await writer.WriteAsync(comment, NormalUserId);
+
+        //Now go do a value search.
+        var found = await searcher.SearchSingleType<MessageView>(NormalUserId, new SearchRequest()
+        {
+            type = nameof(RequestType.message),
+            fields = "*",
+            query = query
+        }, new Dictionary<string, object> {
+            { "keys", new[] {"hello"}}
+        });
+
+        if(shouldFind)
+        {
+            Assert.Single(found);
+            Assert.Equal(writtenComment.id, found.First().id);
+            Assert.Contains("hello", found.First().values.Keys);
+            Assert.Equal("GENERAL KENOBI", found.First().values["hello"]);
+        }
+        else
+        {
+            Assert.True(found.Count > 1);
+            Assert.DoesNotContain(writtenComment.id, found.Select(x => x.id));
+        }
+    }
 }

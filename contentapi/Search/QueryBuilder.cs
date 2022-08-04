@@ -30,6 +30,7 @@ public class QueryBuilder : IQueryBuilder
         { "valuelike", new MacroDescription("vv", "ValueLike", new List<RequestType> { RequestType.content, RequestType.message }) }, 
         { "keywordin", new MacroDescription("v", "KeywordIn", new List<RequestType> { RequestType.content }) },
         { "valuein", new MacroDescription("vv", "ValueIn", new List<RequestType> { RequestType.content, RequestType.message }) }, 
+        { "valuekeyin", new MacroDescription("v", "ValueKeyIn", new List<RequestType> { RequestType.content, RequestType.message }) }, 
         { "valuekeynotin", new MacroDescription("v", "ValueKeyNotIn", new List<RequestType> { RequestType.content, RequestType.message }) }, 
         { "valuekeynotlike", new MacroDescription("v", "ValueKeyNotLike", new List<RequestType> { RequestType.content, RequestType.message }) }, 
         { "onlyparents", new MacroDescription("", "OnlyParents", new List<RequestType> { RequestType.content }) },
@@ -94,24 +95,60 @@ public class QueryBuilder : IQueryBuilder
             )";
     }
 
+    public class ValueGenericKeys 
+    {
+        public string id {get;set;} = "";
+        public string key {get;set;} = "";
+        public string value {get;set;} = "";
+        public string table {get;set;} = "";
+    }
+
+    public ValueGenericKeys GetValueKeys(SearchRequestPlus request)
+    {
+        if(request.requestType == RequestType.content)
+        {
+            var typeInfo = typeService.GetTypeInfo<ContentValue>();
+            return new ValueGenericKeys {
+                id = nameof(ContentValue.contentId),
+                key = nameof(ContentValue.key),
+                value = nameof(ContentValue.value),
+                table = typeInfo.selfDbInfo?.modelTable ?? throw new InvalidOperationException($"No dbmodel associated with {typeInfo.type}!")
+            };
+        }
+        else if(request.requestType == RequestType.message)
+        {
+            var typeInfo = typeService.GetTypeInfo<MessageValue>();
+            return new ValueGenericKeys {
+                id = nameof(MessageValue.messageId),
+                key = nameof(MessageValue.key),
+                value = nameof(MessageValue.value),
+                table = typeInfo.selfDbInfo?.modelTable ?? throw new InvalidOperationException($"No dbmodel associated with {typeInfo.type}!")
+            };
+        }
+        else
+        {
+            throw new InvalidOperationException($"No known generic value for request type {request.requestType}");
+        }
+    }
+
     public string ValueSearchGeneric(SearchRequestPlus request, string key, string value, string op, string contentop)
     {
-        var typeInfo = typeService.GetTypeInfo<ContentValue>();
+        var keys = GetValueKeys(request);
         return $@"id {contentop}
-            (select {nameof(ContentValue.contentId)} 
-             from {typeInfo.selfDbInfo?.modelTable}
-             where {nameof(ContentValue.key)} {op} {key} 
-               and {nameof(ContentValue.value)} {op} {value}
+            (select {keys.id} 
+             from {keys.table}
+             where {keys.key} {op} {key} 
+               and {keys.value} {op} {value}
             )";
     }
 
     public string ValueKeySearchGeneric(SearchRequestPlus request, string key, string op, string contentop)
     {
-        var typeInfo = typeService.GetTypeInfo<ContentValue>();
+        var keys = GetValueKeys(request);
         return $@"id {contentop}
-            (select {nameof(ContentValue.contentId)} 
-             from {typeInfo.selfDbInfo?.modelTable}
-             where {nameof(ContentValue.key)} {op} {key} 
+            (select {keys.id} 
+             from {keys.table}
+             where {keys.key} {op} {key} 
             )";
     }
 
@@ -128,15 +165,14 @@ public class QueryBuilder : IQueryBuilder
     public string ValueIn(SearchRequestPlus request, string key, string value) =>
         ValueSearchGeneric(request, key, value, "in", "in");
     
-    public string ValueKeyNotIn(SearchRequestPlus request, string key)
-    {
-        return ValueKeySearchGeneric(request, key, "IN", "not in");
-    }
+    public string ValueKeyIn(SearchRequestPlus request, string key) =>
+        ValueKeySearchGeneric(request, key, "IN", "in");
 
-    public string ValueKeyNotLike(SearchRequestPlus request, string key)
-    {
-        return ValueKeySearchGeneric(request, key, "LIKE", "not in");
-    }
+    public string ValueKeyNotIn(SearchRequestPlus request, string key) =>
+        ValueKeySearchGeneric(request, key, "IN", "not in");
+
+    public string ValueKeyNotLike(SearchRequestPlus request, string key) =>
+        ValueKeySearchGeneric(request, key, "LIKE", "not in");
 
     public string ParentQueryGenericMacro(SearchRequestPlus request, bool parents)
     {
