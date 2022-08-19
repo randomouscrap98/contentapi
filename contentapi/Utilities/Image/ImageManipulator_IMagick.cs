@@ -148,7 +148,7 @@ public class ImageManipulator_IMagick : IImageManipulator
         }
 
         if(modify.crop)
-            arglist.AddRange(new [] { "-gravity", "center", "-extent", $"{modify.size}x{modify.size}"});
+            arglist.AddRange(new [] { "-background", "none", "-gravity", "center", "-extent", $"{modify.size}x{modify.size}"});
         
         if(baseInfo.MimeType == Constants.GifMime && !modify.freeze)
         {
