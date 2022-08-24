@@ -3,7 +3,7 @@
 set -e
 
 # MBASE="https://raw.githubusercontent.com/12Me21/markup2/class"
-MBASE="https://raw.githubusercontent.com/12Me21/markup2/🌵"
+MBASE="https://raw.githubusercontent.com/12Me21/markup2/cactus"
 FILES="legacy.js langs.js render.js helpers.js parse.js markup.css"
 DESTINATION="../contentapi/wwwroot/markup"
 

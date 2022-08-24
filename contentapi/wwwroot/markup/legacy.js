@@ -1,28 +1,19 @@
+"use strict"
+12||+typeof await/2//2; export default
 /**
-	legacy parser collection
-	@implements Langs_Mixin
-	@hideconstructor
+	Legacy parsers factory
+	@implements Parser_Collection
 */
 class Markup_Legacy { constructor() {
-	"use strict"
-	
 	/**
-		@instance
-		@type {Object}
-		@property {Parser_Function} 12y - 12y parser
-		@property {Parser_Function} bbcode - bbcode parser
-		@property {Parser_Function} plaintext - plaintext parser/autolinker
+		@type {Object<string,Parser>}
+		@property {Parser} 12y - 12y parser
+		@property {Parser} bbcode - bbcode parser
+		@property {Parser} plaintext - plaintext parser/autolinker
 	*/
 	this.langs = {}
 	
-	const MAP = x=>Object.freeze(Object.create(null, Object.getOwnPropertyDescriptors(x)))
-	
-	let BLOCKS = MAP({
-		divider:1, code:1, audio:1, video:1, youtube:1,
-		heading:1, quote:1, list:1, list_item:1,
-		table:1, table_row:1, image:1, error:1,
-		align:1, spoiler:1
-	})
+	const BLOCKS = Object.freeze({__proto__:null, divider: 1, code: 1, audio: 1, video: 1, youtube: 1, heading: 1, quote: 1, list: 1, list_item: 1, table: 1, table_row: 1, image: 1, error: 1, align: 1, spoiler: 1})
 	
 	function convert_cell_args(props, h) {
 		let args = {
@@ -48,34 +39,29 @@ class Markup_Legacy { constructor() {
 	let stack
 	
 	let startOfLine
-	let leadingSpaces
 	function lineStart() {
 		startOfLine = true
-		leadingSpaces = 0
 	}
-	function scan() {	
-		if (c == "\n" || !c)
+	function scan() {
+		if ("\n"===c || !c)
 			lineStart()
-		else if (c != " ")
+		else if (" "!==c)
 			startOfLine = false
-		else if (startOfLine)
-			leadingSpaces++
 		i++
 		c = code.charAt(i)
 	}
 	function stack_top() {
-		return stack[stack.length-1]	
+		return stack[stack.length-1]
 	}
 	
 	function init(text) {
 		code = text
 		openBlocks = 0
-		leadingSpaces = 0
 		startOfLine = true
 		skipNextLineBreak = false
 		textBuffer = ""
-		tree = curr = {type:'ROOT', content:[]}
-		stack = [{node:curr, type:'ROOT'}]
+		tree = curr = {type: 'ROOT', content: []}
+		stack = [{node: curr, type: 'ROOT'}]
 		restore(0)
 	}
 	// move to pos
@@ -86,14 +72,10 @@ class Markup_Legacy { constructor() {
 	
 	//try to read a char
 	function eatChar(chr) {
-		if (c == chr) {
+		if (c===chr) {
 			scan()
 			return true
 		}
-	}
-	
-	function matchNext(str) {
-		return code.substr(i, str.length) == str
 	}
 	
 	// read a url
@@ -105,7 +87,7 @@ class Markup_Legacy { constructor() {
 			while (c) {
 				if (eatChar("[")) {
 					depth++
-				} else if (c=="]") {
+				} else if ("]"===c) {
 					depth--
 					if (depth<0)
 						break
@@ -115,11 +97,11 @@ class Markup_Legacy { constructor() {
 			}
 		else {
 			while (c) {
-				if (/[-\w\$\.+!*',;/\?:@=&#%~]/.test(c)) {
+				if (/[-\w$.+!*',;/?:@=&#%~]/.test(c)) {
 					scan()
 				} else if (eatChar("(")) {
 					depth++
-				} else if (c==")") {
+				} else if (")"===c) {
 					depth--
 					if (depth < 0)
 						break
@@ -127,9 +109,8 @@ class Markup_Legacy { constructor() {
 				} else
 					break
 			}
-			let last = code[i-1]
-			if (/[,\.?!:]/.test(last)) {
-				i-=2
+			if (/[,.?!:]/.test(code.charAt(i-1))) {
+				i -= 2
 				scan()
 			}
 		}
@@ -140,15 +121,11 @@ class Markup_Legacy { constructor() {
 	 ** stack **
 	 ***********/
 	function stackContains(type) {
-		for (let i=0; i<stack.length; i++) {
-			if (stack[i].type == type)
-				return true
-		}
-		return false
+		return stack.some(x=>x.type==type)
 	}
 	function top_is(type) {
 		let top = stack_top()
-		return top && top.type == type
+		return top && top.type===type
 	}
 	
 	/****************
@@ -161,9 +138,9 @@ class Markup_Legacy { constructor() {
 			skipNextLineBreak = true
 		
 		if (stack.length) {
-			let i=stack.length-1
+			let i = stack.length-1
 			// this skips {} fake nodes
-			// it will always find at least the root <div> element I hope
+			// it will always find at least the root element I hope
 			while (!stack[i].node)
 				i--
 			curr = stack[i].node
@@ -190,7 +167,6 @@ class Markup_Legacy { constructor() {
 			skipNextLineBreak = false
 		else
 			addText("\n")
-		//add_block(true)
 	}
 	
 	// add text to output (buffered)
@@ -206,6 +182,7 @@ class Markup_Legacy { constructor() {
 		flushText()
 		while (stack.length)
 			endBlock()
+		openBlocks = code = stack = curr = null // memory leak ...
 	}
 	
 	function add_block(type, args) {
@@ -215,31 +192,34 @@ class Markup_Legacy { constructor() {
 	}
 	
 	function start_block(type, args, data) {
-		if (type) {
-			let node = {type, args, content:[]}
-			data.type = type
-			openBlocks++
-			if (openBlocks > 10)
-				throw "too deep nestted blocks"
-			data.node = node
-			if (BLOCKS[type]) {
-				data.isBlock = true
-				skipNextLineBreak = true
-			}
-			flushText()
-			curr.content.push(node)
-			curr = node
+		//let type = data.type
+		let node = {type, args, content: []}
+		data.type = type
+		openBlocks++
+		if (openBlocks > 10)
+			throw new Error("too deep nestted blocks")
+		data.node = node
+		if (BLOCKS[type]) {
+			data.isBlock = true
+			skipNextLineBreak = true
 		}
+		flushText()
+		curr.content.push(node)
+		curr = node
+		
 		stack.push(data)
 		return data
 	}
 	
+	const URL_RX = /\b(https?:[/][/]|sbs:)/y
+	
 	// check for /\b(http://|https://|sbs:)/ basically
 	function isUrlStart() {
-		if (code[i-1] && /\w/.test(code[i-1]))
-			return false
-		return matchNext("http://") || matchNext("https://") || matchNext("sbs:")
+		URL_RX.lastIndex = i
+		return URL_RX.test(code)
 	}
+	
+	const FR = /(?:(?!https?:\/\/|sbs:)[^\n\\{}*/_~>\]|`![-])+/y
 	
 	this.langs['12y'] = function(codeInput) {
 		init(codeInput)
@@ -248,32 +228,33 @@ class Markup_Legacy { constructor() {
 			return tree
 		
 		while (c) {
-			if (eatChar("\n")) {
+			FR.lastIndex = i
+			let m = FR.exec(code)
+			if (m) {
+				addText(m[0])
+				restore(FR.lastIndex)
+			} else if (eatChar("\n")) {
 				endLine()
 				//==========
 				// \ escape
 			} else if (eatChar("\\")) {
-				/*				if (c == "\n") {
-								add_block(true)
-								} else*/
 				addText(c)
 				scan()
 				//===============
 				// { group start (why did I call these "groups"?)
-			} else if (c == "{") {
+			} else if ("{"===c) {
 				readEnv()
 				//=============
 				// } group end
 			} else if (eatChar("}")) {
-				if (stackContains(null)) {
+				if (stackContains(undefined))
 					closeAll(false)
-				} else {
+				else
 					addText("}")
-				}
 				//================
 				// * heading/bold
-			} else if (c == "*") {
-				if (startOfLine && (code[i+1] == "*" || code[i+1] == " ")) {
+			} else if ("*"===c) {
+				if (startOfLine && ("*"===code[i+1] || " "===code[i+1])) {
 					let headingLevel = 0
 					while (eatChar("*"))
 						headingLevel++
@@ -281,17 +262,17 @@ class Markup_Legacy { constructor() {
 						headingLevel = 3
 					
 					if (eatChar(" "))
-						start_block('heading', {level:headingLevel}, {})
+						start_block('heading', {level: headingLevel}, {})
 					else
-						addText('*'.repeat(headingLevel))
+						addText("*".repeat(headingLevel))
 				} else {
 					doMarkup('bold')
 				}
-			} else if (c == "/") {
+			} else if ("/"===c) {
 				doMarkup('italic')
-			} else if (c == "_") {
+			} else if ("_"===c) {
 				doMarkup('underline')
-			} else if (c == "~") {
+			} else if ("~"===c) {
 				doMarkup('strikethrough')
 				//============
 				// >... quote
@@ -311,7 +292,7 @@ class Markup_Legacy { constructor() {
 						count++
 					//-------------
 					// ---<EOL> hr
-					if (c == "\n" || !c) { //this is kind of bad
+					if ("\n"===c || !c) { //this is kind of bad
 						add_block('divider', null)
 						//----------
 						// ---... normal text
@@ -321,15 +302,18 @@ class Markup_Legacy { constructor() {
 					//------------
 					// - ... list
 				} else if (eatChar(" ")) {
-					start_block('list', {}, {level: leadingSpaces})
-					start_block('list_item', null, {level:leadingSpaces})
+					let spaces = 0
+					for (let x=i-3; code[x]===" "; x--)
+						spaces++
+					start_block('list', {}, {level: spaces})
+					start_block('list_item', null, {level: spaces})
 					//---------------
 					// - normal char
 				} else
 					addText("-")
 				//==========================
 				// ] end link if inside one
-			} else if (c == "]" && stack_top().inBrackets){ //this might break if it assumes .top() exists. needs more testing
+			} else if ("]"===c && stack_top().inBrackets){ //this might break if it assumes .top() exists. needs more testing
 				scan()
 				if (stack_top().big) {
 					if (eatChar("]"))
@@ -340,10 +324,10 @@ class Markup_Legacy { constructor() {
 					endBlock()
 				//============
 				// |... table
-			} else if (c == "|") {
+			} else if ("|"===c) {
 				let top = stack_top()
 				// continuation
-				if (top.type == 'table_cell') {
+				if ('table_cell'===top.type) {
 					scan()
 					let row = top.row
 					let table = top.row.table
@@ -367,7 +351,7 @@ class Markup_Legacy { constructor() {
 							cells++
 							return span-1
 						}).filter(span => span>0)
-						row = start_block('table_row', null, {table:table, cells:cells})
+						row = start_block('table_row', null, {table, cells})
 						row.header = eatChar("*")
 						// start cell
 						startCell(row)
@@ -375,12 +359,12 @@ class Markup_Legacy { constructor() {
 						// | next cell or table end
 					} else {
 						row.cells++
-						textBuffer = textBuffer.replace(/ *$/,"") //strip trailing spaces (TODO: allow \<space>)
+						textBuffer = textBuffer.replace(/ +$/, "") //strip trailing spaces (TODO: allow \<space>)
 						// end of table
 						// table ends when number of cells in current row = number of cells in first row
 						// single-row tables are not easily possible ..
 						// TODO: fix single row tables
-						if (table.columns != null && row.cells > table.columns) {
+						if (table.columns!=null && row.cells>table.columns) {
 							endBlock() //end cell
 							if (top_is('table_row')) //always
 								endBlock() //row
@@ -397,7 +381,7 @@ class Markup_Legacy { constructor() {
 				} else if (startOfLine) {
 					scan()
 					let table = start_block('table', null, {columns: null, rowspans: []})
-					let row = start_block('table_row', null, {table: table, cells: 0})
+					let row = start_block('table_row', null, {table, cells: 0})
 					row.header = eatChar("*")
 					startCell(row)
 				} else {
@@ -415,22 +399,22 @@ class Markup_Legacy { constructor() {
 					if (eatChar("`")) {
 						// read lang name
 						let start = i
-						while (c && c!="\n" && c!="`")
+						while (c && "\n"!==c && "`"!==c)
 							scan()
 						//treat first line as language name, if it matches the pattern. otherwise it's code
 						let language = code.substring(start, i)
 						let eaten = false
-						if (/^\s*\w*\s*$/.test(language)) {
+						if (/^\s*?\w*?\s*?$/.test(language)) {
 							language = language.trim().toLowerCase()
 							eaten = eatChar("\n")
 							start = i
 						}
 						
 						i = code.indexOf("```", i)
-						let text = code.substring(start, i!=-1 ? i : code.length)
-						add_block('code', {lang:language||'sb', text})
+						let text = code.substring(start, -1!==i ? i : code.length)
+						add_block('code', {lang: language||'sb', text})
 						skipNextLineBreak = eaten
-						restore(i==-1 ? code.length : i+3)
+						restore(-1===i ? code.length : i+3)
 						//------------
 						// `` invalid
 					} else {
@@ -442,17 +426,17 @@ class Markup_Legacy { constructor() {
 					let start = i
 					let codeText = ""
 					while (c) {
-						if (c=="`") {
-							if (code[i+1] != "`")
+						if ("`"===c) {
+							if ("`"!==code.charAt(i+1))
 								break
-							if (i == start+1 && codeText[0] == " ")
-								codeText = codeText.substr(1)
+							if (i===start+1 && codeText.startsWith(" "))
+								codeText = codeText.slice(1)
 							scan()
 						}
 						codeText += c
 						scan()
 					}
-					add_block('icode', {text:codeText})
+					add_block('icode', {text: codeText})
 					scan()
 				}
 				//
@@ -475,6 +459,7 @@ class Markup_Legacy { constructor() {
 			flushText()
 			while (stack.length)
 				endBlock()
+			openBlocks = code = stack = curr = null // memory leak ...
 		}
 		
 		// ###################################
@@ -483,7 +468,7 @@ class Markup_Legacy { constructor() {
 			if (eatChar("[")) {
 				if (eatChar("[")) {
 					// read url:
-					let start = i
+					//let start = i // todo bug: are we supposed to use this?
 					let after = false
 					let url = readUrl(true)
 					if (eatChar("]")) {
@@ -496,7 +481,7 @@ class Markup_Legacy { constructor() {
 						if (after) {
 							let altText = ""
 							while (c) {
-								if (c==']' && code[i+1]==']') { //messy
+								if ("]"===c && "]"===code[i+1]) { //messy
 									scan()
 									scan()
 									break
@@ -512,7 +497,7 @@ class Markup_Legacy { constructor() {
 						if (after)
 							start_block('link', {url}, {big: true, inBrackets: true})
 						else
-							add_block('simple_link', {text:url, url})
+							add_block('simple_link', {url})
 					}
 					return true
 				} else {
@@ -525,7 +510,7 @@ class Markup_Legacy { constructor() {
 		function readEnv() {
 			if (!eatChar("{"))
 				return false
-			start_block(null, null, {})
+			stack.push({type:null})
 			lineStart()
 			
 			let start = i
@@ -534,26 +519,26 @@ class Markup_Legacy { constructor() {
 				let props = readProps()
 				// todo: make this better lol
 				let arg = props[""]
-				if (name=='spoiler' && !stackContains("spoiler")) {
+				if ('spoiler'===name && !stackContains("spoiler")) {
 					let label = arg==true ? "spoiler" : arg
 					start_block('spoiler', {label}, {})
-				} else if (name=='ruby') {
+				} else if ('ruby'===name) {
 					start_block('ruby', {text: String(arg)}, {})
-				} else if (name=='align') {
+				} else if ('align'===name) {
 					if (!(arg=='center'||arg=='right'||arg=='left'))
 						arg = null
 					start_block('align', {align: arg}, {})
-				} else if (name=='anchor') {
+				} else if ('anchor'===name) {
 					start_block('anchor', {name: String(arg)}, {})
-				} else if (name=='bg') {
+				} else if ('bg'===name) {
 					// TODO: validate
 					start_block('background_color', {color: String(arg)}, {})
-				} else if (name=='sub') {
+				} else if ('sub'===name) {
 					start_block('subscript', null, {})
-				} else if (name=='sup') {
+				} else if ('sup'===name) {
 					start_block('superscript', null, {})
 				} else {
-					add_block('invalid', {text:code.substring(start, i), reason:"invalid tag"})
+					add_block('invalid', {text: code.substring(start, i), reason: "invalid tag"})
 				}
 				/*if (displayBlock({type:name}))
 				  skipNextLineBreak = true //what does this even do?*/
@@ -577,17 +562,17 @@ class Markup_Legacy { constructor() {
 			let args = convert_cell_args(props, row.header)
 			
 			start_block('table_cell', args, {row: row})
-			while (eatChar(" ")){
+			while (eatChar(" ")) {
 			}
 		}
 		
 		// split string on first occurance
 		function split1(string, sep) {
 			let n = string.indexOf(sep)
-			if (n == -1)
+			if (-1===n)
 				return [string, null]
 			else
-				return [string.substr(0,n), string.substr(n+sep.length)]
+				return [string.slice(0, n), string.slice(n+sep.length)]
 		}
 		
 		function readTagName() {
@@ -641,7 +626,8 @@ class Markup_Legacy { constructor() {
 		}
 		
 		function readPlainLink(embed) {
-			if (!isUrlStart()) return
+			if (!isUrlStart())
+				return
 			
 			let url = readUrl()
 			let after = eatChar("[")
@@ -650,7 +636,7 @@ class Markup_Legacy { constructor() {
 				let [type, args] = urlType(url)
 				if (after) {
 					let altText = ""
-					while (c && c!=']' && c!="\n") {
+					while (c && "]"!==c && "\n"!==c) {
 						eatChar("\\")
 						altText += c
 						scan()
@@ -663,7 +649,7 @@ class Markup_Legacy { constructor() {
 				if (after)
 					start_block('link', {url}, {inBrackets: true})
 				else
-					add_block('simple_link', {text:url, url:url})
+					add_block('simple_link', {url})
 			}
 			return true
 		}
@@ -673,7 +659,7 @@ class Markup_Legacy { constructor() {
 		function closeAll(force) {
 			while (stack.length) {
 				let top = stack_top()
-				if (top.type == 'ROOT')
+				if ('ROOT'===top.type)
 					break
 				if (!force && top.type == null) {
 					endBlock()
@@ -687,23 +673,23 @@ class Markup_Legacy { constructor() {
 		function endLine() {
 			while (1) {
 				let top = stack_top()
-				if (top.type == 'heading' || top.type == 'quote') {
+				if ('heading'===top.type || 'quote'===top.type) {
 					endBlock()
-				} else if (top.type == 'list_item') {
-					if (top.type == 'list_item')
-						endBlock()
+				} else if ('list_item'===top.type) {
+					endBlock()
 					let indent = 0
 					while (eatChar(" "))
 						indent++
 					// OPTION 1:
 					// no next item; end list
-					if (c != "-") {
+					if ("-"!==c) {
 						while (top_is('list')) //should ALWAYS happen at least once
 							endBlock()
 						addText(" ".repeat(indent))
 					} else {
 						scan()
-						while (eatChar(" ")) {}
+						while (eatChar(" ")) {
+						}
 						// OPTION 2:
 						// next item has same indent level; add item to list
 						if (indent == top.level) {
@@ -721,7 +707,7 @@ class Markup_Legacy { constructor() {
 							// TODO: currently this will just fail completely
 							while (1) {
 								top = stack_top()
-								if (top && top.type == 'list') {
+								if (top && 'list'===top.type) {
 									if (top.level <= indent)
 										break
 									endBlock()
@@ -749,12 +735,11 @@ class Markup_Legacy { constructor() {
 				return ["audio", {url}]
 			if (/(\.mp4(?!\w)|\.mkv(?!\w)|\.mov(?!\w)|#video$)/i.test(url))
 				return ["video", {url}]
-			let m = /^https?:[/][/](?:www[.])?(?:youtube.com[/]watch[?]v=|youtu[.]be[/])([\w-]{11,})(?:[&?](.*))?$/.exec(url)
-			if (m)
-				return ["youtube", {url, id:m[1]}]
+			if (/^https?:[/][/](?:www[.])?(?:youtube.com[/]watch[?]v=|youtu[.]be[/]|youtube.com[/]shorts[/])[\w-]{11}/.test(url))
+				return ["youtube", {url}]
 			let size = /^([^#]*)#(\d+)x(\d+)$/.exec(url)
 			if (size)
-				return ["image", {url:size[1], width:+size[2], height:+size[3]}]
+				return ["image", {url: size[1], width: +size[2], height: +size[3]}]
 			return ["image", {url}]
 		}
 		
@@ -772,26 +757,23 @@ class Markup_Legacy { constructor() {
 		
 		function canStartMarkup(type) {
 			return (
-				(!code[i-2] || char_in(code[i-2], " \t\n({'\"")) && //prev char is one of these (or start of text)
-					(c && !char_in(c, " \t\n,'\"")) && //next char is not one of these
-					!stackContains(type)
+				" \t\n({'\"".includes(code.charAt(i-2)) &&// prev
+				!" \t\n,'\"".includes(c) &&// next
+				!stackContains(type)
 			)
 		}
 		function canEndMarkup(type) {
 			return (
-				top_is(type) && //there is an item to close
-					!char_in(code[i-2], " \t\n,'\"") && //prev char is not one of these
-					(!c || char_in(c, " \t\n-.,:!?')}\"")) //next char is one of these (or end of text)
+				top_is(type) &&//
+				!" \t\n,'\"".includes(code.charAt(i-2)) &&//prev
+				" \t\n-.,:!?')}\"".includes(c)//next
 			)
 		}
-		function char_in(chr, list) {
-			return chr && list.indexOf(chr) != -1
-		}
-		
 	}
 	
 	// start_block
-	const block_translate = MAP({
+	const block_translate = Object.freeze({
+		__proto__: null, 
 		// things without arguments
 		b: 'bold',
 		i: 'italic',
@@ -831,13 +813,13 @@ class Markup_Legacy { constructor() {
 			return ['anchor', {name: args['']}]
 		},
 		h1(args) {
-			return ['heading', {level:1}]
+			return ['heading', {level: 1}]
 		},
 		h2(args) {
-			return ['heading', {level:2}]
+			return ['heading', {level: 2}]
 		},
 		h3(args) {
-			return ['heading', {level:3}]
+			return ['heading', {level: 3}]
 		},
 		url(args) {
 			return ['link', {url: args['']}]
@@ -849,19 +831,20 @@ class Markup_Legacy { constructor() {
 		img: 2,
 	})
 	// add_block
-	const block_translate_2 = MAP({
+	const block_translate_2 = Object.freeze({
+		__proto__:null,
 		code(args, contents) {
-			let inline = args[""] == 'inline'
+			let inline = 'inline'===args[""]
 			if (inline)
-				return ['icode', {text:contents}]
+				return ['icode', {text: contents}]
 			else {
-				if (contents[0]=="\n")
-					contents = contents.substr(1)
-				return ['code', {text:contents, lang:args.lang||'sb'}]
+				if (contents.startsWith("\n"))
+					contents = contents.slice(1)
+				return ['code', {text: contents, lang: args.lang||'sb'}]
 			}
 		},
 		url(args, contents) {
-			return ['simple_link', {text:contents, url: contents}]
+			return ['simple_link', {url: contents}]
 		},
 		youtube(args, contents) {
 			return ['youtube', {url: args['']}] // TODO: set id here
@@ -874,7 +857,7 @@ class Markup_Legacy { constructor() {
 		},
 		img(args, contents) {
 			return ['audio', {url: args['']}]
-		},	
+		},
 	})
 	
 	this.langs['bbcode'] = function(codeInput) {
@@ -904,7 +887,7 @@ class Markup_Legacy { constructor() {
 						if (greedyCloseTag(name)) {
 							// eat whitespace between table cells
 							if (name == 'td' || name == 'th' || name == 'tr')
-								while(eatChar(' ')||eatChar('\n')){
+								while (eatChar(' ')||eatChar('\n')) {
 								}
 						} else {
 							// ignore invalid block
@@ -921,7 +904,7 @@ class Markup_Legacy { constructor() {
 								endBlock(point)
 							let top = stack_top()
 							if (top.type == "list")
-								start_block('list_item', null, {bbcode:'item'})
+								start_block('list_item', null, {bbcode: 'item'})
 							else
 								cancel()
 						} else
@@ -933,16 +916,16 @@ class Markup_Legacy { constructor() {
 							let start=i
 							if (eatChar('"')) {
 								start++
-								while (c && c!='"')
+								while (c && '"'!==c)
 									scan()
-								if (c == '"') {
+								if ('"'===c) {
 									scan()
 									arg = code.substring(start, i-1)
 								}
 							} else {
-								while (c && c!="]" && c!=" ")
+								while (c && "]"!==c && " "!==c)
 									scan()
-								if (c == "]" || c == " ")
+								if ("]"===c || " "===c)
 									arg = code.substring(start, i)
 							}
 						}
@@ -953,7 +936,7 @@ class Markup_Legacy { constructor() {
 							args[""] = arg
 						if (eatChar("]")) {
 							// simple tag
-							if (block_translate_2[name] && !(name=="url" && arg!==true)) {
+							if (block_translate_2[name] && !('url'===name && arg!==true)) {
 								let endTag = "[/"+name+"]"
 								let end = code.indexOf(endTag, i)
 								if (end < 0)
@@ -965,25 +948,26 @@ class Markup_Legacy { constructor() {
 									let [t, a] = block_translate_2[name](args, contents)
 									add_block(t, a)
 								}
-							} else if (name!="item" && block_translate[name] && !(name=='spoiler' && stackContains(name))) {
-								if (name == 'tr' || name == 'table')
-									while (eatChar(' ')||eatChar('\n')) {}
+							} else if ('item'!==name && block_translate[name] && !('spoiler'===name && stackContains(name))) {
+								if ('tr'===name || 'table'===name)
+									while (eatChar(" ") || eatChar("\n")) {
+									}
 								
 								let tx = block_translate[name]
-								if (typeof tx == 'string')
-									start_block(tx, null, {bbcode:name})
+								if ('string'===typeof tx)
+									start_block(tx, null, {bbcode: name})
 								else {
 									let [t, a] = tx(args)
-									start_block(t, a, {bbcode:name})
+									start_block(t, a, {bbcode: name})
 								}
 							} else
-								add_block('invalid', {text: code.substring(point, i), message:"invalid tag"})
+								add_block('invalid', {text: code.substring(point, i), message: "invalid tag"})
 						} else
 							cancel()
 					}
 				}
 			} else if (readPlainLink()) {
-			} else if (eatChar('\n')) {
+			} else if (eatChar("\n")) {
 				addLineBreak()
 			} else {
 				addText(c)
@@ -1001,8 +985,8 @@ class Markup_Legacy { constructor() {
 		
 		function greedyCloseTag(name) {
 			for (let j=0; j<stack.length; j++)
-				if (stack[j].bbcode == name) {
-					while (stack_top().bbcode != name)//scary
+				if (stack[j].bbcode === name) {
+					while (stack_top().bbcode !== name)//scary
 						endBlock()
 					endBlock()
 					return true
@@ -1012,7 +996,7 @@ class Markup_Legacy { constructor() {
 		function readPlainLink() {
 			if (isUrlStart()) {
 				let url = readUrl()
-				add_block('simple_link', {text:url, url:url})
+				add_block('simple_link', {url})
 				return true
 			}
 		}
@@ -1030,7 +1014,7 @@ class Markup_Legacy { constructor() {
 					// key="...
 					if (eatChar('"')) {
 						start = i
-						while (c && c!='"' && c!="\n")
+						while (!'"\n'.includes(c))
 							scan()
 						if (eatChar('"'))
 							args[key] = code.substring(start, i-2)
@@ -1039,9 +1023,9 @@ class Markup_Legacy { constructor() {
 						// key=...
 					} else {
 						start = i
-						while (c && c!=" " && c!="]" && c!="\n")
+						while (!" ]\n".includes(c))
 							scan()
-						if (c == "]") {
+						if ("]"===c) {
 							args[key] = code.substring(start, i)
 							return args
 						} else if (eatChar(" ")) {
@@ -1053,7 +1037,7 @@ class Markup_Legacy { constructor() {
 				} else if (eatChar(" ")) {
 					args[key] = true
 					// key]...
-				} else if (c == "]") {
+				} else if ("]"===c) {
 					args[key] = true
 					return args
 					// key<other char> (error)
@@ -1070,14 +1054,14 @@ class Markup_Legacy { constructor() {
 		}
 		
 		function isTagChar(c) {
-			return c>="a"&&c<="z" || c>="A"&&c<="Z" || c>="0"&&c<="9"
+			return /[a-z0-9]/i.test(c)
 		}
 	}
 	
 	this.langs['plaintext'] = function(text) {
-		let root = {type:'ROOT', content:[]}
+		let root = {type: 'ROOT', content: []}
 		
-		let linkRegex = /\b(?:https?:\/\/|sbs:)[-\w\$\.+!*'(),;/\?:@=&#%]*/g
+		let linkRegex = /\b(?:https?:\/\/|sbs:)[-\w$.+!*'(),;/?:@=&#%]*/g
 		let result
 		let last = 0
 		while (result = linkRegex.exec(text)) {
@@ -1087,11 +1071,11 @@ class Markup_Legacy { constructor() {
 				root.content.push(before)
 			// generate link
 			let url = result[0]
-			root.content.push({type:'simple_link', args:{url:url, text:url}})
+			root.content.push({type: 'simple_link', args: {url}})
 			last = result.index + result[0].length
 		}
 		// text after last link (or entire message if no links were found)
-		let after = text.substr(last)
+		let after = text.slice(last)
 		if (after)
 			root.content.push(after)
 		
@@ -1100,8 +1084,7 @@ class Markup_Legacy { constructor() {
 	
 	/**
 		default markup language (plaintext)
-		@instance
-		@type {Parser_Function}
+		@type {Parser}
 	*/
 	this.default_lang = this.langs['plaintext']
 }}
