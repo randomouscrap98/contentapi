@@ -23,11 +23,11 @@ body[data-theme="purple"] {
     --annotationcolor: #c5a7da;
     --notificationbg: #c1b3e2;
     --notificationalertbg: #ff77f7;
-    --mainbg: #fff8ff;
-    --maincolor: #4c4264;
     --font: sans-serif;
     --linkcolor: #2e73fd;
     --linkvisitedcolor: #6112ab;
+    --T-bg: #fff8ff;
+    --T-color: #4c4264;
 }
 
 body[data-theme="blue"] {
@@ -44,11 +44,11 @@ body[data-theme="blue"] {
     --annotationcolor: #8ab3da;
     --notificationbg: #d5e5ec;
     --notificationalertbg: #fa72ff;
-    --mainbg: #f2fbff;
-    --maincolor: #1c2363;
     --font: sans-serif;
     --linkcolor: #0669da;
     --linkvisitedcolor: rgb(36 26 139);
+    --T-bg: #f2fbff;
+    --T-color: #1c2363;
 }
 
 body[data-theme="terminal"] {
@@ -63,14 +63,14 @@ body[data-theme="terminal"] {
     --annotationcolor: #999;
     --notificationbg: black;
     --notificationalertbg: red;
-    --mainbg: black;
-    --maincolor: lime;
     --linkcolor: cyan;
     --linkvisitedcolor: magenta;
+    --T-bg: black;
+    --T-color: lime;
 }
 body[data-theme="terminal"] button {
-    background: var(--maincolor); /*#3333FF;*/
-    color: var(--mainbg);
+    background: var(--T-color); /*#3333FF;*/
+    color: var(--T-bg);
     border: var(--stdborder);
 }
 
@@ -86,14 +86,14 @@ body[data-theme="dark"] {
     --annotationcolor: #777;
     --notificationbg: darkblue;
     --notificationalertbg: darkred;
-    --mainbg: #222;
-    --maincolor: #CCC;
     --linkcolor: deepskyblue;
     --linkvisitedcolor: mediumpurple;
+    --T-bg: #222;
+    --T-color: #CCC;
 }
 body[data-theme="dark"] button {
     background: #2f2f2f;
-    color: var(--maincolor);
+    color: var(--T-color);
     border: var(--stdborder);
 }
 
@@ -180,7 +180,7 @@ body[data-sidebarhidden] {
 }
 
 [data-fancy] ::-webkit-scrollbar {
-  background-color: var(--mainbg); /* or add it to the track */
+  background-color: var(--T-bg); /* or add it to the track */
 }
 
 [data-fancy] ::-webkit-scrollbar-thumb {

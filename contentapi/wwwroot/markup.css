@@ -1,8 +1,7 @@
-html {
+/*html {
 	color-scheme: light;
 	--border-color: gray;
 	--bar-bg: #EEE;
-	/*--spoiler-bg: #F7F7F7;*/
 	--main-color: #222;
 	--bgred: #FCC;
 	--bgorange: #FEA;
@@ -28,8 +27,8 @@ html {
 }
 .content pre * {
 	background-color: transparent;
-}
-.content pre .name { color: #7FF5EF; }
+}*/
+/*.content pre .name { color: #7FF5EF; }
 .content pre .string { color: #59EE79; }
 .content pre .number { color: #f359ab; }
 .content pre .keyword {
@@ -46,4 +45,4 @@ html {
 .content pre .label { color: #f4963e; }
 .content pre .word-operator { color: #2494f0; }
 .content pre .to-step { color: #2494f0; }
-.content pre .constant { color: #aeb5c2; }
+.content pre .constant { color: #aeb5c2; }*/
