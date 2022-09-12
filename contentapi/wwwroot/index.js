@@ -11,6 +11,12 @@ const TINYAVATAR = 30;
 
 const LOGINEXPIRELONG = 60 * 60 * 24 * 365;
 
+const BLOGHOSTS = {
+    "qcs.shsbs.xyz" : "https://qcs.shsbs.xyz/share",
+    "oboy.smilebasicsource.com" : "https://oboy.smilebasicsource.com/share",
+    "localhost:7236" : "https://oboy.smilebasicsource.com/share"
+};
+
 //NOTE: although this is set up to use templates and dynamic loading as an example, this is NOT
 //SPA. It does not attempt to intercept URLS and do all the fanciness required for that.
 window.onload = function()
@@ -22,6 +28,10 @@ window.onload = function()
     var parameters = new URLSearchParams(location.search);
     var state = Object.fromEntries(parameters);
     api = new Api(null, GetToken); //Just a global api object, whatever. Null means use the default endpoint (local to self)
+
+    //Unhide the blogs if we're in the right host for that
+    if(Object.keys(BLOGHOSTS).includes(location.host))
+        document.getElementById("blogs-navlink").removeAttribute("hidden");
 
     //Load a template! Otherwise, just leave the page as-is
     if(parameters.has("t"))
@@ -418,6 +428,45 @@ function page_onload(template, state)
     }));
 }
 
+function blogs_onload(template, state)
+{
+    var search = new RequestParameter({
+        "key" : "share",
+        "value" : "true",
+        "type" : 1 //Remember, 1 is standard "page" type (not a file or module)
+    }, [
+        new RequestSearchParameter("content", APICONST.FIELDSETS.CONTENTQUICK, "!valuelike(@key, @value) and contentType = @type", "id", undefined, undefined, "main"),
+        new RequestSearchParameter("user", "*", "id in @main.createUserId", ""),
+    ]);
+
+    var resultList = template.querySelector("#published-blogs")
+    var blogsLink = BLOGHOSTS[location.host];
+
+    if(!blogsLink)
+    {
+        resultList.innerHTML = "This doesn't appear to be a blog-enabled host!";
+        return;
+    }
+
+    api.Search(search, new ApiHandler(d =>
+    {
+        //If we DID ask for the users, link them
+        if(d.result.objects.user)
+            api.AutoLinkUsers(d.result.objects.main, d.result.objects.user);
+
+        //Clear whatever was in there
+        resultList.innerHTML = "";
+
+        d.result.objects.main.forEach(x => {
+            x.blogsLink = blogsLink;
+            var item = LoadTemplate("page_item", x);
+            resultList.appendChild(item);
+        });
+
+        //aboutElement.textContent = `Search took ${d.result.totalTime} ms`;
+    }));
+}
+
 function search_onload(template, state)
 {
     SetupPagination(template.querySelector("#search-up"), template.querySelector("#search-down"), state, "sp");
@@ -798,6 +847,14 @@ function page_item_onload(template, state)
     time.textContent = state.createDate;
     if(!api.IsPrivate(state))
         private.style.display = "none";
+    if(state.blogsLink && state.hash)
+    {
+        var blogLinkParent = template.querySelector("[data-bloglink-container]");
+        blogLinkParent.removeAttribute("hidden");
+        var blogLink = template.querySelector("[data-bloglink]");
+        blogLink.href = state.blogsLink + "/" + state.hash;
+        blogLink.textContent = blogLink.href;
+    }
 }
 
 function comment_item_onload(template, state)
