@@ -6,19 +6,19 @@
     <meta name="rating" content="general">
     <meta name="description" content="SBS default implementation">
     <link rel="icon" href="favicon.ico" type="image/x-icon">
-    <script src="api.js?v=1661379860"></script>
+    <script src="api.js?v=1663017186"></script>
     <!-- These are required for the 12y parser (markup) -->
-    <script src="markup/langs.js?v=1661379860"></script>
-    <script src="markup/legacy.js?v=1661379860"></script>
-    <script src="markup/parse.js?v=1661379860"></script>
-    <script src="markup/render.js?v=1661379860"></script>
-    <script src="markup/helpers.js?v=1661379860"></script>
-    <link rel="stylesheet" href="markup/markup.css?v=1661379860">
-    <link rel="stylesheet" href="markup.css?v=1661379860">
-    <script src="markup.js?v=1661379860"></script>
+    <script src="markup/langs.js?v=1663017186"></script>
+    <script src="markup/legacy.js?v=1663017186"></script>
+    <script src="markup/parse.js?v=1663017186"></script>
+    <script src="markup/render.js?v=1663017186"></script>
+    <script src="markup/helpers.js?v=1663017186"></script>
+    <link rel="stylesheet" href="markup/markup.css?v=1663017186">
+    <link rel="stylesheet" href="markup.css?v=1663017186">
+    <script src="markup.js?v=1663017186"></script>
     <!-- The scripts and styling for this page in particular -->
-    <script src="index.js?v=1661379860"></script>
-    <link rel="stylesheet" href="index.css?v=1661379860">
+    <script src="index.js?v=1663017186"></script>
+    <link rel="stylesheet" href="index.css?v=1663017186">
 </head>
 
 <body>
@@ -191,15 +191,16 @@
             <h2>Blogs</h2>
             <p>There is a (currently separate) system for using contentapi to generate your own blogs with your own
                 styling and content, using contentapi to manage and publish your posts! But since it's a separate system,
-                there is a chance this information is out of date. Furthermore, only QCS has this feature (if you are not on
-                the main QCS website, this page isn't usually accessible anyway!), so if you're seeing this page, that means
-                blogs are active.
+                there is a chance this information is out of date. Furthermore, only some hosts have this feature, so if 
+                you're seeing this page, that probably means blogs are active.
             </p>
             <p>A blog is just a page with <b>"share"=true</b> in the values. Child pages with <b>literalType="resource"</b>
-                become the posts in your blog. The blog is then published at <a href="https://qcs.shsbs.xyz/share/">https://qcs.shsbs.xyz/share/(blog-hash)</a>.
+                become the posts in your blog. The blog is then published at <b>host/share/(your-hash)</b>.
                 The hash is only settable on creation to prevent broken links, make sure you set your page hash on create! For more information, view the readme
                 on <a href="https://github.com/randomouscrap98/blog-generator_contentapi">github</a>.
             </p>
+            <p><b>NOTE:</b> There's a chance the blog generator doesn't run instantly for any blog creates or updates. If you just created or made
+            changes to your blog that aren't showing up in the published link, give it up to a few minutes.</p>
             <h3>Published blogs:</h3>
             <div id="published-blogs">Loading... please wait</div>
         </div>

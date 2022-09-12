@@ -13,8 +13,7 @@ const LOGINEXPIRELONG = 60 * 60 * 24 * 365;
 
 const BLOGHOSTS = {
     "qcs.shsbs.xyz" : "https://qcs.shsbs.xyz/share",
-    "oboy.smilebasicsource.com" : "https://oboy.smilebasicsource.com/share",
-    "localhost:7236" : "https://oboy.smilebasicsource.com/share"
+    "oboy.smilebasicsource.com" : "https://oboy.smilebasicsource.com/share"
 };
 
 //NOTE: although this is set up to use templates and dynamic loading as an example, this is NOT
