@@ -385,7 +385,11 @@ public class LiveEventQueue : ILiveEventQueue
             //Go ahead and set up the return events, we know we'll return SOMETHING this loop, since there's a non-zero amount
             result.events = events.Select(x => mapper.Map<LiveEventView>(x)).OrderBy(x => x.id).ToList();
 
-            //The "fast optimized" route. Hopefully, MOST live updates go through this.
+            //The "fast optimized" route. Hopefully, MOST live updates go through this. To prevent unnecessary locks, we perform this
+            //check to filter out any and all requests for more than one event, BUT just because there's one event doesn't mean it's 
+            //the optimal one! We found that, if you reconnect with an ID that's just a few behind, but the maximal event is private
+            //and your permission filter returns just one event, you can have a singular but non-optimal event, because it's not the 
+            //latest one.
             if (events.Count() == 1)
             {
                 var optimalEvent = events.First();
@@ -401,8 +405,10 @@ public class LiveEventQueue : ILiveEventQueue
                     }
                     else
                     {
-                        throw new InvalidOperationException($"OPTIMAL EVENT BUT NO MATCHING: {optimalEvent.id} VS: {string.Join(",", dataCache.Select(x => x.evnt.id))}");
+                        logger.LogDebug($"Single event wasn't optimal (probably OK): {optimalEvent.id} (user event) VS: {string.Join(",", dataCache.Select(x => x.evnt.id))} (cached events)");
                     }
+                    //Again, it's OK if we don't find it. It's just that we happened to have a single event that wasn't the very last
+                    //event in the system, almost certainly due to permissions
                 }
             }
 
