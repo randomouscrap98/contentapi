@@ -117,13 +117,25 @@ function fancySetTitle(title, content)
         title.textContent = content.name;
     }
 
-    if (api.IsPrivate(content)) {
-        var lock = document.createElement("div");
-        lock.textContent = "🔒";
-        lock.className = "private";
-        title.appendChild(lock);
-        title.className = (title.className || "") + " privateparent";
-    }
+    var privateText = "";
+
+    if (api.IsPrivate(content))
+        privateText += "🔒";
+    if (userSelf && !api.IsAllowed(content, userSelf.id, "C"))
+        privateText += "❌";
+    
+    if(privateText)
+        addPrivateElement(title, privateText); 
+}
+
+function addPrivateElement(container, icon)
+{
+    var lock = document.createElement("div");
+    lock.textContent = icon || "🔒";
+    lock.className = "private";
+    container.appendChild(lock);
+    container.className = (container.className || "") + " privateparent";
+    return lock;
 }
 
 function fancyCreateUserlistUser(user, status)

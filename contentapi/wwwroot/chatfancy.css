@@ -129,13 +129,21 @@ body[data-sidebarhidden] {
     flex: none;
 }
 
-.privateparent { position: relative; }
+/*.privateparent { position: relative; }*/
 .private {
-    position: absolute;
-    bottom: 0em;
-    right: -1.1em;
-    z-index: 100;
-    font-size: 0.7em;
+    /*position: absolute;
+    bottom: 0em;*/
+    /*left: 100%;*/
+    /*right: -1em;
+    top: -0.22em;*/
+    /*right: -1.1em;*/
+    /*z-index: 100;*/
+    /*font-size: 0.7em;*/
+    font-size: 0.6em;
+    display: inline;
+    background-color: black;
+    padding: 0.25em;
+    border-radius: 0.6em;
 }
 .content_title img, .title img {
     height: 1.2em;

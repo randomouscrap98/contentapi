@@ -1245,5 +1245,14 @@ Api.prototype.GetSearchBackDate = function(hours, date)
 //Return whether or not the content is private (meaning not public...)
 Api.prototype.IsPrivate = function(content)
 {
-    return !(content.permissions[0] && content.permissions[0].indexOf("R") >= 0);
+    return !this.IsAllowed(content, 0, "R");
+    //return !(content.permissions[0] && content.permissions[0].indexOf("R") >= 0);
+}
+
+//Return whether or not the content has granted the given action to the given
+//user (you can pass 0 or undefined or any falsey value for userId if it's general)
+Api.prototype.IsAllowed = function(content, userId, action)
+{
+    return (content.permissions[0] && content.permissions[0].indexOf(action) >= 0) ||
+           (userId && content.permissions[userId] && content.permissions[userId].indexOf(action) >= 0);
 }
