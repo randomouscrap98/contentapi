@@ -12,22 +12,22 @@
     <link rel="icon" href="favicon.ico" type="image/x-icon">
     <!-- The MAIN api consumer script, it comes with most things you need to work with the API. 
         In particular, it has an auto websocket manager for building quick chatrooms -->
-    <script src="api.js?v=1664129092"></script>
+    <script src="api.js?v=1664135151"></script>
     <!-- These are required for the 12y parser (markup) -->
-    <script src="markup/langs.js?v=1664129092"></script>
-    <script src="markup/legacy.js?v=1664129092"></script>
-    <script src="markup/parse.js?v=1664129092"></script>
-    <script src="markup/render.js?v=1664129092"></script>
-    <script src="markup/helpers.js?v=1664129092"></script>
-    <link rel="stylesheet" href="markup/markup.css?v=1664129092">
-    <link rel="stylesheet" href="markup.css?v=1664129092">
-    <script src="markup.js?v=1664129092"></script>
+    <script src="markup/langs.js?v=1664135151"></script>
+    <script src="markup/legacy.js?v=1664135151"></script>
+    <script src="markup/parse.js?v=1664135151"></script>
+    <script src="markup/render.js?v=1664135151"></script>
+    <script src="markup/helpers.js?v=1664135151"></script>
+    <link rel="stylesheet" href="markup/markup.css?v=1664135151">
+    <link rel="stylesheet" href="markup.css?v=1664135151">
+    <script src="markup.js?v=1664135151"></script>
 
     <!-- These are really unnecessary, and you can ignore them. They just add some quality of life
         updates to the chat while we lived there; they don't do anything for this example though! 
         If you are copying this example, you can safely leave these out! -->
-    <script src="chatfancy.js?v=1664129092"></script>
-    <link rel="stylesheet" href="chatfancy.css?v=1664129092">
+    <script src="chatfancy.js?v=1664135151"></script>
+    <link rel="stylesheet" href="chatfancy.css?v=1664135151">
 
     <script>
 //NOTE: this file has nothing to do with index.html or any script/etc other than api.js
@@ -39,6 +39,7 @@ var pid;
 //The user and page for this instance (may take a bit to get set)
 var userSelf;
 var pageSelf;
+var alreadyPosted; //used for locked room post notification
 
 //Constants for our page runtime, you don't necessarily need these
 const FIRSTLOADMESSAGES = 30;
@@ -192,11 +193,11 @@ window.onload = function()
         if(!postbox.value)
             return;
         
-        if(userSelf && pageSelf && !api.IsAllowed(pageSelf, userSelf.id, "C"))
-        {
-            if(!confirm("You don't appear to have permission to post here, try anyway?"))
+        //You don't have to perform these kinds of permissions checks, but it's nice to alert people when
+        //they're posting in a room that maybe won't accept their messages
+        if(!alreadyPosted && userSelf && pageSelf && !api.IsAllowed(pageSelf, userSelf.id, "C") &&
+           !confirm("You don't appear to have permission to post here, try anyway?"))
                 return;
-        }
         
         var commandCheck = postbox.value.match(/^\/([^\s]+)\s*(.*)$/);
 
@@ -212,6 +213,9 @@ window.onload = function()
                 if (d.error) {
                     alert("Error on post: " + d.error)
                     postbox.value = lastPostboxValue;
+                }
+                else {
+                    alreadyPosted = true;
                 }
             }, e => {
                 api.default_handler.error(e);
@@ -237,6 +241,9 @@ window.onload = function()
                     alert("Error on post: " + response.error)
                     postbox.value = lastPostboxValue;
                     console.warning("Websocket write error response:", response);
+                }
+                else {
+                    alreadyPosted = true;
                 }
             });
         }
