@@ -326,6 +326,44 @@ function deleteComment(message)
     }
 }
 
+//Insert the edit comment textbox and such into the given container. Editing a comment is as simple 
+//as reposting the comment with the ID set.
+function editComment(message, editButton, container)
+{
+    var originalMessage = JSON.parse(JSON.stringify(message));
+    var editArea = document.createElement("div"); editArea.className = "editcomment";
+    var editText = document.createElement("textarea"); editText.value = message.text;
+    var editSubmit = document.createElement("button"); editSubmit.textContent = "Submit";
+    var endEdit = () => {
+        editArea.parentElement.removeChild(editArea);
+        editButton.onclick = () => editComment(originalMessage, editButton, container);
+        editButton.textContent = "Edit";
+    };
+    editButton.onclick = endEdit;
+    editButton.textContent = "Cancel";
+    editSubmit.onclick = () =>
+    {
+        message.text = editText.value;
+        //You can also send edits on the websocket, just like regular messages
+        ws.sendRequest("write", {
+            type : APICONST.WRITETYPES.MESSAGE,
+            object :  message
+        }, response => {
+            if(response.error)
+            {
+                alert("Error on post: " + response.error)
+                console.warning("Websocket write error response:", response);
+            }
+            else {
+                endEdit();
+            }
+        });
+    };
+    editArea.appendChild(editText);
+    editArea.appendChild(editSubmit)
+    container.appendChild(editArea);
+}
+
 //Create a single message element (full element, no merging) from the given message data.
 //Will also create module messages. Message data needs to be prelinked
 function createMessage(message)
@@ -350,7 +388,8 @@ function createMessage(message)
     time.textContent = (new Date(message.createDate)).toLocaleString();
     if(message.edited) time.textContent += ` (edited ${new Date(message.editDate).toLocaleString()})`;
     time.className = "annotation";
-    var deleteButton = false; document.createElement('span');
+    var deleteButton = false; 
+    var editButton = false;
 
     if(message.module)
     {
@@ -362,15 +401,21 @@ function createMessage(message)
     }
     else //You can't delete module messages, hence the else
     {
-        var deleteButton = document.createElement("button");
+        deleteButton = document.createElement("button");
         deleteButton.textContent = "Delete";
-        deleteButton.className = "delete";
+        deleteButton.className = "commentcontrol";
         deleteButton.onclick = () => deleteComment(message);
+
+        editButton = document.createElement("button");
+        editButton.textContent = "Edit";
+        editButton.className = "commentcontrol";
+        editButton.onclick = () => editComment(message, editButton, userInfo);
     }
 
     userInfo.appendChild(avatar);
     userInfo.appendChild(user);
     userInfo.appendChild(time);
+    if(editButton) userInfo.appendChild(editButton);
     if(deleteButton) userInfo.appendChild(deleteButton);
 
     var content = document.createElement("div");
@@ -730,11 +775,11 @@ body, input, textarea, select {
 .userinfo .user {
     text-decoration: underline;
 }
-.delete { 
+.commentcontrol { 
     display: none; 
     font-size: 0.5em;
 }
-.message:hover .delete, .message:focus .delete { 
+.message:hover .commentcontrol, .message:focus .commentcontrol { 
     display: inline-block; 
 }
 .avatar {
