@@ -72,47 +72,54 @@ class Markup_Render_Dom { constructor() {
 				e.textContent = text
 				e.className += ' M-link-custom'
 			}
-			e.href = filter_url(url, 'link')
+			if (!url.startsWith("#")) {
+				url = filter_url(url, 'link')
+				e.target = '_blank'
+			} else
+				e.target = '_self'
+			e.href = url
 			return e
-		}.bind(𐀶`<a href="" class='M-link' target=_blank>`),
+		}.bind(𐀶`<a href="" class='M-link'>`),
 		
 		image: function({url, alt, width, height}) {
 			let e = this.elem()
 			let src = filter_url(url, 'image')
-			if (intersection_observer) {
-				e.dataset.src = src
-				intersection_observer.observe(e)
-			} else {
-				e.src = src
-			}
 			if (alt!=null) e.alt = e.title = alt
 			if (width) {
 				e.width = width
-				e.style.setProperty('--width', height)
+				e.style.setProperty('--width', width)
 			}
 			if (height) {
 				e.height = height
 				e.style.setProperty('--height', height)
 				e.dataset.state = 'size'
 			}
-			// check whether the image is "available" (i.e. size is known)
-			// https://html.spec.whatwg.org/multipage/images.html#img-available
-			if (e.naturalHeight) {
-				this.set_size(e, 'size')
-			}
+			// loading maybe
 			e.onerror = (event)=>{
 				event.target.dataset.state = 'error'
 			}
 			e.onload = (event)=>{
 				this.set_size(event.target, 'loaded')
 			}
+			if (intersection_observer) {
+				e.dataset.src = src
+				intersection_observer.observe(e)
+			} else {
+				e.src = src
+			}
+			// check whether the image is "available" (i.e. size is known)
+			// https://html.spec.whatwg.org/multipage/images.html#img-available
+			if (e.naturalHeight)
+				this.set_size(e, 'size')
+			else if (e.complete)
+				e.dataset.state = 'loaded'
 			return e
 		}.bind({
 			elem: 𐀶`<img data-state=loading data-shrink tabindex=0>`,
 			set_size: (e, state)=>{
-				e.dataset.state = state
-				e.width = e.naturalWidth
 				e.height = e.naturalHeight
+				e.width = e.naturalWidth
+				e.dataset.state = state
 				e.style.setProperty('--width', e.naturalWidth)
 				e.style.setProperty('--height', e.naturalHeight)
 			},
@@ -121,109 +128,49 @@ class Markup_Render_Dom { constructor() {
 		error: 𐀶`<div class='error'><code>🕯error🕯</code>🕯message🕯<pre>🕯stack🕯`,
 		
 		audio: function({url}) {
+			url = filter_url(url, 'audio')
 			let e = this()
-			let src = filter_url(url, 'audio')
-			let c2 = e.lastChild
-			let c1 = c2.previousSibling
-			let [time, save, vol, volume] = c2.childNodes
-			let [play, progress, , loop] = c1.childNodes
-			save.href = src
-			
-			let audio
-			function setup() {
-				audio = document.createElement('audio')
-				audio.preload = 'none'
-				audio.src = src
-				
-				time.textContent = 'loading'
-				
-				volume.oninput = e=>{
-					audio.volume = +volume.value
-				}
-				function anim() {
-					time.textContent = format_time(audio.currentTime)+" / "+format_time(audio.duration)
-					progress.value = Math.round(audio.currentTime*10)/10
-				}
-				loop.onchange = e=>{ audio.loop = loop.checked }
-				audio.onpause = e=>{
-					play.textContent = "▶️"
-				}
-				audio.onpause()
-				audio.onplay = e=>{
-					play.textContent = "⏸️"
-				}
-				audio.onerror = e=>{
-					time.textContent = "Error"
-				}
-				function format_time(dur) {
-					let s = dur
-					let m = Math.floor(s / 60)
-					s = s % 60
-					return m+":"+(s+100).toFixed(1).substring(1)
-				}
-				audio.onvolumechange = e=>{
-					let volume = audio.volume
-					vol.textContent = volume ? ["🔈", "🔉", "🔊"][volume*2.99|0] : "🔇"
-				}
-				if (volume.value==1) {
-					volume.value = audio.volume
-					audio.onvolumechange()
-				} else {
-					volume.oninput()
-				}
-				audio.ondurationchange = e=>{
-					progress.max = Math.round(audio.duration*10)/10
-					time.textContent = format_time(audio.currentTime)+" / "+format_time(audio.duration)
-				}
-				audio.ontimeupdate = e=>{
-					anim()
-				}
-				progress.onchange = e=>{
-					audio.currentTime = progress.value
-				}
+			e.dataset.src = url
+			e.onclick = ev=>{
+				ev.preventDefault()
+				let e = ev.currentTarget
+				let audio = document.createElement('audio')
+				audio.controls = true
+				audio.autoplay = true
+				audio.src = e.dataset.src
+				e.replaceChildren(audio)
+				e.onclick = null
 			}
-			
-			play.onclick = e=>{
-				if (!audio)
-					setup()
-				if (audio.paused)
-					audio.play()
-				else
-					audio.pause()
-			}
+			let link = e.firstChild
+			link.href = url
+			link.title = url
+			link.lastChild.textContent = url.replace(/.*[/]/, "…/")
 			return e
-		}.bind(𐀶`
-<media-player class='M-audio-player'>
-<div class='M-media-controls'>
-<button>▶️</button>
-<input type=range max=100 step=0.1 value=0>
-🔁<input type=checkbox title=loop></input>
-</div>
-<div class='M-media-controls'>
-<span class='M-media-time'>‒‒/‒‒</span>
-<a target=_blank>💾</a>
-<span>🔊</span>
-<input type=range max=1 step=0.01 value=1 class='M-media-volume'>
-</div>
-</media-player>
-`),
+		}.bind(𐀶`<y12-audio><a>🎵️<span></span></a></y12-audio>`),
+		
 		video: function({url}) {
 			let e = this()
 			let media = document.createElement('video')
+			media.setAttribute('tabindex', 0)
 			media.preload = 'none'
 			media.dataset.shrink = "video"
 			media.src = filter_url(url, 'video')
 			e.firstChild.append(media)
+			
 			let cl = e.lastChild
 			let [play, progress, time] = cl.childNodes
 			play.onclick = e=>{
-				if (media.paused) {
+				if (media.paused)
 					media.play()
-					//let e2 = new Event('videoclicked', {bubbles: true, cancellable: true})
-					//media.dispatchEvent(e2)
-				} else
+				else
 					media.pause()
 				e.stopPropagation()
+			}
+			media.onpause = e=>{
+				play.textContent = "▶️"
+			}
+			media.onplay = e=>{
+				play.textContent = "⏸️"
 			}
 			media.onresize = ev=>{
 				media.onresize = null
@@ -231,28 +178,33 @@ class Markup_Render_Dom { constructor() {
 				media.parentNode.style.height = media.videoHeight+"px"
 				media.parentNode.style.width = media.videoWidth+"px"
 			}
+			media.onerror = ev=>{
+				time.textContent = 'Error'
+			}
 			media.ondurationchange = e=>{
 				let s = media.duration
+				progress.disabled = false
+				progress.max = s
 				let m = Math.floor(s / 60)
 				s = s % 60
 				time.textContent = m+":"+(s+100).toFixed(2).substring(1)
 			}
 			media.ontimeupdate = e=>{
-				progress.value = media.currentTime / media.duration * 100
+				progress.value = media.currentTime
 			}
 			progress.onchange = e=>{
-				media.currentTime = progress.value/100 * media.duration
+				media.currentTime = progress.value
 			}
 			return e
 		}.bind(𐀶`
-<media-player class='M-video-player'>
-<div class='M-image-wrapper'></div>
-<div class='M-media-controls'>
-<button>Play</button>
-<input type=range max=100 value=0>
-<span>not loaded</span>
-</div>
-</media-player>
+<y12-video>
+	<figure class='M-image-wrapper'></figure>
+	<div class='M-media-controls'>
+		<button>▶️</button>
+		<input type=range min=0 max=1 step=any value=0 disabled>
+		<span>not loaded</span>
+	</div>
+</y12-video>
 `),
 		
 		italic: 𐀶`<i>`,
@@ -301,13 +253,18 @@ class Markup_Render_Dom { constructor() {
 		
 		table_row: 𐀶`<tr>`,
 		
-		table_cell: function({header, color, truecolor, colspan, rowspan, align}, row_args) {
+		table_cell: function({header, color, truecolor, colspan, rowspan, align, div}, row_args) {
 			let e = this[header||row_args.header ? 1 : 0]()
 			if (color) e.dataset.bgcolor = color
 			if (truecolor) e.style.backgroundColor = truecolor
 			if (colspan) e.colSpan = colspan
 			if (rowspan) e.rowSpan = rowspan
 			if (align) e.style.textAlign = align
+			// todo: better way of representing this?
+			if (div)
+				e.classList.add('M-wall-right')
+			if (row_args.divider)
+				e.classList.add('M-wall-top')
 			return e
 		}.bind([𐀶`<td>`, 𐀶`<th>`]),
 		
@@ -315,15 +272,20 @@ class Markup_Render_Dom { constructor() {
 			let e = this()
 			e.firstChild.textContent = url
 			e.firstChild.href = url
-			e.setAttribute('href', url)
+			e.dataset.href = url
 			return e
 		}.bind(𐀶`<youtube-embed><a target=_blank></a></youtube-embed>`),
 		
 		link: function({url}) {
 			let e = this()
-			e.href = filter_url(url, 'link')
+			if (!url.startsWith("#")) {
+				url = filter_url(url, 'link')
+				e.target = '_blank'
+			} else
+				e.target = '_self'
+			e.href = url
 			return e
-		}.bind(𐀶`<a class='M-link M-link-custom' target=_blank href="">`),
+		}.bind(𐀶`<a class='M-link M-link-custom' href="">`),
 		
 		list: function({style}) {
 			if (style==null)

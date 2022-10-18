@@ -54,7 +54,7 @@ window.addEventListener('load', function()
     {
         var container = oldCreateMessage(m);
         var userArea = container.querySelector(".userinfo");
-        var deleteButton = container.querySelector(".delete");
+        var firstControl = container.querySelector(".commentcontrol");
         var content = container.querySelector(".content");
 
         var images = content.querySelectorAll("img");
@@ -79,7 +79,7 @@ window.addEventListener('load', function()
             var checkBox = document.createElement("input");
             checkBox.setAttribute("type", "checkbox");
             checkBox.className = "messageselect";
-            userArea.insertBefore(checkBox, deleteButton);
+            userArea.insertBefore(checkBox, firstControl);
         }
 
         return container;

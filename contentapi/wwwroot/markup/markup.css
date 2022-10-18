@@ -15,7 +15,6 @@ L + ratio { }
 
 *:not(*>*) { /* this selects :root with 0 specificity */
 	/* normal colors */
-	--T-color: black;
 	--T-bg: white;
 	
 	--T-link-color: #056;
@@ -24,38 +23,51 @@ L + ratio { }
 	--T-custom-link-decoration: underline blue;
 	
 	--T-border-color: gray; /* nnnnn... */
-	/* these are transparent, so they should work with both dark and light */
+	
 	--T-image-border: 1px solid var(--T-border-color);
+	
+	--T-embed-height: 10vh;
+	
+	/* for colored table cells, etc. */
+	/* these are transparent, so they should work with both dark and light */
+	888;
+	#0F08;
+	 #FF08;
+	 #FA08;
+	08F8;
+	 #C0F8;
+	AAA8;
 	
 	--T-box-bg: #AAA2;
 	
-	--T-red-bg: #F888;
-	--T-green-bg: #FA08;
-	--T-yellow-bg: #FF08;
-	--T-orange-bg: #0F08;
-	--T-blue-bg: #08F8;
-	--T-purple-bg: #C0F8;
-	--T-gray-bg: #AAA8;
-	
-	--T-link-bg: #5CE5; /* for links w/ custom text */
-	
-
-	--T-tab-size: 2.5;
-	--T-embed-height: 10vh;
-	
-	--T-font: 1em sans-serif;
-	--T-monospace-font: 0.8128em consolas, monospace;
+	/* other values used :
+		--T-tab-size
+		--T-monospace-font
+		
+		--T-table-border
+		--T-table-outer-border
+		--T-table-thick-border
+		
+		--T-code-color
+		--T-code-bg
+		
+		--T-red-bg:
+		--T-green-bg:
+		--T-yellow-bg:
+		--T-orange-bg:
+		--T-blue-bg:
+		--T-purple-bg:
+		--T-gray-bg:
+*/
 }
 
 /** aa */
 
 .Markup {
-	color: var(--T-color);
 	background: var(--T-bg);
-	font: var(--T-font); /* this is kinda bad.. maybe there should be a --T-markup-font ? or something separate for the main site and markup. then you can set --T-markup-font to "inherit" */
+	font-family: inherit;
 	font-variant-ligatures: none;
-	-moz-tab-size: var(--T-tab-size);
-	tab-size: var(--T-tab-size);
+	-moz-tab-size: var(--T-tab-size, 2.5); tab-size: var(--T-tab-size, 2.5);
 }
 
 .Markup * {
@@ -107,7 +119,7 @@ L + ratio { }
 }
 .Markup img[data-state="loaded"] {
 	height: auto;
-}
+}	
 
 /* ruby text doesn't work if set to white-space: pre */
 .Markup rt {
@@ -119,7 +131,42 @@ L + ratio { }
 	background: #F888;
 }
 
-/*** keyboard key ***/
+/*** divider ***/
+.Markup hr {
+	margin: 0.5rem 0;
+}
+
+.Markup pre, .Markup code, .Markup kbd {
+	font-family: var(--T-monospace-font, "Cascadia Code", consolas, monospace);
+	font-size: 0.8125em;
+}
+/*** Inline Code ***/
+/*** ` ***/
+.Markup code {
+	line-break: anywhere;
+	background: #9995;
+	padding: 0 0.1875em;
+	border-radius: 4px;
+	margin: 0 0.1em;
+	vertical-align: 1px;
+}
+.Markup th code {
+	white-space: pre-wrap;
+	line-break: unset;
+	word-break: normal; overflow-wrap: break-word;
+}
+/*** Code Block ***/
+/*** ``` ***/
+.Markup pre {
+	color: var(--T-code-color, white);
+	background: var(--T-code-bg, black);
+	border: 1px solid black;
+	padding: 0.5em;
+	margin: 0.25em 0;
+	line-break: anywhere;
+}
+/*** Keyboard Key ***/
+/*** \kbd ***/
 .Markup kbd {
 	display: inline-block;
 	
@@ -127,43 +174,11 @@ L + ratio { }
 	border: 1px solid var(--T-border-color);
 	border-radius: 3px;
 	padding: 0.1875rem 0.375rem;
-	font: var(--T-monospace-font);
 	vertical-align: middle;
 }
 
-/*** divider ***/
-.Markup hr {
-	margin: 0.5rem 0;
-}
-
-/**********/
-/** Code **/
-/**********/
-.Markup pre, .Markup code {
-	font: var(--T-monospace-font);
-}
-/* inline */
-.Markup code {
-	line-break: anywhere;
-	vertical-align: 1px;
-	background: #9996;
-	padding: 0 0.1875em;
-	border-radius: 4px;
-	margin: 0 0.1em;
-}
-/* block */
-.Markup pre {
-	color: white;
-	background: black;
-	border: 1px solid black;
-	padding: 0.5em;
-	margin: 0.25em 0;
-	line-break: anywhere;
-}
-
-/*************/
-/** Spoiler **/
-/*************/
+/*** Spoiler ***/
+/*** \spoiler \h ***/
 .M-spoiler-label {
 	display: table; /* width... */
 	background: var(--T-box-bg);
@@ -222,35 +237,45 @@ L + ratio { }
 .M-table-outer {
 	overflow-x: auto;
 }
-.Markup table, .Markup td, .Markup th {
-	border: 1px solid var(--T-color);
+.Markup table, .Markup tr > * {
 	border-collapse: collapse;
 }
-.Markup td, .Markup th {
+.Markup table {
+	border: var(--T-table-outer-border, 3px solid #222);	
+}
+.Markup tr > * {
 	padding: 0.1875em 0.3125em;
 	/* alternate text wrap mode, produces better table widths (somewhat) */
 	word-break: normal; overflow-wrap: break-word;
+	border: var(--T-table-border, 1px solid #222);
+}
+.Markup tr > .M-wall-top {
+	border-top: var(--T-table-thick-border, 4px solid #222);
+}
+.Markup tr > .M-wall-right {
+	border-right: var(--T-table-thick-border, 4px solid #222);
 }
 
 /**********************/
 /** Background Color **/
 /**********************/
-.Markup [data-bgcolor="red"]    { background: var(--T-red-bg) }
-.Markup [data-bgcolor="orange"] { background: var(--T-orange-bg) }
-.Markup [data-bgcolor="yellow"] { background: var(--T-yellow-bg) }
-.Markup [data-bgcolor="green"]  { background: var(--T-green-bg) }
-.Markup [data-bgcolor="blue"]   { background: var(--T-blue-bg) }
-.Markup [data-bgcolor="purple"] { background: var(--T-purple-bg) }
-.Markup [data-bgcolor="gray"]   { background: var(--T-gray-bg) }
+.Markup [data-bgcolor="red"]    { background: var(--T-red-bg, #F888) }
+.Markup [data-bgcolor="orange"] { background: var(--T-orange-bg, #FA08) }
+.Markup [data-bgcolor="yellow"] { background: var(--T-yellow-bg, #FF08) }
+.Markup [data-bgcolor="green"]  { background: var(--T-green-bg, #0F08) }
+.Markup [data-bgcolor="blue"]   { background: var(--T-blue-bg, #08F8) }
+.Markup [data-bgcolor="purple"] { background: var(--T-purple-bg, #C0F8) }
+.Markup [data-bgcolor="gray"]   { background: var(--T-gray-bg, #AAA8) }
 .Markup table { background: var(--T-bg); } /* reset */
 
 /***********/
 /** Links **/
 /***********/
 .M-link {
-	color: var(--T-link-color);
-	text-decoration: var(--T-link-decoration);
-	-webkit-text-decoration: var(--T-link-decoration);
+	color: var(--T-link-color, #056);
+	text-decoration: underline;
+	text-decoration: var(--T-link-decoration, underline #AAAA);
+	-webkit-text-decoration: var(--T-link-decoration, underline #AAAA);
 }
 .M-link:hover {
 	color: var(--T-link-hover-color);
@@ -279,8 +304,8 @@ L + ratio { }
 	padding-left: 1em;
 }
 
-.Markup li:last-child {
-    margin-bottom: 0.25em;
+.Markup li {
+	margin: 0.25em 0;
 }
 
 /*************/
@@ -296,6 +321,29 @@ L + ratio { }
 /***********/
 /** Media **/
 /***********/
+
+y12-audio {
+	display: contents;
+}
+y12-audio > audio {
+	display: block;
+	width: 100%;
+}
+y12-audio > a {
+	display: flex;
+	width: 100%;
+	align-items: center;
+	padding: 3px 0.5rem;
+	box-sizing: border-box;
+	height: 40px;
+	background: #555;
+	color: silver;
+	line-break: anywhere;
+	text-decoration: none;
+}
+y12-audio > a > span {
+	padding-left: 0.25rem;
+}
 
 .M-image-wrapper {
 	aspect-ratio: 16/9;
@@ -315,7 +363,13 @@ L + ratio { }
 	background: black;
 }
 
-.Markup media-player {
+y12-video > figure > span {
+	z-index: 1;
+	color: white;
+	overflow-y: scroll;
+}
+
+y12-video {
 	display: flex;
 	flex-flow: column;
 	max-width: 100%;
@@ -328,7 +382,7 @@ L + ratio { }
 	padding-right: 3px;
 }
 
-.M-audio-player, .M-video-player > .M-media-controls {
+y12-video > .M-media-controls {
 	border: 2px solid var(--T-border-color);
 	background: slategray;
 	border-radius: 0 3px 3px 3px;
@@ -336,7 +390,7 @@ L + ratio { }
 	width: max-content;
 }
 
-.Markup media-player > * {
+y12-video > * {
 	flex: none;
 }
 

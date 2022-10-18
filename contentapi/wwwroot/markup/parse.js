@@ -41,8 +41,9 @@ class Markup_12y2 { constructor() {
 	`{BOL}[\`]{3}(?!.*?[\`])${'CODE_BLOCK'}`
 	`[\`][^\`\n]*([\`]{2}[^\`\n]*)*[\`]?${'INLINE_CODE'}`
 	`([!]${'EMBED'})?\b(https?://|sbs:){URL_CHARS}{URL_FINAL}([(]{URL_CHARS}[)]({URL_CHARS}{URL_FINAL})?)?${'LINK'}`
+	`{BOL}[|][-][-+]*[-][|]{EOL}${'TABLE_DIVIDER'}` // `{BOL}[|][|][|]{EOL}${'TABLE_DIVIDER'}`
 	`{BOL} *[|]${'TABLE_START'}`
-	` *[|]${'TABLE_CELL'}`
+	` *[|][|]?${'TABLE_CELL'}`
 	`{BOL} *[-]${'LIST_ITEM'}`
 	()
 	
@@ -56,6 +57,7 @@ class Markup_12y2 { constructor() {
 	// creates 2 cells, with 2 lines each, rather than 2 rows.
 	// i.e: each added row will just append its contents to the cells
 	// of the previous row.
+	// maybe this should be an arg instead? on a row, to merge it with prev or etc..
 	
 
 	// all state is stored in these vars (and REGEX.lastIndex)
@@ -63,7 +65,7 @@ class Markup_12y2 { constructor() {
 	
 	// About __proto__ in object literals:
 	// https://tc39.es/ecma262/multipage/ecmascript-language-expressions.html#sec-runtime-semantics-propertydefinitionevaluation
-	const IS_BLOCK = {__proto__:null, code:1, divider:1, ROOT:1, heading:1, quote:1, table:1, table_cell:1, image:1, video:1, audio:1, spoiler:1, align:1, list:1, list_item:1, youtube:1, anchor:1}
+	const IS_BLOCK = {__proto__:null, code:1, divider:1, ROOT:1, heading:1, quote:1, table:1, table_cell:1, image:1, video:1, audio:1, spoiler:1, align:1, list:1, list_item:1, youtube:1, anchor:1, table_divider:1}
 	
 
 	// argument processing //
@@ -110,9 +112,9 @@ class Markup_12y2 { constructor() {
 			args.alt = rargs.named.alt
 		// todo: improve this
 		if (!type) {
-			if (/[.](mp3|ogg|wav|m4a)\b/i.test(url))
+			if (/[.](mp3|ogg|wav|m4a|flac)\b/i.test(url))
 				type = 'audio'
-			else if (/[.](mp4|mkv|mov)\b/i.test(url))
+			else if (/[.](mp4|mkv|mov|webm)\b/i.test(url))
 				type = 'video'
 			else if (/^https?:[/][/](?:www[.])?(?:youtube.com[/]watch[?]v=|youtu[.]be[/]|youtube.com[/]shorts[/])[\w-]{11}/.test(url)) {
 				// todo: accept [start-end] args maybe?
@@ -123,13 +125,18 @@ class Markup_12y2 { constructor() {
 			type = 'image'
 		return [type, args]
 	}
+	const is_color=(arg)=>{
+		return ['red', 'orange', 'yellow', 'green', 'blue', 'purple', 'gray'].includes(arg)
+	}
 	const process_cell_args=(rargs)=>{
 		let args = {}
 		for (let arg of rargs) {
 			let m
 			if ("*"===arg || "#"===arg)
 				args.header = true
-			else if (['red', 'orange', 'yellow', 'green', 'blue', 'purple', 'gray'].includes(arg))
+			else if ("-div"===arg)
+				args.div = true
+			else if (is_color(arg))
 				args.color = arg
 			else if (m = /^(\d*)x(\d*)$/.exec(arg)) {
 				let [, w, h] = m
@@ -168,6 +175,16 @@ class Markup_12y2 { constructor() {
 		return node
 	}
 	
+	// push text
+	const TEXT=(text)=>{
+		if ('block'===current.prev)
+			text = text.replace(/^ +/, "")
+		if (text!=="") {
+			current.content.push(text) // todo: merge with surrounding textnodes?
+			current.prev = 'text'
+		}
+	}
+	
 	const CLOSE=(cancel)=>{
 		let o = pop()
 		let type = o.type
@@ -191,6 +208,11 @@ class Markup_12y2 { constructor() {
 			}
 		} break; case 'null_env': {
 			current.content.push(...o.content)
+		} break; case 'table_divider': {
+			let above = get_last(current)
+			if (above && 'table'===above.type) {
+				above.args = {divider:true}
+			}
 		} break; case 'table_cell': {
 			// push cell if not empty
 			if (!cancel || o.content.length) {
@@ -231,21 +253,20 @@ class Markup_12y2 { constructor() {
 			push(dest, type, null, o.content)
 		} break; case 'table_row': {
 			let dest = get_last(current)
-			if (!dest || 'table'!==dest.type)
+			if (!dest || 'table'!==dest.type) {
 				dest = push(current, 'table', null, [])
+			} else {
+				if (dest.args && dest.args.divider) {
+					delete dest.args.divider
+					o.args.divider = true
+				}
+			}
 			push(dest, type, o.args, o.content)
 		} }
 		
 		current.prev = type in IS_BLOCK ? 'block' : o.prev
 	}
 	
-	// push text
-	const TEXT=(text)=>{
-		if (text!=="") {
-			current.content.push(text) // todo: merge with surrounding textnodes?
-			current.prev = 'text'
-		}
-	}
 	// push empty tag
 	const BLOCK=(type, args)=>{
 		current.content.push({type, args})
@@ -266,13 +287,13 @@ class Markup_12y2 { constructor() {
 	// parsing //
 	
 	const STYLE_START
-		= /^[\s][^\s,]|^['"}{(>][^\s,'"]/
+		= /^[\s][^\s,]|^['"}{(>|][^\s,'"]/
 	const STYLE_END
-		= /^[^\s,][-\s.,:;!?'"}{)<\\]/
+		= /^[^\s,][-\s.,:;!?'"}{)<\\|]/
 	const ITALIC_START
-		= /^[\s][^\s,/]|^['"}{(>][^\s,'"/]/
+		= /^[\s][^\s,/]|^['"}{(>|][^\s,'"/]/
 	const ITALIC_END
-		= /^[^\s,/][-\s.,:;!?'"}{)<\\]/
+		= /^[^\s,/][-\s.,:;!?'"}{)<\\|]/
 	
 	const find_style=(token)=>{
 		for (let c=current; 'style'===c.type; c=c.parent)
@@ -290,7 +311,7 @@ class Markup_12y2 { constructor() {
 	}
 	const ARG_REGEX = /.*?(?=])/y
 	const WORD_REGEX = /[^\s`^()+=\[\]{}\\|"';:,.<>/?!*]*/y
-	const CODE_REGEX = /(?: *([-\w.+#$ ]+?) *(?![^\n]))?\n?([^]*?)(?:```|$)/y // ack
+	const CODE_REGEX = /(?: *([-\w.+#$ ]+?) *(?![^\n]))?\n?([^]*?)(?:\n?```|$)/y // ack
 	
 	const parse=(text)=>{
 		let tree = {type: 'ROOT', content: [], prev: 'all_newline'}
@@ -363,8 +384,8 @@ class Markup_12y2 { constructor() {
 		
 		let match
 		let last = REGEX.lastIndex = 0
-		const NEVERMIND=()=>{
-			REGEX.lastIndex = match.index+1
+		const NEVERMIND=(index=match.index+1)=>{
+			REGEX.lastIndex = index
 		}
 		const ACCEPT=()=>{
 			TEXT(text.substring(last, match.index))
@@ -461,6 +482,11 @@ class Markup_12y2 { constructor() {
 					} else {
 						BLOCK('simple_link', args)
 					}
+				} break; case '\\bg': {
+					let color = rargs[0]
+					if (!is_color(color))
+						color = null
+					OPEN('background_color', {color})
 				}}
 			} break; case 'STYLE': {
 				let c = check_style(token, text.charAt(match.index-1)||"\n", text.charAt(REGEX.lastIndex)||"\n")
@@ -485,16 +511,35 @@ class Markup_12y2 { constructor() {
 						while (current!==c)
 							CLOSE(true)
 						CLOSE() // cell
+						// TODO: HACK
+						if (/^ *[|][|]/.test(token)) {
+							let last = current.content[current.content.length-1]
+							last.args.div = true
+						}
 						// we don't know whether these are row args or cell args,
 						// so just pass the raw args directly, and parse them later.
 						OPEN('table_cell', rargs)
 						break
 					}
 					if ('style'!==c.type) {
-						NEVERMIND()
+						// normally NEVERMIND skips one char,
+						// e.g. if we parse "abc" and that matches but gets rejected, it'll try parsing at "bc".
+						// but table cell tokens can look like this: "   ||"
+						// if we skip 1 char (a space), it would try to parse a table cell again several times.
+						// so instead we skip to the end of the token because we know it's safe in this case.
+						NEVERMIND(REGEX.lastIndex)
 						continue main
 					}
 				}
+			} break; case 'TABLE_DIVIDER': {
+				//skip_spaces()
+				let tbl = get_last(current)
+				if (!tbl || 'table'!==tbl.type) {
+					NEVERMIND()
+					continue main
+				}
+				ACCEPT()
+				OPEN('table_divider')
 			} break; case 'TABLE_START': {
 				read_args()
 				skip_spaces()
@@ -553,8 +598,10 @@ class Markup_12y2 { constructor() {
 					// todo: close lists too
 					//current.content.push("")
 					//current.prev = 'block'
-				} else
-					TEXT(token.substring(1))
+				} else {
+					current.content.push(token.slice(1))
+					current.prev = 'text'
+				}
 			} break; case 'QUOTE': {
 				read_args()
 				read_body(true)
@@ -570,7 +617,7 @@ class Markup_12y2 { constructor() {
 				BLOCK('code', {text:code, lang})
 			} break; case 'INLINE_CODE': {
 				ACCEPT()
-				BLOCK('icode', {text: token.replace(/`(`)?/g, "$1")})
+				BLOCK('icode', {text: token.replace(/^`|`$/g, "").replace(/``/g, "`")})
 			} break; case 'EMBED': {
 				read_args()
 				ACCEPT()
