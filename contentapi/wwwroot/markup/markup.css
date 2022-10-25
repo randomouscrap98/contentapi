@@ -105,10 +105,7 @@ L + ratio { }
 	display: block;
 	object-fit: scale-down;
 	
-	max-width: -webkit-fill-available;
-	max-width: -moz-available;
-	max-width: stretch;
-	
+	max-width: calc(100% - 2px);
 	width: auto;
 }
 

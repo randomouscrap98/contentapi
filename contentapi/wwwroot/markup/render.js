@@ -111,8 +111,6 @@ class Markup_Render_Dom { constructor() {
 			// https://html.spec.whatwg.org/multipage/images.html#img-available
 			if (e.naturalHeight)
 				this.set_size(e, 'size')
-			else if (e.complete)
-				e.dataset.state = 'loaded'
 			return e
 		}.bind({
 			elem: 𐀶`<img data-state=loading data-shrink tabindex=0>`,

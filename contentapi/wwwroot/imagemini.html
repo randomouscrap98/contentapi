@@ -21,6 +21,23 @@ function getPage() { return Number(page.textContent); }
 function changePage(amount) { setPage(getPage() + amount); }
 function setPage(exact) { page.textContent = String(Math.max(0, exact)); }
 
+const IMAGEMINISETTINGSKEY = "contentapi_defimpl_imagemini";
+function GetImageMiniSettings() 
+{ 
+    var raw = localStorage.getItem(IMAGEMINISETTINGSKEY); 
+    return raw ? JSON.parse(raw) : {};
+}
+function SetImageMiniSettings(settings) 
+{ 
+    localStorage.setItem(IMAGEMINISETTINGSKEY, JSON.stringify(settings)); 
+}
+function SetImageMiniSettingValue(key, value)
+{
+    var settings = GetImageMiniSettings();
+    settings[key] = value;
+    SetImageMiniSettings(settings);
+}
+
 window.onload = function()
 {
     // You should try to create only one API object for your entire application (or at least, one per session)
@@ -32,9 +49,15 @@ window.onload = function()
         console.log("Error: ", e);
     };
 
+    var settings = GetImageMiniSettings();
+
+    if(settings.bucket) bucket.value = settings.bucket;
+    if(settings.quantize) quantize.value = settings.quantize;
+
     reloadList();
 
-    bucket.onblur = () => { setPage(0); reloadList(); };
+    bucket.onblur = () => { setPage(0); reloadList(); SetImageMiniSettingValue("bucket", bucket.value)};
+    quantize.onchange = () => { SetImageMiniSettingValue("quantize", quantize.value); }
     forward.onclick = () => { changePage(1); reloadList(); };
     back.onclick = () => { changePage(-1); reloadList(); };
 
@@ -48,28 +71,65 @@ window.onload = function()
             if (file && (/^image\//).test(file.type))
             {
                 console.log("PASTE WAS FILE, UPLOADING...");
-                var form = new FormData();
-                form.append("file", file);
-                if(quantize.value)
-                {
-                    console.log(`Quantizing to ${quantize.value}`);
-                    form.append("quantize", quantize.value);
-                }
-                if(bucket.value)
-                {
-                    console.log(`Uploading to bucket ${bucket.value}`);
-                    form.append("globalPerms", "");
-                    form.append("values[bucket]", bucket.value);
-                }
-                api.UploadFile(form, new ApiHandler(d => 
-                {
-                    console.log("Upload successful. ID: " + d.result.id);
-                    reloadList();
-                }));
+
+                uploadImage(form);
             }
         }
     });
+
+    var doNothing = (e) => { e.stopPropagation(); e.preventDefault(); }
+    document.addEventListener("dragenter", doNothing);
+    document.addEventListener("dragover", doNothing);
+    document.addEventListener("drop", (e) =>
+    {
+        doNothing(e);
+
+        const dt = e.dataTransfer;
+        const files = dt.files;
+
+        if(!files.length)
+        {
+            console.warn("No files dragged");
+            return;
+        }
+        else if(!files[0].type.startsWith('image/'))
+        {
+            console.warn("File doesn't appear to be an image!");
+            return;
+        }
+
+        uploadImage(files[0]);
+    });
+
+    fileinput.addEventListener("input", () =>
+    {
+        if(!fileinput.files.length)
+        {
+            console.warn("No file selected");
+            return;
+        }
+        uploadImage(fileinput.files[0]);
+    });
 };
+
+function uploadImage(file)
+{
+    var form = new FormData();
+    form.append("file", file);
+    if (quantize.value) {
+        console.log(`Quantizing to ${quantize.value}`);
+        form.append("quantize", quantize.value);
+    }
+    if (bucket.value) {
+        console.log(`Uploading to bucket ${bucket.value}`);
+        form.append("globalPerms", "");
+        form.append("values[bucket]", bucket.value);
+    }
+    api.UploadFile(form, new ApiHandler(d => {
+        console.log("Upload successful. ID: " + d.result.id);
+        reloadList();
+    }));
+}
 
 function reloadList()
 {
@@ -174,9 +234,10 @@ img {
 
 <body>
     <div id="main">
-        <span>paste img in here</span>
         <input id="bucket" placeholder="bucket (private)" autocomplete="on">
         <input id="quantize" placeholder="quantize" autocomplete="on">
+        <input id="fileinput" type="file" accept="image/*">
+        <span>or drag/paste img here</span>
         <div id="imagelist"></div>
         <div id="controls">
             <button id="back">&lt;</button>
