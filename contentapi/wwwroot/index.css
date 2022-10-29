@@ -18,6 +18,11 @@ textarea {
     min-height: 5em;
 }
 
+#page-editor-text {
+    min-height: 25em;
+    max-width: 100%;
+}
+
 header {
     margin-bottom: 0.5em;
     padding: 0.25em 0.5em;
