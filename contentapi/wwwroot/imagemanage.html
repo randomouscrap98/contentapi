@@ -16,7 +16,8 @@ var userSelf;
 var SearchState = {
     ipp : 100,
     isize : 200,
-    id : 0
+    id : 0,
+    own : 0
 };
 
 //duplicate from index.js
@@ -30,6 +31,7 @@ window.onload = function()
     SetState_Number('ipp', p);
     SetState_Number('isize', p);
     SetState_Number('id', p);
+    SetState_Bool('own', p);
 
     //Then, set the nav and form values from the state (but only AFTER images are loaded, we won't know what the 'next' images will be otherwise)
     reset.onclick = () =>
@@ -58,6 +60,11 @@ window.onload = function()
     {
         values["maxid"] = SearchState.id;
         request.query += " and id <= @maxid";
+    }
+    if(SearchState.own)
+    {
+        values["me"] = api.GetUidFromToken(GetToken());
+        request.query += " and createUserId = @me";
     }
 
     var search = new RequestParameter(values, [ request ]);
@@ -88,6 +95,17 @@ function SetState_Number(name, params)
     var input = document.getElementById(`stateform_${name}`);
     if(input) input.value = SearchState[name];
     else console.warn(`Somehow couldn't find form input for state '${name}'`);
+}
+
+function SetState_Bool(name, params)
+{
+    if(params.has(name))
+        SearchState[name] = params.get(name) ? true : false;
+    var input = document.getElementById(`stateform_${name}`);
+    if(input) 
+        input.checked = SearchState[name];
+    else 
+        console.warn(`Somehow couldn't find form input for state '${name}'`);
 }
 
 function CreateInput(name, value)
@@ -291,6 +309,8 @@ input:disabled {
             <input name="ipp" id="stateform_ipp">
             <label for="stateform_isize">Images size:</label>
             <input name="isize" id="stateform_isize">
+            <label for="stateform_own">Only mine:</label>
+            <input name="own" type="checkbox" id="stateform_own">
             <input name="id" id="stateform_id" type="hidden" value="0">
             <input type="submit" value="Update">
             <button type="button" id="reset">Reset (beginning)</button>
