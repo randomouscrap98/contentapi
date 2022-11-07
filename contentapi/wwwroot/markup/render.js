@@ -43,6 +43,28 @@ class Markup_Render_Dom { constructor() {
 	
 	let intersection_observer, preview
 	
+	const load_image = (e, src)=>{
+		const set_size = (state)=>{
+			e.width = e.naturalWidth
+			e.height = e.naturalHeight
+			e.dataset.state = state
+			e.style.setProperty('--width', e.naturalWidth)
+			e.style.setProperty('--height', e.naturalHeight)
+		}
+		e.src = src
+		// check whether the image is "available" (i.e. size is known) by looking at naturalHeight
+		// https://html.spec.whatwg.org/multipage/images.html#img-available
+		// this will happen here if the image is VERY cached, i guess
+		if (e.naturalHeight)
+			set_size('loaded')
+		else // otherwise wait for load
+			e.decode().then(ok=>{
+				set_size('loaded')
+			}, no=>{
+				e.dataset.state = 'error'
+			})
+	}
+	
 	let CREATE = {
 		__proto__: null,
 		
@@ -82,8 +104,13 @@ class Markup_Render_Dom { constructor() {
 		}.bind(𐀶`<a href="" class='M-link'>`),
 		
 		image: function({url, alt, width, height}) {
-			let e = this.elem()
+			let e = document.createElement('img')
+			e.tabIndex = 0
+			e.dataset.state = "loading"
+			e.dataset.shrink = ""
+			
 			let src = filter_url(url, 'image')
+			
 			if (alt!=null) e.alt = e.title = alt
 			if (width) {
 				e.width = width
@@ -94,34 +121,17 @@ class Markup_Render_Dom { constructor() {
 				e.style.setProperty('--height', height)
 				e.dataset.state = 'size'
 			}
+			
 			// loading maybe
-			e.onerror = (event)=>{
-				event.target.dataset.state = 'error'
-			}
-			e.onload = (event)=>{
-				this.set_size(event.target, 'loaded')
-			}
 			if (intersection_observer) {
 				e.dataset.src = src
 				intersection_observer.observe(e)
+				intersection_observer._x_load = load_image//HACK
 			} else {
-				e.src = src
+				load_image(e, src)
 			}
-			// check whether the image is "available" (i.e. size is known)
-			// https://html.spec.whatwg.org/multipage/images.html#img-available
-			if (e.naturalHeight)
-				this.set_size(e, 'size')
 			return e
-		}.bind({
-			elem: 𐀶`<img data-state=loading data-shrink tabindex=0>`,
-			set_size: (e, state)=>{
-				e.height = e.naturalHeight
-				e.width = e.naturalWidth
-				e.dataset.state = state
-				e.style.setProperty('--width', e.naturalWidth)
-				e.style.setProperty('--height', e.naturalHeight)
-			},
-		}),
+		},
 		
 		error: 𐀶`<div class='error'><code>🕯error🕯</code>🕯message🕯<pre>🕯stack🕯`,
 		

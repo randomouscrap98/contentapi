@@ -1,0 +1,309 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+    <script src="api.js"></script>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width">
+    <script>
+const ATTR_MODIFIED = "data-modified";
+
+var api;
+
+//The default values for searching are set here, but the variable is used to indicate
+//the CURRENT state of searching (so the values are substituted from the URL)
+var SearchState = {
+    ipp : 100,
+    isize : 300,
+    id : 0
+};
+
+//duplicate from index.js
+const TOKENKEY = "contentapi_defimpl_userkey";
+function GetToken() { return localStorage.getItem(TOKENKEY); }
+
+window.onload = function()
+{
+    //Setup the internal state immediately so it can be used for searches/display/etc
+    var p = new URLSearchParams(location.search);
+    SetState_Number('ipp', p);
+    SetState_Number('isize', p);
+    SetState_Number('id', p);
+
+    //Then, set the nav and form values from the state (but only AFTER images are loaded, we won't know what the 'next' images will be otherwise)
+    reset.onclick = () =>
+    {
+        stateform_id.value = 0;
+        stateform.submit();
+    };
+
+    // You should try to create only one API object for your entire application (or at least, one per session)
+    api = new Api(null, GetToken); //Just a global api object, whatever. Null means use the default endpoint (local to self)
+    // Set the default error handler for all REGULAR requests (not websocket) to show an alert to the user.
+    api.default_handler.error = e =>
+    {
+        alert(`Error ${e.status_code}: ${e.message}`);
+        console.log("Error: ", e);
+    };
+
+    var values = { type : 3 };
+    var request = new RequestSearchParameter("content", "*", "contentType = @type", "id_desc", SearchState.ipp)
+
+    if(SearchState.id)
+    {
+        values["maxid"] = SearchState.id;
+        request.query += " and id <= @maxid";
+    }
+
+    var search = new RequestParameter(values, [ request ]);
+
+    api.Search(search, new ApiHandler(dd =>
+    {
+        //Now that we know the max id, do some stuff
+        older.onclick = () =>
+        {
+            stateform_id.value = Math.min(...dd.result.objects.content.map(x => x.id)) - 1;
+            stateform.submit();
+        };
+        older.removeAttribute("hidden");
+        dd.result.objects.content.forEach(x => {
+            imagelist.appendChild(CreateImageElement(x));
+        });
+    }));
+};
+
+//Both set the global state AND the data on the form
+function SetState_Number(name, params)
+{
+    if(params.has(name))
+    {
+        var n = Number(params.get(name));
+        if(n) SearchState[name] = n;
+    }
+    var input = document.getElementById(`stateform_${name}`);
+    if(input) input.value = SearchState[name];
+    else console.warn(`Somehow couldn't find form input for state '${name}'`);
+}
+
+function CreateInput(name, value)
+{
+    var fragment = document.createDocumentFragment();
+    var title = document.createElement("div");
+    title.className = "title";
+    title.textContent = `${name}:`;
+    var input = document.createElement("input");
+    input.setAttribute("type", "text");
+    input.setAttribute("data-original", value);
+    input.setAttribute("name", name);
+    input.value = value;
+    input.oninput = (e) =>
+    {
+        if(input.value !== input.getAttribute("data-original"))
+            input.setAttribute(ATTR_MODIFIED, "");
+        else
+            input.removeAttribute(ATTR_MODIFIED);
+    };
+    fragment.appendChild(title);
+    fragment.appendChild(input);
+    return fragment;
+}
+
+function CreateInfoKeyValue(key, value)
+{
+    var fragment = document.createDocumentFragment();
+    var name = document.createElement("td");
+    name.className = "key";
+    name.textContent = `${key}:`;
+    var data = document .createElement("td");
+    data.className = "value";
+    data.textContent = value;
+    fragment.appendChild(name);
+    fragment.appendChild(data);
+    return fragment;
+}
+
+function CreateInfoTable(content)
+{
+    var table = document.createElement("table");
+    table.className = "info";
+
+    var row = document.createElement("tr");
+    row.appendChild(CreateInfoKeyValue('id', content['id']));
+    row.appendChild(CreateInfoKeyValue('hash', content['hash']));
+    row.appendChild(CreateInfoKeyValue('date', (new Date(content['createDate'])).toLocaleDateString()));
+    table.appendChild(row);
+
+    return table;
+}
+
+function CreateImageElement(content)
+{
+    var el = document.createElement("div");
+    el.className = "image";
+    var img = document.createElement("img");
+    img.src = api.ResolveRelativeUrl(api.GetFileUrl(content.hash, new FileModifyParameter(SearchState.isize)));
+    var link = document.createElement("a");
+    link.href = api.ResolveRelativeUrl(api.GetFileUrl(content.hash));
+    link.append(img);
+    link.target="_blank";
+    link.className = "imagelink";
+    var dat = document.createElement("form");
+    dat.className = "data";
+    var submit = document.createElement("input");
+    submit.setAttribute("type", "submit");
+    submit.value = "Update";
+    dat.onsubmit = (e) =>
+    {
+        submit.disabled = true;
+
+        e.preventDefault();
+        //We have the original content; just keep abusing the value
+        var name = dat.querySelector(`[name="name"]`);
+        var keywords = dat.querySelector(`[name="keywords"]`);
+        content.name = name.value;
+        content.keywords = keywords.value.split(' ').filter(x => x);
+
+        api.WriteType(APICONST.WRITETYPES.CONTENT, content, new ApiHandler(d => {
+            var newImage = CreateImageElement(d.result);
+            el.replaceWith(newImage);
+        }));
+    };
+    //dat.setAttribute("data-raw", JSON.stringify(content));
+    dat.appendChild(CreateInput("name", content.name));
+    dat.appendChild(CreateInput("keywords", content.keywords.join(" ")));
+    dat.appendChild(submit);
+    el.appendChild(link);
+    if(api.IsPrivate(content))
+    {
+        var lock = document.createElement("div");
+        lock.innerHTML = "&#128274;";
+        lock.className = "private";
+        el.appendChild(lock);
+        el.setAttribute("data-private", "true");
+    }
+    el.appendChild(CreateInfoTable(content));
+    el.appendChild(dat);
+    return el;
+}
+
+
+function createImage(content)
+{
+    var container = document.createElement("a");
+    var image = document.createElement("img");
+    image.src = api.ResolveRelativeUrl(api.GetFileUrl(content.hash, new FileModifyParameter(IMAGESIZE)));
+    container.href = api.ResolveRelativeUrl(api.GetFileUrl(content.hash));
+    container.append(image);
+    container.target="_blank";
+    container.className = "imagecontainer";
+    container.title = new Date(content.createDate).toLocaleString();
+
+    if(api.IsPrivate(content))
+    {
+        var lock = document.createElement("div");
+        lock.innerHTML = "&#128274;";
+        lock.className = "private";
+        container.appendChild(lock);
+        container.setAttribute("data-private", "true");
+    }
+
+    return container;
+}
+
+    </script>
+
+    <style>
+body {
+    font-family: sans-serif;
+}
+#imagelist {
+    padding: 1em;
+    background-color: #f5fcff;
+    border-radius: 1em;
+    margin: 1em 0;
+}
+#stateform {
+    border-radius: 0.5em;
+    padding: 0.5em;
+    background-color: #d7edff; /*#75c1ff;*/
+}
+.image {
+    display: inline-block;
+    background-color: #d7edff;/*#75c1ff;*/
+    margin: 0.5em;
+    padding: 0.5em;
+    border-radius: 0.5em;
+    min-width: 15em;
+}
+.image img {
+    border: 0.2em solid #0d91fc;
+    border-radius: 0.2em;
+    display: block;
+    margin: auto;
+    /*margin-bottom: 0.4em;*/
+}
+.info {
+    margin: auto;
+    /*float: right;*/
+}
+.info .key {
+    text-align: right;
+    font-size: 0.6em;
+    color: cornflowerblue;
+}
+.info .value {
+    font-weight: bold;
+    font-size: 0.6em;
+    color: blue;
+}
+.data .title {
+    /*font-weight: bold;*/
+    font-size: 0.8em;
+    color: cornflowerblue;
+}
+.data input {
+    width: 100%;
+    box-sizing: border-box;
+    margin-bottom: 0.2em;
+    border-radius: 2px;
+    border: 1px solid cornflowerblue;
+}
+.data input[type='submit'] {
+    background-color: cornflowerblue;
+    color: white;
+    border: 1px solid blue;
+    border-radius: 2px;
+}
+input[data-modified] {
+    border: 1px solid red;
+    background-color: #fff1ed;
+}
+input:disabled {
+    opacity: 0.5;
+}
+    </style>
+
+</head>
+
+<body>
+    <div id="main">
+        <form id="stateform" method="GET">
+            <label for="stateform_ipp">Images per page:</label>
+            <input name="ipp" id="stateform_ipp">
+            <label for="stateform_isize">Images size:</label>
+            <input name="isize" id="stateform_isize">
+            <input name="id" id="stateform_id" type="hidden" value="0">
+            <input type="submit" value="Set">
+        </form>
+        <div id="imagelist">
+
+        </div>
+        <!-- Navigation won't be specifically pages, it will be an amount to display and -->
+        <div id="navigation">
+            <button id="reset">Reset (beginning)</a>
+            <button id="older" hidden="">Older Images (next)</a>
+        </div>
+    </div>
+</body>
+
+</html>
