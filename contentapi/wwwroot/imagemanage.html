@@ -14,7 +14,7 @@ var api;
 //the CURRENT state of searching (so the values are substituted from the URL)
 var SearchState = {
     ipp : 100,
-    isize : 300,
+    isize : 200,
     id : 0
 };
 
@@ -186,30 +186,6 @@ function CreateImageElement(content)
     return el;
 }
 
-
-function createImage(content)
-{
-    var container = document.createElement("a");
-    var image = document.createElement("img");
-    image.src = api.ResolveRelativeUrl(api.GetFileUrl(content.hash, new FileModifyParameter(IMAGESIZE)));
-    container.href = api.ResolveRelativeUrl(api.GetFileUrl(content.hash));
-    container.append(image);
-    container.target="_blank";
-    container.className = "imagecontainer";
-    container.title = new Date(content.createDate).toLocaleString();
-
-    if(api.IsPrivate(content))
-    {
-        var lock = document.createElement("div");
-        lock.innerHTML = "&#128274;";
-        lock.className = "private";
-        container.appendChild(lock);
-        container.setAttribute("data-private", "true");
-    }
-
-    return container;
-}
-
     </script>
 
     <style>
@@ -241,6 +217,12 @@ body {
     display: block;
     margin: auto;
     /*margin-bottom: 0.4em;*/
+}
+.image[data-private] img {
+    border-color: red;
+}
+.private {
+    float: right;
 }
 .info {
     margin: auto;
@@ -293,15 +275,17 @@ input:disabled {
             <label for="stateform_isize">Images size:</label>
             <input name="isize" id="stateform_isize">
             <input name="id" id="stateform_id" type="hidden" value="0">
-            <input type="submit" value="Set">
+            <input type="submit" value="Update">
+            <!--<div id="navigation">-->
+                <button type="button" id="reset">Reset (beginning)</button>
+                <button type="button" id="older" hidden="">Older Images (next)</button>
+            <!--</div>-->
         </form>
+        <!-- Navigation won't be specifically pages, it will be an amount to display and -->
+        <!--<div id="navigation">
+        </div>-->
         <div id="imagelist">
 
-        </div>
-        <!-- Navigation won't be specifically pages, it will be an amount to display and -->
-        <div id="navigation">
-            <button id="reset">Reset (beginning)</a>
-            <button id="older" hidden="">Older Images (next)</a>
         </div>
     </div>
 </body>
