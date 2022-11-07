@@ -9,6 +9,7 @@
 const ATTR_MODIFIED = "data-modified";
 
 var api;
+var userSelf;
 
 //The default values for searching are set here, but the variable is used to indicate
 //the CURRENT state of searching (so the values are substituted from the URL)
@@ -45,6 +46,10 @@ window.onload = function()
         alert(`Error ${e.status_code}: ${e.message}`);
         console.log("Error: ", e);
     };
+
+    api.UserSelf(new ApiHandler(
+        d => { userSelf = d.result; }, 
+        err => { console.warn("Not logged in?"); userSelf = {id:0}; }));
 
     var values = { type : 3 };
     var request = new RequestSearchParameter("content", "*", "contentType = @type", "id_desc", SearchState.ipp)
@@ -168,19 +173,24 @@ function CreateImageElement(content)
             el.replaceWith(newImage);
         }));
     };
+    var privacy = document.createElement("div");
+    privacy.className = "privacy";
     //dat.setAttribute("data-raw", JSON.stringify(content));
     dat.appendChild(CreateInput("name", content.name));
     dat.appendChild(CreateInput("keywords", content.keywords.join(" ")));
     dat.appendChild(submit);
     el.appendChild(link);
+    if (userSelf && !api.IsAllowed(content, userSelf.id, "U")) 
+    {
+        privacy.innerHTML += "❌";
+        el.setAttribute("data-noedit", "true");
+    }
     if(api.IsPrivate(content))
     {
-        var lock = document.createElement("div");
-        lock.innerHTML = "&#128274;";
-        lock.className = "private";
-        el.appendChild(lock);
+        privacy.innerHTML += "&#128274;";
         el.setAttribute("data-private", "true");
     }
+    el.appendChild(privacy);
     el.appendChild(CreateInfoTable(content));
     el.appendChild(dat);
     return el;
@@ -218,10 +228,7 @@ body {
     margin: auto;
     /*margin-bottom: 0.4em;*/
 }
-.image[data-private] img {
-    border-color: red;
-}
-.private {
+.privacy {
     float: right;
 }
 .info {
@@ -263,6 +270,16 @@ input[data-modified] {
 input:disabled {
     opacity: 0.5;
 }
+.image[data-private] img {
+    border-color: red;
+}
+.image[data-noedit] {
+    background-color: #EEE;
+}
+.image[data-noedit] .data input[type='submit'] {
+    background-color: #999;
+    border-color: #666;
+}
     </style>
 
 </head>
@@ -276,14 +293,9 @@ input:disabled {
             <input name="isize" id="stateform_isize">
             <input name="id" id="stateform_id" type="hidden" value="0">
             <input type="submit" value="Update">
-            <!--<div id="navigation">-->
-                <button type="button" id="reset">Reset (beginning)</button>
-                <button type="button" id="older" hidden="">Older Images (next)</button>
-            <!--</div>-->
+            <button type="button" id="reset">Reset (beginning)</button>
+            <button type="button" id="older" hidden="">Older Images (next)</button>
         </form>
-        <!-- Navigation won't be specifically pages, it will be an amount to display and -->
-        <!--<div id="navigation">
-        </div>-->
         <div id="imagelist">
 
         </div>
