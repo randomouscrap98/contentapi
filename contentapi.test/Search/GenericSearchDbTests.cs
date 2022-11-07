@@ -5,7 +5,6 @@ using System.Linq;
 using System.Threading.Tasks;
 using contentapi.Db;
 using contentapi.Search;
-using contentapi.Utilities;
 using contentapi.data;
 using contentapi.data.Views;
 using Xunit;
@@ -1378,6 +1377,35 @@ public class GenericSearchDbTests : ViewUnitTestBase
             Assert.True(x.contentId != 0);
             Assert.True(x.createUserId != 0);
             Assert.True(x.count > 0); //THIS IS TRUE because a groupby would not include groups that don't exist!
+        });
+    }
+
+    [Theory]
+    [InlineData(0)]
+    [InlineData((int)UserVariations.Super)]
+    [InlineData((int)UserVariations.Super + 1)]
+    public async Task GenericSearch_Search_KeywordAggregateSimple(long userId, string query = "")
+    {
+        var search = new SearchRequests();
+        search.requests.Add(new SearchRequest()
+        {
+            type = "keyword_aggregate",
+            fields = "*",
+            query = query
+        });
+
+        var result = (userId == 0 ? (await service.SearchUnrestricted(search)) : (await service.Search(search, userId)))
+            .objects["keyword_aggregate"];
+        var castResult = service.ToStronglyTyped<KeywordAggregateView>(result);
+
+        //There should ALWAYS be results
+        Assert.True(castResult.Count > 0, "There were no results!");
+
+        //This is a weird little thing to ensure the grouping works
+        Assert.Equal(castResult.Select(x => x.value).Distinct().Count(), castResult.Count);
+        Assert.All(castResult, x =>
+        {
+            Assert.True(x.count > 0);
         });
     }
 

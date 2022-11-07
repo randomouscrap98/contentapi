@@ -189,4 +189,87 @@ public class SpecializedSearchTests : ViewUnitTestBase //, IClassFixture<DbUnitT
             Assert.DoesNotContain(writtenComment.id, found.Select(x => x.id));
         }
     }
+
+    //Specialized keyword tests to make sure permissions and queries are working
+    [Theory]
+    [InlineData(0, AllAccessContentId, true)]
+    [InlineData(0, SuperAccessContentId, false)]
+    [InlineData(NormalUserId, AllAccessContentId, true)]
+    [InlineData(NormalUserId, SuperAccessContentId, false)]
+    [InlineData(SuperUserId, AllAccessContentId, true)]
+    [InlineData(SuperUserId, SuperAccessContentId, true)]
+    public async Task GenericSearch_Search_KeywordAggregate_Permissions(long userId, long contentId, bool allowed)
+    {
+        //First, update some content with some special keywords
+        var content = await searcher.GetById<ContentView>(RequestType.content, contentId); //SearchSingleTypeUnrestricted<ContentView>()
+        content.keywords = new List<string> { "mega", "hecking", "chonker" }; //note that we REPLACE the existing keywords
+        var writtenContent = await writer.WriteAsync(content, SuperUserId);
+
+        //OK, now that there are keywords, go try to get them (this ALSO tests the contentId get)
+        var keywords = await searcher.SearchSingleType<KeywordAggregateView>(userId, new SearchRequest()
+        {
+            type = nameof(RequestType.keyword_aggregate),
+            fields = "*",
+            query = "contentId = {{" + contentId + "}}"
+        });
+
+        //No matter what, we can always assert that there are no OTHER keywords in it...
+        Assert.All(keywords, x =>
+        {
+            Assert.Contains(x.value, writtenContent.keywords);
+            Assert.Equal(1, x.count);
+        });
+
+        if(allowed)
+        {
+            Assert.True(keywords.Count > 0);
+            Assert.Equal(writtenContent.keywords.Count, keywords.Count);
+            Assert.Equal(new HashSet<string>(writtenContent.keywords), new HashSet<string>(keywords.Select(x => x.value)));
+        }
+        else
+        {
+            Assert.Empty(keywords);
+        }
+    }
+
+    //Special test to ensure value searching works
+    [Theory]
+    [InlineData("", "", "mega, hecking, chonker")]
+    [InlineData("value LIKE @thing", "m%", "mega")]
+    [InlineData("value LIKE @thing", "%i%", "hecking")]
+    [InlineData("value = @thing", "chonker", "chonker")]
+    [InlineData("value LIKE @thing", "%c%", "hecking, chonker")]
+    public async Task GenericSearch_Search_KeywordAggregate_ValueQuery(string query, string value, string results)
+    {
+        var expected = results.Split(",", StringSplitOptions.RemoveEmptyEntries).Select(x => x.Trim()).ToList();
+
+        //First, create some content with some special keywords
+        var content = GetNewPageView();
+        content.keywords = new List<string> { "mega", "hecking", "chonker" }; //note that we REPLACE the existing keywords
+        var writtenContent = await writer.WriteAsync(content, SuperUserId);
+
+        var queryParts = new List<string> { "contentId = {{" + writtenContent.id + "}}" };
+
+        if(!string.IsNullOrEmpty(query))
+            queryParts.Add(query);
+
+        //OK, now that there are keywords, go try to get them (this ALSO tests the contentId get)
+        var keywords = await searcher.SearchSingleType<KeywordAggregateView>(NormalUserId, new SearchRequest()
+        {
+            type = nameof(RequestType.keyword_aggregate),
+            fields = "*",
+            query = String.Join(" and ", queryParts)
+        }, new Dictionary<string, object>() { {"thing", value} });
+
+        //No matter what, we can always assert that there are no OTHER keywords in it...
+        Assert.All(keywords, x =>
+        {
+            Assert.Contains(x.value, writtenContent.keywords);
+            Assert.Equal(1, x.count);
+        });
+
+        //Now a simple test: are the results the same as the ones we expect?
+        Assert.Equal(new HashSet<string>(expected), new HashSet<string>(keywords.Select(x => x.value)));
+        Assert.Equal(expected.Count, keywords.Count);
+    }
 }

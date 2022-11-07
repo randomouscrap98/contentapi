@@ -17,7 +17,8 @@ var SearchState = {
     ipp : 100,
     isize : 200,
     id : 0,
-    own : 0
+    own : 0,
+    oldest: 0
 };
 
 //duplicate from index.js
@@ -32,6 +33,7 @@ window.onload = function()
     SetState_Number('isize', p);
     SetState_Number('id', p);
     SetState_Bool('own', p);
+    SetState_Bool('oldest', p);
 
     //Then, set the nav and form values from the state (but only AFTER images are loaded, we won't know what the 'next' images will be otherwise)
     reset.onclick = () =>
@@ -53,13 +55,29 @@ window.onload = function()
         d => { userSelf = d.result; }, 
         err => { console.warn("Not logged in?"); userSelf = {id:0}; }));
 
+    ReloadImages();
+};
+
+function ToggleAttribute(element, attribute, value)
+{
+    if(element.hasAttribute(attribute)) { element.removeAttribute(attribute); return false; }
+    else { element.setAttribute(attribute, value || ""); return true; }
+}
+
+// reset the image list based on the current SearchState configuration
+function ReloadImages()
+{
     var values = { type : 3 };
     var request = new RequestSearchParameter("content", "*", "contentType = @type", "id_desc", SearchState.ipp)
+
+    if(SearchState.oldest)
+        request.order = "id";
 
     if(SearchState.id)
     {
         values["maxid"] = SearchState.id;
-        request.query += " and id <= @maxid";
+        if(SearchState.oldest) request.query += " and id >= @maxid";
+        else request.query += " and id <= @maxid";
     }
     if(SearchState.own)
     {
@@ -67,14 +85,22 @@ window.onload = function()
         request.query += " and createUserId = @me";
     }
 
-    var search = new RequestParameter(values, [ request ]);
+    var userRequest = new RequestSearchParameter("user", "id,username", "id in @content.createUserId");
+    var search = new RequestParameter(values, [ request, userRequest ]);
 
+    console.debug("Image search:", search);
+
+    imagelist.innerHTML = "";
+    older.setAttribute("hidden", "");
     api.Search(search, new ApiHandler(dd =>
     {
+        api.AutoLinkUsers(dd.result.objects.content, dd.result.objects.user);
         //Now that we know the max id, do some stuff
         older.onclick = () =>
         {
-            stateform_id.value = Math.min(...dd.result.objects.content.map(x => x.id)) - 1;
+            var ids = dd.result.objects.content.map(x => x.id);
+            if(SearchState.oldest) stateform_id.value = Math.max(...ids) + 1;
+            else stateform_id.value = Math.min(...ids) - 1;
             stateform.submit();
         };
         older.removeAttribute("hidden");
@@ -82,7 +108,7 @@ window.onload = function()
             imagelist.appendChild(CreateImageElement(x));
         });
     }));
-};
+}
 
 //Both set the global state AND the data on the form
 function SetState_Number(name, params)
@@ -131,7 +157,7 @@ function CreateInput(name, value)
     return fragment;
 }
 
-function CreateInfoKeyValue(key, value)
+function CreateInfoKeyValue(key, value, raw)
 {
     var fragment = document.createDocumentFragment();
     var name = document.createElement("td");
@@ -139,7 +165,8 @@ function CreateInfoKeyValue(key, value)
     name.textContent = `${key}:`;
     var data = document .createElement("td");
     data.className = "value";
-    data.textContent = value;
+    if(raw) data.innerHTML = value;
+    else data.textContent = value;
     fragment.appendChild(name);
     fragment.appendChild(data);
     return fragment;
@@ -150,10 +177,46 @@ function CreateInfoTable(content)
     var table = document.createElement("table");
     table.className = "info";
 
+    var meta = JSON.parse(content.meta || "{}");
     var row = document.createElement("tr");
-    row.appendChild(CreateInfoKeyValue('id', content['id']));
-    row.appendChild(CreateInfoKeyValue('hash', content['hash']));
-    row.appendChild(CreateInfoKeyValue('date', (new Date(content['createDate'])).toLocaleDateString()));
+    row.appendChild(CreateInfoKeyValue('rev', content.lastRevisionId));
+    row.appendChild(CreateInfoKeyValue('size', meta.size || "?"));
+    row.appendChild(CreateInfoKeyValue('date', (new Date(content.createDate)).toLocaleDateString()));
+    table.appendChild(row);
+
+    var spoilerCell = document.createElement("td");
+    var spoiler = document.createElement("a");
+    spoiler.textContent = "▼";
+    spoiler.className = "spoilertoggle";
+    spoiler.href = "#";
+    spoiler.onclick = (e) =>
+    {
+        if(ToggleAttribute(spoiler, "data-shown"))
+            spoiler.textContent = "▲";
+        else
+            spoiler.textContent = "▼";
+
+        e.preventDefault();
+        var toggles = table.querySelectorAll("[data-toggle]");
+        [...toggles].forEach(x => ToggleAttribute(x, "hidden"));
+    };
+    spoilerCell.appendChild(spoiler);
+    row.appendChild(spoilerCell);
+
+    row = document.createElement("tr");
+    row.appendChild(CreateInfoKeyValue('id', content.id));
+    row.appendChild(CreateInfoKeyValue('hash', content.hash));
+    row.appendChild(CreateInfoKeyValue('user', content.createUser.username));
+    row.setAttribute("hidden", "");
+    row.setAttribute("data-toggle", "");
+    table.appendChild(row);
+
+    row = document.createElement("tr");
+    row.appendChild(CreateInfoKeyValue('quant', meta.quantize || "-"));
+    row.appendChild(CreateInfoKeyValue('link', `<a href="index.html?t=page&pid=${content.id}" target="_blank">qcs</a>`, true));
+    row.appendChild(CreateInfoKeyValue('mime', content.literalType));
+    row.setAttribute("hidden", "");
+    row.setAttribute("data-toggle", "");
     table.appendChild(row);
 
     return table;
@@ -231,6 +294,9 @@ body {
     padding: 0.5em;
     background-color: #d7edff; /*#75c1ff;*/
 }
+#stateform > * {
+    margin-bottom: 0.3em;
+}
 .image {
     display: inline-block;
     background-color: #d7edff;/*#75c1ff;*/
@@ -249,6 +315,9 @@ body {
 .privacy {
     float: right;
 }
+.spoilertoggle {
+    text-decoration: none;
+}
 .info {
     margin: auto;
     /*float: right;*/
@@ -262,6 +331,13 @@ body {
     font-weight: bold;
     font-size: 0.6em;
     color: blue;
+}
+.info .spoilertoggle {
+    font-size: 0.6em;
+    cursor: pointer;
+    color: cornflowerblue;
+    line-height: 0.6em;
+    vertical-align: middle;
 }
 .data .title {
     /*font-weight: bold;*/
@@ -280,6 +356,7 @@ body {
     color: white;
     border: 1px solid blue;
     border-radius: 2px;
+    cursor: pointer;
 }
 input[data-modified] {
     border: 1px solid red;
@@ -309,12 +386,16 @@ input:disabled {
             <input name="ipp" id="stateform_ipp">
             <label for="stateform_isize">Images size:</label>
             <input name="isize" id="stateform_isize">
-            <label for="stateform_own">Only mine:</label>
-            <input name="own" type="checkbox" id="stateform_own">
+            <div id="stateform_checkboxes">
+                <label for="stateform_own">Only mine:</label>
+                <input name="own" type="checkbox" id="stateform_own">
+                <label for="stateform_oldest">Oldest first:</label>
+                <input name="oldest" type="checkbox" id="stateform_oldest">
+            </div>
             <input name="id" id="stateform_id" type="hidden" value="0">
             <input type="submit" value="Update">
             <button type="button" id="reset">Reset (beginning)</button>
-            <button type="button" id="older" hidden="">Older Images (next)</button>
+            <button type="button" id="older" hidden="">Next set</button>
         </form>
         <div id="imagelist">
 

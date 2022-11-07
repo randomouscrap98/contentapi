@@ -51,7 +51,8 @@ public class QueryBuilder : IQueryBuilder
             RequestType.content,
             RequestType.message,
             RequestType.message_aggregate,
-            RequestType.activity_aggregate
+            RequestType.activity_aggregate,
+            RequestType.keyword_aggregate
         }) }
     };
 

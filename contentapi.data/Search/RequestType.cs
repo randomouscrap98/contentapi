@@ -12,5 +12,6 @@ public enum RequestType
     message_aggregate,
     activity_aggregate,
     vote,
-    ban
+    ban,
+    keyword_aggregate
 }
