@@ -2032,4 +2032,32 @@ public class DbWriterTest : ViewUnitTestBase, IDisposable
         Assert.True(resultContent.values.Keys.OrderBy(x => x).SequenceEqual(oldValues.Keys.OrderBy(x => x)));
         Assert.True(resultContent.permissions.Keys.OrderBy(x => x).SequenceEqual(oldPermissions.Keys.OrderBy(x => x)));
     }
+
+    [Theory]
+    [InlineData("heck", true)]
+    [InlineData("hecking%*490%$*)%", true)]
+    [InlineData("'=-_+0)9(8*7&6^5%4$3#2@1!wow`~\\][}{;:,<.>/?", true)]
+    [InlineData("💙loveu", true)]
+    [InlineData("no way", false)]
+    [InlineData("no\"way", false)]
+    [InlineData(" noway", false)]
+    [InlineData("noway ", false)]
+    [InlineData("\"noway", false)]
+    [InlineData("noway\"", false)]
+    public async Task Write_KeywordCheck(string keyword, bool allowed)
+    {
+        var content = GetNewPageView();
+        content.keywords.Add(keyword);
+
+        if(allowed)
+        {
+            var written = await writer.WriteAsync(content, NormalUserId);
+            Assert.Contains(keyword, written.keywords);
+        }
+        else
+        {
+            await Assert.ThrowsAnyAsync<RequestException>(() => writer.WriteAsync(content, NormalUserId));
+        }
+
+    }
 }

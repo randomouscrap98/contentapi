@@ -19,6 +19,7 @@ public class DbWriterConfig
    public int AutoHashChars {get;set;} = 5;
    public int AutoHashMaxRetries {get;set;} = 50;
    public string HashRegex {get;set;} = @"^[a-z\-]+$";
+   public string ForbiddenKeywordRegex {get;set;} = @"[\s""]";
    public int HashMinLength {get;set;} = 8;
    public int HashMaxLength {get;set;} = 32;
    public List<string> ReservedModuleNames {get;set;} = new List<string> {
@@ -192,6 +193,14 @@ public class DbWriter : IDbWriter
             //Now for general validation
             await ValidateBanOnContent(cView.id, requesterBan);
             await ValidatePermissionFormat(cView.permissions);
+
+            //Just throw away empty keywords
+            cView.keywords = cView.keywords.Where(x => !string.IsNullOrWhiteSpace(x)).ToList();
+
+            //And reject if any keywords have badness
+            foreach(var keyword in cView.keywords)
+                if(Regex.IsMatch(keyword, config.ForbiddenKeywordRegex))
+                    throw new RequestException($"Keyword {keyword} has forbidden characters! Forbidden: {config.ForbiddenKeywordRegex}");
 
             if(cView.deleted)
                 throw new RequestException("Don't delete content by setting the deleted flag!");

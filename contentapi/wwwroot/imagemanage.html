@@ -7,15 +7,17 @@
     <meta name="viewport" content="width=device-width">
     <script>
 const ATTR_MODIFIED = "data-modified";
+const ENTERCODE = "Enter";
 
 var api;
 var userSelf;
+var keywordCache;
 
 //The default values for searching are set here, but the variable is used to indicate
 //the CURRENT state of searching (so the values are substituted from the URL)
 var SearchState = {
     ipp : 100,
-    isize : 200,
+    isize : 300, /* want it at 200, but browser is doing something weird */
     id : 0,
     own : 0,
     oldest: 0
@@ -42,6 +44,8 @@ window.onload = function()
         stateform.submit();
     };
 
+    stateform_search.appendChild(CreateKeywordSearch(stateform_keywords));
+
     // You should try to create only one API object for your entire application (or at least, one per session)
     api = new Api(null, GetToken); //Just a global api object, whatever. Null means use the default endpoint (local to self)
     // Set the default error handler for all REGULAR requests (not websocket) to show an alert to the user.
@@ -55,6 +59,7 @@ window.onload = function()
         d => { userSelf = d.result; }, 
         err => { console.warn("Not logged in?"); userSelf = {id:0}; }));
 
+    TestGenerateKeywordSearch();
     ReloadImages();
 };
 
@@ -62,6 +67,108 @@ function ToggleAttribute(element, attribute, value)
 {
     if(element.hasAttribute(attribute)) { element.removeAttribute(attribute); return false; }
     else { element.setAttribute(attribute, value || ""); return true; }
+}
+
+function SetKeywordCache(apiData) 
+{ 
+    //You technically DON'T need this because of the implementation but... oh well
+    keywordCache = apiData.result.objects.keyword_aggregate; 
+    keywordCache.sort((a, b) => b.count - a.count);
+    keywordlist.innerHTML = "";
+    keywordCache.forEach(x =>
+    {
+        var option = document.createElement("option");
+        option.value = x.value;
+        //option.textContent = `${x.value} (${x.count})`;
+        keywordlist.appendChild(option);
+    });
+}
+function GetKeywordFullSearch(values) 
+{ 
+    values.empty = [""];
+    return new RequestSearchParameter("keyword_aggregate", "*", "value NOT IN @empty", "count_desc"); 
+}
+function RefreshKeywordCache() 
+{ 
+    var values = {};
+    var search = new RequestParameter(values, [ GetKeywordFullSearch(values) ]);
+    api.Search(search, new ApiHandler(dd => SetKeywordCache(dd)));
+}
+
+const KEYWORDRESERVEDCHARS = [" ", "(", ")", '"'];
+
+function GenerateQueryFromKeywords(keywordSearch, values)
+{
+    var result = "";
+    var nextId = "";
+    var pc = ""; var lc = "";
+    var lastWasId = false;
+    var state = 0; //0 = consume whitespace, emit parens etc, 1 = consume identifier, emit special based on completion
+    var nextValId = 1;
+    var key = "";
+
+    for(var i = 0; i < keywordSearch.length; i++)
+    {
+        //peek next character
+        pc = keywordSearch[i];
+        if(state === 0)
+        {
+            //If peeking next character is not state1 char, go to state 2
+            if(KEYWORDRESERVEDCHARS.indexOf(pc) < 0) { state = 1; }
+
+            if(c === " ") {} //consume
+            else if(c === "(" || c === ")") { result += c; } //emit as is
+            else { if(c !== '"') { nextId += c; } state = 1; } //now we're consuming an id
+        }
+        else if(state === 1)
+        {
+            if((KEYWORDRESERVEDCHARS.indexOf(c) >= 0) || (i === keywordSearch.length - 1)) //End of id, check crap
+            {
+                if(nextId.toUpperCase() === "AND" || nextId.toUpperCase() === "OR") //a keyword, just emit it normally
+                {
+                    result += " " + nextId + " ";
+                    lastWasId = false;
+                }
+                else //an identifier, output certain things based on current state
+                {
+                    if(lastWasId) result += " AND "; //implicit and
+                    key = `value_${nextValId++}`; //key in the value array for our identifier
+                    result += "(value ";
+                    if(nextId.startsWith("-")) { values[key] = nextId.substring(1); result += "!"; }
+                    else { values[key] = nextId; }
+                    result += `= @${key})`;
+                    lastWasId = true;
+                }
+                nextId = "";
+                state = 0;
+            }
+            else { nextId += c; } //keep track of identifier
+        }
+        lc = c;
+        if(lc === "(" || lc === ")") { result += c; } //emit as is
+    }
+
+    //No error checking, just dump it and let the API deal with it
+
+    return result;
+}
+
+function TestGenerateKeywordSearch()
+{
+    var v = (n) => `(value = @value_${n})`;
+    var vn = (n) => `(value != @value_${n})`;
+    var tests = {
+        "a AND b" : { r: `${v(1)} AND ${v(2)}`, v: ["a", "b"] }
+    };
+    Object.keys(tests).forEach(k =>
+    {
+        var values = {};
+        var result = GenerateQueryFromKeywords(k, values);
+        if(result !== tests[k].r) console.error(`UNITTEST FAIL ON '${k}': expect '${tests[k].r}', got '${result}'`);
+        for(var i = 1; i <= tests[k].v.length; i++) 
+            if(values[`value_${i}`] !== tests[k].v[i])
+                console.error(`UNITTEST FAIL ON '${k}': value ${i} is not ${tests[k].v[i]}`);
+    });
 }
 
 // reset the image list based on the current SearchState configuration
@@ -86,7 +193,7 @@ function ReloadImages()
     }
 
     var userRequest = new RequestSearchParameter("user", "id,username", "id in @content.createUserId");
-    var search = new RequestParameter(values, [ request, userRequest ]);
+    var search = new RequestParameter(values, [ request, userRequest, GetKeywordFullSearch(values) ]);
 
     console.debug("Image search:", search);
 
@@ -94,6 +201,7 @@ function ReloadImages()
     older.setAttribute("hidden", "");
     api.Search(search, new ApiHandler(dd =>
     {
+        SetKeywordCache(dd);
         api.AutoLinkUsers(dd.result.objects.content, dd.result.objects.user);
         //Now that we know the max id, do some stuff
         older.onclick = () =>
@@ -145,16 +253,49 @@ function CreateInput(name, value)
     input.setAttribute("data-original", value);
     input.setAttribute("name", name);
     input.value = value;
-    input.oninput = (e) =>
+    input.refreshModified = () =>
     {
         if(input.value !== input.getAttribute("data-original"))
             input.setAttribute(ATTR_MODIFIED, "");
         else
             input.removeAttribute(ATTR_MODIFIED);
     };
+    input.oninput = input.refreshModified;
     fragment.appendChild(title);
     fragment.appendChild(input);
     return fragment;
+}
+
+function SubmitKeywordSearch(input, linkedInput)
+{
+    if (!input.value) {
+        console.warn("Empty search");
+        return;
+    }
+    linkedInput.value += (linkedInput.value ? " " : "") + input.value;
+    if (linkedInput.refreshModified) linkedInput.refreshModified();
+    input.value = "";
+}
+function CreateKeywordSearch(linkedInput)
+{
+    var input = document.createElement("input");
+    input.setAttribute("placeholder", "Search");
+    input.setAttribute('list', "keywordlist");
+    input.setAttribute("type", "text");
+    input.oninput = (e) =>
+    {
+        //console.log(e);
+        if(e.inputType === "insertReplacementText" || (!e.inputType && e instanceof Event))
+            SubmitKeywordSearch(input, linkedInput);
+    };
+    input.onkeydown = (e) =>
+    {
+        if(e.key === ENTERCODE)
+            SubmitKeywordSearch(input, linkedInput);
+    };
+    input.onkeyup = (e) => { if(e.key === ENTERCODE) e.preventDefault() };
+    input.onkeypress= (e) => { if(e.key === ENTERCODE) e.preventDefault() };
+    return input;
 }
 
 function CreateInfoKeyValue(key, value, raw)
@@ -206,7 +347,7 @@ function CreateInfoTable(content)
     row = document.createElement("tr");
     row.appendChild(CreateInfoKeyValue('id', content.id));
     row.appendChild(CreateInfoKeyValue('hash', content.hash));
-    row.appendChild(CreateInfoKeyValue('user', content.createUser.username));
+    row.appendChild(CreateInfoKeyValue('user', (content.createUser || {username:`#${content.createUserId}`}).username));
     row.setAttribute("hidden", "");
     row.setAttribute("data-toggle", "");
     table.appendChild(row);
@@ -252,6 +393,7 @@ function CreateImageElement(content)
         api.WriteType(APICONST.WRITETYPES.CONTENT, content, new ApiHandler(d => {
             var newImage = CreateImageElement(d.result);
             el.replaceWith(newImage);
+            RefreshKeywordCache(); //This is to get updated keywords in the cache
         }));
     };
     var privacy = document.createElement("div");
@@ -259,6 +401,7 @@ function CreateImageElement(content)
     //dat.setAttribute("data-raw", JSON.stringify(content));
     dat.appendChild(CreateInput("name", content.name));
     dat.appendChild(CreateInput("keywords", content.keywords.join(" ")));
+    dat.appendChild(CreateKeywordSearch(dat.querySelector(`[name="keywords"]`)));
     dat.appendChild(submit);
     el.appendChild(link);
     if (userSelf && !api.IsAllowed(content, userSelf.id, "U")) 
@@ -382,10 +525,16 @@ input:disabled {
 <body>
     <div id="main">
         <form id="stateform" method="GET">
-            <label for="stateform_ipp">Images per page:</label>
-            <input name="ipp" id="stateform_ipp">
-            <label for="stateform_isize">Images size:</label>
-            <input name="isize" id="stateform_isize">
+            <div id="stateform_text">
+                <label for="stateform_ipp">Images per page:</label>
+                <input name="ipp" id="stateform_ipp">
+                <label for="stateform_isize">Images size:</label>
+                <input name="isize" id="stateform_isize">
+            </div>
+            <div id="stateform_search">
+                <label for="stateform_keywords">Keywords:</label>
+                <input name="keywords" id="stateform_keywords" placeholder="a AND (b OR c)">
+            </div>
             <div id="stateform_checkboxes">
                 <label for="stateform_own">Only mine:</label>
                 <input name="own" type="checkbox" id="stateform_own">
@@ -400,6 +549,7 @@ input:disabled {
         <div id="imagelist">
 
         </div>
+        <datalist id="keywordlist"></datalist>
     </div>
 </body>
 
