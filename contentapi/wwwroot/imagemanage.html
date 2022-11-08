@@ -193,12 +193,12 @@ function GenerateQueryFromKeywords(keywordSearch, values)
         else if (id === "AND" || id === "OR") { result += ` ${token} `; lastWasKeyword = true; } //space surround because
         else if (id === "IDENTIFIER") {
             if(!lastWasKeyword) result += " AND ";
-            var key = `value_${nextValueId++}`;
+            var key = `kwsvalue_${nextValueId++}`;
             var negate = false;
             if(token.startsWith('-')) { token = token.substring(1); negate = true; }
             if(token.startsWith('"')) { token = token.substring(1, token.length - 1); }
             values[key] = token;
-            result += "(value " + (negate ? "!=" : "=") + ` @${key})`;
+            result += "!" + (negate ? "avoidkeyword" : "haskeyword") + `(@${key})`;
             lastWasKeyword = false;
         }
         else { throw "UNKNOWN TOKEN: " + id; }
@@ -209,8 +209,8 @@ function GenerateQueryFromKeywords(keywordSearch, values)
 
 function TestGenerateKeywordSearch()
 {
-    var v = (n) => `(value = @value_${n})`;
-    var vn = (n) => `(value != @value_${n})`;
+    var v = (n) => `!haskeyword(@kwsvalue_${n})`;
+    var vn = (n) => `!avoidkeyword(@kwsvalue_${n})`;
     var tests = {
         "a AND b" : { r: `${v(1)} AND ${v(2)}`, v: ["a", "b"] },
         "a OR b" : { r: `${v(1)} OR ${v(2)}`, v: ["a", "b"] },
@@ -231,7 +231,7 @@ function TestGenerateKeywordSearch()
         console.debug("TEST: " + k);
         if(result !== tests[k].r) console.error(`UNITTEST FAIL ON '${k}': **EXPECT**\n${tests[k].r}\n**RESULT**\n${result}`);
         for(var i = 0; i < tests[k].v.length; i++) 
-            if(values[`value_${i+1}`] !== tests[k].v[i])
+            if(values[`kwsvalue_${i+1}`] !== tests[k].v[i])
                 console.error(`UNITTEST FAIL ON '${k}': value ${i+1} is not ${tests[k].v[i]}`);
     });
 }
