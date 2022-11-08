@@ -62,6 +62,7 @@ window.onload = function()
         e.preventDefault();
         stateform_users.value = api.GetUidFromToken(GetToken());
     };
+    keywordbrowse_container.insertBefore(CreateSpoiler(keywordbrowse, "Browse tags"), keywordbrowse);
 
     stateform_keysearch.appendChild(CreateKeywordSearch(stateform_keywords));
 
@@ -170,12 +171,17 @@ function SetKeywordCache(apiData)
     keywordCache = apiData.result.objects.keyword_aggregate; 
     keywordCache.sort((a, b) => b.count - a.count);
     keywordlist.innerHTML = "";
+    keywordbrowse.innerHTML = "";
     keywordCache.forEach(x =>
     {
         var option = document.createElement("option");
         option.value = x.value;
         //option.textContent = `${x.value} (${x.count})`;
         keywordlist.appendChild(option);
+        var browseItem = document.createElement("a");
+        browseItem.href = "?keywords=" + x.value; //all defaults, hoping that's ok?
+        browseItem.innerHTML = `<b>${x.value}</b><span>${x.count}</span>`;
+        keywordbrowse.appendChild(browseItem);
     });
 }
 function GetKeywordFullSearch(values) 
@@ -378,6 +384,30 @@ function CreateInfoKeyValue(key, value, raw)
     return fragment;
 }
 
+function CreateSpoiler(contents, extraText)
+{
+    extraText = extraText || "";
+    if(extraText) extraText += " ";
+    var spoiler = document.createElement("a");
+    spoiler.textContent = `${extraText}▼`;
+    spoiler.className = "spoilertoggle";
+    spoiler.href = "#";
+    spoiler.onclick = (e) =>
+    {
+        e.preventDefault();
+
+        if(ToggleAttribute(spoiler, "data-shown"))
+            spoiler.textContent = `${extraText}▲`;
+        else
+            spoiler.textContent = `${extraText}▼`;
+
+        var toggles = [...contents.querySelectorAll("[data-toggle]")];
+        if(contents.hasAttribute("data-toggle")) toggles.push(contents);
+        toggles.forEach(x => ToggleAttribute(x, "hidden"));
+    };
+    return spoiler;
+}
+
 function CreateInfoTable(content)
 {
     var table = document.createElement("table");
@@ -391,22 +421,7 @@ function CreateInfoTable(content)
     table.appendChild(row);
 
     var spoilerCell = document.createElement("td");
-    var spoiler = document.createElement("a");
-    spoiler.textContent = "▼";
-    spoiler.className = "spoilertoggle";
-    spoiler.href = "#";
-    spoiler.onclick = (e) =>
-    {
-        if(ToggleAttribute(spoiler, "data-shown"))
-            spoiler.textContent = "▲";
-        else
-            spoiler.textContent = "▼";
-
-        e.preventDefault();
-        var toggles = table.querySelectorAll("[data-toggle]");
-        [...toggles].forEach(x => ToggleAttribute(x, "hidden"));
-    };
-    spoilerCell.appendChild(spoiler);
+    spoilerCell.appendChild(CreateSpoiler(table));
     row.appendChild(spoilerCell);
 
     row = document.createElement("tr");
@@ -514,6 +529,41 @@ body {
     margin-right: 0.5em;
     margin-bottom: 0.3em;
 }
+#keywordbrowse_container {
+    background-color: #f5fcff;
+    width: 100%;
+    padding: 0.5em;
+    border-radius: 0.5em;
+}
+#keywordbrowse_container .spoilertoggle {
+    color: darkblue;
+}
+#keywordbrowse {
+    margin-top: 0.5em;
+    width: 100%;
+    box-sizing: border-box;
+    display: flex;
+    flex-wrap: wrap;
+    max-height: 9em;
+    overflow-y: auto;
+}
+#keywordbrowse > a {
+    margin-right: 0.4em;
+    margin-bottom: 0.3em;
+    text-decoration: none;
+    background-color: cornflowerblue;
+    color: white;
+    padding: 0.3em 0.6em;
+    border-radius: 0.7em;
+    cursor: pointer;
+    display: flex;
+    align-items: center;
+}
+#keywordbrowse > a span {
+    font-size: 0.7em;
+    margin-left: 0.55em;
+    color: #def;
+}
 .image {
     display: inline-block;
     background-color: #d7edff;/*#75c1ff;*/
@@ -523,12 +573,10 @@ body {
     min-width: 15em;
 }
 .image img {
-    /*border: 0.2em solid #0d91fc;*/
     border: 0.15em solid rgba(0, 30, 100, 0.4);
     border-radius: 0.2em;
     display: block;
     margin: auto;
-    /*margin-bottom: 0.4em;*/
 }
 .privacy {
     float: right;
@@ -538,7 +586,6 @@ body {
 }
 .info {
     margin: auto;
-    /*float: right;*/
 }
 .info .key {
     text-align: right;
@@ -607,6 +654,9 @@ input.xsmall {
 .image[data-noedit] .data, .image[data-noedit] .info {
     filter: grayscale(1) opacity(0.80);
 }
+[data-toggle][hidden] {
+    display: none !important;
+}
     </style>
 
 </head>
@@ -662,6 +712,9 @@ input.xsmall {
                 <button type="button" id="older" hidden="">Next set</button>
             </div>
             <a href="imagemanage.html">Reset everything</a>
+            <div id="keywordbrowse_container">
+                <div id="keywordbrowse" hidden="" data-toggle=""></div>
+            </div>
         </form>
         <div id="imagelist"></div>
         <datalist id="keywordlist"></datalist>

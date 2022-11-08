@@ -272,4 +272,51 @@ public class SpecializedSearchTests : ViewUnitTestBase //, IClassFixture<DbUnitT
         Assert.Equal(new HashSet<string>(expected), new HashSet<string>(keywords.Select(x => x.value)));
         Assert.Equal(expected.Count, keywords.Count);
     }
+
+    [Fact]
+    public async Task GenericSearch_Search_ContentType()
+    {
+        //create content of the various types
+        var module = GetNewModuleView();
+        var file = GetNewFileView();
+        var page = GetNewPageView();
+
+        //Set keywords for each
+        module.keywords.Add("ismodule");
+        file.keywords.Add("isfile");
+        page.keywords.Add("ispage");
+
+        //Write them all
+        var writtenModule = await writer.WriteAsync(module, SuperUserId);
+        var writtenFile = await writer.WriteAsync(file, SuperUserId);
+        var writtenPage = await writer.WriteAsync(page, SuperUserId);
+
+        var getKeywordsOfType = new Func<InternalContentType, Task<List<KeywordAggregateView>>>((t) =>
+            searcher.SearchSingleType<KeywordAggregateView>(SuperUserId, new SearchRequest()
+            {
+                type = nameof(RequestType.keyword_aggregate),
+                fields = "*",
+                query = "!contenttype(@type)"
+            }, new Dictionary<string, object>() { {"type", t} })
+        );
+
+        //Now do three different tests, one for each type, and ensure you only get the one keyword and not the other two
+        var keywords = await getKeywordsOfType(InternalContentType.module);
+        var ks = keywords.Select(x => x.value);
+        Assert.Contains("ismodule", ks);
+        Assert.DoesNotContain("isfile", ks);
+        Assert.DoesNotContain("ispage", ks);
+
+        keywords = await getKeywordsOfType(InternalContentType.file);
+        ks = keywords.Select(x => x.value);
+        Assert.Contains("isfile", ks);
+        Assert.DoesNotContain("ismodule", ks);
+        Assert.DoesNotContain("ispage", ks);
+
+        keywords = await getKeywordsOfType(InternalContentType.page);
+        ks = keywords.Select(x => x.value);
+        Assert.Contains("ispage", ks);
+        Assert.DoesNotContain("ismodule", ks);
+        Assert.DoesNotContain("isfile", ks);
+    }
 }

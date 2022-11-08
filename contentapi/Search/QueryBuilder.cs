@@ -35,6 +35,7 @@ public class QueryBuilder : IQueryBuilder
         { "valuekeyin", new MacroDescription("v", "ValueKeyIn", new List<RequestType> { RequestType.content, RequestType.message }) }, 
         { "valuekeynotin", new MacroDescription("v", "ValueKeyNotIn", new List<RequestType> { RequestType.content, RequestType.message }) }, 
         { "valuekeynotlike", new MacroDescription("v", "ValueKeyNotLike", new List<RequestType> { RequestType.content, RequestType.message }) }, 
+        { "contenttype", new MacroDescription("v", "IsContentType", new List<RequestType> { RequestType.keyword_aggregate, RequestType.message_aggregate, RequestType.activity_aggregate}) }, 
         { "onlyparents", new MacroDescription("", "OnlyParents", new List<RequestType> { RequestType.content }) },
         { "onlynotparents", new MacroDescription("", "OnlyNotParents", new List<RequestType> { RequestType.content }) },
         { "userpage", new MacroDescription("v", "OnlyUserpage", new List<RequestType> { RequestType.content }) },
@@ -190,6 +191,16 @@ public class QueryBuilder : IQueryBuilder
             (select {nameof(Content.parentId)} 
              from {typeInfo.selfDbInfo?.modelTable}
              group by {nameof(Content.parentId)}
+            )";
+    }
+
+    public string IsContentType(SearchRequestPlus request, string value)
+    {
+        var typeInfo = typeService.GetTypeInfo<Content>();
+        return $@"{nameof(data.Views.IContentRelatedView.contentId)} in
+            (select {nameof(Content.id)}
+             from {typeInfo.selfDbInfo?.modelTable}
+             where {nameof(Content.contentType)} = {value}
             )";
     }
 
