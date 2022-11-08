@@ -490,7 +490,8 @@ body {
     min-width: 15em;
 }
 .image img {
-    border: 0.2em solid #0d91fc;
+    /*border: 0.2em solid #0d91fc;*/
+    border: 0.15em solid rgba(0, 30, 100, 0.4);
     border-radius: 0.2em;
     display: block;
     margin: auto;
@@ -567,9 +568,8 @@ input.small {
 .image[data-noedit] {
     background-color: #EEE;
 }
-.image[data-noedit] .data input[type='submit'] {
-    background-color: #999;
-    border-color: #666;
+.image[data-noedit] .data, .image[data-noedit] .info {
+    filter: grayscale(1) opacity(0.80);
 }
     </style>
 
