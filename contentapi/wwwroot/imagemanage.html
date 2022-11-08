@@ -20,7 +20,8 @@ var SearchState = {
     isize : 300, /* want it at 200, but browser is doing something weird */
     id : 0,
     own : 0,
-    oldest: 0
+    oldest: 0,
+    keywords : ""
 };
 
 //duplicate from index.js
@@ -36,6 +37,7 @@ window.onload = function()
     SetState_Number('id', p);
     SetState_Bool('own', p);
     SetState_Bool('oldest', p);
+    SetState_String('keywords', p);
 
     //Then, set the nav and form values from the state (but only AFTER images are loaded, we won't know what the 'next' images will be otherwise)
     reset.onclick = () =>
@@ -62,6 +64,57 @@ window.onload = function()
     TestGenerateKeywordSearch();
     ReloadImages();
 };
+
+// reset the image list based on the current SearchState configuration
+function ReloadImages()
+{
+    var values = { type : 3 };
+    var request = new RequestSearchParameter("content", "*", "contentType = @type", "id_desc", SearchState.ipp)
+
+    if(SearchState.oldest)
+        request.order = "id";
+
+    if(SearchState.id)
+    {
+        values["maxid"] = SearchState.id;
+        if(SearchState.oldest) request.query += " and id >= @maxid";
+        else request.query += " and id <= @maxid";
+    }
+    if(SearchState.own)
+    {
+        values["me"] = api.GetUidFromToken(GetToken());
+        request.query += " and createUserId = @me";
+    }
+    if(SearchState.keywords)
+    {
+        request.query += " and (" + GenerateQueryFromKeywords(SearchState.keywords, values) + ")";
+    }
+
+    var userRequest = new RequestSearchParameter("user", "id,username", "id in @content.createUserId");
+    var search = new RequestParameter(values, [ request, userRequest, GetKeywordFullSearch(values) ]);
+
+    console.debug("Image search:", search);
+
+    imagelist.innerHTML = "";
+    older.setAttribute("hidden", "");
+    api.Search(search, new ApiHandler(dd =>
+    {
+        SetKeywordCache(dd);
+        api.AutoLinkUsers(dd.result.objects.content, dd.result.objects.user);
+        //Now that we know the max id, do some stuff
+        older.onclick = () =>
+        {
+            var ids = dd.result.objects.content.map(x => x.id);
+            if(SearchState.oldest) stateform_id.value = Math.max(...ids) + 1;
+            else stateform_id.value = Math.min(...ids) - 1;
+            stateform.submit();
+        };
+        older.removeAttribute("hidden");
+        dd.result.objects.content.forEach(x => {
+            imagelist.appendChild(CreateImageElement(x));
+        });
+    }));
+}
 
 function ToggleAttribute(element, attribute, value)
 {
@@ -95,21 +148,19 @@ function RefreshKeywordCache()
     api.Search(search, new ApiHandler(dd => SetKeywordCache(dd)));
 }
 
-const KEYWORDSTATE1 = [" ", "(", ")", '"'];
-
 const TOKENSTRINGS = {
     LPAREN : "\\(",
     RPAREN : "\\)",
     AND : "AND",
     OR : "OR",
-    IDENTIFIER : "-?(([^\\s()]+)|(\"[^\"\\s]+\"))"
+    IDENTIFIER : "-?([^\\s()\"]+|\"[^\"\\s]+\")"
 }
 
 function GenerateQueryFromKeywords(keywordSearch, values)
 {
     var result = "";
     var tokens = {};
-    var lastWasIdentifier = false;
+    var lastWasKeyword = true;
     var nextValueId = 1;
 
     Object.keys(TOKENSTRINGS).forEach(k =>
@@ -117,14 +168,17 @@ function GenerateQueryFromKeywords(keywordSearch, values)
         tokens[k] = new RegExp("^" + TOKENSTRINGS[k], "i");
     });
 
+    //console.log(tokens);
+
     while(keywordSearch.length)
     {
         var match = false;
-        var id;
+        var id = "init";
 
         //not optimized, don't care
-        for(id in Object.keys(tokens))
+        for(id of Object.keys(tokens))
         {
+            //console.log(id, keywordSearch);
             match = keywordSearch.match(tokens[id]);
             if(match) break;
         }
@@ -133,19 +187,19 @@ function GenerateQueryFromKeywords(keywordSearch, values)
         if(!match) { keywordSearch = keywordSearch.substring(1); continue; }
         
         var token = match[0];
-        keywordSearch.substring(token.length);
+        keywordSearch = keywordSearch.substring(token.length);
 
-        if(id === "LPAREN" || id === "RPAREN") { result += token; lastWasIdentifier = false; } //pure emit
-        else if (id === "AND" || id === "OR") { result += ` ${token} `; lastWasIdentifier = false; } //space surround because
+        if(id === "LPAREN" || id === "RPAREN") { result += token; } //pure emit
+        else if (id === "AND" || id === "OR") { result += ` ${token} `; lastWasKeyword = true; } //space surround because
         else if (id === "IDENTIFIER") {
-            if(lastWasIdentifier) result += " AND ";
+            if(!lastWasKeyword) result += " AND ";
             var key = `value_${nextValueId++}`;
             var negate = false;
             if(token.startsWith('-')) { token = token.substring(1); negate = true; }
             if(token.startsWith('"')) { token = token.substring(1, token.length - 1); }
             values[key] = token;
             result += "(value " + (negate ? "!=" : "=") + ` @${key})`;
-            lastWasIdentifier = true;
+            lastWasKeyword = false;
         }
         else { throw "UNKNOWN TOKEN: " + id; }
     }
@@ -158,69 +212,33 @@ function TestGenerateKeywordSearch()
     var v = (n) => `(value = @value_${n})`;
     var vn = (n) => `(value != @value_${n})`;
     var tests = {
-        "a AND b" : { r: `${v(1)} AND ${v(2)}`, v: ["a", "b"] }
+        "a AND b" : { r: `${v(1)} AND ${v(2)}`, v: ["a", "b"] },
+        "a OR b" : { r: `${v(1)} OR ${v(2)}`, v: ["a", "b"] },
+        "a and b" : { r: `${v(1)} and ${v(2)}`, v: ["a", "b"] },
+        "a or b" : { r: `${v(1)} or ${v(2)}`, v: ["a", "b"] },
+        "a b" : { r: `${v(1)} AND ${v(2)}`, v: ["a", "b"] },
+        "abc123 AND -**&432" : { r : `${v(1)} AND ${vn(2)}`, v: ["abc123", "**&432"]},
+        "\"a\" AND b" : { r: `${v(1)} AND ${v(2)}`, v: ["a", "b"] },
+        "a AND \"b\"" : { r: `${v(1)} AND ${v(2)}`, v: ["a", "b"] },
+        "(\"a\" AND \"b\")" : { r: `(${v(1)} AND ${v(2)})`, v: ["a", "b"] },
+        "(what \"nonsense(ugh)\" or -thing)AND( (-\"becky\") ) heck" : 
+            { r : `(${v(1)} AND ${v(2)} or ${vn(3)}) AND ((${vn(4)})) AND ${v(5)}`, v: ["what", "nonsense(ugh)", "thing", "becky", "heck"]}
     };
     Object.keys(tests).forEach(k =>
     {
         var values = {};
         var result = GenerateQueryFromKeywords(k, values);
-        if(result !== tests[k].r) console.error(`UNITTEST FAIL ON '${k}': expect '${tests[k].r}', got '${result}'`);
-        for(var i = 1; i <= tests[k].v.length; i++) 
-            if(values[`value_${i}`] !== tests[k].v[i])
-                console.error(`UNITTEST FAIL ON '${k}': value ${i} is not ${tests[k].v[i]}`);
+        console.debug("TEST: " + k);
+        if(result !== tests[k].r) console.error(`UNITTEST FAIL ON '${k}': **EXPECT**\n${tests[k].r}\n**RESULT**\n${result}`);
+        for(var i = 0; i < tests[k].v.length; i++) 
+            if(values[`value_${i+1}`] !== tests[k].v[i])
+                console.error(`UNITTEST FAIL ON '${k}': value ${i+1} is not ${tests[k].v[i]}`);
     });
 }
 
-// reset the image list based on the current SearchState configuration
-function ReloadImages()
-{
-    var values = { type : 3 };
-    var request = new RequestSearchParameter("content", "*", "contentType = @type", "id_desc", SearchState.ipp)
-
-    if(SearchState.oldest)
-        request.order = "id";
-
-    if(SearchState.id)
-    {
-        values["maxid"] = SearchState.id;
-        if(SearchState.oldest) request.query += " and id >= @maxid";
-        else request.query += " and id <= @maxid";
-    }
-    if(SearchState.own)
-    {
-        values["me"] = api.GetUidFromToken(GetToken());
-        request.query += " and createUserId = @me";
-    }
-
-    var userRequest = new RequestSearchParameter("user", "id,username", "id in @content.createUserId");
-    var search = new RequestParameter(values, [ request, userRequest, GetKeywordFullSearch(values) ]);
-
-    console.debug("Image search:", search);
-
-    imagelist.innerHTML = "";
-    older.setAttribute("hidden", "");
-    api.Search(search, new ApiHandler(dd =>
-    {
-        SetKeywordCache(dd);
-        api.AutoLinkUsers(dd.result.objects.content, dd.result.objects.user);
-        //Now that we know the max id, do some stuff
-        older.onclick = () =>
-        {
-            var ids = dd.result.objects.content.map(x => x.id);
-            if(SearchState.oldest) stateform_id.value = Math.max(...ids) + 1;
-            else stateform_id.value = Math.min(...ids) - 1;
-            stateform.submit();
-        };
-        older.removeAttribute("hidden");
-        dd.result.objects.content.forEach(x => {
-            imagelist.appendChild(CreateImageElement(x));
-        });
-    }));
-}
 
 //Both set the global state AND the data on the form
-function SetState_Number(name, params)
-{
+function SetState_Number(name, params) {
     if(params.has(name))
     {
         var n = Number(params.get(name));
@@ -230,16 +248,17 @@ function SetState_Number(name, params)
     if(input) input.value = SearchState[name];
     else console.warn(`Somehow couldn't find form input for state '${name}'`);
 }
-
-function SetState_Bool(name, params)
-{
-    if(params.has(name))
-        SearchState[name] = params.get(name) ? true : false;
+function SetState_Bool(name, params) {
+    if(params.has(name)) SearchState[name] = params.get(name) ? true : false;
     var input = document.getElementById(`stateform_${name}`);
-    if(input) 
-        input.checked = SearchState[name];
-    else 
-        console.warn(`Somehow couldn't find form input for state '${name}'`);
+    if(input) input.checked = SearchState[name];
+    else console.warn(`Somehow couldn't find form input for state '${name}'`);
+}
+function SetState_String(name, params) {
+    if(params.has(name)) SearchState[name] = params.get(name);
+    var input = document.getElementById(`stateform_${name}`);
+    if(input) input.value = SearchState[name];
+    else console.warn(`Somehow couldn't find form input for state '${name}'`);
 }
 
 function CreateInput(name, value)

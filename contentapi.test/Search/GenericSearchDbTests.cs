@@ -928,6 +928,58 @@ public class GenericSearchDbTests : ViewUnitTestBase
     }
 
     [Fact]
+    public async Task GenericSearch_Search_HasKeyword()
+    {
+        var result = await service.SearchSingleTypeUnrestricted<ContentView>(new SearchRequest()
+        {
+            type = "content",
+            fields = "id,keywords",
+            query = "!haskeyword({{one}})"
+        }); //, new Dictionary<string, object> { { "search", "one" }});
+
+        Assert.True(result.Count > 0);
+
+        //Just make sure all the results have that keyword
+        Assert.All(result, x =>
+        {
+            Assert.Contains("one", x.keywords);
+        });
+    }
+
+    [Fact]
+    public async Task GenericSearch_Search_HasKeyword_none()
+    {
+        var result = await service.SearchSingleTypeUnrestricted<ContentView>(new SearchRequest()
+        {
+            type = "content",
+            fields = "id,keywords",
+            query = "!haskeyword({{none}})"
+        }); //, new Dictionary<string, object> { { "search", "one" }});
+
+        Assert.Empty(result);
+    }
+
+    [Fact]
+    public async Task GenericSearch_Search_AvoidKeyword()
+    {
+        var result = await service.SearchSingleTypeUnrestricted<ContentView>(new SearchRequest()
+        {
+            type = "content",
+            fields = "id,keywords",
+            query = "!avoidkeyword({{one}})"
+        }); //, new Dictionary<string, object> { { "search", "one" }});
+
+        Assert.True(result.Count > 0);
+
+        //Just make sure all the results have that keyword
+        Assert.All(result, x =>
+        {
+            Assert.DoesNotContain("one", x.keywords);
+        });
+    }
+
+
+    [Fact]
     public async Task GenericSearch_Search_ValueMacro()
     {
         var search = new SearchRequests();

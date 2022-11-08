@@ -26,6 +26,8 @@ public class QueryBuilder : IQueryBuilder
     
     protected readonly Dictionary<string, MacroDescription> StandardMacros = new Dictionary<string, MacroDescription>()
     {
+        { "haskeyword", new MacroDescription("v", "HasKeyword", new List<RequestType> { RequestType.content })},
+        { "avoidkeyword", new MacroDescription("v", "AvoidKeyword", new List<RequestType> { RequestType.content })},
         { "keywordlike", new MacroDescription("v", "KeywordLike", new List<RequestType> { RequestType.content }) },
         { "valuelike", new MacroDescription("vv", "ValueLike", new List<RequestType> { RequestType.content, RequestType.message }) }, 
         { "keywordin", new MacroDescription("v", "KeywordIn", new List<RequestType> { RequestType.content }) },
@@ -159,6 +161,12 @@ public class QueryBuilder : IQueryBuilder
         
     public string KeywordIn(SearchRequestPlus request, string value) =>
         KeywordSearchGeneric(request, value, "in", "in");
+    
+    public string HasKeyword(SearchRequestPlus request, string value) =>
+        KeywordSearchGeneric(request, value, "=", "in");
+
+    public string AvoidKeyword(SearchRequestPlus request, string value) =>
+        KeywordSearchGeneric(request, value, "=", "not in");
 
     public string ValueLike(SearchRequestPlus request, string key, string value) =>
         ValueSearchGeneric(request, key, value, "like", "in");
