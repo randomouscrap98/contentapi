@@ -95,34 +95,79 @@ function RefreshKeywordCache()
     api.Search(search, new ApiHandler(dd => SetKeywordCache(dd)));
 }
 
-const KEYWORDRESERVEDCHARS = [" ", "(", ")", '"'];
+const KEYWORDSTATE1 = [" ", "(", ")", '"'];
+
+const TOKENSTRINGS = {
+    LPAREN : "\\(",
+    RPAREN : "\\)",
+    AND : "AND",
+    OR : "OR",
+    IDENTIFIER : "([^\\s()]+)|(\"[^\"\\s]+\")"
+}
 
 function GenerateQueryFromKeywords(keywordSearch, values)
 {
     var result = "";
-    var nextId = "";
-    var pc = ""; var lc = "";
-    var lastWasId = false;
-    var state = 0; //0 = consume whitespace, emit parens etc, 1 = consume identifier, emit special based on completion
-    var nextValId = 1;
-    var key = "";
+    var tokens = {};
+
+    Object.keys(TOKENSTRINGS).forEach(k =>
+    {
+        tokens[k] = new RegExp("^" + TOKENSTRINGS[k], "i");
+    });
+
+    while(keywordSearch.length)
+    {
+        if(keywordSearch.startsWith("(") || keywordSearch.startsWith
+    }
+    var result = "";
+    var stack = "";
+
+    for(var i = 0; i <= keywordSearch.length; i++)
+    {
+        var c = keywordSearch[i];
+
+        if(c)
+            stack += keywordSearch[i];
+
+        if(stack.endsWith("(") || stack.endsWith(")") || stack.toUpperCase() ==)
+        {
+            result += stack;
+            stack = "";
+        }
+    }
+
+    if(stack.length)
+        console.error("PARSE ERROR, YOUR QUERY PROBABLY WON'T WORK!");
+    //var result = "";
+    //var nextId = "";
+    //var pc = ""; var lc = "";
+    //var lastWasId = false;
+    //var state = 0; //0 = consume whitespace, emit parens etc, 1 = consume identifier, emit special based on completion
+    //var nextValId = 1;
+    //var key = "";
 
     for(var i = 0; i < keywordSearch.length; i++)
     {
         //peek next character
         pc = keywordSearch[i];
-        if(state === 0)
+        //Only change states if we're not at the end
+        if(pc)
         {
-            //If peeking next character is not state1 char, go to state 2
-            if(KEYWORDRESERVEDCHARS.indexOf(pc) < 0) { state = 1; }
-
-            if(c === " ") {} //consume
-            else if(c === "(" || c === ")") { result += c; } //emit as is
-            else { if(c !== '"') { nextId += c; } state = 1; } //now we're consuming an id
+            if(state === 0)
+            {
+                //If peeking next character is not state1 char, go to state 2
+                if(KEYWORDSTATE1.indexOf(pc) < 0) { state = 1; }
+            }
+            else if(state === 1)
+            {
+                //|| (i === keywordSearch.length - 1)) //End of id, check crap
+                if(KEYWORDSTATE1.indexOf(pc) >= 0) { state = 0; } 
+            }
         }
-        else if(state === 1)
-        {
-            if((KEYWORDRESERVEDCHARS.indexOf(c) >= 0) || (i === keywordSearch.length - 1)) //End of id, check crap
+
+        //Now do stuff with lc
+        if(lc === "(" || lc === ")") { result += lc; } //emit as is, regardless of state
+        if(state === 1)
             {
                 if(nextId.toUpperCase() === "AND" || nextId.toUpperCase() === "OR") //a keyword, just emit it normally
                 {
@@ -145,7 +190,6 @@ function GenerateQueryFromKeywords(keywordSearch, values)
             else { nextId += c; } //keep track of identifier
         }
         lc = c;
-        if(lc === "(" || lc === ")") { result += c; } //emit as is
     }
 
     //No error checking, just dump it and let the API deal with it
