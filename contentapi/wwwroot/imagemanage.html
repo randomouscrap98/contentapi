@@ -20,10 +20,14 @@ var SearchState = {
     isize : 300, /* want it at 200, but browser is doing something weird */
     id : 0,
     oldest: 0,
+    comments: 0,
     keywords : "",
     mindate : "",
     maxdate : "",
-    users : ""
+    minkc : undefined,
+    maxkc : undefined,
+    users : "",
+    search : ""
 };
 
 //duplicate from index.js
@@ -37,11 +41,15 @@ window.onload = function()
     SetState_Number('ipp', p);
     SetState_Number('isize', p);
     SetState_Number('id', p);
+    SetState_Number('minkc', p);
+    SetState_Number('maxkc', p);
     SetState_Bool('oldest', p);
+    SetState_Bool('comments', p);
     SetState_String('keywords', p);
     SetState_String('mindate', p);
     SetState_String('maxdate', p);
     SetState_String('users', p);
+    SetState_String("search", p)
 
     //Then, set the nav and form values from the state (but only AFTER images are loaded, we won't know what the 'next' images will be otherwise)
     reset.onclick = () =>
@@ -55,7 +63,7 @@ window.onload = function()
         stateform_users.value = api.GetUidFromToken(GetToken());
     };
 
-    stateform_search.appendChild(CreateKeywordSearch(stateform_keywords));
+    stateform_keysearch.appendChild(CreateKeywordSearch(stateform_keywords));
 
     // You should try to create only one API object for your entire application (or at least, one per session)
     api = new Api(null, GetToken); //Just a global api object, whatever. Null means use the default endpoint (local to self)
@@ -77,11 +85,13 @@ window.onload = function()
 // reset the image list based on the current SearchState configuration
 function ReloadImages()
 {
-    var values = { type : 3 };
+    var values = { type : 3, zero : 0 };
     var request = new RequestSearchParameter("content", "*", "contentType = @type", "id_desc", SearchState.ipp)
 
     if(SearchState.oldest)
         request.order = "id";
+    if(SearchState.comments)
+        request.query += " and commentCount > @zero";
     if(SearchState.keywords)
         request.query += " and (" + GenerateQueryFromKeywords(SearchState.keywords, values) + ")";
 
@@ -101,10 +111,25 @@ function ReloadImages()
         values["maxdate"] = SearchState.maxdate;
         request.query += " and createDate <= @maxdate";
     }
+    if(SearchState.minkc !== undefined)
+    {
+        values["minkc"] = SearchState.minkc;
+        request.query += " and keywordCount >= @minkc";
+    }
+    if(SearchState.maxkc !== undefined)
+    {
+        values["maxkc"] = SearchState.maxkc;
+        request.query += " and keywordCount <= @maxkc";
+    }
     if(SearchState.users)
     {
         values["users"] = SearchState.users.split(' ').filter(x => x).map(x => Number(x));
         request.query += " and createUserId in @users";
+    }
+    if(SearchState.search)
+    {
+        values['search'] = '%' + SearchState.search + '%';
+        request.query += " and (name LIKE @search or hash LIKE @search or !keywordlike(@search))"
     }
 
     var userRequest = new RequestSearchParameter("user", "id,username", "id in @content.createUserId");
@@ -258,11 +283,15 @@ function TestGenerateKeywordSearch()
 function SetState_Number(name, params) {
     if(params.has(name))
     {
-        var n = Number(params.get(name));
-        if(n) SearchState[name] = n;
+        var v = params.get(name);
+        if(v)
+        {
+            var n = Number(v);
+            if(!isNaN(n)) SearchState[name] = n;
+        }
     }
     var input = document.getElementById(`stateform_${name}`);
-    if(input) input.value = SearchState[name];
+    if(input && SearchState[name] !== undefined) input.value = SearchState[name];
     else console.warn(`Somehow couldn't find form input for state '${name}'`);
 }
 function SetState_Bool(name, params) {
@@ -315,7 +344,7 @@ function SubmitKeywordSearch(input, linkedInput)
 function CreateKeywordSearch(linkedInput)
 {
     var input = document.createElement("input");
-    input.setAttribute("placeholder", "Search");
+    input.setAttribute("placeholder", "Browse keywords");
     input.setAttribute('list', "keywordlist");
     input.setAttribute("type", "text");
     input.oninput = (e) =>
@@ -441,6 +470,10 @@ function CreateImageElement(content)
     dat.appendChild(CreateKeywordSearch(dat.querySelector(`[name="keywords"]`)));
     dat.appendChild(submit);
     el.appendChild(link);
+    if(content.commentCount)
+    {
+        privacy.innerHTML += `<a href="chat.html?pid=${content.id}" class="nodecoration" target="_blank">💬</a>`;
+    }
     if (userSelf && !api.IsAllowed(content, userSelf.id, "U")) 
     {
         privacy.innerHTML += "❌";
@@ -500,7 +533,7 @@ body {
 .privacy {
     float: right;
 }
-.spoilertoggle {
+.nodecoration, .spoilertoggle {
     text-decoration: none;
 }
 .info {
@@ -562,6 +595,9 @@ input:disabled {
 input.small {
     width: 5em;
 }
+input.xsmall {
+    width: 2.5em;
+}
 .image[data-private] img {
     border-color: red;
 }
@@ -587,6 +623,10 @@ input.small {
                 <input name="isize" id="stateform_isize" class="small">
             </div>
             <div class="searchunit">
+                <label for="stateform_search">Search:</label>
+                <input name="search" type="text" id="stateform_search">
+            </div>
+            <div class="searchunit">
                 <label for="stateform_mindate">Date range:</label>
                 <input name="mindate" id="stateform_mindate" type="date" placeholder="Min" title="Min date (low end)">
                 <span>-</span>
@@ -597,13 +637,23 @@ input.small {
                 <input name="users" type="text" id="stateform_users" placeholder="12 47 etc.">
                 <a href="#" id="stateform_setself">Only me</a>
             </div>
-            <div class="searchunit" id="stateform_search">
+            <div class="searchunit" id="stateform_keysearch">
                 <label for="stateform_keywords">Keywords:</label>
                 <input name="keywords" type="text" id="stateform_keywords" placeholder="a AND (b OR c)">
             </div>
             <div class="searchunit">
+                <label for="stateform_minkc">Keyword count:</label>
+                <input name="minkc" id="stateform_minkc" class="xsmall" placeholder="Min">
+                <span>-</span>
+                <input name="maxkc" id="stateform_maxkc" class="xsmall" placeholder="Max">
+            </div>
+            <div class="searchunit">
                 <label for="stateform_oldest">Oldest first:</label>
                 <input name="oldest" type="checkbox" id="stateform_oldest">
+            </div>
+            <div class="searchunit">
+                <label for="stateform_comments">Has comments:</label>
+                <input name="comments" type="checkbox" id="stateform_comments">
             </div>
             <input name="id" id="stateform_id" type="hidden" value="0">
             <div class="searchunit">
@@ -611,6 +661,7 @@ input.small {
                 <button type="button" id="reset">Reset (beginning)</button>
                 <button type="button" id="older" hidden="">Next set</button>
             </div>
+            <a href="imagemanage.html">Reset everything</a>
         </form>
         <div id="imagelist"></div>
         <datalist id="keywordlist"></datalist>

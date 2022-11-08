@@ -978,6 +978,34 @@ public class GenericSearchDbTests : ViewUnitTestBase
         });
     }
 
+    [Fact]
+    public async Task GenericSearch_Search_KeywordCount()
+    {
+        var result = await service.SearchSingleTypeUnrestricted<ContentView>(new SearchRequest()
+        {
+            type = "content",
+            fields = "id,keywordCount",
+            query = "keywordCount > {{0}}"
+        });
+
+        Assert.True(result.Count > 0);
+        Assert.All(result, x => Assert.True(x.keywordCount > 0));
+    }
+
+    [Fact]
+    public async Task GenericSearch_Search_KeywordCount_Zero()
+    {
+        var result = await service.SearchSingleTypeUnrestricted<ContentView>(new SearchRequest()
+        {
+            type = "content",
+            fields = "id,keywordCount",
+            query = "keywordCount = {{0}}"
+        });
+
+        Assert.True(result.Count > 0);
+        Assert.All(result, x => Assert.True(x.keywordCount == 0));
+    }
+
 
     [Fact]
     public async Task GenericSearch_Search_ValueMacro()

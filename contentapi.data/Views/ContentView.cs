@@ -96,6 +96,10 @@ public class ContentView : IIdView
     public int watchCount {get;set;}
 
     [Expensive(1)]
+    [FieldSelect("select count(*) from content_keywords where main.id = contentId")]
+    public int keywordCount {get;set;}
+
+    [Expensive(1)]
     [FieldSelect("select max(id) from content_history where main.id = contentId")]
     public long lastRevisionId {get;set;} //ALL content has a lastRevisionId
 }

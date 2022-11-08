@@ -784,7 +784,12 @@ public class QueryBuilder : IQueryBuilder
         while(literals.Success)
         {
             var valueName = reqplus.UniqueRequestKey($"val{count}");
-            parameters.Add(valueName, literals.Value.Substring(2, literals.Value.Length - 4));
+            var valueLiteral = literals.Value.Substring(2, literals.Value.Length - 4);
+            long numberLiteral;
+            if(long.TryParse(valueLiteral, out numberLiteral))
+                parameters.Add(valueName, numberLiteral);
+            else
+                parameters.Add(valueName, valueLiteral);
             reqplus.query = reqplus.query.Replace(literals.Value, $"@{valueName}");
             count++;
             literals = Regex.Match(reqplus.query, PreparseLiteralSugar);

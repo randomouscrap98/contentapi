@@ -209,9 +209,9 @@ public class QueryBuilderTests : UnitTestBase
     }
 
     [Theory]
-    [InlineData("id = {{123}}", "123", true)]
+    [InlineData("id = {{123}}", 123L, true)]
     [InlineData("name = {{abc}}", "abc", true)]
-    [InlineData("name = {{abc}} or id = {{123}}", "123", true)]
+    [InlineData("name = {{abc}} or id = {{123}}", 123L, true)]
     [InlineData("name = {{\"holy heck\"}}", "\"holy heck\"", true)]
     [InlineData("name = {{%wow%}}", "%wow%", true)]
     [InlineData("name = {{something with spaces}}", "something with spaces", true)]
