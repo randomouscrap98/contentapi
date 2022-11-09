@@ -187,7 +187,8 @@ function SetKeywordCache(apiData)
 function GetKeywordFullSearch(values) 
 { 
     values.empty = [""];
-    return new RequestSearchParameter("keyword_aggregate", "*", "value NOT IN @empty", "count_desc"); 
+    values.filecontenttype = 3;
+    return new RequestSearchParameter("keyword_aggregate", "*", "value NOT IN @empty and !contenttype(@filecontenttype)", "count_desc"); 
 }
 function RefreshKeywordCache() 
 { 
@@ -297,8 +298,8 @@ function SetState_Number(name, params) {
         }
     }
     var input = document.getElementById(`stateform_${name}`);
-    if(input && SearchState[name] !== undefined) input.value = SearchState[name];
-    else console.warn(`Somehow couldn't find form input for state '${name}'`);
+    if(input) { if(SearchState[name] !== undefined) input.value = SearchState[name]; } 
+    else { console.warn(`Somehow couldn't find form input for state '${name}'`); }
 }
 function SetState_Bool(name, params) {
     if(params.has(name)) SearchState[name] = params.get(name) ? true : false;
@@ -493,6 +494,7 @@ function CreateImageElement(content)
     {
         privacy.innerHTML += "❌";
         el.setAttribute("data-noedit", "true");
+        el.title += "\nYou can't edit this info unless you're super!";
     }
     if(api.IsPrivate(content))
     {
@@ -544,7 +546,7 @@ body {
     box-sizing: border-box;
     display: flex;
     flex-wrap: wrap;
-    max-height: 9em;
+    max-height: 10em;
     overflow-y: auto;
 }
 #keywordbrowse > a {
