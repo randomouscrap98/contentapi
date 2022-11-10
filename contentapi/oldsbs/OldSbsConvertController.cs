@@ -1,9 +1,7 @@
 using System.Data;
 using contentapi.Controllers;
 using contentapi.Main;
-using contentapi.oldsbs;
 using contentapi.Search;
-using Dapper;
 using Microsoft.AspNetCore.Mvc;
 using MySql.Data.MySqlClient;
 
@@ -27,6 +25,7 @@ public partial class OldSbsConvertController : BaseController
     protected IFileService fileService;
     protected IGenericSearch searcher;
     protected IDbWriter writer;
+    private static long nextId = 0;
 
     public OldSbsConvertController(BaseControllerServices services, OldSbsConvertControllerConfig config,
         IFileService fileService) : base(services)
@@ -42,6 +41,24 @@ public partial class OldSbsConvertController : BaseController
         return new MySqlConnection(config.OldSbsConnectionString);
     }
 
+    protected string GetNextHash()
+    {
+        var id = Interlocked.Increment(ref nextId);
+        return $"sbsconvert-{id}";
+    }
+
+    protected Db.Content GetSystemContent(string whatfor)
+    {
+        return new Db.Content()
+        {
+            deleted = false,
+            contentType = data.InternalContentType.none,
+            createUserId = 0,
+            parentId = 0,
+            literalType = "system:" + whatfor,
+            hash = GetNextHash(),
+        };
+    }
 
     /// <summary>
     /// Basically all transfer functions will follow this same pattern, so might as well just give it to them.
@@ -79,25 +96,10 @@ public partial class OldSbsConvertController : BaseController
         //NOTE: all these conversion functions are put into separate files because they're so big
         await ConvertUsers();
         await ConvertBans();
+        await ConvertStoredValues();
 
         await UploadAvatars(); //This should come AFTER pages and threads and categories oh my, so 
 
         logger.LogInformation("Convert all complete?");
     }
-
-    //protected Task DeleteAll()
-    //{
-    //    Directory.Delete()
-    //    return PerformDbTransfer(async (oldcon, con, trans) =>
-    //    {
-    //        await con.ExecuteAsync("delete from users");
-    //        logger.LogInformation("Deleted all users from contentapi");
-    //        await con.ExecuteAsync("delete from content");
-    //        logger.LogInformation("Deleted all content from contentapi");
-    //        await con.ExecuteAsync("delete from messages");
-    //        logger.LogInformation("Deleted all messages from contentapi");
-    //        await con.ExecuteAsync("delete from bans");
-    //        logger.LogInformation("Deleted all bans from contentapi");
-    //    });
-    //}
 }
