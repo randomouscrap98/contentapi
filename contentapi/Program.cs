@@ -2,6 +2,7 @@ using Amazon.S3;
 using contentapi;
 using contentapi.Controllers;
 using contentapi.Main;
+using contentapi.oldsbs;
 using contentapi.Search;
 using contentapi.Setup;
 using contentapi.Utilities;
