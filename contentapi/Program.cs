@@ -113,45 +113,51 @@ builder.Services.AddSwaggerGen(c =>
     });
 });
 
-var app = builder.Build();
+var provider = builder.Services.BuildServiceProvider();
+var controller = provider.GetService<OldSbsConvertController>() ?? throw new InvalidOperationException("Couldn't create controller!");
 
-// Configure the HTTP request pipeline.
-// I ALWAYS want swagger, no matter what environment it is
-app.UseSwagger();
-app.UseSwaggerUI(c => {
-    c.ConfigObject.AdditionalItems["syntaxHighlight"] = new Dictionary<string, object>
-    {
-        ["activated"] = false
-    };
-});
-//c =>
-//{
-//    c.SwaggerEndpoint("/swagger/v1/swagger.json", "My API V1");
-//    c.RoutePrefix = "api";
+await controller.ConvertAll();
+
+//var app = builder.Build();
+//
+//// Configure the HTTP request pipeline.
+//// I ALWAYS want swagger, no matter what environment it is
+//app.UseSwagger();
+//app.UseSwaggerUI(c => {
+//    c.ConfigObject.AdditionalItems["syntaxHighlight"] = new Dictionary<string, object>
+//    {
+//        ["activated"] = false
+//    };
 //});
-
-app.UseCors(builder =>
-{
-    builder
-    .AllowAnyOrigin()
-    .AllowAnyMethod()
-    .AllowAnyHeader()
-    .WithExposedHeaders("*");
-});
-
-app.UseStaticFiles(builder.Configuration.GetValue<string>("StaticPath"));
-
-app.UseAuthentication();
-app.UseAuthorization();
-
-//MUST COME BEFORE USE ENDPOINTS 
-//https://www.koskila.net/httpcontext-websockets-iswebsocketrequest-always-null-in-your-net-core-code/
-app.UseWebSockets(new WebSocketOptions()
-{
-    //Make this configurable later?
-    KeepAliveInterval = TimeSpan.FromSeconds(15),
-});
-
-app.MapControllers();
-
-app.Run();
+////c =>
+////{
+////    c.SwaggerEndpoint("/swagger/v1/swagger.json", "My API V1");
+////    c.RoutePrefix = "api";
+////});
+//
+//app.UseCors(builder =>
+//{
+//    builder
+//    .AllowAnyOrigin()
+//    .AllowAnyMethod()
+//    .AllowAnyHeader()
+//    .WithExposedHeaders("*");
+//});
+//
+//app.UseStaticFiles(builder.Configuration.GetValue<string>("StaticPath"));
+//
+//app.UseAuthentication();
+//app.UseAuthorization();
+//
+////MUST COME BEFORE USE ENDPOINTS 
+////https://www.koskila.net/httpcontext-websockets-iswebsocketrequest-always-null-in-your-net-core-code/
+//app.UseWebSockets(new WebSocketOptions()
+//{
+//    //Make this configurable later?
+//    KeepAliveInterval = TimeSpan.FromSeconds(15),
+//});
+//
+//app.MapControllers();
+//
+//app.Run();
+//

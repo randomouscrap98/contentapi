@@ -79,6 +79,8 @@ public partial class OldSbsConvertController : BaseController
         await ConvertUsers();
 
         await UploadAvatars(); //This should come AFTER pages and threads and categories oh my, so 
+
+        logger.LogInformation("Convert all complete?");
     }
 
     //protected Task DeleteAll()

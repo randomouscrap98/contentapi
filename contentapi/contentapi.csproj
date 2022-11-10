@@ -4,7 +4,7 @@
     <TargetFramework>net6.0</TargetFramework>
     <Nullable>enable</Nullable>
     <ImplicitUsings>enable</ImplicitUsings>
-	  <Version>3.1.0.474</Version>
+	  <Version>3.1.0.475</Version>
     <InvariantGlobalization>true</InvariantGlobalization>
     <ProduceReferenceAssembly>false</ProduceReferenceAssembly>
   </PropertyGroup>
