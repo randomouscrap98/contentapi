@@ -1,4 +1,4 @@
-namespace oldsbs;
+namespace contentapi.oldsbs;
 
 public class Bans
 {

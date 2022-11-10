@@ -7,7 +7,7 @@ namespace contentapi.oldsbs;
 
 public partial class OldSbsConvertController
 {
-    public Task ConvertUsers()
+    protected Task ConvertUsers()
     {
         logger.LogTrace("ConvertUsers called");
 
@@ -60,7 +60,7 @@ public partial class OldSbsConvertController
     /// Users must ALREADY be inserted!
     /// </summary>
     /// <returns></returns>
-    public async Task UploadAvatars()
+    protected async Task UploadAvatars()
     {
         logger.LogTrace("UploadAvatars called");
 
@@ -82,17 +82,25 @@ public partial class OldSbsConvertController
             }
             else
             {
-                using(var fstream = System.IO.File.Open(Path.Combine(config.AvatarPath, user.avatar), FileMode.Open, FileAccess.Read))
+                try
                 {
-                    //oops, we have to actually upload the file
-                    var fcontent = await fileService.UploadFile(new UploadFileConfigExtra() 
+                    using (var fstream = System.IO.File.Open(Path.Combine(config.AvatarPath, user.avatar), FileMode.Open, FileAccess.Read))
                     {
-                        name = user.avatar
-                    }, fstream, user.id);
+                        //oops, we have to actually upload the file
+                        var fcontent = await fileService.UploadFile(new UploadFileConfigExtra()
+                        {
+                            name = user.avatar
+                        }, fstream, user.id);
 
-                    logger.LogDebug($"Uploaded avatar for {user.username}({user.id}): {fcontent.name} ({fcontent.hash})");
+                        logger.LogDebug($"Uploaded avatar for {user.username}({user.id}): {fcontent.name} ({fcontent.hash})");
 
-                    user.avatar = fcontent.hash;
+                        user.avatar = fcontent.hash;
+                    }
+                }
+                catch(Exception ex)
+                {
+                    logger.LogWarning($"Couldn't import avatar for user {user.username}({user.id}), using default: {ex}");
+                    user.avatar = "0";
                 }
             }
         }

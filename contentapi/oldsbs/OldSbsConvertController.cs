@@ -78,6 +78,7 @@ public partial class OldSbsConvertController : BaseController
 
         //NOTE: all these conversion functions are put into separate files because they're so big
         await ConvertUsers();
+        await ConvertBans();
 
         await UploadAvatars(); //This should come AFTER pages and threads and categories oh my, so 
 
