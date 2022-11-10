@@ -89,6 +89,7 @@ public partial class OldSbsConvertController
                 var fcontent = await fileService.UploadFile(new data.Views.ContentView()
                 {
                     name = oldBadge.name,
+                    contentType = data.InternalContentType.file, 
                     description = oldBadge.description,
                     parentId = parentId,
                     values = new Dictionary<string, object> {

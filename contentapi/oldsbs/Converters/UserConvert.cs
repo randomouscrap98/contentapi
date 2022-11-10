@@ -33,7 +33,7 @@ public partial class OldSbsConvertController
 
             var newUsers = oldUsers.Select(x => 
             {
-                var user = new Db.User()
+                var user = new Db.User_Convert()
                 {
                     id = x.uid,
                     username = x.username,
@@ -52,9 +52,9 @@ public partial class OldSbsConvertController
                     logger.LogInformation($"User {user.username}({user.id}) is super!");
 
                 return user;
-            });
+            }).ToList();
 
-            logger.LogInformation($"Translated (in-memory) all the users");
+            logger.LogInformation($"Translated (in-memory) all the users; super user uid was {config.SuperUserId}");
 
             await con.InsertAsync(newUsers, trans);
             logger.LogInformation($"Wrote {newUsers.Count()} users into contentapi!");
