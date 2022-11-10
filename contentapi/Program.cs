@@ -114,7 +114,7 @@ builder.Services.AddSwaggerGen(c =>
 });
 
 var provider = builder.Services.BuildServiceProvider();
-var controller = provider.GetService<OldSbsConvertController>() ?? throw new InvalidOperationException("Couldn't create controller!");
+var controller = ActivatorUtilities.GetServiceOrCreateInstance<OldSbsConvertController>(provider); //provider.provider.GetService<OldSbsConvertController>() ?? throw new InvalidOperationException("Couldn't create controller!");
 
 await controller.ConvertAll();
 

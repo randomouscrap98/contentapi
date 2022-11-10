@@ -29,18 +29,19 @@ public partial class OldSbsConvertController : BaseController
     protected IDbWriter writer;
 
     public OldSbsConvertController(BaseControllerServices services, OldSbsConvertControllerConfig config,
-        IFileService fileService, IGenericSearch searcher, IDbWriter writer) : base(services)
+        IFileService fileService) : base(services)
     {
         this.config = config;
         this.fileService = fileService;
-        this.searcher = searcher;
-        this.writer = writer;
+        this.searcher = services.dbFactory.CreateSearch();
+        this.writer = services.dbFactory.CreateWriter();
     }
 
     protected IDbConnection GetOldSbsConnection()
     {
         return new MySqlConnection(config.OldSbsConnectionString);
     }
+
 
     /// <summary>
     /// Basically all transfer functions will follow this same pattern, so might as well just give it to them.

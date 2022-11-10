@@ -18,20 +18,20 @@ public partial class OldSbsConvertController
             //Also, we are specifically excluding users who currently have a lockout or shadow ban. Although they may 
             //have content linked to them that won't show up appropriately, we'll simply remove any content
             //for which we don't have a linked user. We will absolutely log when that happens though
-            var users = await con.QueryAsync<oldsbs.Users>("select * from users");
-            logger.LogInformation($"Found {users.Count()} users in old database");
+            var oldUsers = await oldcon.QueryAsync<oldsbs.Users>("select * from users");
+            logger.LogInformation($"Found {oldUsers.Count()} users in old database");
 
-            var ignoredUsers = await con.QueryAsync<oldsbs.Users>(
+            var oldIgnoredUsers = await oldcon.QueryAsync<oldsbs.Users>(
                 @"select uid, username from users
                   where uid in (select uid from registrations) 
                     or uid in (select uid from bans where end > curdate() and (lockout=1 or shadow=1))");
             
-            logger.LogWarning($"The following {ignoredUsers.Count()} users are being marked deleted: " + 
-                string.Join(", ", ignoredUsers.Select(x => $"{x.username}({x.uid})")));
+            logger.LogWarning($"The following {oldIgnoredUsers.Count()} users are being marked deleted: " + 
+                string.Join(", ", oldIgnoredUsers.Select(x => $"{x.username}({x.uid})")));
             
-            var deleteHash = new HashSet<long>(ignoredUsers.Select(x => x.uid));
+            var deleteHash = new HashSet<long>(oldIgnoredUsers.Select(x => x.uid));
 
-            var newUsers = users.Select(x => 
+            var newUsers = oldUsers.Select(x => 
             {
                 return new Db.User()
                 {
@@ -60,40 +60,45 @@ public partial class OldSbsConvertController
     /// Users must ALREADY be inserted!
     /// </summary>
     /// <returns></returns>
-    public Task UploadAvatars()
+    public async Task UploadAvatars()
     {
         logger.LogTrace("UploadAvatars called");
 
-        return PerformDbTransfer(async (oldcon, con, trans) =>
+        List<Db.User> users = new List<Db.User>();
+
+        await PerformDbTransfer(async (oldcon, con, trans) =>
         {
-            var users = await con.QueryAsync<Db.User>("select * from users");
+            users = (await con.QueryAsync<Db.User>("select * from users")).ToList();
             logger.LogDebug($"Found {users.Count()} users to update avatars");
+        });
 
-            foreach(var user in users)
+        foreach(var user in users)
+        {
+            //Simple case: just use the default avatar (no upload required)
+            if(Regex.IsMatch(user.avatar, config.OldDefaultAvatarRegex))
             {
-                //Simple case: just use the default avatar (no upload required)
-                if(Regex.IsMatch(user.avatar, config.OldDefaultAvatarRegex))
+                user.avatar = "0";
+                logger.LogDebug($"Skipping default avatar for {user.username}({user.id})");
+            }
+            else
+            {
+                using(var fstream = System.IO.File.Open(Path.Combine(config.AvatarPath, user.avatar), FileMode.Open, FileAccess.Read))
                 {
-                    user.avatar = "0";
-                    logger.LogDebug($"Skipping default avatar for {user.username}({user.id})");
-                }
-                else
-                {
-                    using(var fstream = System.IO.File.Open(Path.Combine(config.AvatarPath, user.avatar), FileMode.Open))
+                    //oops, we have to actually upload the file
+                    var fcontent = await fileService.UploadFile(new UploadFileConfigExtra() 
                     {
-                        //oops, we have to actually upload the file
-                        var fcontent = await fileService.UploadFile(new UploadFileConfigExtra() 
-                        {
-                            name = user.avatar
-                        }, fstream, user.id);
+                        name = user.avatar
+                    }, fstream, user.id);
 
-                        logger.LogDebug($"Uploaded avatar for {user.username}({user.id}): {fcontent.name} ({fcontent.hash})");
+                    logger.LogDebug($"Uploaded avatar for {user.username}({user.id}): {fcontent.name} ({fcontent.hash})");
 
-                        user.avatar = fcontent.hash;
-                    }
+                    user.avatar = fcontent.hash;
                 }
             }
+        }
 
+        await PerformDbTransfer(async (oldcon, con, trans) =>
+        {
             await con.InsertAsync(users, trans);
             logger.LogInformation($"Updated all avatars for {users.Count()} users");
         });
