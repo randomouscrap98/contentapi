@@ -29,6 +29,7 @@ public partial class OldSbsConvertController
                 if(og.single) values.Add(CreateValue(id, "single", true));
                 if(og.starter) values.Add(CreateValue(id, "starter", true));
                 await con.InsertAsync(values, trans);
+                await con.InsertAsync(new Db.ContentPermission { contentId = id, userId = 0, read = true }, trans);
                 logger.LogDebug($"Inserted {values.Count} value(s) for badgegroup {ng.name}({id})");
             }
 
@@ -73,9 +74,14 @@ public partial class OldSbsConvertController
         foreach(var oldBadge in oldBadges)
         {
             var bgid = badgeGroupMapping.GetValueOrDefault(oldBadge.bid, 0); //ContainsKey(oldBadge.bid) ? badgeGroupMapping[oldBadge.bid]
+
+            if(bgid == 0)
+                logger.LogWarning($"Badge {oldBadge.name}({oldBadge.bid}) has no group mapping!");
             
             if(!groupContentMapping.ContainsKey(bgid))
                 throw new InvalidOperationException($"Could not find appropriate content group for badge {oldBadge.name}({oldBadge.bid}), bgid = {bgid}");
+            
+            var parentId = groupContentMapping[bgid];
 
             using (var fstream = System.IO.File.Open(Path.Combine(config.BadgePath, oldBadge.file), FileMode.Open, FileAccess.Read))
             {
@@ -84,13 +90,23 @@ public partial class OldSbsConvertController
                 {
                     name = oldBadge.name,
                     description = oldBadge.description,
-                    parentId = 
+                    parentId = parentId,
+                    values = new Dictionary<string, object> {
+                        { "system", true }, //We may want to skip system content in browsing
+                        { "badge", true }, //Might need to know if a file is a badge. since files literaltypes are stuck with the mimetype...
+                        { "bid", oldBadge.bid },        //The original bid (id of the badge)
+                        { "bgid", oldBadge.bid },       //The original bgid
+                        { "file", oldBadge.file },      //The original filename
+                        { "value", oldBadge.value },    //Badges had a score but the system was never used properly
+                        { "givable", oldBadge.givable }, //This badge WAS givable by admins at one point
+                        { "hidden", oldBadge.hidden }, 
+                        { "single", oldBadge.single } //Can only be given to a single person
+                    },
+                    permissions = new Dictionary<long, string> { { 0, "CR" }} //NEEDS to be public 
                 }, new Main.UploadFileConfig() { }, fstream, config.SuperUserId);
 
-                logger.LogDebug($"Uploaded avatar for {user.username}({user.id}): {fcontent.name} ({fcontent.hash})");
+                logger.LogDebug($"Uploaded badge {oldBadge.name}({oldBadge.bid}): {fcontent.name} ({fcontent.hash})");
 
-                user.avatar = fcontent.hash;
-            }
             }
         }
     }

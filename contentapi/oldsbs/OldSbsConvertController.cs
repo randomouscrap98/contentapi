@@ -111,8 +111,8 @@ public partial class OldSbsConvertController : BaseController
         logger.LogTrace("SkipIds called");
         return PerformDbTransfer(async (oldcon, con, trans) =>
         {
-            await con.InsertAsync(new Db.Content { id = config.ContentIdSkip });
-            await con.InsertAsync(new Db.Message { id = config.MessageIdSkip});
+            await con.InsertAsync(new Db.Content_Convert { id = config.ContentIdSkip, hash = "delete-later" }, trans);
+            await con.InsertAsync(new Db.Message_Convert { id = config.MessageIdSkip }, trans);
             logger.LogInformation($"Inserted skip markers for content at {config.ContentIdSkip} and messages at {config.MessageIdSkip}");
         });
     }
@@ -122,8 +122,8 @@ public partial class OldSbsConvertController : BaseController
         logger.LogTrace("RemoveSkipMarkerscalled");
         return PerformDbTransfer(async (oldcon, con, trans) =>
         {
-            await con.DeleteAsync(new Db.Content { id = config.ContentIdSkip });
-            await con.DeleteAsync(new Db.Message { id = config.MessageIdSkip});
+            await con.DeleteAsync(new Db.Content_Convert { id = config.ContentIdSkip }, trans);
+            await con.DeleteAsync(new Db.Message_Convert { id = config.MessageIdSkip}, trans);
             logger.LogInformation($"Removed skip markers for content at {config.ContentIdSkip} and messages at {config.MessageIdSkip}");
         });
     }

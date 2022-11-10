@@ -33,7 +33,7 @@ public partial class OldSbsConvertController
 
             var newUsers = oldUsers.Select(x => 
             {
-                return new Db.User()
+                var user = new Db.User()
                 {
                     id = x.uid,
                     username = x.username,
@@ -43,10 +43,15 @@ public partial class OldSbsConvertController
                     password = "",
                     salt = "",
                     special = "",
-                    super = false,
+                    super = x.uid == config.SuperUserId,
                     deleted = deleteHash.Contains(x.uid),
                     lastPasswordDate = new DateTime(0), //This forces everyone's passwords to be reset
                 };
+
+                if(user.super)
+                    logger.LogInformation($"User {user.username}({user.id}) is super!");
+
+                return user;
             });
 
             logger.LogInformation($"Translated (in-memory) all the users");
