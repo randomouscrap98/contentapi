@@ -2,8 +2,11 @@ using System.Data;
 using contentapi.Controllers;
 using contentapi.Main;
 using contentapi.Search;
+using Dapper;
+using Dapper.Contrib.Extensions;
 using Microsoft.AspNetCore.Mvc;
 using MySql.Data.MySqlClient;
+using Newtonsoft.Json;
 
 namespace contentapi.oldsbs;
 
@@ -11,11 +14,15 @@ public class OldSbsConvertControllerConfig
 {
     public string OldSbsConnectionString {get;set;} = "";
     public string AvatarPath {get;set;} = "";
+    public string BadgePath {get;set;} = "";
     public string OldDefaultAvatarRegex {get;set;} = "";
-    public long PageIdSkip {get;set;}
-    public long ThreadIdSkip {get;set;}
-    public long ThreadCategoryIdSkip {get;set;}
-    public long PageCategoryIdSkip {get;set;}
+    public long SuperUserId {get;set;}
+    public long ContentIdSkip {get;set;}
+    public long MessageIdSkip {get;set;}
+    //public long PageIdSkip {get;set;}
+    //public long ThreadIdSkip {get;set;}
+    //public long ThreadCategoryIdSkip {get;set;}
+    //public long PageCategoryIdSkip {get;set;}
 }
 
 public partial class OldSbsConvertController : BaseController
@@ -60,6 +67,17 @@ public partial class OldSbsConvertController : BaseController
         };
     }
 
+    protected Db.ContentValue CreateValue(long contentId, string key, object? value)
+    {
+        return new Db.ContentValue
+        {
+            contentId = contentId,
+            key = key,
+            value = JsonConvert.SerializeObject(value)
+        };
+    }
+
+
     /// <summary>
     /// Basically all transfer functions will follow this same pattern, so might as well just give it to them.
     /// </summary>
@@ -88,17 +106,60 @@ public partial class OldSbsConvertController : BaseController
         }
     }
 
+    protected Task SkipIds()
+    {
+        logger.LogTrace("SkipIds called");
+        return PerformDbTransfer(async (oldcon, con, trans) =>
+        {
+            await con.InsertAsync(new Db.Content { id = config.ContentIdSkip });
+            await con.InsertAsync(new Db.Message { id = config.MessageIdSkip});
+            logger.LogInformation($"Inserted skip markers for content at {config.ContentIdSkip} and messages at {config.MessageIdSkip}");
+        });
+    }
+
+    protected Task RemoveSkipMarkers()
+    {
+        logger.LogTrace("RemoveSkipMarkerscalled");
+        return PerformDbTransfer(async (oldcon, con, trans) =>
+        {
+            await con.DeleteAsync(new Db.Content { id = config.ContentIdSkip });
+            await con.DeleteAsync(new Db.Message { id = config.MessageIdSkip});
+            logger.LogInformation($"Removed skip markers for content at {config.ContentIdSkip} and messages at {config.MessageIdSkip}");
+        });
+    }
+
+    protected Task SanityChecks()
+    {
+        logger.LogTrace("SanityChecks called");
+        return PerformDbTransfer(async (oldcon, con, trans) =>
+        {
+            var badContentCount = await con.ExecuteScalarAsync<int>("select count(*) from content where id < @id", new { id = config.ContentIdSkip });
+            var badMessageCount = await con.ExecuteScalarAsync<int>("select count(*) from messages where id < @id", new { id = config.MessageIdSkip });
+
+            logger.LogInformation($"Sanity checks passed!");
+        });
+    }
+
     [HttpGet()]
     public async Task ConvertAll()
     {
         logger.LogTrace("ConvertAll called! It expects an empty database and upload folder!");
 
+        await SkipIds();
+
         //NOTE: all these conversion functions are put into separate files because they're so big
         await ConvertUsers();
         await ConvertBans();
         await ConvertStoredValues();
+        await ConvertBadgeGroups();
+        await ConvertBadges();
 
-        await UploadAvatars(); //This should come AFTER pages and threads and categories oh my, so 
+        await UploadAvatars(); //Because of our skip system, the ids for avatars no longer matter. To make things look nice, they should still come after content though
+
+        // Need to keep the skip markers around long enough to insert content with new ids
+        await RemoveSkipMarkers();
+
+        await SanityChecks();
 
         logger.LogInformation("Convert all complete?");
     }

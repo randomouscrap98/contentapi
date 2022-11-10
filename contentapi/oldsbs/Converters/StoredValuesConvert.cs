@@ -1,5 +1,6 @@
 using Dapper;
 using Dapper.Contrib.Extensions;
+using Newtonsoft.Json;
 
 namespace contentapi.oldsbs;
 
@@ -20,15 +21,7 @@ public partial class OldSbsConvertController
             logger.LogInformation($"Inserted container for values ({id})");
 
             //ALL stored values are just values in this special container
-            var newValues = osv.Select(x => 
-            {
-                return new Db.ContentValue 
-                {
-                    contentId = id,
-                    key = x.name,
-                    value = x.value ?? ""
-                };
-            });
+            var newValues = osv.Select(x => CreateValue(id, x.name, x.value));
 
             logger.LogInformation($"Translated (in-memory) all the stored values");
 
