@@ -54,17 +54,41 @@ public partial class OldSbsConvertController : BaseController
         return $"sbsconvert-{id}";
     }
 
-    protected Db.Content GetSystemContent(string whatfor)
+    protected Task<Db.Content> AddSystemContent(string type, IDbConnection con, IDbTransaction trans)
     {
-        return new Db.Content()
+        return AddSystemContent(new Db.Content 
         {
-            deleted = false,
-            contentType = data.InternalContentType.none,
             createUserId = 0,
-            parentId = 0,
-            literalType = "system:" + whatfor,
-            hash = GetNextHash(),
-        };
+            literalType = type,
+        }, con, trans);
+    }
+
+    /// <summary>
+    /// System content is anything which may house data but which has no owner, only global read permission, no parent, and some special
+    /// values to filter them out. They HAVE to have global read in order for them to be found AT ALL in the api
+    /// </summary>
+    /// <param name="whatfor"></param>
+    /// <returns></returns>
+    protected async Task<Db.Content> AddSystemContent(Db.Content content, IDbConnection con, IDbTransaction trans)
+    {
+        //Preset certain fields regardless of what was given
+        content.createDate = DateTime.UtcNow;
+        content.deleted = false;
+        content.hash = GetNextHash();
+        content.literalType = "system:" + content.literalType; //WARN: this prefixes all types with system:!!
+
+        var id = await con.InsertAsync(content, trans);
+        content.id = id;
+
+        //And now we have to add the permission and the value
+        await con.InsertAsync(CreateReadonlyGlobalPermission(id), trans);
+
+        //WARN: DON'T use values to indicate system, even if system files might need that! The system content might
+        //require those fields, and it's harder to filter out! 
+
+        logger.LogInformation($"Inserted system content {content.name}({content.id})");
+
+        return content;
     }
 
     protected Db.ContentValue CreateValue(long contentId, string key, object? value)
@@ -74,6 +98,27 @@ public partial class OldSbsConvertController : BaseController
             contentId = contentId,
             key = key,
             value = JsonConvert.SerializeObject(value)
+        };
+    }
+
+    protected Db.ContentPermission CreateReadonlyGlobalPermission(long contentId)
+    {
+        return new Db.ContentPermission
+        {
+            contentId = contentId,
+            userId = 0,
+            read = true 
+        };
+    }
+
+    protected Db.ContentPermission CreateBasicGlobalPermission(long contentId)
+    {
+        return new Db.ContentPermission
+        {
+            contentId = contentId,
+            userId = 0,
+            create = true,
+            read = true 
         };
     }
 

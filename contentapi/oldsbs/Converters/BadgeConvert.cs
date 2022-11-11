@@ -20,17 +20,17 @@ public partial class OldSbsConvertController
             //matter because we're in a transaction
             foreach(var og in oldGroups)
             {
-                var ng = GetSystemContent("badgegroup");
-                ng.name = og.name;
-                ng.description = og.description;
-                var id = await con.InsertAsync(ng, trans);
-                logger.LogDebug($"Wrote badge {ng.name}({id})");
-                var values = new List<Db.ContentValue> { CreateValue(id, "bgid", og.bgid) };
-                if(og.single) values.Add(CreateValue(id, "single", true));
-                if(og.starter) values.Add(CreateValue(id, "starter", true));
+                var ng = await AddSystemContent(new Db.Content {
+                    literalType = "badgegroup",
+                    name = og.name,
+                    description = og.description
+                }, con, trans); 
+                logger.LogDebug($"Wrote badgegroup {ng.name}({ng.id})");
+                var values = new List<Db.ContentValue> { CreateValue(ng.id, "bgid", og.bgid) };
+                if(og.single) values.Add(CreateValue(ng.id, "single", true));
+                if(og.starter) values.Add(CreateValue(ng.id, "starter", true));
                 await con.InsertAsync(values, trans);
-                await con.InsertAsync(new Db.ContentPermission { contentId = id, userId = 0, read = true }, trans);
-                logger.LogDebug($"Inserted {values.Count} value(s) for badgegroup {ng.name}({id})");
+                logger.LogDebug($"Inserted {values.Count} value(s) for badgegroup {ng.name}({ng.id})[{og.bgid}]");
             }
 
             logger.LogInformation($"Wrote {oldGroups.Count()} badgegroups into contentapi!");
