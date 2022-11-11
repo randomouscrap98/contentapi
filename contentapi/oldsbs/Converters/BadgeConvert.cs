@@ -60,7 +60,7 @@ public partial class OldSbsConvertController
             var groupValues = await con.QueryAsync<Db.ContentValue>(
                 @"select * from content_values 
                    where key=""bgid""
-                     and contentId in (select id from content where literalType=""system:badgegroup"")");
+                     and contentId in (select id from content where literalType=""badgegroup"")");
 
             groupContentMapping = groupValues.ToDictionary(k => JsonConvert.DeserializeObject<long>(k.value), v => v.contentId);
             groupContentMapping.Add(0, 0); //Make sure "no group" matches to root

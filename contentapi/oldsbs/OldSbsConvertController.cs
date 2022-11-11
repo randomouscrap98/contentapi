@@ -19,10 +19,6 @@ public class OldSbsConvertControllerConfig
     public long SuperUserId {get;set;}
     public long ContentIdSkip {get;set;}
     public long MessageIdSkip {get;set;}
-    //public long PageIdSkip {get;set;}
-    //public long ThreadIdSkip {get;set;}
-    //public long ThreadCategoryIdSkip {get;set;}
-    //public long PageCategoryIdSkip {get;set;}
 }
 
 public partial class OldSbsConvertController : BaseController
@@ -54,13 +50,11 @@ public partial class OldSbsConvertController : BaseController
         return $"sbsconvert-{id}";
     }
 
-    protected Task<Db.Content> AddSystemContent(string type, IDbConnection con, IDbTransaction trans)
+    protected Task<Db.Content> AddSystemContent(string type, IDbConnection con, IDbTransaction trans, bool globalCreate = false)
     {
-        return AddSystemContent(new Db.Content 
-        {
-            createUserId = 0,
+        return AddSystemContent(new Db.Content {
             literalType = type,
-        }, con, trans);
+        }, con, trans, globalCreate);
     }
 
     /// <summary>
@@ -69,24 +63,33 @@ public partial class OldSbsConvertController : BaseController
     /// </summary>
     /// <param name="whatfor"></param>
     /// <returns></returns>
-    protected async Task<Db.Content> AddSystemContent(Db.Content content, IDbConnection con, IDbTransaction trans)
+    protected async Task<Db.Content> AddSystemContent(Db.Content content, IDbConnection con, IDbTransaction trans, bool globalCreate = false)
     {
         //Preset certain fields regardless of what was given
+        content.createUserId = config.SuperUserId; //NOTE: it was changed such that most system content needs to be owned by the super user just in case.
         content.createDate = DateTime.UtcNow;
         content.deleted = false;
         content.hash = GetNextHash();
-        content.literalType = "system:" + content.literalType; //WARN: this prefixes all types with system:!!
+        content.contentType = data.InternalContentType.system;
 
         var id = await con.InsertAsync(content, trans);
         content.id = id;
 
         //And now we have to add the permission and the value
-        await con.InsertAsync(CreateReadonlyGlobalPermission(id), trans);
+        await con.InsertAsync(globalCreate ? CreateBasicGlobalPermission(id) : CreateReadonlyGlobalPermission(id), trans);
+        await con.InsertAsync(new Db.ContentPermission {
+            contentId = id,
+            userId = content.createUserId,
+            create = true,
+            read = true,
+            update = true,
+            delete = true
+        }, trans);
 
         //WARN: DON'T use values to indicate system, even if system files might need that! The system content might
         //require those fields, and it's harder to filter out! 
 
-        logger.LogInformation($"Inserted system content {content.name}({content.id})");
+        logger.LogInformation($"Inserted system content {CSTR(content)}");
 
         return content;
     }
@@ -120,6 +123,12 @@ public partial class OldSbsConvertController : BaseController
             create = true,
             read = true 
         };
+    }
+
+    protected void AddBasicMetadata(data.Views.ContentView content)
+    {
+        content.values.Add("markup", "bbcode");
+        content.permissions[0] = "CR";
     }
 
 
@@ -184,6 +193,9 @@ public partial class OldSbsConvertController : BaseController
             logger.LogInformation($"Sanity checks passed!");
         });
     }
+
+    protected string CSTR(Db.Content content) => $"{content.name}/{content.hash}({content.literalType})[{content.id}]";
+    protected string CSTR(data.Views.ContentView content) => $"{content.name}/{content.hash}({content.literalType})[{content.id}]";
 
     [HttpGet()]
     public async Task ConvertAll()

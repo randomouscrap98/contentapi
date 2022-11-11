@@ -7,18 +7,21 @@ namespace contentapi.oldsbs;
 
 public partial class OldSbsConvertController
 {
-    protected Task ConvertUsers()
+    protected async Task ConvertUsers()
     {
         logger.LogTrace("ConvertUsers called");
 
+        var oldUsers = new List<oldsbs.Users>();
+        var userpageParent = new Db.Content();
+
         //Use a transaction to make batch inserts much faster (on sqlite at least)
-        return PerformDbTransfer(async (oldcon, con, trans) =>
+        await PerformDbTransfer(async (oldcon, con, trans) =>
         {
             //I'm assuming there's not enough users to matter, so we're not doing it in batches
             //Also, we are specifically excluding users who currently have a lockout or shadow ban. Although they may 
             //have content linked to them that won't show up appropriately, we'll simply remove any content
             //for which we don't have a linked user. We will absolutely log when that happens though
-            var oldUsers = await oldcon.QueryAsync<oldsbs.Users>("select * from users");
+            oldUsers = (await oldcon.QueryAsync<oldsbs.Users>("select * from users")).ToList();
             logger.LogInformation($"Found {oldUsers.Count()} users in old database");
 
             var oldIgnoredUsers = await oldcon.QueryAsync<oldsbs.Users>(
@@ -58,7 +61,43 @@ public partial class OldSbsConvertController
 
             await con.InsertAsync(newUsers, trans);
             logger.LogInformation($"Wrote {newUsers.Count()} users into contentapi!");
+
+            //Create yet another system page which is the parent of all userpages
+            userpageParent = await AddSystemContent("userpages", con, trans, true);
+            logger.LogInformation($"Created userpage parent {CSTR(userpageParent)}");
         });
+
+
+        //After adding all users, we now take their abouts and turn them into real pages. We're going to let the API do the 
+        //work so the pages are as normal as possible. The create date is of course incorrect but it doesn't matter too much,
+        //as that date information isn't preserved in the old database anyway
+        foreach(var oldUser in oldUsers)
+        {
+            if(!string.IsNullOrEmpty(oldUser.about))
+            {
+                var content = new data.Views.ContentView()
+                {
+                    contentType = data.InternalContentType.userpage,
+                    text = oldUser.about,
+                    parentId = userpageParent.id,
+                    name = $"{oldUser.username}'s userpage"
+                };
+                AddBasicMetadata(content);
+
+                //These api calls already log
+                var writtenContent = await writer.WriteAsync(content, oldUser.uid);
+            }
+            else
+            {
+                logger.LogDebug($"No userpage for {oldUser.username}");
+            }
+        }
+
+        using(var con = services.dbFactory.CreateRaw())
+        {
+            var userpageCount = await con.ExecuteScalarAsync<int>("select count(*) from content where contentType = @type", new { type = data.InternalContentType.userpage });
+            logger.LogInformation($"Inserted {userpageCount} userpages!");
+        }
     }
 
     /// <summary>
