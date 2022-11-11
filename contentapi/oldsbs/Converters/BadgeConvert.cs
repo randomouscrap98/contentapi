@@ -56,15 +56,8 @@ public partial class OldSbsConvertController
 
             badgeGroupMapping = groupsForBadges.ToDictionary(k => k.bid, v => v.bgid);
 
-            var groupValues = await con.QueryAsync<Db.ContentValue>(
-                @"select * from content_values 
-                   where key=""bgid""
-                     and contentId in (select id from content where literalType=""badgegroup"")");
-
-            groupContentMapping = groupValues.ToDictionary(k => JsonConvert.DeserializeObject<long>(k.value), v => v.contentId);
+            groupContentMapping = await GetOldToNewMapping("bgid", "badgegroup", con);
             groupContentMapping.Add(0, 0); //Make sure "no group" matches to root
-            logger.LogInformation("BGID to content mapping for badge insertion: " + 
-                string.Join(" ", groupContentMapping.Select(x => $"({x.Key}={x.Value})")));
         });
 
         //Now we insert files outside the transaction... note that this IS inserting all the badges, since badges

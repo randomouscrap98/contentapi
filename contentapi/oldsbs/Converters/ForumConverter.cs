@@ -33,5 +33,60 @@ public partial class OldSbsConvertController
             logger.LogInformation($"Inserted {oldCategories.Count()} forum categories owned by super {config.SuperUserId}");
         });
     }
+
+    protected async Task ConvertForumThreads()
+    {
+        logger.LogTrace("ConvertForumThreads called");
+
+        //We have to get the fcid to id mapping
+        var categoryMapping = await GetOldToNewMapping("fcid", "forumcategory");
+
+        await PerformChunkedTransfer<oldsbs.ForumThreads>("forumthreads", "ftid", async (oldcon, con, trans, oldThreads, start) =>
+        {
+            //Each category is another system content with create perms for a general audience. This is so people can
+            //create threads inside. But, in the future, we can remove the create perm from specific categories!
+            foreach(var oldThread in oldThreads)
+            {
+                var content = new Db.Content
+                {
+                    parentId = categoryMapping.GetValueOrDefault(oldThread.fcid, 0),
+                    createDate = oldThread.created, 
+                    createUserId = oldThread.uid,
+                    name = oldThread.title
+                };
+
+                if(content.parentId == 0)
+                    throw new InvalidOperationException($"Couldn't find matching forum category fcid={oldThread.fcid} for thread '{oldThread.title}'({oldThread.ftid})");
+
+                //Bit 4 is 'locked', which means it's readonly. Unfortunately there's no point getting rid of the user's self
+                //permissions, since the API always gives you full permissions over your own content. That MUST be enforced
+                //by the SSR frontend
+                await AddGeneralPage(content, con, trans, (oldThread.status & 4) > 0);
+
+                //Now link the old data just in case
+                await con.InsertAsync(CreateValue(content.id, "ftid", oldThread.ftid), trans);
+                await con.InsertAsync(CreateValue(content.id, "fcid", oldThread.fcid), trans);
+                await con.InsertAsync(CreateValue(content.id, "views", oldThread.views), trans);
+                await con.InsertAsync(CreateValue(content.id, "status", oldThread.status), trans);
+
+                //Bit 1 from status is "important", which I think is an announcement thread. I don't know if we'll need that
+                //anymore, but might as well indicate things easily
+                if((oldThread.status & 1) > 0)
+                {
+                    await con.InsertAsync(CreateValue(content.id, $"important", true), trans);
+                    logger.LogDebug($"Thread marked important: {CSTR(content)}");
+                }
+
+                //Bit 2 is a sticky thread
+                if((oldThread.status & 2) > 0) 
+                {
+                    await con.InsertAsync(CreateValue(content.parentId, $"sticky:{content.id}", true), trans);
+                    logger.LogDebug($"Stickied thread {CSTR(content)} to category {content.parentId}/fcid-{oldThread.fcid}");
+                }
+            }
+
+            logger.LogInformation($"Inserted {oldThreads.Count} forum threads (chunk {start})");
+        });
+    }
 }
         

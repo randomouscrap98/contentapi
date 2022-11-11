@@ -19,6 +19,7 @@ public class OldSbsConvertControllerConfig
     public long SuperUserId {get;set;}
     public long ContentIdSkip {get;set;}
     public long MessageIdSkip {get;set;}
+    public int MaxChunk {get;set;} = 1000;
 }
 
 public partial class OldSbsConvertController : BaseController
@@ -94,7 +95,7 @@ public partial class OldSbsConvertController : BaseController
     /// <param name="con"></param>
     /// <param name="trans"></param>
     /// <returns></returns>
-    protected async Task<Db.Content> AddGeneralPage(Db.Content content, IDbConnection con, IDbTransaction trans, bool setBbcode = true)
+    protected async Task<Db.Content> AddGeneralPage(Db.Content content, IDbConnection con, IDbTransaction trans, bool isReadonly = false, bool setBbcode = true)
     {
         //Assume the other fields are as people want them
         content.hash = GetNextHash();
@@ -105,7 +106,7 @@ public partial class OldSbsConvertController : BaseController
         var id = await con.InsertAsync(content, trans);
         content.id = id;
 
-        await con.InsertAsync(CreateBasicGlobalPermission(id));
+        await con.InsertAsync(isReadonly ? CreateReadonlyGlobalPermission(id) : CreateBasicGlobalPermission(id));
         await con.InsertAsync(CreateSelfPermission(id, content.createUserId), trans);
 
         if(setBbcode)
@@ -144,6 +145,51 @@ public partial class OldSbsConvertController : BaseController
         delete = true
     };
 
+    /// <summary>
+    /// Assuming you saved the old id as a value, and the thing you're looking at has a unique type, this will return
+    /// a simple mapping from old id to new id
+    /// </summary>
+    /// <param name="key"></param>
+    /// <param name="type"></param>
+    /// <param name="con"></param>
+    /// <returns></returns>
+    protected async Task<Dictionary<long, long>> GetOldToNewMapping(string key, string type, IDbConnection? con = null)
+    {
+        IDbConnection realCon;
+        bool created = false;
+
+        if(con == null)
+        {
+            realCon = services.dbFactory.CreateRaw();
+            created = true;
+        }
+        else
+        {
+            realCon = con;
+        }
+
+        try
+        {
+            var values = await realCon.QueryAsync<Db.ContentValue>(
+                @$"select * from content_values 
+                where key=""{key}""
+                    and contentId in (select id from content where literalType=""{type}"")");
+
+            var result = values.ToDictionary(k => JsonConvert.DeserializeObject<long>(k.value), v => v.contentId);
+
+            logger.LogInformation($"{key} to content mapping for {type}: " +
+                string.Join(" ", result.Select(x => $"({x.Key}={x.Value})")));
+
+            return result;
+        }
+        finally
+        {
+            if(created)
+                realCon.Dispose();
+        }
+
+    }
+
     //protected void AddBasicMetadata(data.Views.ContentView content)
     //{
     //    content.values.Add("markup", "bbcode");
@@ -177,6 +223,30 @@ public partial class OldSbsConvertController : BaseController
                 }
             }
         }
+    }
+
+    /// <summary>
+    /// Too many things to operate on all at once? use this function to auto-chunk it all
+    /// </summary>
+    /// <param name="database"></param>
+    /// <param name="order"></param>
+    /// <param name="transferFunc"></param>
+    /// <typeparam name="T"></typeparam>
+    /// <returns></returns>
+    protected Task PerformChunkedTransfer<T>(string database, string order, Func<IDbConnection, IDbConnection, IDbTransaction, List<T>, int, Task> transferFunc)
+    {
+        logger.LogTrace($"PerformChunkedTransfer called for database {database}");
+        return PerformDbTransfer(async (oldcon, con, trans) =>
+        {
+            var count = await oldcon.ExecuteScalarAsync<int>($"select count(*) from {database}");
+            logger.LogInformation($"Found {count} items in {database}; working in chunks of {config.MaxChunk}");
+
+            for(var start = 0; start < count; start+=config.MaxChunk)
+            {
+                var oldStuff = (await oldcon.QueryAsync<T>($"select * from {database} order by {order} LIMIT {config.MaxChunk} OFFSET {start}")).ToList();
+                await transferFunc(oldcon, con, trans, oldStuff, start);
+            }
+        });
     }
 
     protected Task SkipIds()
@@ -226,12 +296,13 @@ public partial class OldSbsConvertController : BaseController
         //NOTE: all these conversion functions are put into separate files because they're so big
         await ConvertUsers();
         await ConvertBans();
+        await UploadAvatars(); //Because of our skip system, the ids for avatars no longer matter. To make things look nice, they should still come after content though
         await ConvertStoredValues();
         await ConvertBadgeGroups();
         await ConvertBadges();
         await ConvertForumCategories();
+        await ConvertForumThreads();
 
-        await UploadAvatars(); //Because of our skip system, the ids for avatars no longer matter. To make things look nice, they should still come after content though
 
         // Need to keep the skip markers around long enough to insert content with new ids
         await RemoveSkipMarkers();
