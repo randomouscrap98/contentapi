@@ -20,14 +20,14 @@ public partial class OldSbsConvertController
             //create threads inside. But, in the future, we can remove the create perm from specific categories!
             foreach(var oldCategory in oldCategories)
             {
-                var newCategory = await AddSystemContent(new Db.Content
-                {
+                var newCategory = await AddSystemContent(new Db.Content {
                     literalType = "forumcategory",
                     name = oldCategory.name,
                     description = oldCategory.description,
                 }, con, trans, true);
                 //Now link the old fcid just in case
                 await con.InsertAsync(CreateValue(newCategory.id, "fcid", oldCategory.fcid));
+                await con.InsertAsync(CreateValue(newCategory.id, "permissions", oldCategory.permissions)); //NOTE: THEY'RE ALL 0, THERE'S NO REASON TO DO THIS
             }
 
             logger.LogInformation($"Inserted {oldCategories.Count()} forum categories owned by super {config.SuperUserId}");

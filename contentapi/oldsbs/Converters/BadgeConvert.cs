@@ -25,7 +25,6 @@ public partial class OldSbsConvertController
                     name = og.name,
                     description = og.description
                 }, con, trans); 
-                logger.LogDebug($"Wrote badgegroup {ng.name}({ng.id})");
                 var values = new List<Db.ContentValue> { CreateValue(ng.id, "bgid", og.bgid) };
                 if(og.single) values.Add(CreateValue(ng.id, "single", true));
                 if(og.starter) values.Add(CreateValue(ng.id, "starter", true));

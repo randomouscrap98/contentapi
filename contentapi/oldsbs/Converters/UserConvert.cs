@@ -74,34 +74,33 @@ public partial class OldSbsConvertController
         {
             //Create yet another system page which is the parent of all userpages
             userpageParent = await AddSystemContent("userpages", con, trans, true);
-            logger.LogInformation($"Created userpage parent {CSTR(userpageParent)}");
+
+            //After adding all users, we now take their abouts and turn them into real pages. We're going to let the API do the 
+            //work so the pages are as normal as possible. The create date is of course incorrect but it doesn't matter too much,
+            //as that date information isn't preserved in the old database anyway
+            foreach(var oldUser in oldUsers)
+            {
+                if(!string.IsNullOrEmpty(oldUser.about))
+                {
+                    var content = new Db.Content
+                    {
+                        contentType = data.InternalContentType.userpage,
+                        text = oldUser.about,
+                        parentId = userpageParent.id,
+                        createDate = oldUser.created, //This isn't correct but whatever
+                        createUserId = oldUser.uid,
+                        name = $"{oldUser.username}'s userpage"
+                    };
+
+                    await AddGeneralPage(content, con, trans);
+                }
+                else
+                {
+                    logger.LogDebug($"No userpage for {oldUser.username}");
+                }
+            }
         });
 
-        //After adding all users, we now take their abouts and turn them into real pages. We're going to let the API do the 
-        //work so the pages are as normal as possible. The create date is of course incorrect but it doesn't matter too much,
-        //as that date information isn't preserved in the old database anyway
-        foreach(var oldUser in oldUsers)
-        {
-            if(!string.IsNullOrEmpty(oldUser.about))
-            {
-                var content = new data.Views.ContentView()
-                {
-                    contentType = data.InternalContentType.userpage,
-                    text = oldUser.about,
-                    parentId = userpageParent.id,
-                    name = $"{oldUser.username}'s userpage"
-                };
-                AddBasicMetadata(content);
-
-                //These api calls already log, no need to print log again
-                //WARN: using the api submits historic data; the activity will show many users creating their userpage!
-                var writtenContent = await writer.WriteAsync(content, oldUser.uid);
-            }
-            else
-            {
-                logger.LogDebug($"No userpage for {oldUser.username}");
-            }
-        }
 
         using(var con = services.dbFactory.CreateRaw())
         {

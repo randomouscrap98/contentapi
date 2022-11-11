@@ -13,6 +13,9 @@ public class ForumThreads
     public DateTime created {get;set;}
     public long views {get;set;}
     public long status {get;set;} //what is this?? might be pinned, locked, etc
+    //1 = Important (alert? a special flag, set a value)
+    //2 = Sticky (set field on parent; mayhaps should do this after both sets are inserted?)
+    //4 = closed (locked? global permissions thing)
 
     //- Locked threads can simply be threads that have global create removed.
     //- Pinned threads can be a list on the parent category, so that truly only super users can pin stuff

@@ -94,17 +94,24 @@ public partial class OldSbsConvertController : BaseController
     /// <param name="con"></param>
     /// <param name="trans"></param>
     /// <returns></returns>
-    protected async Task<Db.Content> AddGeneralPage(Db.Content content, IDbConnection con, IDbTransaction trans)
+    protected async Task<Db.Content> AddGeneralPage(Db.Content content, IDbConnection con, IDbTransaction trans, bool setBbcode = true)
     {
         //Assume the other fields are as people want them
         content.hash = GetNextHash();
-        content.contentType = data.InternalContentType.page;
+
+        if(content.contentType == data.InternalContentType.none)
+            content.contentType = data.InternalContentType.page;
 
         var id = await con.InsertAsync(content, trans);
         content.id = id;
 
         await con.InsertAsync(CreateBasicGlobalPermission(id));
         await con.InsertAsync(CreateSelfPermission(id, content.createUserId), trans);
+
+        if(setBbcode)
+            await con.InsertAsync(CreateValue(id, "markup", "bbcode"));
+
+        logger.LogInformation($"Inserted general page {CSTR(content)}");
 
         return content;
     }
@@ -137,11 +144,11 @@ public partial class OldSbsConvertController : BaseController
         delete = true
     };
 
-    protected void AddBasicMetadata(data.Views.ContentView content)
-    {
-        content.values.Add("markup", "bbcode");
-        content.permissions[0] = "CR";
-    }
+    //protected void AddBasicMetadata(data.Views.ContentView content)
+    //{
+    //    content.values.Add("markup", "bbcode");
+    //    content.permissions[0] = "CR";
+    //}
 
 
     /// <summary>
