@@ -12,7 +12,6 @@ public partial class OldSbsConvertController
         logger.LogTrace("ConvertUsers called");
 
         var oldUsers = new List<oldsbs.Users>();
-        var userpageParent = new Db.Content();
 
         //Use a transaction to make batch inserts much faster (on sqlite at least)
         await PerformDbTransfer(async (oldcon, con, trans) =>
@@ -61,12 +60,22 @@ public partial class OldSbsConvertController
 
             await con.InsertAsync(newUsers, trans);
             logger.LogInformation($"Wrote {newUsers.Count()} users into contentapi!");
+        });
 
+        await AddUserPages(oldUsers);
+    }
+
+    protected async Task AddUserPages(List<oldsbs.Users> oldUsers)
+    {
+        logger.LogTrace($"AddUserPages called with {oldUsers.Count} users");
+        var userpageParent = new Db.Content();
+
+        await PerformDbTransfer(async (oldcon, con, trans) =>
+        {
             //Create yet another system page which is the parent of all userpages
             userpageParent = await AddSystemContent("userpages", con, trans, true);
             logger.LogInformation($"Created userpage parent {CSTR(userpageParent)}");
         });
-
 
         //After adding all users, we now take their abouts and turn them into real pages. We're going to let the API do the 
         //work so the pages are as normal as possible. The create date is of course incorrect but it doesn't matter too much,
@@ -84,7 +93,8 @@ public partial class OldSbsConvertController
                 };
                 AddBasicMetadata(content);
 
-                //These api calls already log
+                //These api calls already log, no need to print log again
+                //WARN: using the api submits historic data; the activity will show many users creating their userpage!
                 var writtenContent = await writer.WriteAsync(content, oldUser.uid);
             }
             else

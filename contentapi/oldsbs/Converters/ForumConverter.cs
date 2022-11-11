@@ -16,11 +16,21 @@ public partial class OldSbsConvertController
             var oldCategories = await oldcon.QueryAsync<oldsbs.ForumCategories>("select * from forumcategories");
             logger.LogInformation($"Found {oldCategories.Count()} forumcategories in old database");
 
-            //Each category is just some content with global permissions. We'll need to mark the categories as special things,
-            //but... this should be fine. I don't think these kinds of items (which could be added by super users) should have the system: moniker,
-            //but rather that displaying all "pages" should simply look for specific literalContentType values rather than omitting any they don't want.
-            //The monikers are still fine considering 
+            //Each category is another system content with create perms for a general audience. This is so people can
+            //create threads inside. But, in the future, we can remove the create perm from specific categories!
+            foreach(var oldCategory in oldCategories)
+            {
+                var newCategory = await AddSystemContent(new Db.Content
+                {
+                    literalType = "forumcategory",
+                    name = oldCategory.name,
+                    description = oldCategory.description,
+                }, con, trans, true);
+                //Now link the old fcid just in case
+                await con.InsertAsync(CreateValue(newCategory.id, "fcid", oldCategory.fcid));
+            }
 
+            logger.LogInformation($"Inserted {oldCategories.Count()} forum categories owned by super {config.SuperUserId}");
         });
     }
 }

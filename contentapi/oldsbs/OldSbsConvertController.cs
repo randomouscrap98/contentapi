@@ -77,14 +77,7 @@ public partial class OldSbsConvertController : BaseController
 
         //And now we have to add the permission and the value
         await con.InsertAsync(globalCreate ? CreateBasicGlobalPermission(id) : CreateReadonlyGlobalPermission(id), trans);
-        await con.InsertAsync(new Db.ContentPermission {
-            contentId = id,
-            userId = content.createUserId,
-            create = true,
-            read = true,
-            update = true,
-            delete = true
-        }, trans);
+        await con.InsertAsync(CreateSelfPermission(id, content.createUserId), trans);
 
         //WARN: DON'T use values to indicate system, even if system files might need that! The system content might
         //require those fields, and it's harder to filter out! 
@@ -94,36 +87,55 @@ public partial class OldSbsConvertController : BaseController
         return content;
     }
 
-    protected Db.ContentValue CreateValue(long contentId, string key, object? value)
+    /// <summary>
+    /// MOST user generated content should suffice with this. You should set the fields you care about; we ONLY set the hash and contentType
+    /// </summary>
+    /// <param name="content"></param>
+    /// <param name="con"></param>
+    /// <param name="trans"></param>
+    /// <returns></returns>
+    protected async Task<Db.Content> AddGeneralPage(Db.Content content, IDbConnection con, IDbTransaction trans)
     {
-        return new Db.ContentValue
-        {
-            contentId = contentId,
-            key = key,
-            value = JsonConvert.SerializeObject(value)
-        };
+        //Assume the other fields are as people want them
+        content.hash = GetNextHash();
+        content.contentType = data.InternalContentType.page;
+
+        var id = await con.InsertAsync(content, trans);
+        content.id = id;
+
+        await con.InsertAsync(CreateBasicGlobalPermission(id));
+        await con.InsertAsync(CreateSelfPermission(id, content.createUserId), trans);
+
+        return content;
     }
 
-    protected Db.ContentPermission CreateReadonlyGlobalPermission(long contentId)
-    {
-        return new Db.ContentPermission
-        {
-            contentId = contentId,
-            userId = 0,
-            read = true 
-        };
-    }
+    protected Db.ContentValue CreateValue(long contentId, string key, object? value) => new Db.ContentValue {
+        contentId = contentId,
+        key = key,
+        value = JsonConvert.SerializeObject(value)
+    };
 
-    protected Db.ContentPermission CreateBasicGlobalPermission(long contentId)
-    {
-        return new Db.ContentPermission
-        {
-            contentId = contentId,
-            userId = 0,
-            create = true,
-            read = true 
-        };
-    }
+    protected Db.ContentPermission CreateReadonlyGlobalPermission(long contentId) => new Db.ContentPermission {
+        contentId = contentId,
+        userId = 0,
+        read = true 
+    };
+
+    protected Db.ContentPermission CreateBasicGlobalPermission(long contentId) => new Db.ContentPermission {
+        contentId = contentId,
+        userId = 0,
+        create = true,
+        read = true 
+    };
+
+    protected Db.ContentPermission CreateSelfPermission(long contentId, long userId) => new Db.ContentPermission {
+        contentId = contentId,
+        userId = userId,
+        create = true,
+        read = true,
+        update = true,
+        delete = true
+    };
 
     protected void AddBasicMetadata(data.Views.ContentView content)
     {
@@ -210,6 +222,7 @@ public partial class OldSbsConvertController : BaseController
         await ConvertStoredValues();
         await ConvertBadgeGroups();
         await ConvertBadges();
+        await ConvertForumCategories();
 
         await UploadAvatars(); //Because of our skip system, the ids for avatars no longer matter. To make things look nice, they should still come after content though
 
