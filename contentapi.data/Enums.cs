@@ -16,7 +16,8 @@ public enum InternalContentType : long
     page = 1,
     module = 2,
     file = 3,
-    userpage = 4
+    userpage = 4,
+    system = 5
 }
 
 public enum UserAction : long

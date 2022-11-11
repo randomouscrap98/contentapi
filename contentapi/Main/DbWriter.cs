@@ -157,6 +157,9 @@ public class DbWriter : IDbWriter
                 //Only supers can create modules, but after that, permissions are based on their internal permissions.
                 if(cView.contentType == InternalContentType.module && !requester.super)
                     throw new ForbiddenException($"Only supers can create modules!");
+
+                if(cView.contentType == InternalContentType.system && !requester.super)
+                    throw new ForbiddenException($"Only supers can create system pages!");
                 
                 if(cView.contentType == InternalContentType.none)
                     throw new ForbiddenException($"You can't create content type '{cView.contentType}'!");

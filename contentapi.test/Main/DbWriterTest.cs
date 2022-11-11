@@ -215,22 +215,29 @@ public class DbWriterTest : ViewUnitTestBase, IDisposable
         }
     }
 
-    [Theory] //For modules, regular users can NEVER create!
-    [InlineData((int)UserVariations.Super, 0, false)]
-    [InlineData(1 + (int)UserVariations.Super, 0, true)] //THIS one is super
-    [InlineData((int)UserVariations.Super, (int)ContentVariations.AccessByAll + 1, false)]
-    [InlineData(1 + (int)UserVariations.Super, (int)ContentVariations.AccessByAll + 1, true)] //THIS one is super
-    [InlineData((int)UserVariations.Super, (int)ContentVariations.AccessBySupers + 1, false)]
-    [InlineData(1 + (int)UserVariations.Super, (int)ContentVariations.AccessBySupers + 1, true)] //THIS one is super
-    public async Task WriteAsync_BasicModule(long uid, long parentId, bool allowed)
+    [Theory] //For modules and system types, regular users can NEVER create!
+    [InlineData(InternalContentType.module, (int)UserVariations.Super, 0, false)]
+    [InlineData(InternalContentType.module, 1 + (int)UserVariations.Super, 0, true)] //THIS one is super
+    [InlineData(InternalContentType.module, (int)UserVariations.Super, (int)ContentVariations.AccessByAll + 1, false)]
+    [InlineData(InternalContentType.module, 1 + (int)UserVariations.Super, (int)ContentVariations.AccessByAll + 1, true)] //THIS one is super
+    [InlineData(InternalContentType.module, (int)UserVariations.Super, (int)ContentVariations.AccessBySupers + 1, false)]
+    [InlineData(InternalContentType.module, 1 + (int)UserVariations.Super, (int)ContentVariations.AccessBySupers + 1, true)] //THIS one is super
+    [InlineData(InternalContentType.system, (int)UserVariations.Super, 0, false)]
+    [InlineData(InternalContentType.system, 1 + (int)UserVariations.Super, 0, true)] //THIS one is super
+    [InlineData(InternalContentType.system, (int)UserVariations.Super, (int)ContentVariations.AccessByAll + 1, false)]
+    [InlineData(InternalContentType.system, 1 + (int)UserVariations.Super, (int)ContentVariations.AccessByAll + 1, true)] //THIS one is super
+    [InlineData(InternalContentType.system, (int)UserVariations.Super, (int)ContentVariations.AccessBySupers + 1, false)]
+    [InlineData(InternalContentType.system, 1 + (int)UserVariations.Super, (int)ContentVariations.AccessBySupers + 1, true)] //THIS one is super
+    public async Task WriteAsync_BasicSystemTypes(InternalContentType type, long uid, long parentId, bool allowed)
     {
         //NOTE: DO NOT PROVIDE CREATEDATE! ALSO IT SHOULD BE UTC TIME!
         var content = GetNewModuleView(parentId);
+        content.contentType = type;
 
         if(allowed)
         {
             var result = await writer.WriteAsync(content, uid);
-            StandardContentEqualityCheck(content, result, uid, InternalContentType.module);
+            StandardContentEqualityCheck(content, result, uid, type);
             await AssertHistoryMatchesAsync(result, UserAction.create);
             Assert.Equal(content.text, result.text);
             Assert.Equal(content.description, result.description);
