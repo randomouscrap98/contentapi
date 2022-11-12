@@ -1,4 +1,3 @@
-
 using Dapper;
 using Dapper.Contrib.Extensions;
 using Newtonsoft.Json;

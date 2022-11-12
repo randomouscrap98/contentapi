@@ -20,6 +20,7 @@ public class OldSbsConvertControllerConfig
     public long ContentIdSkip {get;set;}
     public long MessageIdSkip {get;set;}
     public int MaxChunk {get;set;} = 1000;
+    public Dictionary<string, long> BasePageTypes = new Dictionary<string, long>();
 }
 
 public partial class OldSbsConvertController : BaseController
@@ -318,6 +319,7 @@ public partial class OldSbsConvertController : BaseController
         await ConvertForumThreads();
         await ConvertForumPosts();
         await ConvertForumHistory();
+        await ConvertPageCategories();
 
 
         // Need to keep the skip markers around long enough to insert content with new ids
