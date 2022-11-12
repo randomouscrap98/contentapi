@@ -36,7 +36,8 @@ public enum UserType : long
 
 public enum UserRelationType : long
 {
-    in_group = 1
+    in_group = 1,
+    holds_content = 2
 }
 
 public enum AdminLogType : long
