@@ -13,5 +13,6 @@ namespace contentapi.Db
         public DateTime createDate { get; set; }
         public long userId { get; set; }
         public long relatedId { get; set; }
+        //public string meta {get;set;}
     }
 }
