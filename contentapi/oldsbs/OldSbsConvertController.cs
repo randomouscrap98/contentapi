@@ -20,7 +20,7 @@ public class OldSbsConvertControllerConfig
     public long ContentIdSkip {get;set;}
     public long MessageIdSkip {get;set;}
     public int MaxChunk {get;set;} = 1000;
-    public Dictionary<string, long> BasePageTypes = new Dictionary<string, long>();
+    public Dictionary<string, long> BasePageTypes {get;set;} = new Dictionary<string, long>();
 }
 
 public partial class OldSbsConvertController : BaseController
@@ -161,14 +161,13 @@ public partial class OldSbsConvertController : BaseController
     };
 
     /// <summary>
-    /// Assuming you saved the old id as a value, and the thing you're looking at has a unique type, this will return
-    /// a simple mapping from old id to new id
+    /// Produce the old to new mapping based on the given contentId query (should be the set of content you want to map)
     /// </summary>
     /// <param name="key"></param>
-    /// <param name="type"></param>
+    /// <param name="query"></param>
     /// <param name="con"></param>
     /// <returns></returns>
-    protected async Task<Dictionary<long, long>> GetOldToNewMapping(string key, string type, IDbConnection? con = null)
+    protected async Task<Dictionary<long, long>> GetOldToNewMappingQuery(string key, string query, IDbConnection? con = null)
     {
         IDbConnection realCon;
         bool created = false;
@@ -188,11 +187,11 @@ public partial class OldSbsConvertController : BaseController
             var values = await realCon.QueryAsync<Db.ContentValue>(
                 @$"select * from content_values 
                 where key=""{key}""
-                    and contentId in (select id from content where literalType=""{type}"")");
+                    and contentId in ({query})");
 
             var result = values.ToDictionary(k => JsonConvert.DeserializeObject<long>(k.value), v => v.contentId);
 
-            logger.LogInformation($"{key} to content mapping for {type}: " +
+            logger.LogInformation($"{key} to content mapping for '{query}': " +
                 string.Join(" ", result.Select(x => $"({x.Key}={x.Value})")));
 
             return result;
@@ -202,7 +201,19 @@ public partial class OldSbsConvertController : BaseController
             if(created)
                 realCon.Dispose();
         }
+    }
 
+    /// <summary>
+    /// Assuming you saved the old id as a value, and the thing you're looking at has a unique type, this will return
+    /// a simple mapping from old id to new id
+    /// </summary>
+    /// <param name="key"></param>
+    /// <param name="type"></param>
+    /// <param name="con"></param>
+    /// <returns></returns>
+    protected Task<Dictionary<long, long>> GetOldToNewMapping(string key, string type, IDbConnection? con = null)
+    {
+        return GetOldToNewMappingQuery(key, $"select id from content where literalType=\"{type}\"", con);
     }
 
     //protected void AddBasicMetadata(data.Views.ContentView content)
@@ -315,6 +326,7 @@ public partial class OldSbsConvertController : BaseController
         await ConvertStoredValues();
         await ConvertBadgeGroups();
         await ConvertBadges();
+        await ConvertBadgeAssignments();
         await ConvertForumCategories();
         await ConvertForumThreads();
         await ConvertForumPosts();

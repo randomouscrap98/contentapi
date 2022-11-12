@@ -12,11 +12,13 @@ public partial class OldSbsConvertController
 
         return PerformDbTransfer(async (oldcon, con, trans) =>
         {
-            var oldCategories = await oldcon.QueryAsync<oldsbs.Categories>("select * from categories order by cid");
+            var oldCategories = await oldcon.QueryAsync<oldsbs.Categories>("select * from categories order by pcid,cid");
             logger.LogInformation($"Found {oldCategories.Count()} categories in old database");
 
             var oldNewMapping = new Dictionary<long, long>();
             var rootPageTypeCategories = config.BasePageTypes.ToDictionary(k => k.Key, v => new List<long>{v.Value});
+
+            logger.LogInformation($"Root category start lists: " + JsonConvert.SerializeObject(rootPageTypeCategories));
 
             //Each category is another system content with create perms for a general audience. This is so people can
             //create threads inside. But, in the future, we can remove the create perm from specific categories!
@@ -46,8 +48,8 @@ public partial class OldSbsConvertController
                     }
                 }
 
-                if(found == false)
-                    throw new InvalidOperationException($"Can't find root parent for category {CSTR(newCategory)}");
+                if(found == false) //This is fine as a warning now; they just won't BE for "any" category
+                    logger.LogWarning($"Can't find root parent for category {CSTR(newCategory)}");
 
                 //Now link the old values just in case
                 await con.InsertAsync(CreateValue(newCategory.id, "cid", oldCategory.cid));

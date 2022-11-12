@@ -103,4 +103,60 @@ public partial class OldSbsConvertController
             }
         }
     }
+
+    //NOTE: need to convert badge assignments to user relationships
+    protected async Task ConvertBadgeAssignments()
+    {
+        logger.LogTrace("ConvertBadgeAssignments called");
+
+        //Need the mapping of old badge id to new
+        var badgeMapping = await GetOldToNewMappingQuery("bid", "select contentId from content_values where key=\"badge\"");
+        var userBadgeOrders = new Dictionary<long, List<long>>();
+
+        await PerformChunkedTransfer<oldsbs.UserBadges>("userbadges", "uid,displayIndex,bid", async (oldcon, con, trans, oldUserBadges, start) =>
+        {
+            //Not only do you need to create the relationship, you also need track each user's order and insert them later
+
+            foreach(var oldBadgeAssign in oldUserBadges)
+            {
+                if(!badgeMapping.ContainsKey(oldBadgeAssign.bid))
+                    throw new InvalidOperationException($"No badge found with bid {oldBadgeAssign.bid}");
+
+                var relation = new Db.UserRelation
+                {
+                    relatedId = badgeMapping[oldBadgeAssign.bid],
+                    userId = oldBadgeAssign.uid,
+                    createDate = oldBadgeAssign.received,
+                    type = data.UserRelationType.holds_content
+                };
+
+                await con.InsertAsync(relation, trans);
+
+                if(oldBadgeAssign.displayindex > 0)
+                {
+                    if(!userBadgeOrders.ContainsKey(oldBadgeAssign.uid))
+                        userBadgeOrders.Add(oldBadgeAssign.uid, new List<long>());
+                    
+                    userBadgeOrders[oldBadgeAssign.uid].Add(oldBadgeAssign.bid);
+                }
+            }
+
+            logger.LogInformation($"Inserted {oldUserBadges.Count} user badge links (chunk {start})");
+        });
+
+        await PerformDbTransfer(async (oldcon, con, trans) =>
+        {
+            await con.InsertAsync(userBadgeOrders.Select(x =>
+            {
+                return new Db.UserVariable
+                {
+                    userId = x.Key, 
+                    createDate = DateTime.UtcNow,
+                    key = "badge_order",
+                    value = JsonConvert.SerializeObject(x.Value)
+                };
+            }),trans);
+            logger.LogInformation($"Inserted {userBadgeOrders.Count} user values ({userBadgeOrders.Sum(x => x.Value.Count)} badges) for user badge ordering");
+        });
+    }
 }
