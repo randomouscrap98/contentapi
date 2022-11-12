@@ -34,14 +34,10 @@ public enum UserType : long
     group = 2
 }
 
-/// <summary>
-/// UserRelation is between two users, and so is always public!
-/// </summary>
 public enum UserRelationType : long
 {
     in_group = 1,
-    //holds_content = 2,
-    //message_react = 3
+    holds_content = 2
 }
 
 public enum AdminLogType : long
