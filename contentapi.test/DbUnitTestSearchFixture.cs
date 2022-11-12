@@ -176,7 +176,7 @@ public class DbUnitTestSearchFixture : DbUnitTestBase, IDisposable
                     var keywords = new List<Db.ContentKeyword>();
                     var permissions = new List<Db.ContentPermission>();
                     var watchers = new List<Db.ContentWatch>();
-                    var votes = new List<Db.ContentVote>();
+                    var votes = new List<Db.ContentEngagement>();
                     var history = new List<Db.ContentHistory>();
                     ContentCount = (int)Math.Pow(2, Enum.GetValues<ContentVariations>().Count());
 
@@ -227,7 +227,7 @@ public class DbUnitTestSearchFixture : DbUnitTestBase, IDisposable
                         var random = new Random(i);
                         for (var j = 0; j < i / (ContentCount / UserCount); j++)
                         {
-                            votes.Add(new Db.ContentVote()
+                            votes.Add(new Db.ContentEngagement()
                             {
                                 contentId = i + 1,
                                 userId = j % UserCount,

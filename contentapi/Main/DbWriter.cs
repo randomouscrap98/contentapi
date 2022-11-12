@@ -48,7 +48,7 @@ public class DbWriter : IDbWriter
 
     public List<RequestType> TrueDeletes = new List<RequestType> {
         RequestType.watch,
-        RequestType.vote,
+        RequestType.content_engagement,
         RequestType.uservariable
     };
 
@@ -490,7 +490,7 @@ public class DbWriter : IDbWriter
         }
         else if (view is VoteView)
         {
-            id = await DatabaseWork_ContentUserRelated<VoteView, Db.ContentVote>(
+            id = await DatabaseWork_ContentUserRelated<VoteView, Db.ContentEngagement>(
                 new DbWorkUnit<VoteView>((view as VoteView)!, requester, typeInfo, action, existing as VoteView, message),
                 EventType.none);
         }

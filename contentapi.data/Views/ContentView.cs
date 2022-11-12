@@ -81,7 +81,7 @@ public class ContentView : IIdView
 
     [NoQuery]
     [Expensive(2)]
-    public Dictionary<VoteType, int> votes {get;set;} = new Dictionary<VoteType, int>();
+    public Dictionary<string, Dictionary<string, int>> engagement {get;set;} = new Dictionary<string, Dictionary<string, int>>();
 
     [Expensive(1)]
     [FieldSelect("select max(id) from " + MessagesTable + " where main.id = contentId and " + NaturalCommentQuery )]

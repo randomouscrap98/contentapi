@@ -194,7 +194,7 @@ public class BaseController : Controller
         {
             limiter = RateInteract;
         }
-        else if(item is VoteView)
+        else if(item is EngagementView)
         {
             limiter = RateInteract;
         }

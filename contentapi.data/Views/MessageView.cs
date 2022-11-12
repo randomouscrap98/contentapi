@@ -35,6 +35,10 @@ public class MessageView : IContentRelatedView
     [Expensive(2)]
     public Dictionary<string, object> values {get;set;} = new Dictionary<string, object>();
 
+    [NoQuery]
+    [Expensive(2)]
+    public Dictionary<string, Dictionary<string, int>> engagement {get;set;} = new Dictionary<string, Dictionary<string, int>>();
+
     [FieldSelect]
     [Writable(WriteRule.Preserve, WriteRule.AutoDate)]
     public DateTime? editDate {get;set;}
