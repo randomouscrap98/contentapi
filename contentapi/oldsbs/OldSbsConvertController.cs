@@ -123,6 +123,12 @@ public partial class OldSbsConvertController : BaseController
         value = JsonConvert.SerializeObject(value)
     };
 
+    protected Db.MessageValue CreateMValue(long messageId, string key, object? value) => new Db.MessageValue {
+        messageId = messageId,
+        key = key,
+        value = JsonConvert.SerializeObject(value)
+    };
+
     protected Db.ContentPermission CreateReadonlyGlobalPermission(long contentId) => new Db.ContentPermission {
         contentId = contentId,
         userId = 0,
@@ -283,8 +289,8 @@ public partial class OldSbsConvertController : BaseController
         });
     }
 
-    protected string CSTR(Db.Content content) => $"{content.name}/{content.hash}({content.literalType})[{content.id}]";
-    protected string CSTR(data.Views.ContentView content) => $"{content.name}/{content.hash}({content.literalType})[{content.id}]";
+    protected string CSTR(Db.Content content) => $"'{content.name}'/{content.hash}({content.literalType})[{content.id}]";
+    protected string CSTR(data.Views.ContentView content) => $"'{content.name}'/{content.hash}({content.literalType})[{content.id}]";
 
     [HttpGet()]
     public async Task ConvertAll()
@@ -302,6 +308,7 @@ public partial class OldSbsConvertController : BaseController
         await ConvertBadges();
         await ConvertForumCategories();
         await ConvertForumThreads();
+        await ConvertForumPosts();
 
 
         // Need to keep the skip markers around long enough to insert content with new ids

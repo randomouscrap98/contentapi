@@ -49,6 +49,7 @@ public partial class OldSbsConvertController
             {
                 var content = new Db.Content
                 {
+                    literalType = "forumthread",
                     parentId = categoryMapping.GetValueOrDefault(oldThread.fcid, 0),
                     createDate = oldThread.created, 
                     createUserId = oldThread.uid,
@@ -86,6 +87,48 @@ public partial class OldSbsConvertController
             }
 
             logger.LogInformation($"Inserted {oldThreads.Count} forum threads (chunk {start})");
+        });
+    }
+
+    protected async Task ConvertForumPosts()
+    {
+        logger.LogTrace("ConvertForumPosts called");
+
+        //We have to get the fcid to id mapping
+        var threadMapping = await GetOldToNewMapping("ftid", "forumthread");
+
+        await PerformChunkedTransfer<oldsbs.ForumPosts>("forumposts", "fpid", async (oldcon, con, trans, oldPosts, start) =>
+        {
+            foreach(var oldPost in oldPosts)
+            {
+                var message = new Db.Message
+                {
+                    contentId = threadMapping.GetValueOrDefault(oldPost.ftid, 0),
+                    createDate = oldPost.created, 
+                    createUserId = oldPost.uid,
+                    text = oldPost.content
+                };
+
+                if(oldPost.edited.Ticks > 0 && oldPost.edited != oldPost.created)
+                {
+                    message.editDate = oldPost.edited;
+                    message.editUserId = oldPost.euid;
+                    logger.LogDebug($"Post {oldPost.fpid} was edited");
+                }
+
+                if(message.contentId == 0)
+                    throw new InvalidOperationException($"Couldn't find matching forum thread ftid={oldPost.ftid} for post {oldPost.fpid}");
+
+                var id = await con.InsertAsync(message, trans);
+
+                //Now link the old data just in case. MAKE SURE THEY'RE MESSAGE VALUES!
+                await con.InsertAsync(CreateMValue(message.id, "markup", "bbcode"), trans);
+                await con.InsertAsync(CreateMValue(message.id, "fpid", oldPost.fpid), trans);
+                await con.InsertAsync(CreateMValue(message.id, "ftid", oldPost.ftid), trans);
+                await con.InsertAsync(CreateMValue(message.id, "status", oldPost.status), trans);
+            }
+
+            logger.LogInformation($"Inserted {oldPosts.Count} forum posts (chunk {start})");
         });
     }
 }

@@ -8,6 +8,6 @@ public class ForumPosts
     public long euid {get;set;}
     public string content {get;set;} = "";
     public DateTime created {get;set;}
-    public DateTime edited {get;set;}
-    public long status {get;set;}
+    public DateTime edited {get;set;} //Seems that all non-edited posts have this set to the same value as created
+    public long status {get;set;} //literally all 0
 }
