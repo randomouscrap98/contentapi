@@ -117,6 +117,14 @@ public partial class OldSbsConvertController : BaseController
         return content;
     }
 
+    //protected async Task<Db.Message> AddLazyConversion(object row, IDbConnection con, IDbTransaction trans)
+    //{
+    //    var message = new Db.Message()
+    //    {
+    //        creat
+    //    }
+    //}
+
     protected Db.ContentValue CreateValue(long contentId, string key, object? value) => new Db.ContentValue {
         contentId = contentId,
         key = key,
@@ -309,6 +317,7 @@ public partial class OldSbsConvertController : BaseController
         await ConvertForumCategories();
         await ConvertForumThreads();
         await ConvertForumPosts();
+        await ConvertForumHistory();
 
 
         // Need to keep the skip markers around long enough to insert content with new ids
