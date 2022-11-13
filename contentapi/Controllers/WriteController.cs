@@ -30,9 +30,13 @@ public class WriteController : BaseController
     public Task<ActionResult<WatchView>> WriteWatchAsync([FromBody]WatchView watch) =>
         MatchExceptions(() => WriteAsync(watch));
 
-    [HttpPost("vote")]
-    public Task<ActionResult<VoteView>> WriteVoteAsync([FromBody]VoteView vote) =>
-        MatchExceptions(() => WriteAsync(vote));
+    [HttpPost("content_engagement")]
+    public Task<ActionResult<ContentEngagementView>> WriteContentEngagementAsync([FromBody]ContentEngagementView engagement) =>
+        MatchExceptions(() => WriteAsync(engagement));
+
+    [HttpPost("message_engagement")]
+    public Task<ActionResult<MessageEngagementView>> WriteMessageEngagementAsync([FromBody]MessageEngagementView engagement) =>
+        MatchExceptions(() => WriteAsync(engagement));
 
     [HttpPost("uservariable")]
     public Task<ActionResult<UserVariableView>> WriteUserVariableAsync([FromBody]UserVariableView variable) =>
