@@ -1271,17 +1271,18 @@ public class DbWriterTest : ViewUnitTestBase, IDisposable
     [InlineData(SuperUserId, 9000, false)]
     [InlineData(SuperUserId, AllAccessContentId, true)]
     [InlineData(SuperUserId, SuperAccessContentId, true)]
-    public async Task WriteAsync_VoteBasic(long uid, long content, bool allowed)
+    public async Task WriteAsync_ContentEngagementBasic(long uid, long content, bool allowed)
     {
         //Also test to ensure the watch view auto-sets fields for us
-        var vote = new VoteView()
+        var vote = new ContentEngagementView()
         {
             contentId = content,
             userId = 999, //This should get reset.
-            vote = VoteType.ok
+            type = "vote",
+            engagement = "ok"
         };
 
-        VoteView writtenVote = vote;
+        ContentEngagementView writtenVote = vote;
 
         var writeVote = new Func<Task>(async () => {
             writtenVote = await writer.WriteAsync(vote, uid);
@@ -1402,11 +1403,11 @@ public class DbWriterTest : ViewUnitTestBase, IDisposable
     }
 
     [Fact]
-    public async Task WriteAsync_SimpleVoteEdit()
+    public async Task WriteAsync_SimpleContentEngagementEdit()
     {
-        var values = new List<VoteType> { VoteType.ok, VoteType.bad, VoteType.good, VoteType.ok };
-        await WriteAsync_ConstrictedUserEdit<VoteView>(
-            () => new VoteView() { contentId = AllAccessContentId }, x => x.vote, (x,i) => x.vote = values[i]);
+        var values = new List<string> { "ok", "bad", "good", "ok" };
+        await WriteAsync_ConstrictedUserEdit<ContentEngagementView>(
+            () => new ContentEngagementView() { contentId = AllAccessContentId, type = "vote" }, x => x.engagement, (x,i) => x.engagement= values[i]);
     }
 
     [Fact]

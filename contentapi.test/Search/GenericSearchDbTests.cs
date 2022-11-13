@@ -151,7 +151,7 @@ public class GenericSearchDbTests : ViewUnitTestBase
             else
                 Assert.Equal(0, x.commentCount);
             Assert.Equal((x.id - 1) / (fixture.ContentCount / fixture.UserCount), x.watchCount);
-            Assert.Equal((x.id - 1) / (fixture.ContentCount / fixture.UserCount), x.votes.Sum(x => x.Value));
+            Assert.Equal((x.id - 1) / (fixture.ContentCount / fixture.UserCount), x.engagement["vote"].Sum(x => x.Value));
             Assert.True(x.id > 0, "ContentId not cast properly!");
             Assert.True(x.createUserId > 0, "Content createuserid not cast properly!");
             Assert.True(x.createDate.Ticks > 0, "Content createdate not cast properly!");
@@ -1600,12 +1600,12 @@ public class GenericSearchDbTests : ViewUnitTestBase
     [Theory]
     [InlineData(NormalUserId)]
     [InlineData(SuperUserId)]
-    public async Task SearchAsync_VotesOnlyForSelf(long uid)
+    public async Task SearchAsync_ContentEngagementOnlyForSelf(long uid)
     {
         //go try to get all the votes
-        var votes = await service.SearchSingleType<VoteView>(uid, new SearchRequest()
+        var votes = await service.SearchSingleType<ContentEngagementView>(uid, new SearchRequest()
         {
-            type = "vote",
+            type = nameof(RequestType.content_engagement),
             fields = "*"
         });
 
@@ -1614,7 +1614,7 @@ public class GenericSearchDbTests : ViewUnitTestBase
         {
             Assert.Equal(uid, x.userId);
             Assert.True(x.contentId > 0);
-            Assert.NotEqual(VoteType.none, x.vote);
+            Assert.NotEqual("none", x.engagement);
         });
     }
 

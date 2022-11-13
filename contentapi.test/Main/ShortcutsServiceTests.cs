@@ -27,7 +27,7 @@ public class ShortcutsServiceTests : ViewUnitTestBase
         this.writer = fixture.GetWriter();
         this.search = fixture.GetGenericSearcher();
         this.mapper = fixture.GetService<IMapper>();
-        this.service = new ShortcutsService(fixture.GetService<ILogger<ShortcutsService>>(), fixture.dbFactory, mapper);
+        this.service = new ShortcutsService(fixture.GetService<ILogger<ShortcutsService>>(), fixture.dbFactory, fixture.GetService<IViewTypeInfoService>(), mapper);
     }
 
     [Theory]
@@ -85,20 +85,22 @@ public class ShortcutsServiceTests : ViewUnitTestBase
     public async Task LookupVoteByContentId_Simple(long uid, long cid)
     {
         //Shouldn't exist at first... we hope?
-        await Assert.ThrowsAnyAsync<NotFoundException>(() => service.LookupVoteByContentIdAsync(uid, cid));
+        await Assert.ThrowsAnyAsync<NotFoundException>(() => service.LookupEngagementByRelatedIdAsync<ContentEngagementView>(uid, cid, "vote"));
 
-        var vote =  new VoteView() { contentId = cid, vote = VoteType.ok };
+        var vote =  new ContentEngagementView() { contentId = cid, type = "vote", engagement = "ok" };
         var writtenVote = await writer.WriteAsync(vote, uid);
 
-        Assert.Equal(vote.vote, writtenVote.vote);
+        Assert.Equal(vote.engagement, writtenVote.engagement);
+        Assert.Equal(vote.type, writtenVote.type);
         Assert.Equal(vote.contentId, writtenVote.contentId);
 
         //now go look it up
-        var lookupVote = await service.LookupVoteByContentIdAsync(uid, cid);
+        var lookupVote = await service.LookupEngagementByRelatedIdAsync<ContentEngagementView>(uid, cid, "vote");
 
         Assert.Equal(uid, lookupVote.userId);
         Assert.Equal(cid, lookupVote.contentId);
-        Assert.Equal(vote.vote, lookupVote.vote);
+        Assert.Equal(vote.engagement, lookupVote.engagement);
+        Assert.Equal(vote.type, lookupVote.type);
     }
 
     [Theory]

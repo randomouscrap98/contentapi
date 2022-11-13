@@ -232,7 +232,8 @@ public class DbUnitTestSearchFixture : DbUnitTestBase, IDisposable
                                 contentId = i + 1,
                                 userId = j % UserCount,
                                 createDate = DateTime.Now,
-                                vote = (VoteType)(1 + random.Next() % 3)
+                                type = "vote",
+                                engagement = (new [] {"bad", "ok", "good"}).ElementAt(random.Next() % 3)
                             });
                         }
 
