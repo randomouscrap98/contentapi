@@ -1472,6 +1472,16 @@ public class DbWriterTest : ViewUnitTestBase, IDisposable
     }
 
     [Fact]
+    public async Task WriteAsync_SimpleMessageEngagementEdit()
+    {
+        var message = GetNewCommentView(AllAccessContentId);
+        var writtenMessage = await writer.WriteAsync(message, SuperUserId);
+        var values = new List<string> { "ok", "bad", "good", "ok" };
+        await WriteAsync_ConstrictedUserEdit<MessageEngagementView>(
+            () => new MessageEngagementView() { messageId = writtenMessage.id, type = DbUnitTestSearchFixture.VoteEngagement }, x => x.engagement, (x,i) => x.engagement= values[i]);
+    }
+
+    [Fact]
     public async Task WriteAsync_SimpleUserVariableEdit()
     {
         var values = new List<string> { "a", "b", "c", "d" };

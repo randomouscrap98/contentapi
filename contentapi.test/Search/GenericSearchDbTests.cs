@@ -1613,11 +1613,38 @@ public class GenericSearchDbTests : ViewUnitTestBase
             fields = "*"
         });
 
+        Assert.NotEmpty(votes);
+
         //Ensure they're ALL just for us, nobody else
         Assert.All(votes, x => 
         {
             Assert.Equal(uid, x.userId);
             Assert.True(x.contentId > 0);
+            Assert.False(string.IsNullOrEmpty(x.engagement));
+            Assert.NotEqual("none", x.engagement);
+        });
+    }
+
+    [Theory]
+    [InlineData(NormalUserId)]
+    [InlineData(SuperUserId)]
+    public async Task SearchAsync_MessageEngagementOnlyForSelf(long uid)
+    {
+        //go try to get all the votes
+        var votes = await service.SearchSingleType<MessageEngagement>(uid, new SearchRequest()
+        {
+            type = nameof(RequestType.message_engagement),
+            fields = "*"
+        });
+
+        Assert.NotEmpty(votes);
+
+        //Ensure they're ALL just for us, nobody else
+        Assert.All(votes, x => 
+        {
+            Assert.Equal(uid, x.userId);
+            Assert.True(x.messageId > 0);
+            Assert.False(string.IsNullOrEmpty(x.engagement));
             Assert.NotEqual("none", x.engagement);
         });
     }

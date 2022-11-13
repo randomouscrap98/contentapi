@@ -340,11 +340,11 @@ public class DbUnitTestSearchFixture : DbUnitTestBase, IDisposable
                         content.Add(c);
                     }
 
-                    for (var j = 1; j <= 10; j++)  //for the first 10 comments, whatever they are, add some engagement
+                    for (var j = 1; j <= 100; j++)  //for the first 100 comments, whatever they are, add some engagement
                     {
                         messagevotes.Add(new Db.MessageEngagement()
                         {
-                            messageId = j,
+                            messageId = j / 2,
                             userId = j % UserCount,
                             createDate = DateTime.Now,
                             type = VoteEngagement,
