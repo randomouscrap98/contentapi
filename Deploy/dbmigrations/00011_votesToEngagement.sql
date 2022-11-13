@@ -1,25 +1,25 @@
--- Votes are changing to engagement
-ALTER TABLE content_votes RENAME TO content_engagement;
+BEGIN TRANSACTION;
 
--- Need to rename a column
-ALTER TABLE content_engagement ADD COLUMN `type` TEXT NOT NULL DEFAULT "";
+-- Votes are changing to engagement; only modern versions of sqlite3 have drop column
+create table if not exists content_engagement (
+    id integer primary key,
+    contentId int not null,
+    userId int not null,
+    `type` text not null, 
+    engagement text not null default "", 
+    createDate text not null
+);
 
-update content_engagement set type = "vote";
+insert into content_engagement(id, contentId, userId, `type`, engagement, createDate)
+select id, contentId, userId, 'vote' as `type`, 
+  case vote when 1 then 'bad' when 2 then 'ok' when 3 then 'good' else '' end, createDate from content_votes;
 
--- Here, 'engagement' is replacing 'vote'. We add the new column for the engagement, 
--- which the votes will be translated into. Afterwards, we remove the old column 'vote'
-ALTER TABLE content_engagement ADD COLUMN engagement TEXT NOT NULL DEFAULT "";
-update content_engagement set engagement = "bad" where vote = 1;
-update content_engagement set engagement = "ok" where vote = 2;
-update content_engagement set engagement = "good" where vote = 3;
-ALTER TABLE content_engagement DROP COLUMN vote;
-
--- With new "type" field, upgrade the existing index
-drop index if exists idx_content_votes_contentId;
+-- Add those all important indexes for the new table
+create index if not exists idx_content_engagement_userIdtype on content_engagement(userId, type);
 create index if not exists idx_content_engagement_contentIdtype on content_engagement(contentId, type);
 
--- And add one for users too
-create index if not exists idx_content_engagement_userIdtype on content_engagement(userId, type);
+-- Now that we're done, we can drop the old table
+drop table if exists content_votes;
 
 -- Ugh right and now we need the same table but for messages...
 create table if not exists message_engagement (
@@ -33,3 +33,5 @@ create table if not exists message_engagement (
 
 create index if not exists idx_message_engagement_contentIdtype on message_engagement(messageId, type);
 create index if not exists idx_message_engagement_userIdtype on message_engagement(userId, type);
+
+COMMIT;
