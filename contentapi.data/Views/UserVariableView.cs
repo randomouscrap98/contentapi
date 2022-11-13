@@ -6,32 +6,32 @@ namespace contentapi.data.Views;
 [WriteAs(typeof(Db.UserVariable))]
 public class UserVariableView : IIdView
 {
-    [FieldSelect]
+    [DbField]
     [Writable(WriteRule.Preserve, WriteRule.Preserve)]
     public long id {get;set;}
 
-    [FieldSelect]
+    [DbField]
     [Writable(WriteRule.AutoUserId, WriteRule.Preserve)]
     public long userId {get;set;}
 
-    [FieldSelect]
+    [DbField]
     [Writable(WriteRule.AutoDate, WriteRule.Preserve)]
     public DateTime createDate { get; set; }
 
-    [FieldSelect]
+    [DbField]
     [Writable(WriteRule.Preserve, WriteRule.AutoDate)]
     public DateTime? editDate { get; set; }
 
-    [FieldSelect]
+    [DbField]
     [Writable(WriteRule.Preserve, WriteRule.Increment)]
     public int editCount { get; set; }
 
-    [FieldSelect]
+    [DbField]
     [Writable(WriteRule.User, WriteRule.Preserve)]
     public string key {get;set;} = "";
 
     [Multiline]
-    [FieldSelect]
+    [DbField]
     [Writable]
     public string value {get;set;} = "";
 }

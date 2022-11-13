@@ -71,7 +71,7 @@ public class ViewTypeInfoService_Cached : IViewTypeInfoService
                 foreach(var pk in allProperties)
                 {
                     var writeRule = pk.Value.GetCustomAttribute<WritableAttribute>(); 
-                    var fieldSelect = pk.Value.GetCustomAttribute<FieldSelectAttribute>()?.SelectField_Sql;
+                    var dbField = pk.Value.GetCustomAttribute<DbField>();
                     var ignored = pk.Value.GetCustomAttribute<FullIgnoreAttribute>();
 
                     if(ignored != null)
@@ -85,8 +85,15 @@ public class ViewTypeInfoService_Cached : IViewTypeInfoService
                         expensive = pk.Value.GetCustomAttribute<ExpensiveAttribute>()?.PotentialCost ?? 0,
                         onInsert = writeRule?.InsertRule ?? WriteRule.Preserve, //Preserve is safer, basically "readonly"
                         onUpdate = writeRule?.UpdateRule ?? WriteRule.Preserve,
-                        fieldSelect = (fieldSelect == "") ? pk.Key : fieldSelect
+                        fieldSelect = (dbField?.SelectAlias == "") ? pk.Key : dbField?.SelectAlias,
+                        //fieldWhere is whatever the PROPERTY name is. This is an extremely safe default, as all selects
+                        //are aliased to the name of the column. Only time you need to modify this is when there's an ambiguity in the column alias
+                        fieldWhere = (dbField?.WhereAlias == "") ? pk.Key : dbField?.WhereAlias
                     };
+
+                    //The column is assumed to be whatever the select is. This only works if you're just renaming a column, which is the standard
+                    //case. If you're performing a complex select for a column, it's almost NEVER written to anyway.
+                    fieldInfo.fieldColumn = (dbField?.DbColumnAlias == "") ? fieldInfo.fieldSelect : dbField?.DbColumnAlias;
 
                     result.fields.Add(pk.Key, fieldInfo);
                 }

@@ -7,69 +7,72 @@ namespace contentapi.data.Views;
 [WriteAs(typeof(Db.ContentEngagement))]
 public class ContentEngagementView : IContentUserRelatedView, IEngagementView
 {
-    [FieldSelect]
+    [DbField]
     public long id { get; set; }
 
-    [FieldSelect]
+    [DbField]
     [Writable(WriteRule.AutoUserId, WriteRule.Preserve)]
     public long userId { get; set; }
 
-    [FieldSelect]
+    [DbField]
     [Writable]
     public string type { get; set; } = "";
 
-    [FieldSelect]
+    [DbField]
     [Writable]
     public string engagement { get; set; } = "";
 
-    [FieldSelect]
+    [DbField]
     [Writable(WriteRule.AutoDate, WriteRule.Preserve)]
     public DateTime createDate { get; set; }
 
-    [FieldSelect]
+    [DbField]
     [Writable(WriteRule.User, WriteRule.Preserve)]
     public long contentId { get; set; }
 
     //An alias
-    [FieldSelect("contentId")]
+    //[FieldSelect("contentId")]
+    [FullIgnore]
     public long relatedId => contentId;
 
     public void SetRelatedId(long id) { contentId = id; }
 }
 
 [ResultFor(RequestType.message_engagement)]
-[SelectFrom("message_engagement e join messages m on e.messageId = m.id")]
+[SelectFrom("message_engagement")] // e join messages m on e.messageId = m.id")]
 [WriteAs(typeof(Db.MessageEngagement))]
 public class MessageEngagementView : IContentUserRelatedView, IEngagementView
 {
-    [FieldSelect("e.id")]
+    [DbField()] //"e.id", "id")]
     public long id { get; set; }
 
-    [FieldSelect("e.userId")]
+    [DbField()] //"e.userId", "userId")]
     [Writable(WriteRule.AutoUserId, WriteRule.Preserve)]
     public long userId { get; set; }
 
-    [FieldSelect("e.type")]
+    [DbField()] //"e.type", "type")]
     [Writable]
     public string type { get; set; } = "";
 
-    [FieldSelect("e.engagement")]
+    [DbField()] //"e.engagement", "engagement")]
     [Writable]
     public string engagement { get; set; } = "";
 
-    [FieldSelect("e.createDate")]
+    [DbField()] //"e.createDate", "createDate")]
     [Writable(WriteRule.AutoDate, WriteRule.Preserve)]
     public DateTime createDate { get; set; }
 
-    [FieldSelect("e.messageId")]
+    [DbField()] //"e.messageId", "messageId")]
     [Writable(WriteRule.User, WriteRule.Preserve)]
     public long messageId { get; set; }
     
-    [FieldSelect("m.contentId")]
+    [Expensive(1)]
+    [DbField("select contentId from messages m where m.id = messageId")] //"m.contentId", "contentId")]
     public long contentId {get;set;}
 
     //An alias
-    [FieldSelect("messageId")]
+    //[FieldSelect("messageId")]
+    [FullIgnore]
     public long relatedId => messageId;
 
     public void SetRelatedId(long id) { messageId = id; }

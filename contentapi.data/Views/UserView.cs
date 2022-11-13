@@ -7,43 +7,43 @@ namespace contentapi.data.Views;
 [WriteAs(typeof(Db.User))]
 public class UserView : IIdView
 {
-    [FieldSelect]
+    [DbField]
     [Writable(WriteRule.Preserve, WriteRule.Preserve)]
     public long id {get;set;}
 
-    [FieldSelect]
+    [DbField]
     [Writable]
     public string username {get;set;} = "";
 
-    [FieldSelect]
+    [DbField]
     [Writable]
     public string avatar {get;set;} = "0";
 
     [NoQuery]
-    [FieldSelect]
+    [DbField]
     [Writable]
     public string? special {get;set;}
 
-    [FieldSelect]
+    [DbField]
     [Writable(WriteRule.User, WriteRule.Preserve)]
     public UserType type {get;set;}
 
-    [FieldSelect]
+    [DbField]
     [Writable(WriteRule.AutoDate, WriteRule.Preserve)]
     public DateTime createDate {get;set;}
 
-    [FieldSelect]
+    [DbField]
     [Writable(WriteRule.AutoUserId, WriteRule.Preserve)]
     public long createUserId {get;set;}
 
-    [FieldSelect]
+    [DbField]
     [Writable]
     public bool super {get;set;}
 
-    [FieldSelect("registrationkey IS NULL")]
+    [DbField("registrationkey IS NULL")]
     public bool registered {get;set;}
 
-    [FieldSelect]
+    [DbField]
     public bool deleted {get;set;}
 
     [NoQuery]

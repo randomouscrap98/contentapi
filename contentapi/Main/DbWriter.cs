@@ -326,6 +326,10 @@ public class DbWriter : IDbWriter
         else if(view is MessageEngagementView)
         {
             var ev = (view as MessageEngagementView)!;
+            //Message is special: contentId is not set, we need to go out and find the message to then fill out the contentId for 
+            //the later permission validation. This is kind of hacky, consider a different approach
+            var associatedMessage = await searcher.GetById<MessageView>(RequestType.message, ev.messageId, true);
+            ev.contentId = associatedMessage.contentId;
             string query; Dictionary<string, object> objects;
             searcher.GetEngagementLookup(requester.id, ev.messageId, ev.type, out query, out objects);
             await ValidateContentUserRelatedView_Generic(ev, existing as MessageEngagementView, requester, action, query, objects);
@@ -511,7 +515,7 @@ public class DbWriter : IDbWriter
         }
         else if (view is MessageEngagementView)
         {
-            id = await DatabaseWork_ContentUserRelated<MessageEngagementView, Db.ContentEngagement>(
+            id = await DatabaseWork_ContentUserRelated<MessageEngagementView, Db.MessageEngagement>(
                 new DbWorkUnit<MessageEngagementView>((view as MessageEngagementView)!, requester, typeInfo, action, existing as MessageEngagementView, message),
                 EventType.none);
         }
@@ -556,7 +560,7 @@ public class DbWriter : IDbWriter
         foreach(var dbModelProp in work.typeInfo.writeAsInfo.modelProperties) 
         {
             //Simply go find the field definition where the real database column is the same as the model property. 
-            var remap = work.typeInfo.fields.FirstOrDefault(x => x.Value.fieldSelect == dbModelProp.Key);
+            var remap = work.typeInfo.fields.FirstOrDefault(x => x.Value.fieldColumn == dbModelProp.Key);
 
             var isWriteRuleSet = new Func<WriteRule, bool>(t => 
                 remap.Value.onInsert == t && work.action == UserAction.create ||

@@ -33,11 +33,14 @@ public class CachedTypeInfoServiceTest : UnitTestBase
         [NoQuery] //No query means you can't use this in a query... obviously
         public string unsearchableField {get;set;} = "";
 
-        [FieldSelect]
+        [DbField]
         public double buildableField {get;set;}
 
-        [FieldSelect("otherField")] //NOTE: the "as fieldname" is automatically appended... do we want that?
+        [DbField("otherField")] //NOTE: the "as fieldname" is automatically appended... do we want that?
         public string? remappedField {get;set;}
+
+        [DbField("e.reallyOther", "e.reallyOther", "reallyOther")] //The column field is the true database column name you want. The system SHOULD always assign this for you
+        public string? joinedField {get;set;}
 
         [Writable] //Anything marked "writable" should be freely writable
         public string freeWriteField {get;set;} = "";
@@ -107,17 +110,18 @@ public class CachedTypeInfoServiceTest : UnitTestBase
 
 
     [Theory]
-    [InlineData("queryableFieldLong", true, DefWR, DefWR, null, false, false, 0)]
-    [InlineData("unsearchableField", false, DefWR, DefWR, null, false, false, 0)]
-    [InlineData("buildableField", true, DefWR, DefWR, "buildableField", false, true, 0)]
-    [InlineData("remappedField", true, DefWR, DefWR, "otherField", false, true, 0)]
-    [InlineData("freeWriteField", true, WriteRule.User, WriteRule.User, null, false, false, 0)]
-    [InlineData("createDateField", true, WriteRule.AutoDate, WriteRule.Preserve, null, false, false, 0)]
-    [InlineData("editUserField", true, WriteRule.Preserve, WriteRule.AutoUserId, null, false, false, 0)]
-    [InlineData("multilineField", true, DefWR, DefWR, null, true, false, 0)]
-    [InlineData("expensiveField", true, DefWR, DefWR, null, false, false, 3)]
+    [InlineData("queryableFieldLong", true, DefWR, DefWR, null, null, null, false, false, 0)]
+    [InlineData("unsearchableField", false, DefWR, DefWR, null, null, null, false, false, 0)]
+    [InlineData("buildableField", true, DefWR, DefWR, "buildableField", "buildableField", "buildableField", false, true, 0)]
+    [InlineData("remappedField", true, DefWR, DefWR, "otherField", "remappedField", "otherField", false, true, 0)]
+    [InlineData("joinedField", true, DefWR, DefWR, "e.reallyOther", "e.reallyOther", "reallyOther", false, true, 0)]
+    [InlineData("freeWriteField", true, WriteRule.User, WriteRule.User, null, null, null, false, false, 0)]
+    [InlineData("createDateField", true, WriteRule.AutoDate, WriteRule.Preserve, null, null, null, false, false, 0)]
+    [InlineData("editUserField", true, WriteRule.Preserve, WriteRule.AutoUserId, null, null, null, false, false, 0)]
+    [InlineData("multilineField", true, DefWR, DefWR, null, null, null, true, false, 0)]
+    [InlineData("expensiveField", true, DefWR, DefWR, null, null, null, false, false, 3)]
     public void GetTypeInfo_All(string fname, bool queryable, WriteRule onInsert, WriteRule onUpdate,
-        string? fieldSelect, bool multiline, bool queryBuildable, int expensive)
+        string? fieldSelect, string? fieldWhere, string? dbColumn, bool multiline, bool queryBuildable, int expensive)
     {
         var typeInfo = service.GetTypeInfo<TestView>();
 
@@ -131,6 +135,8 @@ public class CachedTypeInfoServiceTest : UnitTestBase
         Assert.Equal(onInsert, field.onInsert);
         Assert.Equal(onUpdate, field.onUpdate);
         Assert.Equal(fieldSelect, field.fieldSelect);
+        Assert.Equal(fieldWhere, field.fieldWhere);
+        Assert.Equal(dbColumn, field.fieldColumn);
         Assert.Equal(multiline, field.multiline);
         Assert.Equal(queryBuildable, field.queryBuildable);
         Assert.Equal(expensive, field.expensive);
@@ -140,9 +146,6 @@ public class CachedTypeInfoServiceTest : UnitTestBase
 
     [Theory] 
     [InlineData(typeof(ContentView))]
-    //[InlineData(typeof(PageView))]
-    //[InlineData(typeof(ModuleView))]
-    //[InlineData(typeof(FileView))]
     public void GetTypeInfo_ContentPermission(Type t)
     {
         var typeInfo = service.GetTypeInfo(t);

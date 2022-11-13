@@ -6,9 +6,9 @@ namespace contentapi.data.Views;
 [ExtraQueryField("contentId")]
 public class KeywordAggregateView
 {
-    [FieldSelect]
+    [DbField]
     public string value { get; set; } = "";
 
-    [FieldSelect("count(id)")]
+    [DbField("count(id)")]
     public long count { get;set; }
 }

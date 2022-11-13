@@ -24,6 +24,26 @@ public class ViewFieldInfo
     /// the standard query builder
     /// </summary>
     public string? fieldSelect {get;set;}
+
+    /// <summary>
+    /// The name used in the 'where' clause. This usually defaults to the 'fieldSelect' value, regardless of what it is. We have this to 
+    /// remove ambiguity in select/where with complex selects
+    /// </summary>
+    /// <value></value>
+    public string? fieldWhere {get;set;}
+
+    /// <summary>
+    /// The legitimate name of the column as seen in the database. Defaults to 'fieldSelect' value, regardless of what it is. If your
+    /// field is not writable, it doesn't matter what this value is
+    /// </summary>
+    /// <value></value>
+    public string? fieldColumn {get;set;}
+
+    /// <summary>
+    /// With as much accuracy as possible, what is the ACTUAL database column we're pointing at?
+    /// </summary>
+    /// <value></value>
+    //public string? dbColumn {get;set;}
     
     public bool multiline {get;set;} = false;
 

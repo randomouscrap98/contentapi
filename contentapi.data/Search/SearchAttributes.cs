@@ -32,10 +32,18 @@ public class SelectFromAttribute : System.Attribute
 /// (or empty string) means use the field's name as the selector, a simple select
 /// </summary>
 [System.AttributeUsage(System.AttributeTargets.Property)]
-public class FieldSelectAttribute : System.Attribute  
+public class DbField : System.Attribute  
 {  
-    public string SelectField_Sql {get;}
-    public FieldSelectAttribute(string sql = "") {  this.SelectField_Sql = sql; }  
+    public string SelectAlias {get;}
+    public string WhereAlias {get;}
+    public string DbColumnAlias {get;}
+
+    public DbField(string select = "", string where = "", string column = "") 
+    {  
+        this.SelectAlias = select; 
+        this.WhereAlias = where;
+        this.DbColumnAlias= column;
+    }  
 }  
 
 [System.AttributeUsage(System.AttributeTargets.Class | System.AttributeTargets.Struct)]

@@ -5,21 +5,21 @@ namespace contentapi.data.Views;
 [SelectFrom("admin_log")]
 public class AdminLogView : IIdView
 {
-    [FieldSelect]
+    [DbField]
     public long id {get;set;}
 
-    [FieldSelect]
+    [DbField]
     public AdminLogType type {get;set;}
 
-    [FieldSelect]
+    [DbField]
     public string? text {get;set;}
 
-    [FieldSelect]
+    [DbField]
     public DateTime createDate {get;set;}
 
-    [FieldSelect]
+    [DbField]
     public long initiator {get;set;}
 
-    [FieldSelect]
+    [DbField]
     public long target {get;set;}
 }
