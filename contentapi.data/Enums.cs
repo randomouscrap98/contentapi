@@ -60,11 +60,3 @@ public enum AdminLogType : long
     login_passwordexpired = 15,
     content_restore = 16
 }
-
-public enum VoteType : long
-{
-    none = 0,
-    bad = 1,
-    ok = 2,
-    good = 3
-}

@@ -432,12 +432,21 @@ public class QueryBuilder : IQueryBuilder
         if(!request.typeInfo.fields[field].queryable)
             throw new ArgumentException($"Field '{field}' not queryable in type '{request.type}'({request.name})! (in: {parseFor})");
 
+        //use the field select format given by the typeInfo, as that is the absolute most accurate. note that aggregate fields
+        //can't be queried using normal where clause anyway, so the field select should be absolutely safe.
+        //HOWEVER: I currently have to return just the field name if no field select is present, because that was the default
+        //behavior before this upgrade! I don't really know the implications of that! What is the difference between NoQuery and 
+        //not having a field select??
+        //return request.typeInfo.fields[field].fieldSelect ?? field;
+        //NO: CANNOT USE THIS SYSTEM! SOME FIELD SELECTS ARE (requested IS NULL) AS someField. This is only not working because of
+        //the name collisions used on joins! Your system in inherently flawed!
+
         //For now, we outright reject querying against fields you don't explicitly pull. This CAN be made better in the
         //future, but for now, I think this is a reasonable limitation to reduce potential bugs
         if(!request.requestFields.Contains(field))
             throw new ArgumentException($"Can't query against field '{field}' without selecting it (in: {parseFor}): Current query system requires fields to be selected in order to be used anywhere else");
 
-        return field;
+        return request.typeInfo.fields[field].fieldWhere ?? throw new InvalidOperationException($"No where defined for {field} for type {request.type}"); //field;
     }
 
     /// <summary>
@@ -864,7 +873,7 @@ public class QueryBuilder : IQueryBuilder
         result.codes.Add(typeof(UserType).Name, Enum.GetValues<UserType>().ToDictionary(x => (int)x, y => y.ToString("G")));
         result.codes.Add(typeof(BanType).Name, Enum.GetValues<BanType>().ToDictionary(x => (int)x, y => y.ToString("G")));
         result.codes.Add(typeof(AdminLogType).Name, Enum.GetValues<AdminLogType>().ToDictionary(x => (int)x, y => y.ToString("G")));
-        result.codes.Add(typeof(VoteType).Name, Enum.GetValues<VoteType>().ToDictionary(x => (int)x, y => y.ToString("G")));
+        //result.codes.Add(typeof(VoteType).Name, Enum.GetValues<VoteType>().ToDictionary(x => (int)x, y => y.ToString("G")));
         result.codes.Add(typeof(EventType).Name, Enum.GetValues<EventType>().ToDictionary(x => (int)x, y => y.ToString("G")));
 
         return result;

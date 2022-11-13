@@ -67,52 +67,69 @@ public class ShortcutsController : BaseController
         });
     }
 
-    [HttpPost("vote/set/{contentId}")]
-    public Task<ActionResult<VoteView>> AddVote([FromRoute]long contentId, [FromBody]VoteType vote)
+    protected Task<ActionResult<T>> AddEngagement<T>(long relatedId, string type, string? engagement) where T : class, IEngagementView, new()
     {
         //A nice shortcut in case users do it this way
-        if(vote == VoteType.none)
-            return DeleteVote(contentId);
+        if(engagement == null)
+            return DeleteEngagement<T>(relatedId, type);
 
         return MatchExceptions(async () => 
         {
             RateLimit(RateInteract);
             var uid = GetUserIdStrict();
 
-            VoteView writeVote;
+            T writeEngagement;
 
             //Try to lookup the existing vote to update it, otherwise create a new one
             try
             {
-                writeVote = await shortcuts.LookupVoteByContentIdAsync(uid, contentId);
+                writeEngagement = await shortcuts.LookupEngagementByRelatedIdAsync<T>(uid, relatedId, type);
             }
             catch(NotFoundException)
             {
-                writeVote = new VoteView() {
-                    contentId = contentId
+                writeEngagement = new T() {
+                    type = type
                 };
+
+                writeEngagement.SetRelatedId(relatedId);
             }
 
             //Actually set the vote to what they wanted
-            writeVote.vote = vote;
+            writeEngagement.engagement = engagement;
 
-            return await CachedWriter.WriteAsync(writeVote, uid); //message used for activity and such
+            return await CachedWriter.WriteAsync(writeEngagement, uid);
         });
     }
 
-    [HttpPost("vote/delete/{contentId}")]
-    public Task<ActionResult<VoteView>> DeleteVote([FromRoute]long contentId)
+    protected Task<ActionResult<T>> DeleteEngagement<T>(long relatedId, string type) where T : class, IEngagementView, new()
     {
         return MatchExceptions(async () => 
         {
             RateLimit(RateInteract);
 
             var uid = GetUserIdStrict();
-            var vote = await shortcuts.LookupVoteByContentIdAsync(uid, contentId);
+            var engagement = await shortcuts.LookupEngagementByRelatedIdAsync<T>(uid, relatedId, type);
 
-            return await CachedWriter.DeleteAsync<VoteView>(vote.id, uid); //message used for activity and such
+            return await CachedWriter.DeleteAsync<T>(engagement.id, uid);
         });
     }
+
+
+    [HttpPost("content/{contentId}/setengagement/{type}")]
+    public Task<ActionResult<ContentEngagementView>> AddContentEngagement([FromRoute]long contentId, [FromRoute]string type, [FromBody]string? engagement) =>
+        AddEngagement<ContentEngagementView>(contentId, type, engagement);
+
+    [HttpPost("message/{messageId}/setengagement/{type}")]
+    public Task<ActionResult<MessageEngagementView>> AddMessageEngagement([FromRoute]long messageId, [FromRoute]string type, [FromBody]string? engagement) =>
+        AddEngagement<MessageEngagementView>(messageId, type, engagement);
+
+    [HttpPost("content/{contentId}/deleteengagement/{type}")]
+    public Task<ActionResult<ContentEngagementView>> DeleteContentEngagement([FromRoute]long contentId, [FromRoute]string type) =>
+        DeleteEngagement<ContentEngagementView>(contentId, type);
+
+    [HttpPost("message/{messageId}/deleteengagement/{type}")]
+    public Task<ActionResult<MessageEngagementView>> DeleteMessageEngagement([FromRoute]long messageId, [FromRoute]string type) =>
+        DeleteEngagement<MessageEngagementView>(messageId, type);
 
     [HttpGet("uservariable/{key}")]
     public Task<ActionResult<string>> GetUserVariable([FromRoute]string key)

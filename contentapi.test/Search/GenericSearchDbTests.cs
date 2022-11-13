@@ -151,7 +151,11 @@ public class GenericSearchDbTests : ViewUnitTestBase
             else
                 Assert.Equal(0, x.commentCount);
             Assert.Equal((x.id - 1) / (fixture.ContentCount / fixture.UserCount), x.watchCount);
-            Assert.Equal((x.id - 1) / (fixture.ContentCount / fixture.UserCount), x.votes.Sum(x => x.Value));
+            var voteCount = (x.id - 1) / (fixture.ContentCount / fixture.UserCount);
+            if(voteCount == 0)
+                Assert.False(x.engagement.ContainsKey(DbUnitTestSearchFixture.VoteEngagement));
+            else
+                Assert.Equal(voteCount, x.engagement[DbUnitTestSearchFixture.VoteEngagement].Sum(x => x.Value));
             Assert.True(x.id > 0, "ContentId not cast properly!");
             Assert.True(x.createUserId > 0, "Content createuserid not cast properly!");
             Assert.True(x.createDate.Ticks > 0, "Content createdate not cast properly!");
@@ -1600,21 +1604,48 @@ public class GenericSearchDbTests : ViewUnitTestBase
     [Theory]
     [InlineData(NormalUserId)]
     [InlineData(SuperUserId)]
-    public async Task SearchAsync_VotesOnlyForSelf(long uid)
+    public async Task SearchAsync_ContentEngagementOnlyForSelf(long uid)
     {
         //go try to get all the votes
-        var votes = await service.SearchSingleType<VoteView>(uid, new SearchRequest()
+        var votes = await service.SearchSingleType<ContentEngagementView>(uid, new SearchRequest()
         {
-            type = "vote",
+            type = nameof(RequestType.content_engagement),
             fields = "*"
         });
+
+        Assert.NotEmpty(votes);
 
         //Ensure they're ALL just for us, nobody else
         Assert.All(votes, x => 
         {
             Assert.Equal(uid, x.userId);
             Assert.True(x.contentId > 0);
-            Assert.NotEqual(VoteType.none, x.vote);
+            Assert.False(string.IsNullOrEmpty(x.engagement));
+            Assert.NotEqual("none", x.engagement);
+        });
+    }
+
+    [Theory]
+    [InlineData(NormalUserId)]
+    [InlineData(SuperUserId)]
+    public async Task SearchAsync_MessageEngagementOnlyForSelf(long uid)
+    {
+        //go try to get all the votes
+        var votes = await service.SearchSingleType<MessageEngagement>(uid, new SearchRequest()
+        {
+            type = nameof(RequestType.message_engagement),
+            fields = "*"
+        });
+
+        Assert.NotEmpty(votes);
+
+        //Ensure they're ALL just for us, nobody else
+        Assert.All(votes, x => 
+        {
+            Assert.Equal(uid, x.userId);
+            Assert.True(x.messageId > 0);
+            Assert.False(string.IsNullOrEmpty(x.engagement));
+            Assert.NotEqual("none", x.engagement);
         });
     }
 

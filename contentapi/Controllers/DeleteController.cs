@@ -51,13 +51,23 @@ public class DeleteController : BaseController
         });
     }
 
-    [HttpPost("vote/{id}")]
-    public Task<ActionResult<VoteView>> DeleteVoteAsync([FromRoute]long id)
+    [HttpPost("content_engagement/{id}")]
+    public Task<ActionResult<ContentEngagementView>> DeleteContentEngagementAsync([FromRoute]long id)
     {
         return MatchExceptions(async () => 
         {
             RateLimit(RateInteract); //watches are different I guess?
-            return await CachedWriter.DeleteAsync<VoteView>(id, GetUserIdStrict()); 
+            return await CachedWriter.DeleteAsync<ContentEngagementView>(id, GetUserIdStrict()); 
+        });
+    }
+
+    [HttpPost("message_engagement/{id}")]
+    public Task<ActionResult<MessageEngagementView>> DeleteMessageEngagementAsync([FromRoute]long id)
+    {
+        return MatchExceptions(async () => 
+        {
+            RateLimit(RateInteract); //watches are different I guess?
+            return await CachedWriter.DeleteAsync<MessageEngagementView>(id, GetUserIdStrict()); 
         });
     }
 

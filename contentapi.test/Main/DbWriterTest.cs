@@ -1271,17 +1271,18 @@ public class DbWriterTest : ViewUnitTestBase, IDisposable
     [InlineData(SuperUserId, 9000, false)]
     [InlineData(SuperUserId, AllAccessContentId, true)]
     [InlineData(SuperUserId, SuperAccessContentId, true)]
-    public async Task WriteAsync_VoteBasic(long uid, long content, bool allowed)
+    public async Task WriteAsync_ContentEngagementBasic(long uid, long content, bool allowed)
     {
         //Also test to ensure the watch view auto-sets fields for us
-        var vote = new VoteView()
+        var vote = new ContentEngagementView()
         {
             contentId = content,
             userId = 999, //This should get reset.
-            vote = VoteType.ok
+            type = DbUnitTestSearchFixture.VoteEngagement,
+            engagement = "ok"
         };
 
-        VoteView writtenVote = vote;
+        ContentEngagementView writtenVote = vote;
 
         var writeVote = new Func<Task>(async () => {
             writtenVote = await writer.WriteAsync(vote, uid);
@@ -1295,6 +1296,67 @@ public class DbWriterTest : ViewUnitTestBase, IDisposable
             Assert.Equal(uid, writtenVote.userId);
             Assert.Empty(events.Events); //There should be NO events for votes right now!
             //AssertWatchEventMatches(writtenWatch, uid, UserAction.create);
+        }
+        else if(content <= 0 || content >= 1000)
+        {
+            await Assert.ThrowsAnyAsync<NotFoundException>(writeVote);
+        }
+        else
+        {
+            await Assert.ThrowsAnyAsync<ForbiddenException>(writeVote);
+        }
+    }
+
+    [Theory]
+    [InlineData(NormalUserId, 0, false)]
+    [InlineData(NormalUserId, 9000, false)]
+    [InlineData(NormalUserId, AllAccessContentId, true)]
+    [InlineData(NormalUserId, SuperAccessContentId, false)]
+    [InlineData(SuperUserId, 0, false)]
+    [InlineData(SuperUserId, 9000, false)]
+    [InlineData(SuperUserId, AllAccessContentId, true)]
+    [InlineData(SuperUserId, SuperAccessContentId, true)]
+    public async Task WriteAsync_MessageEngagementBasic(long uid, long content, bool allowed)
+    {
+        long messageId = 0;
+
+        //Gotta actually WRITE the message, since we're given content
+        if(content == AllAccessContentId || content == SuperAccessContentId)
+        {
+            var message = GetNewCommentView(content);
+            message.text = "this is a text";
+            var writtenMessage = await writer.WriteAsync(message, SuperUserId);
+            messageId = writtenMessage.id;
+            events.Events.Clear();
+        }
+        else
+        {
+            messageId = content; //use the crappy id they gave us
+        }
+
+        //Also test to ensure the watch view auto-sets fields for us
+        var vote = new MessageEngagementView()
+        {
+            messageId = messageId,
+            userId = 999, //This should get reset.
+            type = DbUnitTestSearchFixture.VoteEngagement,
+            engagement = "ok"
+        };
+
+        MessageEngagementView writtenVote = vote;
+
+        var writeVote = new Func<Task>(async () => {
+            writtenVote = await writer.WriteAsync(vote, uid);
+        });
+
+        if(allowed)
+        {
+            await writeVote();
+            Assert.True(writtenVote.id > 0);
+            Assert.Equal(content, writtenVote.contentId);
+            Assert.Equal(messageId, writtenVote.messageId);
+            Assert.Equal(uid, writtenVote.userId);
+            Assert.Empty(events.Events); //There should be NO events for votes right now!
         }
         else if(content <= 0 || content >= 1000)
         {
@@ -1402,11 +1464,21 @@ public class DbWriterTest : ViewUnitTestBase, IDisposable
     }
 
     [Fact]
-    public async Task WriteAsync_SimpleVoteEdit()
+    public async Task WriteAsync_SimpleContentEngagementEdit()
     {
-        var values = new List<VoteType> { VoteType.ok, VoteType.bad, VoteType.good, VoteType.ok };
-        await WriteAsync_ConstrictedUserEdit<VoteView>(
-            () => new VoteView() { contentId = AllAccessContentId }, x => x.vote, (x,i) => x.vote = values[i]);
+        var values = new List<string> { "ok", "bad", "good", "ok" };
+        await WriteAsync_ConstrictedUserEdit<ContentEngagementView>(
+            () => new ContentEngagementView() { contentId = AllAccessContentId, type = DbUnitTestSearchFixture.VoteEngagement }, x => x.engagement, (x,i) => x.engagement= values[i]);
+    }
+
+    [Fact]
+    public async Task WriteAsync_SimpleMessageEngagementEdit()
+    {
+        var message = GetNewCommentView(AllAccessContentId);
+        var writtenMessage = await writer.WriteAsync(message, SuperUserId);
+        var values = new List<string> { "ok", "bad", "good", "ok" };
+        await WriteAsync_ConstrictedUserEdit<MessageEngagementView>(
+            () => new MessageEngagementView() { messageId = writtenMessage.id, type = DbUnitTestSearchFixture.VoteEngagement }, x => x.engagement, (x,i) => x.engagement= values[i]);
     }
 
     [Fact]

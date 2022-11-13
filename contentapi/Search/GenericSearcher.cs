@@ -118,6 +118,7 @@ public class GenericSearcher : IGenericSearch
             const string valkey = nameof(MessageView.values);
             const string uidskey = nameof(MessageView.uidsInText);
             const string textkey = nameof(MessageView.text);
+            const string engagementkey = nameof(MessageView.engagement);
 
             if(r.requestFields.Contains(valkey))
             {
@@ -135,6 +136,10 @@ public class GenericSearcher : IGenericSearch
                 foreach(var c in index)
                     c.Value[uidskey] = Regex.Matches((string)c.Value[textkey], @"%(\d+)%").Select(x => long.Parse(x.Groups[1].Value)).ToList();
             }
+            if(r.requestFields.Contains(engagementkey))
+            {
+                await AddEngagement<Db.MessageEngagement>(cidkey, index, engagementkey, x => x.messageId);
+            }
         }
 
         if(r.requestType == RequestType.content)
@@ -142,12 +147,10 @@ public class GenericSearcher : IGenericSearch
             const string keykey = nameof(ContentView.keywords);
             const string valkey = nameof(ContentView.values);
             const string permkey = nameof(ContentView.permissions);
-            const string votekey = nameof(ContentView.votes);
+            const string engagementkey = nameof(ContentView.engagement);
             const string cidkey = nameof(Db.ContentKeyword.contentId); //WARN: assuming it's the same for all!
             var ids = index.Keys.ToList();
             
-            var voteinfo = typeService.GetTypeInfo<Db.ContentVote>();
-
             if(r.requestFields.Contains(keykey))
             {
                 var keyinfo = typeService.GetTypeInfo<Db.ContentKeyword>();
@@ -181,26 +184,46 @@ public class GenericSearcher : IGenericSearch
                 foreach(var c in index)
                     c.Value[permkey] = permissionService.ResultToPermissions(lookup.Contains(c.Key) ? lookup[c.Key] : new List<dynamic>());
             }
-            if(r.requestFields.Contains(votekey))
+            if(r.requestFields.Contains(engagementkey))
             {
-                var votes = await dbcon.QueryAsync($"select {cidkey}, vote, count(*) as count from {voteinfo.selfDbInfo?.modelTable} where {cidkey} in @ids group by {cidkey}, vote",
-                    new { ids = ids });
-                var displayVotes = Enum.GetValues<VoteType>().Where(x => x != VoteType.none); 
-
-                var lookup = votes.ToLookup(x => x.contentId);
-
-                foreach(var c in index)
-                {
-                    var cvotes = lookup.Contains(c.Key) ? lookup[c.Key].ToDictionary(x => (VoteType)x.vote, y => y.count) : new Dictionary<VoteType, dynamic>();
-                    foreach(var v in displayVotes)
-                    {
-                        if(!cvotes.ContainsKey(v))
-                            cvotes.Add(v, 0);
-                    }
-                    c.Value[votekey] = cvotes;
-                }
+                await AddEngagement<Db.ContentEngagement>(cidkey, index, engagementkey, x => x.contentId);
             }
         }
+    }
+
+    public async Task AddEngagement<T>(string entityKey, Dictionary<long, QueryResult> index, string engagementkey, Func<dynamic, dynamic> getIndex) 
+    {
+        var engagementInfo = typeService.GetTypeInfo<T>();
+        var engagement = await dbcon.QueryAsync($"select {entityKey}, type, engagement, count(*) as count from {engagementInfo.selfDbInfo?.modelTable} where {entityKey} in @ids group by {entityKey},type,engagement",
+            new { ids = index.Keys.ToList() });
+
+        var lookup = engagement.ToLookup(getIndex); //x => x[entityKey]); //getIndex); //x => getIndex(x));
+
+        foreach (var c in index)
+        {
+            var engres = new Dictionary<string, Dictionary<string, int>>();
+
+            if (lookup.Contains(c.Key))
+            {
+                foreach (var e in lookup[c.Key])
+                {
+                    var type = (string)e.type;
+                    if (!engres.ContainsKey(type))
+                        engres.Add(type, new Dictionary<string, int>());
+                    engres[type].Add(e.engagement, (int)e.count);
+                }
+            }
+
+            c.Value[engagementkey] = engres;
+        }
+    }
+
+    public void GetEngagementLookup(long userId, long id, string type, out string query, out Dictionary<string, object> objects)
+    {
+        objects = new Dictionary<string, object> {
+            { "me", userId }, { "id", id }, { "type", type }
+        };
+        query = "userId = @me and relatedId = @id and type = @type";
     }
 
     public async Task<QueryResultSet> QueryRawAsync(string sql, Dictionary<string, object> values)
@@ -391,7 +414,8 @@ public class GenericSearcher : IGenericSearch
                 request.query = queryBuilder.CombineQueryClause(request.query, $"!permissionlimit(@{groupsKey}, id, R)");
             }
             if(request.type == RequestType.message.ToString() || request.type == RequestType.activity.ToString() || 
-               request.type == RequestType.watch.ToString() || request.type == RequestType.vote.ToString() ||
+               request.type == RequestType.watch.ToString() || 
+               request.type == RequestType.content_engagement.ToString() || request.type == RequestType.message_engagement.ToString() ||
                request.type == RequestType.message_aggregate.ToString() || request.type == RequestType.activity_aggregate.ToString() ||
                request.type == RequestType.keyword_aggregate.ToString())
             {
@@ -401,9 +425,9 @@ public class GenericSearcher : IGenericSearch
             {
                 request.query = queryBuilder.CombineQueryClause(request.query, $"!receiveuserlimit(@{requesterKey})");
             }
-            //Watches and variables and votes are per-user!
+            //Watches and variables and engagement(both types) are per-user!
             if(request.type == RequestType.watch.ToString() || request.type == RequestType.uservariable.ToString() ||
-               request.type == RequestType.vote.ToString())
+               request.type == RequestType.content_engagement.ToString() || request.type == RequestType.message_engagement.ToString())
             {
                 request.query = queryBuilder.CombineQueryClause(request.query, $"userId = @{requesterKey}");
             }

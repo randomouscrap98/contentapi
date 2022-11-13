@@ -6,30 +6,30 @@ namespace contentapi.data.Views;
 [WriteAs(typeof(Db.Ban))]
 public class BanView : IIdView
 {
-    [FieldSelect]
+    [DbField]
     public long id { get; set; }
 
-    [FieldSelect]
+    [DbField]
     [Writable(WriteRule.AutoDate, WriteRule.Preserve)]
     public DateTime createDate { get; set; }
 
-    [FieldSelect]
+    [DbField]
     [Writable(WriteRule.AutoUserId, WriteRule.Preserve)]
     public long createUserId { get; set; }
 
-    [FieldSelect]
+    [DbField]
     [Writable(WriteRule.User, WriteRule.Preserve)]
     public long bannedUserId { get; set; }
 
-    [FieldSelect]
+    [DbField]
     [Writable]
     public DateTime expireDate { get; set; }
 
-    [FieldSelect]
+    [DbField]
     [Writable]
     public string? message { get; set; } //message is nullable!
 
-    [FieldSelect]
+    [DbField]
     [Writable]
     public BanType type { get; set; }
 }

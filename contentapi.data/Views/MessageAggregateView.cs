@@ -9,29 +9,29 @@ namespace contentapi.data.Views;
 [ExtraQueryField("module")]
 public class MessageAggregateView
 {
-    [FieldSelect]
+    [DbField]
     public long contentId { get; set; }
 
-    [FieldSelect]
+    [DbField]
     public long createUserId { get; set; }
 
 
-    [FieldSelect("count(id)")]
+    [DbField("count(id)")]
     public long count { get;set; }
 
     [NoQuery]
-    [FieldSelect("max(id)")]
+    [DbField("max(id)")]
     public long maxId {get;set;}
 
     [NoQuery]
-    [FieldSelect("min(id)")]
+    [DbField("min(id)")]
     public long minId {get;set;}
 
     [NoQuery]
-    [FieldSelect("max(createDate)")]
+    [DbField("max(createDate)")]
     public DateTime maxCreateDate {get;set;}
 
     [NoQuery]
-    [FieldSelect("min(createDate)")]
+    [DbField("min(createDate)")]
     public DateTime minCreateDate {get;set;}
 }

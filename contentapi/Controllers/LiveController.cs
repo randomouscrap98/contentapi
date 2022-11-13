@@ -245,8 +245,10 @@ public class LiveController : BaseController
                         response.data = await WriteAsync(writeObject.ToObject<UserVariableView>() ?? throw new RequestException($"Couldn't parse {type}!"), userId, writeData.activityMessage);
                     else if(type == nameof(RequestType.watch))
                         response.data = await WriteAsync(writeObject.ToObject<WatchView>() ?? throw new RequestException($"Couldn't parse {type}!"), userId, writeData.activityMessage);
-                    else if(type == nameof(RequestType.vote))
-                        response.data = await WriteAsync(writeObject.ToObject<VoteView>() ?? throw new RequestException($"Couldn't parse {type}!"), userId, writeData.activityMessage);
+                    else if(type == nameof(RequestType.content_engagement))
+                        response.data = await WriteAsync(writeObject.ToObject<ContentEngagementView>() ?? throw new RequestException($"Couldn't parse {type}!"), userId, writeData.activityMessage);
+                    else if(type == nameof(RequestType.message_engagement))
+                        response.data = await WriteAsync(writeObject.ToObject<MessageEngagementView>() ?? throw new RequestException($"Couldn't parse {type}!"), userId, writeData.activityMessage);
                     else if(type == nameof(RequestType.ban))
                         response.data = await WriteAsync(writeObject.ToObject<BanView>() ?? throw new RequestException($"Couldn't parse {type}!"), userId, writeData.activityMessage);
                     else

@@ -300,6 +300,23 @@ function page_onload(template, state)
     var commentsElement = template.querySelector("#page-comments");
     var voteOptionsElement = template.querySelector("#vote-options-page");
     var historyList = template.querySelector("#page-history-list");
+    var voteDeleteElement = template.querySelector("#vote-delete-page");
+
+    APICONST.VOTES.forEach(k =>
+    {
+        var option = document.createElement("option");
+        option.textContent = k;
+        option.value = k;
+        voteOptionsElement.appendChild(option);
+    });
+
+    template.querySelector("#vote-page").onclick = () => {
+        api.SetPageEngagement(state.pid, "vote", voteOptionsElement.value, new ApiHandler(_ => { location.reload(); }));
+    };
+
+    voteDeleteElement.onclick = () => {
+        api.DeletePageEngagement(state.pid, "vote", new ApiHandler(_ => { location.reload(); }));
+    };
 
     SetCollapseButton(template.querySelector(`#page-history-toggle`), template.querySelector("#page-history-container"), state.hp);
 
@@ -349,7 +366,7 @@ function page_onload(template, state)
             //content.appendChild(Parse.parseLang(page.text, page.values.markupLang || "plaintext"));
             delete page.name;
             delete page.text;
-            page.votes = JSON.stringify(page.votes);
+            page.engagement = JSON.stringify(page.engagement);
             page.values = JSON.stringify(page.values);
             page.keywords = JSON.stringify(page.keywords);
             page.permissions = JSON.stringify(page.permissions);
@@ -383,30 +400,14 @@ function page_onload(template, state)
             else
                 template.querySelector("#watch-page").removeAttribute("hidden");
             
-            //Need to get some information to fill out the vote selector. You COULD hardcode it, it's probably fine...
-            //NOTE: It's of course much slower to ask for the about AFTER the page completes, but it lets us display the 
-            //user vote appropriately, as most codes are returned from the database raw. As I said, you COULD hardcode these
-            //so don't worry about doing it this way. I just think this is a good example just in case, AND it keeps me from
-            //having to maintain the vote system if I change it.
-            api.AboutSearch(new ApiHandler(dd =>
-            {
-                var voteCodes = dd.result.details.codes.VoteType;
-                AboutToOptions(voteCodes, voteOptionsElement);
-                template.querySelector("#vote-page").onclick = function()
-                {
-                    api.VoteOnPage(state.pid, voteOptionsElement.value, new ApiHandler(ddd =>
-                    {
-                        location.reload();
-                    }));
-                };
-                template.querySelector("#vote-submit-page").removeAttribute("hidden");
+            var myVotes = d.result.objects.content_engagement.filter(x => x.type === "vote");
 
-                if(d.result.objects.vote.length)
-                {
-                    template.querySelector("#current-vote-page").textContent = voteCodes[d.result.objects.vote[0].vote];
-                    template.querySelector("#current-vote-container-page").removeAttribute("hidden");
-                }
-            }));
+            if(myVotes.length) //d.result.objects.content_engagement.length)
+            {
+                voteDeleteElement.removeAttribute("hidden");
+                template.querySelector("#current-vote-container-page").removeAttribute("hidden");
+                template.querySelector("#current-vote-page").textContent = myVotes[0].engagement; //voteCodes[d.result.objects.vote[0].vote];
+            }
         }
 
         //Waste a few cycles linking some stuff together!

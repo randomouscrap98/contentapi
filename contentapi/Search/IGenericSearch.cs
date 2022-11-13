@@ -31,4 +31,7 @@ public interface IGenericSearch : IDisposable
     List<T> ToStronglyTyped<T>(QueryResultSet singleResults);
 
     //[Obsolete]
+
+    //Might get rid of these later, but for now...
+    void GetEngagementLookup(long userId, long id, string type, out string query, out Dictionary<string, object> objects);
 }

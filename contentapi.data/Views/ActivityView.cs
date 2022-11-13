@@ -6,21 +6,21 @@ namespace contentapi.data.Views;
 [SelectFrom("content_history")]
 public class ActivityView : IContentUserRelatedView
 {
-    [FieldSelect]
+    [DbField]
     public long id { get; set; }
 
-    [FieldSelect]
+    [DbField]
     public long contentId { get; set; }
 
-    [FieldSelect("createUserId")]
+    [DbField("createUserId")]
     public long userId { get; set; }
 
-    [FieldSelect("createDate")]
+    [DbField("createDate")]
     public DateTime date { get; set; }
 
-    [FieldSelect]
+    [DbField]
     public string? message {get;set;}
 
-    [FieldSelect]
+    [DbField]
     public UserAction action {get;set;}
 }

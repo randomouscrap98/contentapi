@@ -32,9 +32,10 @@ var APICONST = {
         DELETE : 8
     },
     FIELDSETS : {
-        CONTENTQUICK : "~values,keywords,votes,text,commentCount"
+        CONTENTQUICK : "~values,keywords,engagement,text,commentCount"
     },
     MARKUP : [ "12y", "bbcode", "plaintext" ],
+    VOTES : [ "bad", "ok", "good" ],
     WRITETYPES : {
         MESSAGE : "message",
         CONTENT : "content",
@@ -598,10 +599,14 @@ Api.prototype.ClearNotifications = function(pid, handler)
     this.Raw(`shortcuts/watch/clear/${pid}`, null, handler, "POST");
 };
 
-Api.prototype.VoteOnPage = function(pid, vote, handler)
+Api.prototype.SetPageEngagement = function(pid, type, engagement, handler)
 {
-    //I believe "vote" can be either the string or the code...
-    this.Raw(`shortcuts/vote/set/${pid}`, vote, handler, "POST");
+    this.Raw(`shortcuts/content/${pid}/setengagement/${type}`, engagement, handler, "POST");
+};
+
+Api.prototype.DeletePageEngagement = function(pid, type, handler)
+{
+    this.Raw(`shortcuts/content/${pid}/deleteengagement/${type}`, null, handler, "POST");
 };
 
 Api.prototype.GetUserVariable = function(key, handler)
@@ -644,7 +649,7 @@ Api.prototype.RestoreContent = function(revision, message, handler)
 //You can ALSO get modules from the request/search endpoint, however you won't
 //get the special lua data necessary to generate help data/etc. Leave name
 //null to get all modules. You can exclude expensive fields if you want a faster
-//search with something like "~values,votes,permissions,keywords,text"
+//search with something like "~values,engagement,permissions,keywords,text"
 Api.prototype.SearchModules = function(name, fields, handler)
 {
     var params = new URLSearchParams();
@@ -948,9 +953,9 @@ Api.prototype.Search_BasicPageDisplay = function(id, subpagesPerPage, subpagePag
         //The parent, you generally want some information about that!
         new RequestSearchParameter("content", APICONST.FIELDSETS.CONTENTQUICK, "id = @content.parentId and !notdeleted()", null, null, null, "parent"),
         new RequestSearchParameter("message", "*", "contentId = @pageid and !notdeleted() and !null(module)", "id_desc", commentsPerPage, commentsPerPage * commentPage),
-        // We grab your personal watches/votes/etc specifically for the main page to see if you ARE watching it
+        // We grab your personal watches/engagement/etc specifically for the main page to see if you ARE watching it
         new RequestSearchParameter("watch", "*", "contentId = @pageid"),    //This is YOUR watch (the requester)
-        new RequestSearchParameter("vote", "*", "contentId = @pageid"),     //This is YOUR vote (the requester)
+        new RequestSearchParameter("content_engagement", "*", "contentId = @pageid"),     //This is YOUR engagements (the requester)
         // And then users in everything
         new RequestSearchParameter("user", "*", "id in @message.createUserId or id in @content.createUserId or id in @subpages.createUserId"),
     ]);

@@ -138,12 +138,21 @@ public class ViewUnitTestBase : UnitTestBase
         };
     }
 
-    protected MessageView GetNewCommentView(long contentId)//, Dictionary<long, string>? permissions = null)
+    public MessageView GetNewCommentView(long contentId)//, Dictionary<long, string>? permissions = null)
     {
         return new MessageView {
             text = "Yeah this is comment!",
             contentId = contentId,
             module = null
+        };
+    }
+
+    public MessageEngagementView GetMessageEngagementView(long messageId, string type, string engagement)
+    {
+        return new MessageEngagementView() {
+            messageId = messageId,
+            type = type,
+            engagement = engagement 
         };
     }
 }

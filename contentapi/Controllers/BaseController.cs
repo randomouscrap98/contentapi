@@ -190,11 +190,7 @@ public class BaseController : Controller
             if(page.id == 0 && page.contentType == InternalContentType.file)
                 throw new ForbiddenException("You cannot create files through this endpoint! Use the file controller!");
         }
-        else if(item is WatchView)
-        {
-            limiter = RateInteract;
-        }
-        else if(item is VoteView)
+        else if(item is WatchView || item is ContentEngagementView || item is MessageEngagementView)
         {
             limiter = RateInteract;
         }

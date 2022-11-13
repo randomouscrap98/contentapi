@@ -14,3 +14,14 @@ public interface IContentUserRelatedView : IContentRelatedView
 {
     long userId {get;set;}
 }
+
+public interface IEngagementView : IIdView
+{
+    long userId { get; set; }
+    string type { get; set; }
+    string engagement { get; set; }
+    DateTime createDate { get; set; }
+    long relatedId {get;}
+
+    void SetRelatedId(long id);
+}

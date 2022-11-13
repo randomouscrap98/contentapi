@@ -9,52 +9,52 @@ public class ContentView : IIdView
     public const string VotesTable = "content_votes";
     public const string NaturalCommentQuery = "deleted = 0 and module IS NULL";
 
-    [FieldSelect]
+    [DbField]
     public long id { get; set; }
 
     //Entirely not writable
-    [FieldSelect]
+    [DbField]
     public bool deleted { get; set; }
 
-    [FieldSelect]
+    [DbField]
     [Writable(WriteRule.AutoUserId, WriteRule.Preserve)]
     public long createUserId { get; set; }
 
-    [FieldSelect]
+    [DbField]
     [Writable(WriteRule.AutoDate, WriteRule.Preserve)]
     public DateTime createDate { get; set; }
 
-    [FieldSelect]
+    [DbField]
     [Writable(WriteRule.User, WriteRule.Preserve)]
     public InternalContentType contentType {get;set;}
 
-    [FieldSelect]
+    [DbField]
     [Writable]
     public string name { get; set; } = "";
 
-    [FieldSelect]
+    [DbField]
     [Writable]
     public long parentId { get; set; }
 
     [NoQuery]
-    [FieldSelect]
+    [DbField]
     [Writable]
     public string text { get; set; } = "";
 
 
-    [FieldSelect]
+    [DbField]
     [Writable] //Not for files though!
     public string? literalType {get;set;}   //The page type set by users, OR the file mimetype
 
-    [FieldSelect] 
+    [DbField] 
     [Writable(WriteRule.User, WriteRule.Preserve)] // Don't know if this is what I want... 
     public string? meta {get;set;}          //Not always used, READONLY after insert
 
-    [FieldSelect] 
+    [DbField] 
     [Writable]
     public string? description {get;set;}   //Tagline for pages, description for anything else maybe
 
-    [FieldSelect]  //This is special, because it MUST be unique! The API will manage it... hopefully
+    [DbField]  //This is special, because it MUST be unique! The API will manage it... hopefully
     [Writable(WriteRule.User, WriteRule.Preserve)]
     public string hash {get;set;} = "";     //Some kind of unique public identifier. Uniqueness is enforced by the API however
 
@@ -81,25 +81,25 @@ public class ContentView : IIdView
 
     [NoQuery]
     [Expensive(2)]
-    public Dictionary<VoteType, int> votes {get;set;} = new Dictionary<VoteType, int>();
+    public Dictionary<string, Dictionary<string, int>> engagement {get;set;} = new Dictionary<string, Dictionary<string, int>>();
 
     [Expensive(1)]
-    [FieldSelect("select max(id) from " + MessagesTable + " where main.id = contentId and " + NaturalCommentQuery )]
+    [DbField("select max(id) from " + MessagesTable + " where main.id = contentId and " + NaturalCommentQuery )]
     public long? lastCommentId {get;set;}
 
     [Expensive(3)]
-    [FieldSelect("select count(*) from " + MessagesTable + " where main.id = contentId and " + NaturalCommentQuery)]
+    [DbField("select count(*) from " + MessagesTable + " where main.id = contentId and " + NaturalCommentQuery)]
     public int commentCount {get;set;}
 
     [Expensive(1)]
-    [FieldSelect("select count(*) from content_watches where main.id = contentId")]
+    [DbField("select count(*) from content_watches where main.id = contentId")]
     public int watchCount {get;set;}
 
     [Expensive(1)]
-    [FieldSelect("select count(*) from content_keywords where main.id = contentId")]
+    [DbField("select count(*) from content_keywords where main.id = contentId")]
     public int keywordCount {get;set;}
 
     [Expensive(1)]
-    [FieldSelect("select max(id) from content_history where main.id = contentId")]
+    [DbField("select max(id) from content_history where main.id = contentId")]
     public long lastRevisionId {get;set;} //ALL content has a lastRevisionId
 }

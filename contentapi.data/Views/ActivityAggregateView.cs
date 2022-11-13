@@ -10,30 +10,30 @@ namespace contentapi.data.Views
     [ExtraQueryField("contentType", "c.contentType")]
     public class ActivityAggregateView
     {
-        [FieldSelect("h.contentId")]
+        [DbField("h.contentId")]
         public long contentId { get; set; }
 
-        [FieldSelect("h.createUserId")]
+        [DbField("h.createUserId")]
         public long createUserId { get; set; }
 
 
-        [FieldSelect("count(h.id)")]
+        [DbField("count(h.id)")]
         public long count { get; set; }
 
         [NoQuery]
-        [FieldSelect("max(h.id)")]
+        [DbField("max(h.id)")]
         public long maxId { get; set; }
 
         [NoQuery]
-        [FieldSelect("min(h.id)")]
+        [DbField("min(h.id)")]
         public long minId { get; set; }
 
         [NoQuery]
-        [FieldSelect("max(h.createDate)")]
+        [DbField("max(h.createDate)")]
         public DateTime maxCreateDate { get; set; }
 
         [NoQuery]
-        [FieldSelect("min(h.createDate)")]
+        [DbField("min(h.createDate)")]
         public DateTime minCreateDate { get; set; }
     }
 }

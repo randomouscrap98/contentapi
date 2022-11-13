@@ -8,14 +8,16 @@ namespace contentapi.Main;
 public class ShortcutsService
 {
     protected IDbServicesFactory dbFactory;
+    protected IViewTypeInfoService typeInfoService;
     protected IMapper mapper;
     protected ILogger logger;
 
-    public ShortcutsService(ILogger<ShortcutsService> logger, IDbServicesFactory factory, IMapper mapper)
+    public ShortcutsService(ILogger<ShortcutsService> logger, IDbServicesFactory factory, IViewTypeInfoService typeInfoService, IMapper mapper)
     {
         this.dbFactory = factory;
         this.logger = logger;
         this.mapper = mapper;
+        this.typeInfoService = typeInfoService;
     }
 
     public async Task ClearNotificationsAsync(WatchView watch, long uid)
@@ -63,23 +65,26 @@ public class ShortcutsService
         return watches.First();
     }
 
-    public async Task<VoteView> LookupVoteByContentIdAsync(long uid, long contentId)
+    public async Task<T> LookupEngagementByRelatedIdAsync<T>(long uid, long relatedId, string type) where T : IEngagementView
     {
         using var search = dbFactory.CreateSearch();
-        var votes = await search.SearchSingleType<VoteView>(uid, new SearchRequest()
-        {
-            type = "vote",
-            fields = "*",
-            query = "userId = @me and contentId = @cid"
-        }, new Dictionary<string, object> {
-            { "me", uid },
-            { "cid", contentId }
-        });
+        string query; Dictionary<string, object> objects;
+        search.GetEngagementLookup(uid, relatedId, type, out query, out objects);
 
-        if (votes.Count == 0)
-            throw new NotFoundException($"Content {contentId} not found for vote!");
+        var typeInfo = typeInfoService.GetTypeInfo<T>();
+        var requestType = typeInfo.requestType ?? throw new InvalidOperationException($"Tried to lookup engagement view {typeof(T)} but it had no requestType!");
         
-        return votes.First();
+        var engagement = await search.SearchSingleType<T>(uid, new SearchRequest()
+        {
+            type = requestType.ToString(),
+            fields = "*",
+            query = query
+        }, objects);
+
+        if (engagement.Count == 0)
+            throw new NotFoundException($"Parent {relatedId} not found for engagement!");
+        
+        return engagement.First();
     }
 
     public async Task<UserVariableView> LookupVariableByKeyAsync(long uid, string key)
