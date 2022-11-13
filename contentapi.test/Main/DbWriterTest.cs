@@ -1278,7 +1278,7 @@ public class DbWriterTest : ViewUnitTestBase, IDisposable
         {
             contentId = content,
             userId = 999, //This should get reset.
-            type = "vote",
+            type = DbUnitTestSearchFixture.VoteEngagement,
             engagement = "ok"
         };
 
@@ -1407,7 +1407,7 @@ public class DbWriterTest : ViewUnitTestBase, IDisposable
     {
         var values = new List<string> { "ok", "bad", "good", "ok" };
         await WriteAsync_ConstrictedUserEdit<ContentEngagementView>(
-            () => new ContentEngagementView() { contentId = AllAccessContentId, type = "vote" }, x => x.engagement, (x,i) => x.engagement= values[i]);
+            () => new ContentEngagementView() { contentId = AllAccessContentId, type = DbUnitTestSearchFixture.VoteEngagement }, x => x.engagement, (x,i) => x.engagement= values[i]);
     }
 
     [Fact]

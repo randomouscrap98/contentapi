@@ -151,7 +151,11 @@ public class GenericSearchDbTests : ViewUnitTestBase
             else
                 Assert.Equal(0, x.commentCount);
             Assert.Equal((x.id - 1) / (fixture.ContentCount / fixture.UserCount), x.watchCount);
-            Assert.Equal((x.id - 1) / (fixture.ContentCount / fixture.UserCount), x.engagement["vote"].Sum(x => x.Value));
+            var voteCount = (x.id - 1) / (fixture.ContentCount / fixture.UserCount);
+            if(voteCount == 0)
+                Assert.False(x.engagement.ContainsKey(DbUnitTestSearchFixture.VoteEngagement));
+            else
+                Assert.Equal(voteCount, x.engagement[DbUnitTestSearchFixture.VoteEngagement].Sum(x => x.Value));
             Assert.True(x.id > 0, "ContentId not cast properly!");
             Assert.True(x.createUserId > 0, "Content createuserid not cast properly!");
             Assert.True(x.createDate.Ticks > 0, "Content createdate not cast properly!");

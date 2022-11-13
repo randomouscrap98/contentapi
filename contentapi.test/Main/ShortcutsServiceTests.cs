@@ -85,9 +85,9 @@ public class ShortcutsServiceTests : ViewUnitTestBase
     public async Task LookupVoteByContentId_Simple(long uid, long cid)
     {
         //Shouldn't exist at first... we hope?
-        await Assert.ThrowsAnyAsync<NotFoundException>(() => service.LookupEngagementByRelatedIdAsync<ContentEngagementView>(uid, cid, "vote"));
+        await Assert.ThrowsAnyAsync<NotFoundException>(() => service.LookupEngagementByRelatedIdAsync<ContentEngagementView>(uid, cid, DbUnitTestSearchFixture.VoteEngagement));
 
-        var vote =  new ContentEngagementView() { contentId = cid, type = "vote", engagement = "ok" };
+        var vote =  new ContentEngagementView() { contentId = cid, type = DbUnitTestSearchFixture.VoteEngagement, engagement = "ok" };
         var writtenVote = await writer.WriteAsync(vote, uid);
 
         Assert.Equal(vote.engagement, writtenVote.engagement);
@@ -95,7 +95,7 @@ public class ShortcutsServiceTests : ViewUnitTestBase
         Assert.Equal(vote.contentId, writtenVote.contentId);
 
         //now go look it up
-        var lookupVote = await service.LookupEngagementByRelatedIdAsync<ContentEngagementView>(uid, cid, "vote");
+        var lookupVote = await service.LookupEngagementByRelatedIdAsync<ContentEngagementView>(uid, cid, DbUnitTestSearchFixture.VoteEngagement);
 
         Assert.Equal(uid, lookupVote.userId);
         Assert.Equal(cid, lookupVote.contentId);

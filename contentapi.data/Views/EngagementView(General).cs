@@ -38,7 +38,7 @@ public class ContentEngagementView : IContentUserRelatedView, IEngagementView
 }
 
 [ResultFor(RequestType.message_engagement)]
-[SelectFrom("message_engagement e join message m on e.messsageId = m.id")]
+[SelectFrom("message_engagement e join messages m on e.messageId = m.id")]
 [WriteAs(typeof(Db.MessageEngagement))]
 public class MessageEngagementView : IContentUserRelatedView, IEngagementView
 {

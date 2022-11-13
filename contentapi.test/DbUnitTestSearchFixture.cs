@@ -63,6 +63,8 @@ public class DbUnitTestSearchFixture : DbUnitTestBase, IDisposable
         "eight"
     };
 
+    public const string VoteEngagement = "vote";
+
     public readonly int UserCount;
     public readonly int ContentCount;
     public readonly int AdminLogCount;
@@ -177,6 +179,7 @@ public class DbUnitTestSearchFixture : DbUnitTestBase, IDisposable
                     var permissions = new List<Db.ContentPermission>();
                     var watchers = new List<Db.ContentWatch>();
                     var votes = new List<Db.ContentEngagement>();
+                    var messagevotes = new List<Db.MessageEngagement>();
                     var history = new List<Db.ContentHistory>();
                     ContentCount = (int)Math.Pow(2, Enum.GetValues<ContentVariations>().Count());
 
@@ -232,7 +235,7 @@ public class DbUnitTestSearchFixture : DbUnitTestBase, IDisposable
                                 contentId = i + 1,
                                 userId = j % UserCount,
                                 createDate = DateTime.Now,
-                                type = "vote",
+                                type = VoteEngagement,
                                 engagement = (new [] {"bad", "ok", "good"}).ElementAt(random.Next() % 3)
                             });
                         }
@@ -337,6 +340,18 @@ public class DbUnitTestSearchFixture : DbUnitTestBase, IDisposable
                         content.Add(c);
                     }
 
+                    for (var j = 1; j <= 10; j++)  //for the first 10 comments, whatever they are, add some engagement
+                    {
+                        messagevotes.Add(new Db.MessageEngagement()
+                        {
+                            messageId = j,
+                            userId = j % UserCount,
+                            createDate = DateTime.Now,
+                            type = VoteEngagement,
+                            engagement = (new [] {"bad", "ok", "good"}).ElementAt(j % 3)
+                        });
+                    }
+
                     conn.Insert(content, tsx);
                     conn.Insert(comments, tsx);
                     conn.Insert(values, tsx);
@@ -344,6 +359,7 @@ public class DbUnitTestSearchFixture : DbUnitTestBase, IDisposable
                     conn.Insert(permissions, tsx);
                     conn.Insert(watchers, tsx);
                     conn.Insert(votes, tsx);
+                    conn.Insert(messagevotes, tsx);
                     conn.Insert(history, tsx);
 
                     var adminLogs = new List<Db.AdminLog>();
