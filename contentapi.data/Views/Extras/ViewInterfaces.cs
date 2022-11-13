@@ -17,8 +17,11 @@ public interface IContentUserRelatedView : IContentRelatedView
 
 public interface IEngagementView : IIdView
 {
-    public long userId { get; set; }
-    public string type { get; set; }
-    public string engagement { get; set; }
-    public DateTime createDate { get; set; }
+    long userId { get; set; }
+    string type { get; set; }
+    string engagement { get; set; }
+    DateTime createDate { get; set; }
+    long relatedId {get;}
+
+    void SetRelatedId(long id);
 }

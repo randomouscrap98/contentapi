@@ -29,6 +29,12 @@ public class ContentEngagementView : IContentUserRelatedView, IEngagementView
     [FieldSelect]
     [Writable(WriteRule.User, WriteRule.Preserve)]
     public long contentId { get; set; }
+
+    //An alias
+    [FieldSelect("contentId")]
+    public long relatedId => contentId;
+
+    public void SetRelatedId(long id) { contentId = id; }
 }
 
 [ResultFor(RequestType.message_engagement)]
@@ -61,4 +67,10 @@ public class MessageEngagementView : IContentUserRelatedView, IEngagementView
     
     [FieldSelect("m.contentId")]
     public long contentId {get;set;}
+
+    //An alias
+    [FieldSelect("messageId")]
+    public long relatedId => messageId;
+
+    public void SetRelatedId(long id) { messageId = id; }
 }

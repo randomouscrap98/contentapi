@@ -218,6 +218,14 @@ public class GenericSearcher : IGenericSearch
         }
     }
 
+    public void GetEngagementLookup(long userId, long id, string type, out string query, out Dictionary<string, object> objects)
+    {
+        objects = new Dictionary<string, object> {
+            { "me", userId }, { "id", id }, { "type", type }
+        };
+        query = "userId = @me and relatedId = @id and type = @type";
+    }
+
     public async Task<QueryResultSet> QueryRawAsync(string sql, Dictionary<string, object> values)
     {
         var dp = new DynamicParameters(values);

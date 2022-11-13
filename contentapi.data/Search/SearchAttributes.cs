@@ -75,6 +75,15 @@ public class NoQueryAttribute : System.Attribute
 }  
 
 /// <summary>
+/// The given property will never be usable in the userspace query system
+/// </summary>
+[System.AttributeUsage(System.AttributeTargets.Property)]
+public class FullIgnoreAttribute : System.Attribute  
+{  
+    public FullIgnoreAttribute() {  }  
+}  
+
+/// <summary>
 /// Rule types for expressing how a field is maintained on insert or update. There are no "null" or
 /// default/readonly rule types, because it is assumed that any field without a defined write rule 
 /// is in fact readonly (fields default to readonly)

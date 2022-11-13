@@ -72,6 +72,10 @@ public class ViewTypeInfoService_Cached : IViewTypeInfoService
                 {
                     var writeRule = pk.Value.GetCustomAttribute<WritableAttribute>(); 
                     var fieldSelect = pk.Value.GetCustomAttribute<FieldSelectAttribute>()?.SelectField_Sql;
+                    var ignored = pk.Value.GetCustomAttribute<FullIgnoreAttribute>();
+
+                    if(ignored != null)
+                        continue;
 
                     var fieldInfo = new ViewFieldInfo()
                     {

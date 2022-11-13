@@ -319,24 +319,16 @@ public class DbWriter : IDbWriter
         else if(view is ContentEngagementView)
         {
             var cv = (view as ContentEngagementView)!;
-            await ValidateContentUserRelatedView_Generic(cv, existing as ContentEngagementView, requester, action, 
-                "userId = @me and contentId = @cid and type = @type", 
-                new Dictionary<string, object> {
-                    { "me", requester.id },
-                    { "cid", cv.contentId },
-                    { "type", cv.type }
-                });
+            string query; Dictionary<string, object> objects;
+            searcher.GetEngagementLookup(requester.id, cv.contentId, cv.type, out query, out objects);
+            await ValidateContentUserRelatedView_Generic(cv, existing as ContentEngagementView, requester, action, query, objects);
         }
         else if(view is MessageEngagementView)
         {
             var ev = (view as MessageEngagementView)!;
-            await ValidateContentUserRelatedView_Generic(ev, existing as MessageEngagementView, requester, action, 
-                "userId = @me and messageId = @mid and type = @type", 
-                new Dictionary<string, object> {
-                    { "me", requester.id },
-                    { "mid", ev.messageId },
-                    { "type", ev.type }
-                });
+            string query; Dictionary<string, object> objects;
+            searcher.GetEngagementLookup(requester.id, ev.messageId, ev.type, out query, out objects);
+            await ValidateContentUserRelatedView_Generic(ev, existing as MessageEngagementView, requester, action, query, objects);
         }
         else if (view is BanView)
         {
@@ -445,26 +437,6 @@ public class DbWriter : IDbWriter
             if(existing?.userId != requester.id)
                 throw new ForbiddenException($"You can only modify your own {requestType}!");
         }
-    }
-
-    /// <summary>
-    /// Validation for content engagement: you can't add duplicates, the content must exist, you must have read permissions. When
-    /// modifying or deleting, you can only do so to your own objects
-    /// </summary>
-    /// <param name="view"></param>
-    /// <param name="existing"></param>
-    /// <param name="requester"></param>
-    /// <param name="action"></param>
-    /// <typeparam name="T"></typeparam>
-    /// <returns></returns>
-    public Task ValidateContentEngagementView(MessageEngagementView view, MessageEngagementView? existing, UserView requester, UserAction action) 
-    {
-        return ValidateContentUserRelatedView_Generic(view, existing, requester, action, "userId = @me and messageId = @mid and type = @type", 
-            new Dictionary<string, object> {
-                { "me", requester.id },
-                { "mid", view.messageId },
-                { "type", view.type }
-            });
     }
 
     //Ensure the action and the view make sense for each other
