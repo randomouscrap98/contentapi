@@ -5,7 +5,7 @@ namespace contentapi.data.Views;
 [ResultFor(RequestType.content_engagement)]
 [SelectFrom("content_engagement")]
 [WriteAs(typeof(Db.ContentEngagement))]
-public class ContentEngagementView : IContentRelatedView, IEngagementView
+public class ContentEngagementView : IContentUserRelatedView, IEngagementView
 {
     [FieldSelect]
     public long id { get; set; }
@@ -34,7 +34,7 @@ public class ContentEngagementView : IContentRelatedView, IEngagementView
 [ResultFor(RequestType.message_engagement)]
 [SelectFrom("message_engagement e join message m on e.messsageId = m.id")]
 [WriteAs(typeof(Db.MessageEngagement))]
-public class MessageEngagementView : IContentRelatedView, IEngagementView
+public class MessageEngagementView : IContentUserRelatedView, IEngagementView
 {
     [FieldSelect("e.id")]
     public long id { get; set; }

@@ -309,11 +309,34 @@ public class DbWriter : IDbWriter
         }
         else if(view is WatchView)
         {
-            await ValidateContentUserRelatedView<WatchView>((view as WatchView)!, existing as WatchView, requester, action);
+            var wv = (view as WatchView)!;
+            await ValidateContentUserRelatedView_Generic(wv, existing as WatchView, requester, action, "userId = @me and contentId = @cid", 
+                new Dictionary<string, object> {
+                    { "me", requester.id },
+                    { "cid", wv.contentId }
+                });
         }
-        else if(view is VoteView)
+        else if(view is ContentEngagementView)
         {
-            await ValidateContentUserRelatedView<VoteView>((view as VoteView)!, existing as VoteView, requester, action);
+            var cv = (view as ContentEngagementView)!;
+            await ValidateContentUserRelatedView_Generic(cv, existing as ContentEngagementView, requester, action, 
+                "userId = @me and contentId = @cid and type = @type", 
+                new Dictionary<string, object> {
+                    { "me", requester.id },
+                    { "cid", cv.contentId },
+                    { "type", cv.type }
+                });
+        }
+        else if(view is MessageEngagementView)
+        {
+            var ev = (view as MessageEngagementView)!;
+            await ValidateContentUserRelatedView_Generic(ev, existing as MessageEngagementView, requester, action, 
+                "userId = @me and messageId = @mid and type = @type", 
+                new Dictionary<string, object> {
+                    { "me", requester.id },
+                    { "mid", ev.messageId },
+                    { "type", ev.type }
+                });
         }
         else if (view is BanView)
         {
@@ -378,17 +401,20 @@ public class DbWriter : IDbWriter
     }
 
     /// <summary>
-    /// Validation for most (all?) db objects that are user generated related to content operate with the 
-    /// same rules: you can't add duplicates, the content must exist, you must have read permissions. When
-    /// modifying or deleting, you can only do so to your own objects
+    /// Generic validation for any user/content related view which requires duplication checking. This will ensure:
+    /// - you have permission to add this relationship to this view
+    /// - you have permission to update or delete this relationship (you can only modify your own)
+    /// - you're not posting a duplicate based on the given duplication rules
     /// </summary>
     /// <param name="view"></param>
     /// <param name="existing"></param>
     /// <param name="requester"></param>
     /// <param name="action"></param>
+    /// <param name="idForDupe"></param>
+    /// <param name="keyForDupe"></param>
     /// <typeparam name="T"></typeparam>
     /// <returns></returns>
-    public async Task ValidateContentUserRelatedView<T>(T view, T? existing, UserView requester, UserAction action) 
+    public async Task ValidateContentUserRelatedView_Generic<T>(T view, T? existing, UserView requester, UserAction action, string dupeQuery, Dictionary<string, object> dupeQueryValues) 
         where T : class, IContentUserRelatedView, new()
     {
         var typeInfo = typeInfoService.GetTypeInfo<T>();
@@ -403,25 +429,42 @@ public class DbWriter : IDbWriter
             if(content == null || !(await CanUserAsync(requester, UserAction.read, content.id)))
                 throw new ForbiddenException($"You don't have access to content {view.contentId}");
 
-            //Also, ensure we're not adding a second watch for the same content
+            //Also, ensure we're not adding a second item for the same content/content child
             var dupeThing = await searcher.SearchSingleTypeUnrestricted<T>(new SearchRequest()
             {
                 type = requestType.ToString(),
                 fields = "*",
-                query = "userId = @me and contentId = @cid"
-            }, new Dictionary<string, object> {
-                { "me", requester.id },
-                { "cid", view.contentId }
-            });
+                query = dupeQuery
+            }, dupeQueryValues);
 
             if(dupeThing.Count > 0)
-                throw new RequestException($"Duplicate {requestType} for content {view.contentId}");
+                throw new RequestException($"Duplicate {requestType} for content (or unique child of content) {view.contentId}");
         }
         else if(action == UserAction.update || action == UserAction.delete)
         {
             if(existing?.userId != requester.id)
                 throw new ForbiddenException($"You can only modify your own {requestType}!");
         }
+    }
+
+    /// <summary>
+    /// Validation for content engagement: you can't add duplicates, the content must exist, you must have read permissions. When
+    /// modifying or deleting, you can only do so to your own objects
+    /// </summary>
+    /// <param name="view"></param>
+    /// <param name="existing"></param>
+    /// <param name="requester"></param>
+    /// <param name="action"></param>
+    /// <typeparam name="T"></typeparam>
+    /// <returns></returns>
+    public Task ValidateContentEngagementView(MessageEngagementView view, MessageEngagementView? existing, UserView requester, UserAction action) 
+    {
+        return ValidateContentUserRelatedView_Generic(view, existing, requester, action, "userId = @me and messageId = @mid and type = @type", 
+            new Dictionary<string, object> {
+                { "me", requester.id },
+                { "mid", view.messageId },
+                { "type", view.type }
+            });
     }
 
     //Ensure the action and the view make sense for each other
@@ -488,10 +531,16 @@ public class DbWriter : IDbWriter
                 new DbWorkUnit<WatchView>((view as WatchView)!, requester, typeInfo, action, existing as WatchView, message),
                 EventType.watch_event);
         }
-        else if (view is VoteView)
+        else if (view is ContentEngagementView)
         {
-            id = await DatabaseWork_ContentUserRelated<VoteView, Db.ContentEngagement>(
-                new DbWorkUnit<VoteView>((view as VoteView)!, requester, typeInfo, action, existing as VoteView, message),
+            id = await DatabaseWork_ContentUserRelated<ContentEngagementView, Db.ContentEngagement>(
+                new DbWorkUnit<ContentEngagementView>((view as ContentEngagementView)!, requester, typeInfo, action, existing as ContentEngagementView, message),
+                EventType.none);
+        }
+        else if (view is MessageEngagementView)
+        {
+            id = await DatabaseWork_ContentUserRelated<MessageEngagementView, Db.ContentEngagement>(
+                new DbWorkUnit<MessageEngagementView>((view as MessageEngagementView)!, requester, typeInfo, action, existing as MessageEngagementView, message),
                 EventType.none);
         }
         else if (view is UserVariableView)
@@ -907,10 +956,9 @@ public class DbWriter : IDbWriter
         where V : class, new()
     {
         var type = work.typeInfo.requestType ?? throw new InvalidOperationException($"Tried to do database work for {typeof(T)} but it had no requestType!");
-        //var dbType = work.typeInfo.writeAsInfo?.modelType ?? throw new InvalidOperationException($"Tried to do database work for {type} but it had no writeAsInfo!");
 
         //NOTE: As usual, validation is performed outside this function!
-        var dbItem = Activator.CreateInstance<V>() ?? throw new InvalidOperationException($"Tried to create instance of db write object for {type} but it returned null!"); //new Db.ContentWatch();
+        var dbItem = Activator.CreateInstance<V>() ?? throw new InvalidOperationException($"Tried to create instance of db write object for {type} but it returned null!"); 
         var unmapped = MapSimpleViewFields(work, dbItem); 
 
         if(unmapped.Count > 0)
