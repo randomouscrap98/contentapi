@@ -1307,7 +1307,7 @@ public class DbWriterTest : ViewUnitTestBase, IDisposable
         }
     }
 
-    /*[Theory]
+    [Theory]
     [InlineData(NormalUserId, 0, false)]
     [InlineData(NormalUserId, 9000, false)]
     [InlineData(NormalUserId, AllAccessContentId, true)]
@@ -1327,6 +1327,7 @@ public class DbWriterTest : ViewUnitTestBase, IDisposable
             message.text = "this is a text";
             var writtenMessage = await writer.WriteAsync(message, SuperUserId);
             messageId = writtenMessage.id;
+            events.Events.Clear();
         }
         else
         {
@@ -1356,7 +1357,6 @@ public class DbWriterTest : ViewUnitTestBase, IDisposable
             Assert.Equal(messageId, writtenVote.messageId);
             Assert.Equal(uid, writtenVote.userId);
             Assert.Empty(events.Events); //There should be NO events for votes right now!
-            //AssertWatchEventMatches(writtenWatch, uid, UserAction.create);
         }
         else if(content <= 0 || content >= 1000)
         {
@@ -1366,7 +1366,7 @@ public class DbWriterTest : ViewUnitTestBase, IDisposable
         {
             await Assert.ThrowsAnyAsync<ForbiddenException>(writeVote);
         }
-    }*/
+    }
 
     [Theory]
     [InlineData(NormalUserId, "junk", "other", true)]
