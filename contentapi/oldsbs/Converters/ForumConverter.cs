@@ -100,6 +100,8 @@ public partial class OldSbsConvertController
 
         await PerformChunkedTransfer<oldsbs.ForumPosts>("forumposts", "fpid", async (oldcon, con, trans, oldPosts, start) =>
         {
+            var editedPosts = new List<long>();
+
             foreach(var oldPost in oldPosts)
             {
                 var message = new Db.Message
@@ -114,7 +116,7 @@ public partial class OldSbsConvertController
                 {
                     message.editDate = oldPost.edited;
                     message.editUserId = oldPost.euid;
-                    logger.LogDebug($"Post {oldPost.fpid} was edited");
+                    editedPosts.Add(oldPost.fpid);
                 }
 
                 if(message.contentId == 0)
@@ -123,12 +125,13 @@ public partial class OldSbsConvertController
                 var id = await con.InsertAsync(message, trans);
 
                 //Now link the old data just in case. MAKE SURE THEY'RE MESSAGE VALUES!
-                await con.InsertAsync(CreateMValue(message.id, "markup", "bbcode"), trans);
-                await con.InsertAsync(CreateMValue(message.id, "fpid", oldPost.fpid), trans);
-                await con.InsertAsync(CreateMValue(message.id, "ftid", oldPost.ftid), trans);
-                await con.InsertAsync(CreateMValue(message.id, "status", oldPost.status), trans);
+                await con.InsertAsync(CreateMValue(id, "markup", "bbcode"), trans);
+                await con.InsertAsync(CreateMValue(id, "fpid", oldPost.fpid), trans);
+                await con.InsertAsync(CreateMValue(id, "ftid", oldPost.ftid), trans);
+                await con.InsertAsync(CreateMValue(id, "status", oldPost.status), trans);
             }
 
+            logger.LogDebug($"{editedPosts.Count} edited posts this chunk");//These posts were edited: {string.Join(" ", editedPosts)}");
             logger.LogInformation($"Inserted {oldPosts.Count} forum posts (chunk {start})");
         });
 
@@ -139,50 +142,16 @@ public partial class OldSbsConvertController
     {
         logger.LogTrace("ConvertForumHistory called");
 
-        var threadsParent = new Db.Content();
-        var postsParent = new Db.Content();
-
-        //First, need to insert the two parents
-        await PerformDbTransfer(async (oldcon, con, trans) =>
+        await ConvertHistoryGeneral<oldsbs.ForumThreadsHistory>("forumthreads_history", "revisionDate", (m, h) =>
         {
-            threadsParent = await AddSystemContent("raw:forumthreads_history", con, trans);
-            postsParent = await AddSystemContent("raw:forumposts_history", con, trans);
+            m.createDate = h.revisiondate;
+            m.createUserId = config.SuperUserId;
         });
 
-        await PerformChunkedTransfer<oldsbs.ForumThreadsHistory>("forumthreads_history", "revisionDate", async (oldcon, con, trans, threadHistory, start) =>
+        await ConvertHistoryGeneral<oldsbs.ForumPostsHistory>("forumposts_history", "revisionDate", (m, h) =>
         {
-            foreach(var history in threadHistory)
-            {
-                var message = new Db.Message()
-                {
-                    contentId = threadsParent.id,
-                    createDate = history.revisiondate,
-                    createUserId = config.SuperUserId,
-                    text = JsonConvert.SerializeObject(history) //Just put the whole old data as json in here.
-                };
-
-                await con.InsertAsync(message, trans);
-            }
-
-            logger.LogInformation($"Inserted {threadHistory.Count} forumthreadhistory (chunk {start})");
-        });
-
-        await PerformChunkedTransfer<oldsbs.ForumPostsHistory>("forumposts_history", "revisionDate", async (oldcon, con, trans, postHistory, start) =>
-        {
-            foreach(var history in postHistory)
-            {
-                var message = new Db.Message()
-                {
-                    contentId = postsParent.id,
-                    createDate = history.revisiondate,
-                    createUserId = config.SuperUserId,
-                    text = JsonConvert.SerializeObject(history) //Just put the whole old data as json in here.
-                };
-
-                await con.InsertAsync(message, trans);
-            }
-
-            logger.LogInformation($"Inserted {postHistory.Count} forumpostshistory (chunk {start})");
+            m.createDate = h.revisiondate;
+            m.createUserId = config.SuperUserId;
         });
 
         logger.LogInformation("Converted all forum history!");

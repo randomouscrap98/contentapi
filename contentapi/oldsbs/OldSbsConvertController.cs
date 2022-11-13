@@ -118,13 +118,45 @@ public partial class OldSbsConvertController : BaseController
         return content;
     }
 
-    //protected async Task<Db.Message> AddLazyConversion(object row, IDbConnection con, IDbTransaction trans)
-    //{
-    //    var message = new Db.Message()
-    //    {
-    //        creat
-    //    }
-    //}
+    /// <summary>
+    /// For any table where the data may never be used and so will only be preserved as json
+    /// </summary>
+    /// <param name="table"></param>
+    /// <param name="sort"></param>
+    /// <param name="modify"></param>
+    /// <typeparam name="T"></typeparam>
+    /// <returns></returns>
+    protected async Task ConvertHistoryGeneral<T>(string table, string sort, Action<Db.Message, T>? modify = null)
+    {
+        var historyParent = new Db.Content();
+
+        //First, need to insert the two parents
+        await PerformDbTransfer(async (oldcon, con, trans) =>
+        {
+            historyParent = await AddSystemContent("raw:" + table, con, trans);
+        });
+
+        await PerformChunkedTransfer<T>(table, sort, async (oldcon, con, trans, oldHistory, start) =>
+        {
+            foreach(var history in oldHistory)
+            {
+                var message = new Db.Message()
+                {
+                    contentId = historyParent.id,
+                    text = JsonConvert.SerializeObject(history) //Just put the whole old data as json in here.
+                };
+
+                if(modify != null)
+                    modify(message, history);
+
+                var id = await con.InsertAsync(message, trans);
+                await con.InsertAsync(CreateMValue(id, "system", true));
+                await con.InsertAsync(CreateMValue(id, "json", true));
+            }
+
+            logger.LogInformation($"Inserted {oldHistory.Count} {table} (chunk {start})");
+        });
+    }
 
     protected Db.ContentValue CreateValue(long contentId, string key, object? value) => new Db.ContentValue {
         contentId = contentId,
@@ -215,13 +247,6 @@ public partial class OldSbsConvertController : BaseController
     {
         return GetOldToNewMappingQuery(key, $"select id from content where literalType=\"{type}\"", con);
     }
-
-    //protected void AddBasicMetadata(data.Views.ContentView content)
-    //{
-    //    content.values.Add("markup", "bbcode");
-    //    content.permissions[0] = "CR";
-    //}
-
 
     /// <summary>
     /// Basically all transfer functions will follow this same pattern, so might as well just give it to them.
@@ -327,6 +352,7 @@ public partial class OldSbsConvertController : BaseController
         await ConvertBadgeGroups();
         await ConvertBadges();
         await ConvertBadgeAssignments();
+        await ConvertBadgeHistory();
         await ConvertForumCategories();
         await ConvertForumThreads();
         await ConvertForumPosts();

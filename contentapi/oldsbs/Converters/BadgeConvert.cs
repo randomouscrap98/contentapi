@@ -159,4 +159,17 @@ public partial class OldSbsConvertController
             logger.LogInformation($"Inserted {userBadgeOrders.Count} user values ({userBadgeOrders.Sum(x => x.Value.Count)} badges) for user badge ordering");
         });
     }
+
+    protected async Task ConvertBadgeHistory()
+    {
+        logger.LogTrace("ConvertBadgeHistory called");
+
+        await ConvertHistoryGeneral<oldsbs.GivenBadges>("givenbadges", "given", (m, h) =>
+        {
+            m.createDate = h.given;
+            m.createUserId = h.giver;
+        });
+
+        logger.LogInformation("Converted all badge history!");
+    }
 }
