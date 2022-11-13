@@ -319,4 +319,36 @@ public class SpecializedSearchTests : ViewUnitTestBase //, IClassFixture<DbUnitT
         Assert.DoesNotContain("ismodule", ks);
         Assert.DoesNotContain("isfile", ks);
     }
+
+    [Fact]
+    public async Task GenericSearch_Search_CorrectMessageEngagement()
+    {
+        //Add a message to put engagement on
+        var message = GetNewCommentView(AllAccessContentId);
+        var writtenMessage = await writer.WriteAsync(message, SuperUserId);
+
+        //Add a particular subset of engagement to the message
+        var e1 = await writer.WriteAsync(GetMessageEngagementView(writtenMessage.id, "vote", "ok"), NormalUserId);
+        var e2 = await writer.WriteAsync(GetMessageEngagementView(writtenMessage.id, "vote", "bad"), SuperUserId);
+        var e3 = await writer.WriteAsync(GetMessageEngagementView(writtenMessage.id, "reaction", "💙"), NormalUserId);
+        var e4 = await writer.WriteAsync(GetMessageEngagementView(writtenMessage.id, "reaction", "💙"), SuperUserId);
+
+        var checkMessages = await searcher.SearchSingleType<MessageView>(NormalUserId, new SearchRequest()
+        {
+            type = nameof(RequestType.message),
+            query = "id = @id",
+            fields = "*"
+        }, new Dictionary<string, object> { {"id",writtenMessage.id}});
+
+        Assert.Single(checkMessages);
+        var engagement = checkMessages.First().engagement;
+        Assert.True(engagement.ContainsKey("vote"));
+        Assert.True(engagement.ContainsKey("reaction"));
+        Assert.True(engagement["vote"].ContainsKey("ok"));
+        Assert.True(engagement["vote"].ContainsKey("bad"));
+        Assert.Equal(1, engagement["vote"]["ok"]);
+        Assert.Equal(1, engagement["vote"]["bad"]);
+        Assert.True(engagement["reaction"].ContainsKey("💙"));
+        Assert.Equal(2, engagement["reaction"]["💙"]);
+    }
 }

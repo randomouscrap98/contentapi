@@ -138,7 +138,7 @@ public class GenericSearcher : IGenericSearch
             }
             if(r.requestFields.Contains(engagementkey))
             {
-                await AddEngagement<Db.MessageEngagement>(cidkey, index, engagementkey);
+                await AddEngagement<Db.MessageEngagement>(cidkey, index, engagementkey, x => x.messageId);
             }
         }
 
@@ -186,18 +186,18 @@ public class GenericSearcher : IGenericSearch
             }
             if(r.requestFields.Contains(engagementkey))
             {
-                await AddEngagement<Db.ContentEngagement>(cidkey, index, engagementkey);
+                await AddEngagement<Db.ContentEngagement>(cidkey, index, engagementkey, x => x.contentId);
             }
         }
     }
 
-    public async Task AddEngagement<T>(string entityKey, Dictionary<long, QueryResult> index, string engagementkey) 
+    public async Task AddEngagement<T>(string entityKey, Dictionary<long, QueryResult> index, string engagementkey, Func<dynamic, dynamic> getIndex) 
     {
         var engagementInfo = typeService.GetTypeInfo<T>();
         var engagement = await dbcon.QueryAsync($"select {entityKey}, type, engagement, count(*) as count from {engagementInfo.selfDbInfo?.modelTable} where {entityKey} in @ids group by {entityKey},type,engagement",
             new { ids = index.Keys.ToList() });
 
-        var lookup = engagement.ToLookup(x => x.contentId);
+        var lookup = engagement.ToLookup(getIndex); //x => x[entityKey]); //getIndex); //x => getIndex(x));
 
         foreach (var c in index)
         {
