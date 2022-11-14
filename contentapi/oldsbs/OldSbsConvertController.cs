@@ -361,6 +361,7 @@ public partial class OldSbsConvertController : BaseController
         await ConvertPageCategories();
         await ConvertPages();
         await ConvertPageHistory();
+        await ConvertInspector();
 
         // Need to keep the skip markers around long enough to insert content with new ids
         await RemoveSkipMarkers();
@@ -368,5 +369,20 @@ public partial class OldSbsConvertController : BaseController
         await SanityChecks();
 
         logger.LogInformation("Convert all complete?");
+    }
+
+    //There's just seemingly no other good place to put this!
+    protected async Task ConvertInspector()
+    {
+        logger.LogTrace("ConvertInspector called");
+
+        await ConvertHistoryGeneral<oldsbs.Inspector>("inspector", "lastuse", (m, h) =>
+        {
+            m.createDate = h.lastuse;
+            // do we want it a super or the user we're inspecting? i think the user is fine...
+            m.createUserId = h.uid;
+        });
+
+        logger.LogInformation("Converted all inspector data!");
     }
 }

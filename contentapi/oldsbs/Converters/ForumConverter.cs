@@ -97,6 +97,7 @@ public partial class OldSbsConvertController
 
         //We have to get the fcid to id mapping
         var threadMapping = await GetOldToNewMapping("ftid", "forumthread");
+        int totalFlags = 0;
 
         await PerformChunkedTransfer<oldsbs.ForumPosts>("forumposts", "fpid", async (oldcon, con, trans, oldPosts, start) =>
         {
@@ -129,14 +130,40 @@ public partial class OldSbsConvertController
                 await con.InsertAsync(CreateMValue(id, "fpid", oldPost.fpid), trans);
                 await con.InsertAsync(CreateMValue(id, "ftid", oldPost.ftid), trans);
                 await con.InsertAsync(CreateMValue(id, "status", oldPost.status), trans);
+
+                //Since we're here, let's get the flags
+                var flags = (await oldcon.QueryAsync<oldsbs.ForumFlags>("select * from forumflags where fpid=@id", new {id=oldPost.fpid})).ToList();
+
+                if(flags.Count > 0)
+                {
+                    await con.InsertAsync(flags.Select(x => new Db.MessageEngagement() {
+                        messageId = id,
+                        userId = x.uid,
+                        type = "flag"
+                    }), trans);
+                    logger.LogDebug($"Inserted {flags.Count} flags for post {id}({oldPost.fpid})");
+                    totalFlags += flags.Count;
+                }
             }
 
             logger.LogDebug($"{editedPosts.Count} edited posts this chunk");//These posts were edited: {string.Join(" ", editedPosts)}");
             logger.LogInformation($"Inserted {oldPosts.Count} forum posts (chunk {start})");
         });
 
-        logger.LogInformation("Converted all forum posts!");
+        logger.LogInformation($"Converted all forum posts! Flagged: {totalFlags}");
     }
+
+    //protected async Task ConvertForumFlags()
+    //{
+    //    logger.LogTrace("ConvertForumFlags called");
+
+    //    //We have to get the fcid to id mapping
+    //    var threadMapping = await GetOldToNewMapping("fpid", "forumpost");
+
+    //    await PerformChunkedTransfer<oldsbs.ForumPosts>("forumposts", "fpid", async (oldcon, con, trans, oldPosts, start) =>
+    //    {
+    //    });
+    //}
 
     protected async Task ConvertForumHistory()
     {
