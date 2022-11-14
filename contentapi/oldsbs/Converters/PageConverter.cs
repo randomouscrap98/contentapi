@@ -1,3 +1,4 @@
+using System.Data;
 using contentapi.Main;
 using Dapper;
 using Dapper.Contrib.Extensions;
@@ -63,6 +64,8 @@ public partial class OldSbsConvertController
         });
     }
 
+    //This function does a lot of work because it's a bit more difficult to link to page data, so it's easier to just do it all
+    //for each page as its pulled
     protected async Task ConvertPages()
     {
         logger.LogTrace("ConvertPages called");
@@ -81,6 +84,7 @@ public partial class OldSbsConvertController
                 var keywords = (await oldcon.QueryAsync<oldsbs.PageKeywords>("select * from pagekeywords where pid=@id", parameters)).ToList();
                 var images = (await oldcon.QueryAsync<oldsbs.PageImages>("select * from pageimages where pid=@id", parameters)).ToList();
                 var votes = (await oldcon.QueryAsync<oldsbs.PageVotes>("select * from pagevotes where pid=@id", parameters)).ToList();
+                var comments = (await oldcon.QueryAsync<oldsbs.Comments>("select * from comments where pid=@id and created!='0000-00-00 00:00:00' order by pcid", parameters)).ToList();
                 //Remember: don't need authors because there are none
                 //Also: not actually doing anything with images, just... there for counting sake
 
@@ -106,6 +110,7 @@ public partial class OldSbsConvertController
                     name = oldPage.title,
                     text = bodyJson.description,
                     contentType = data.InternalContentType.page,
+                    hash = await GetTitleHash(oldPage.title, con),
                     literalType = type
                 };
 
@@ -125,6 +130,9 @@ public partial class OldSbsConvertController
                 await con.InsertAsync(CreateValue(page.id, "notes", bodyJson.notes), trans);
                 await con.InsertAsync(CreateValue(page.id, "instructions", bodyJson.instructions), trans);
 
+                //Now we have to convert all the comments. 
+                await ConvertComments(comments, page.id, con, trans);
+
                 //We can't do stuff with images just now, so we save them for later
                 allImages.Add(page.id, images);
 
@@ -134,7 +142,66 @@ public partial class OldSbsConvertController
         });
 
         logger.LogInformation($"Converted all pages! Now uploading/linking images");
+        await ConvertPageImages(allImages);
+    }
 
+    /// <summary>
+    /// Convert the given comments to messages on the given page, including linking parent comments. The order must be
+    /// pre-set so parent messages are written first... this might be problematic
+    /// </summary>
+    /// <param name="comments"></param>
+    /// <param name="contentId"></param>
+    /// <returns></returns>
+    private async Task ConvertComments(List<oldsbs.Comments> comments, long contentId, IDbConnection con, IDbTransaction trans)
+    {
+        //Need to keep track of old to new commentids
+        var commentMapping = new Dictionary<long, long>();
+        int editCount = 0;
+
+        foreach(var comment in comments)
+        {
+            var message = new Db.Message
+            {
+                createDate = comment.created, 
+                createUserId = comment.uid,
+                editUserId = comment.euid,
+                contentId = contentId,
+                text = comment.content
+            };
+
+            if(comment.euid != null)//comment.edited != null && comment.edited?.Ticks > 0 && comment.edited != comment.created)
+            {
+                //Checking just euid might be enough!
+                message.editDate = comment.edited;
+                editCount++;
+            }
+            
+            var id = await con.InsertAsync(message, trans);
+            commentMapping.Add(comment.cid, id);
+
+            if(comment.pcid != null)
+            {
+                await con.InsertAsync(CreateMValue(id, "pcid", comment.pcid));
+                await con.InsertAsync(CreateMValue(id, "parent", commentMapping[comment.pcid.Value]));
+            }
+
+            await con.InsertAsync(CreateMValue(id, "status", comment.status));
+            await con.InsertAsync(CreateMValue(id, "markup", "bbcode"));
+            await con.InsertAsync(CreateMValue(id, "cid", comment.cid));
+            await con.InsertAsync(CreateMValue(id, "pid", comment.pid));
+        }
+
+        logger.LogDebug($"Inserted {comments.Count} comments for page {contentId} ({editCount} edited)");
+    }
+
+    /// <summary>
+    /// Convert all images collected from all pages, including upload and linking to content. This must be done outside
+    /// the normal flow of conversion so we don't deadlock from transactions
+    /// </summary>
+    /// <param name="allImages"></param>
+    /// <returns></returns>
+    private async Task ConvertPageImages(Dictionary<long, List<oldsbs.PageImages>> allImages)
+    {
         var writePageImagelist = new Dictionary<long, List<string>>();
 
         using var httpClient = new HttpClient();
@@ -215,7 +282,27 @@ public partial class OldSbsConvertController
             m.createUserId = config.SuperUserId;
         });
 
+        await ConvertHistoryGeneral<oldsbs.CommentsHistory>("comments_history", "revisionDate", (m, h) =>
+        {
+            m.createDate = h.revisiondate;
+            m.createUserId = config.SuperUserId;
+        });
+
         logger.LogInformation("Converted all page history!");
     }
+
+    //protected async Task ConvertComments()
+    //{
+    //    logger.LogTrace("ConvertComments called");
+
+    //    var pageMapping = await GetOldToNewMapping("pid", "pag");
+
+    //    await PerformChunkedTransfer<oldsbs.Pages>("pages", "pid", async (oldcon, con, trans, oldPages, start) =>
+    //    {
+
+    //    });
+
+    //    logger.LogInformation("Converted all comments!");
+    //}
 }
         

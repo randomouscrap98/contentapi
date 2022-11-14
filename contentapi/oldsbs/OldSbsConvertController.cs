@@ -1,4 +1,5 @@
 using System.Data;
+using System.Text.RegularExpressions;
 using contentapi.Controllers;
 using contentapi.Main;
 using contentapi.Search;
@@ -100,7 +101,8 @@ public partial class OldSbsConvertController : BaseController
     protected async Task<Db.Content> AddGeneralPage(Db.Content content, IDbConnection con, IDbTransaction trans, bool isReadonly = false, bool setBbcode = true)
     {
         //Assume the other fields are as people want them
-        content.hash = GetNextHash();
+        if(string.IsNullOrEmpty(content.hash))
+            content.hash = GetNextHash();
 
         if(content.contentType == data.InternalContentType.none)
             content.contentType = data.InternalContentType.page;
@@ -301,6 +303,33 @@ public partial class OldSbsConvertController : BaseController
         });
     }
 
+    /// <summary>
+    /// Generate a reasonable title hash from the given title (with no collisions)
+    /// </summary>
+    /// <param name="title"></param>
+    /// <param name="con"></param>
+    /// <returns></returns>
+    protected async Task<string> GetTitleHash(string title, IDbConnection con)
+    {
+        //First, make the title normal
+        var normalizedTitle = Regex.Replace(Regex.Replace(title.ToLower(), @"\s+", "-"), @"[^a-z0-9\-]+", "");//.Substring(0, Math.Min(30));
+        if(normalizedTitle.Length > 62)
+            normalizedTitle = normalizedTitle.Substring(0, 62);
+        var checkTitle = normalizedTitle;
+        int next = 1;
+
+        //Go see if this title is already used
+        while(await con.ExecuteScalarAsync<int>("select count(*) from content where hash = @hash", new {hash=checkTitle}) > 0)
+        {
+            checkTitle = $"{normalizedTitle}-{++next}";
+
+            if(next >= 10)
+                throw new InvalidOperationException($"Couldn't find appropriate hash for title {title}");
+        }
+
+        return checkTitle;
+    }
+
     protected Task SkipIds()
     {
         logger.LogTrace("SkipIds called");
@@ -334,6 +363,7 @@ public partial class OldSbsConvertController : BaseController
             logger.LogInformation($"Sanity checks passed!");
         });
     }
+
 
     protected string CSTR(Db.Content content) => $"'{content.name}'/{content.hash}({content.literalType})[{content.id}]";
     protected string CSTR(data.Views.ContentView content) => $"'{content.name}'/{content.hash}({content.literalType})[{content.id}]";

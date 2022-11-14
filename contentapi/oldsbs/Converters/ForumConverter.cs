@@ -52,6 +52,7 @@ public partial class OldSbsConvertController
                     parentId = categoryMapping.GetValueOrDefault(oldThread.fcid, 0),
                     createDate = oldThread.created, 
                     createUserId = oldThread.uid,
+                    hash = await GetTitleHash(oldThread.title, con),
                     name = oldThread.title
                 };
 

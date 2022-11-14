@@ -92,6 +92,8 @@ public partial class OldSbsConvertController
                         name = $"{oldUser.username}'s userpage"
                     };
 
+                    content.hash = await GetTitleHash(content.name, con);
+
                     await AddGeneralPage(content, con, trans);
                 }
                 else
