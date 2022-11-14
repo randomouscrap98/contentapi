@@ -201,11 +201,21 @@ public partial class OldSbsConvertController
         logger.LogInformation($"Added all imagelists to content ({writePageImagelist.Sum(x => x.Value.Count)})! Page conversion complete!");
     }
 
-    //protected async Task ConvertPageImages()//AddImages(List<oldsbs.PageImages> images)
-    //{
-    //    logger.LogTrace("ConvertPageImages called");
-    //    var pageMapping = await GetOldToNewMapping("pid", "page");
-    //    var resourceMappin = await GetOldToNewMapping("pid", "resource");
-    //}
+    protected async Task ConvertPageHistory()
+    {
+        logger.LogTrace("ConvertPageHistory called");
+
+        await ConvertHistoryGeneral<oldsbs.PageCategoriesHistory>("pagecategories_history", "revision", (m, h)=> { m.createUserId = config.SuperUserId; }); 
+        await ConvertHistoryGeneral<oldsbs.PageImagesHistory>("pageimages_history", "revision", (m, h)=> { m.createUserId = config.SuperUserId; }); 
+        await ConvertHistoryGeneral<oldsbs.PageKeywordsHistory>("pagekeywords_history", "revision", (m, h)=> { m.createUserId = config.SuperUserId; }); 
+
+        await ConvertHistoryGeneral<oldsbs.PagesHistory>("pages_history", "revisionDate", (m, h) =>
+        {
+            m.createDate = h.revisiondate;
+            m.createUserId = config.SuperUserId;
+        });
+
+        logger.LogInformation("Converted all page history!");
+    }
 }
         
