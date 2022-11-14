@@ -18,7 +18,7 @@ public class DbWriterConfig
 {
    public int AutoHashChars {get;set;} = 5;
    public int AutoHashMaxRetries {get;set;} = 50;
-   public string HashRegex {get;set;} = @"^[a-z\-]+$";
+   public string HashRegex {get;set;} = @"^[a-z0-9\-]+$";
    public string ForbiddenKeywordRegex {get;set;} = @"[\s""]";
    public int HashMinLength {get;set;} = 8;
    public int HashMaxLength {get;set;} = 32;
