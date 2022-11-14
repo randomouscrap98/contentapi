@@ -153,17 +153,6 @@ public partial class OldSbsConvertController
         logger.LogInformation($"Converted all forum posts! Flagged: {totalFlags}");
     }
 
-    //protected async Task ConvertForumFlags()
-    //{
-    //    logger.LogTrace("ConvertForumFlags called");
-
-    //    //We have to get the fcid to id mapping
-    //    var threadMapping = await GetOldToNewMapping("fpid", "forumpost");
-
-    //    await PerformChunkedTransfer<oldsbs.ForumPosts>("forumposts", "fpid", async (oldcon, con, trans, oldPosts, start) =>
-    //    {
-    //    });
-    //}
 
     protected async Task ConvertForumHistory()
     {

@@ -347,6 +347,7 @@ public partial class OldSbsConvertController : BaseController
 
         //NOTE: all these conversion functions are put into separate files because they're so big
         await ConvertUsers();
+        await ConvertUserSettings();
         await ConvertBans();
         await UploadAvatars(); //Because of our skip system, the ids for avatars no longer matter. To make things look nice, they should still come after content though
         await ConvertStoredValues();

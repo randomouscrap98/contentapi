@@ -109,6 +109,23 @@ public partial class OldSbsConvertController
         }
     }
 
+    protected async Task ConvertUserSettings()
+    {
+        logger.LogTrace("ConvertUserSettings called");
+
+        await PerformChunkedTransfer<oldsbs.Settings>("settings", "uid,name", async (oldcon, con, trans, oldSettings, start) =>
+        {
+            await con.InsertAsync(oldSettings.Select(x => new Db.UserVariable
+            {
+                userId = x.uid,
+                key = "setting:" + x.name,
+                value = x.value
+            }), trans);
+            logger.LogInformation($"Inserted {oldSettings.Count} settings (chunk {start})");
+        });
+        logger.LogInformation("Converted all user settings!");
+    }
+
     /// <summary>
     /// Users must ALREADY be inserted!
     /// </summary>
