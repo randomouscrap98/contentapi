@@ -13,6 +13,7 @@ namespace contentapi.oldsbs;
 public class OldSbsConvertControllerConfig
 {
     public string OldSbsConnectionString {get;set;} = "";
+    public string BasePath {get;set;} = "";
     public string AvatarPath {get;set;} = "";
     public string BadgePath {get;set;} = "";
     public string OldDefaultAvatarRegex {get;set;} = "";

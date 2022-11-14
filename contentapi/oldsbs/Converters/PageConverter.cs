@@ -1,3 +1,4 @@
+using contentapi.Main;
 using Dapper;
 using Dapper.Contrib.Extensions;
 using Newtonsoft.Json;
@@ -68,6 +69,7 @@ public partial class OldSbsConvertController
 
         var inverseBasePageTypes = config.BasePageTypes.ToDictionary(k => k.Value, v => v.Key);
         var categoryMapping = await GetOldToNewMapping("cid", "category");
+        var allImages = new Dictionary<long, List<oldsbs.PageImages>>();
 
         await PerformChunkedTransfer<oldsbs.Pages>("pages", "pid", async (oldcon, con, trans, oldPages, start) =>
         {
@@ -75,11 +77,12 @@ public partial class OldSbsConvertController
             {
                 //Need to pull all the related content
                 var parameters = new { id = oldPage.pid };
-                var categories = (await con.QueryAsync<oldsbs.PageCategories>("select * from pagecategories where pid=@id", parameters)).ToList();
-                var keywords = (await con.QueryAsync<oldsbs.PageKeywords>("select * from pagekeywords where pid=@id", parameters)).ToList();
-                var images = (await con.QueryAsync<oldsbs.PageImages>("select * from pageimages where pid=@id", parameters)).ToList();
-                var votes = (await con.QueryAsync<oldsbs.PageVotes>("select * from pagevotes where pid=@id", parameters)).ToList();
+                var categories = (await oldcon.QueryAsync<oldsbs.PageCategories>("select * from pagecategories where pid=@id", parameters)).ToList();
+                var keywords = (await oldcon.QueryAsync<oldsbs.PageKeywords>("select * from pagekeywords where pid=@id", parameters)).ToList();
+                var images = (await oldcon.QueryAsync<oldsbs.PageImages>("select * from pageimages where pid=@id", parameters)).ToList();
+                var votes = (await oldcon.QueryAsync<oldsbs.PageVotes>("select * from pagevotes where pid=@id", parameters)).ToList();
                 //Remember: don't need authors because there are none
+                //Also: not actually doing anything with images, just... there for counting sake
 
                 var type = "";
                 var pagePrint = $"'{oldPage.title}({oldPage.pid})";
@@ -121,10 +124,88 @@ public partial class OldSbsConvertController
                 await con.InsertAsync(CreateValue(page.id, "translatedfor", bodyJson.translatedfor), trans);
                 await con.InsertAsync(CreateValue(page.id, "notes", bodyJson.notes), trans);
                 await con.InsertAsync(CreateValue(page.id, "instructions", bodyJson.instructions), trans);
+
+                //We can't do stuff with images just now, so we save them for later
+                allImages.Add(page.id, images);
+
                 logger.LogDebug($"Inserted page {CSTR(page)} with {votes.Count} votes, {keywords.Count} keywords, {categories.Count} categories, and {images.Count} images");
             }
             logger.LogInformation($"Inserted {oldPages.Count} submissions (chunk {start})");
         });
+
+        logger.LogInformation($"Converted all pages! Now uploading/linking images");
+
+        var writePageImagelist = new Dictionary<long, List<string>>();
+
+        using var httpClient = new HttpClient();
+        httpClient.Timeout = TimeSpan.FromSeconds(10);
+
+        //Now that we're out of that loop, we can upload the images
+        foreach(var imageSet in allImages)
+        {
+            var imageList = new List<string>();
+            foreach(var image in imageSet.Value.OrderBy(x => x.number)) 
+            {
+                Stream? fstream = null;
+
+                try
+                {
+                    if(image.link.StartsWith("http"))
+                    {
+                        logger.LogWarning($"Image {image.link} ({image.iid}) is an external link, downloading it now");
+                        var response = await httpClient.GetAsync(image.link);
+                        response.EnsureSuccessStatusCode();
+                        fstream = await response.Content.ReadAsStreamAsync();
+                    }
+                    else
+                    {
+                        //The image link comes with the forward slash
+                        fstream = System.IO.File.Open(config.BasePath + image.link, FileMode.Open, FileAccess.Read);
+                    }
+
+                    //oops, we have to actually upload the file
+                    var fcontent = await fileService.UploadFile(new data.Views.ContentView
+                    {
+                        name = image.link,
+                        parentId = imageSet.Key,
+                        contentType = data.InternalContentType.file
+                    }, new UploadFileConfig(), fstream!, image.uid);
+
+                    logger.LogDebug($"Uploaded image for page {imageSet.Key}: {fcontent.name} ({fcontent.hash})");
+                    imageList.Add(fcontent.hash);
+                }
+                catch(Exception ex)
+                {
+                    logger.LogError($"Couldn't retrieve image {image.link} ({image.iid}), skipping entirely: {ex}");
+                    continue;
+                }
+                finally
+                {
+                    if(fstream != null)
+                        await fstream.DisposeAsync();
+                }
+            }
+            writePageImagelist.Add(imageSet.Key, imageList);
+        }
+
+        logger.LogInformation($"Uploaded all page images ({allImages.Sum(x => x.Value.Count)})! Now adding values to link pages to imagelist");
+
+        await PerformDbTransfer(async (oldcon, con, trans) =>
+        {
+            foreach(var imageList in writePageImagelist)
+            {
+                await con.InsertAsync(CreateValue(imageList.Key, "images", imageList.Value), trans);
+            }
+        });
+
+        logger.LogInformation($"Added all imagelists to content ({writePageImagelist.Sum(x => x.Value.Count)})! Page conversion complete!");
     }
+
+    //protected async Task ConvertPageImages()//AddImages(List<oldsbs.PageImages> images)
+    //{
+    //    logger.LogTrace("ConvertPageImages called");
+    //    var pageMapping = await GetOldToNewMapping("pid", "page");
+    //    var resourceMappin = await GetOldToNewMapping("pid", "resource");
+    //}
 }
         
