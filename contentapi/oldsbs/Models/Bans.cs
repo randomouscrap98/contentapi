@@ -1,5 +1,6 @@
 namespace contentapi.oldsbs;
 
+//Fully converted as just bans, lose shadow/lockout
 public class Bans
 {
     public long bid {get;set;} //primary key

@@ -1,5 +1,6 @@
 namespace contentapi.oldsbs;
 
+//Fully converted as system content, just plain permissions 
 public class ForumCategories
 {
     public long fcid {get;set;} //primary key

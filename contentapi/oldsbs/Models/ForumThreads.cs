@@ -1,5 +1,6 @@
 namespace contentapi.oldsbs;
 
+//Fully converted as content owned by the respective poster, parent is the proper category
 //Any content needs:
 // - Global perms (a function exists to generate those)
 // - Self perms (won't get generated unless you ask)

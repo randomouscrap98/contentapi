@@ -1,5 +1,6 @@
 namespace contentapi.oldsbs;
 
+//Fully converted as standard json history content
 //This table just logs who did what. Any log-type tables could
 //probably be messages inside a special content type.
 //WARN: NOT NECESSARILY ACCURATE! Remember that this table says who has what badge!!

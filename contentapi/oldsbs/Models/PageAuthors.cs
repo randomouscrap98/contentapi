@@ -1,5 +1,6 @@
 namespace contentapi.oldsbs;
 
+// This table is empty? I don't get it!
 public class PageAuthors
 {
     //primary key is the page and user. I guess it just says "this user

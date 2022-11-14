@@ -358,7 +358,7 @@ public partial class OldSbsConvertController : BaseController
         await ConvertForumPosts();
         await ConvertForumHistory();
         await ConvertPageCategories();
-
+        await ConvertPages();
 
         // Need to keep the skip markers around long enough to insert content with new ids
         await RemoveSkipMarkers();

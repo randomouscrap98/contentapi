@@ -1,5 +1,6 @@
 namespace contentapi.oldsbs;
 
+//Fully converted as files owned by super inside of badgegroup content
 public class Badges
 {
     public long bid {get;set;} //primary key

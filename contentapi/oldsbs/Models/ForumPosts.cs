@@ -1,5 +1,6 @@
 namespace contentapi.oldsbs;
 
+//Fully converted as messages on forum thread content, status isn't used so everything is normal
 public class ForumPosts
 {
     public long fpid {get;set;} // primary key

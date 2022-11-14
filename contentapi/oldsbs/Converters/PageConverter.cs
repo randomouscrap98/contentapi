@@ -62,5 +62,69 @@ public partial class OldSbsConvertController
         });
     }
 
+    protected async Task ConvertPages()
+    {
+        logger.LogTrace("ConvertPages called");
+
+        var inverseBasePageTypes = config.BasePageTypes.ToDictionary(k => k.Value, v => v.Key);
+        var categoryMapping = await GetOldToNewMapping("cid", "category");
+
+        await PerformChunkedTransfer<oldsbs.Pages>("pages", "pid", async (oldcon, con, trans, oldPages, start) =>
+        {
+            foreach(var oldPage in oldPages)
+            {
+                //Need to pull all the related content
+                var parameters = new { id = oldPage.pid };
+                var categories = (await con.QueryAsync<oldsbs.PageCategories>("select * from pagecategories where pid=@id", parameters)).ToList();
+                var keywords = (await con.QueryAsync<oldsbs.PageKeywords>("select * from pagekeywords where pid=@id", parameters)).ToList();
+                var images = (await con.QueryAsync<oldsbs.PageImages>("select * from pageimages where pid=@id", parameters)).ToList();
+                var votes = (await con.QueryAsync<oldsbs.PageVotes>("select * from pagevotes where pid=@id", parameters)).ToList();
+                //Remember: don't need authors because there are none
+
+                var type = "";
+                var pagePrint = $"'{oldPage.title}({oldPage.pid})";
+
+                foreach(var c in categories)
+                    if(inverseBasePageTypes.ContainsKey(c.cid))
+                        type = inverseBasePageTypes[c.cid];
+                
+                if(string.IsNullOrEmpty(type))
+                    throw new InvalidOperationException($"Couldn't find page type for page {pagePrint}");
+
+                //Also, parse the body. IDK if this will always work tbh...
+                var bodyJson = JsonConvert.DeserializeObject<PageBody>(oldPage.body) ?? throw new InvalidOperationException($"Couldn't parse page body for page {pagePrint}");
+
+                var page = new Db.Content
+                {
+                    parentId = 0,
+                    createUserId = oldPage.euid,
+                    createDate = oldPage.created,
+                    description = bodyJson.tagline,
+                    name = oldPage.title,
+                    text = bodyJson.description,
+                    contentType = data.InternalContentType.page,
+                    literalType = type
+                };
+
+                await AddGeneralPage(page, con, trans);
+                await con.InsertAsync(keywords.Select(x => new Db.ContentKeyword() {contentId = page.id, value = x.keyword}), trans);
+                await con.InsertAsync(categories.Select(x => CreateValue(page.id, "tag:" + categoryMapping[x.cid], true)), trans);
+                await con.InsertAsync(votes.Select(x => new Db.ContentEngagement() {contentId = page.id, type="vote", userId = x.uid, engagement=(x.vote == 0) ? "-" : "+"}), trans);
+                await con.InsertAsync(CreateValue(page.id, "pid", oldPage.pid), trans);
+                await con.InsertAsync(CreateValue(page.id, "edited", oldPage.edited), trans);
+                await con.InsertAsync(CreateValue(page.id, "dlkey", oldPage.dlkey), trans);
+                await con.InsertAsync(CreateValue(page.id, "version", oldPage.version), trans);
+                await con.InsertAsync(CreateValue(page.id, "size", oldPage.size), trans);
+                await con.InsertAsync(CreateValue(page.id, "dmca", oldPage.dmca), trans);
+                //NOTE: this needs to be translated into some other identifier, for searching of ptc/sb3/switch programs!
+                await con.InsertAsync(CreateValue(page.id, "support", oldPage.support), trans);
+                await con.InsertAsync(CreateValue(page.id, "translatedfor", bodyJson.translatedfor), trans);
+                await con.InsertAsync(CreateValue(page.id, "notes", bodyJson.notes), trans);
+                await con.InsertAsync(CreateValue(page.id, "instructions", bodyJson.instructions), trans);
+                logger.LogDebug($"Inserted page {CSTR(page)} with {votes.Count} votes, {keywords.Count} keywords, {categories.Count} categories, and {images.Count} images");
+            }
+            logger.LogInformation($"Inserted {oldPages.Count} submissions (chunk {start})");
+        });
+    }
 }
         

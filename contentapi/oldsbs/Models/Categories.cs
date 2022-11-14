@@ -1,5 +1,8 @@
 namespace contentapi.oldsbs;
 
+//Fully(?) converted as system content all with proper parents to produce hierarchy.
+//Categories will be used like tags rather than parents; page submissions most likely 
+//won't have parents
 public class Categories
 {
     public long cid {get;set;} //primary key
