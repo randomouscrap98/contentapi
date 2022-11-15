@@ -434,6 +434,7 @@ public partial class OldSbsConvertController : BaseController
         await ConvertForumPosts();
         await ConvertForumHistory();
         await ConvertOsp();
+        await ConvertPolls();
         await ConvertPageCategories();
         await ConvertPages();
         await ConvertPageHistory();
