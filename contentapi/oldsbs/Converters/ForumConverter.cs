@@ -59,31 +59,33 @@ public partial class OldSbsConvertController
                 if(content.parentId == 0)
                     throw new InvalidOperationException($"Couldn't find matching forum category fcid={oldThread.fcid} for thread '{oldThread.title}'({oldThread.ftid})");
 
-                //Bit 4 is 'locked', which means it's readonly. Unfortunately there's no point getting rid of the user's self
-                //permissions, since the API always gives you full permissions over your own content. That MUST be enforced
-                //by the SSR frontend
-                await AddGeneralPage(content, con, trans, (oldThread.status & 4) > 0);
-
-                //Now link the old data just in case
-                await con.InsertAsync(CreateValue(content.id, "ftid", oldThread.ftid), trans);
-                await con.InsertAsync(CreateValue(content.id, "fcid", oldThread.fcid), trans);
-                await con.InsertAsync(CreateValue(content.id, "views", oldThread.views), trans);
-                await con.InsertAsync(CreateValue(content.id, "status", oldThread.status), trans);
+                var values = new List<Db.ContentValue>()
+                {
+                    CreateValue(0, "ftid", oldThread.ftid),
+                    CreateValue(0, "fcid", oldThread.fcid), 
+                    CreateValue(0, "views", oldThread.views), 
+                    CreateValue(0, "status", oldThread.status), 
+                };
 
                 //Bit 1 from status is "important", which I think is an announcement thread. I don't know if we'll need that
                 //anymore, but might as well indicate things easily
                 if((oldThread.status & 1) > 0)
                 {
-                    await con.InsertAsync(CreateValue(content.id, $"important", true), trans);
+                    values.Add(CreateValue(0, $"important", true));
                     logger.LogDebug($"Thread marked important: {CSTR(content)}");
                 }
 
                 //Bit 2 is a sticky thread
                 if((oldThread.status & 2) > 0) 
                 {
-                    await con.InsertAsync(CreateValue(content.parentId, $"sticky:{content.id}", true), trans);
+                    values.Add(CreateValue(0, $"sticky:{content.id}", true));
                     logger.LogDebug($"Stickied thread {CSTR(content)} to category {content.parentId}/fcid-{oldThread.fcid}");
                 }
+
+                //Bit 4 is 'locked', which means it's readonly. Unfortunately there's no point getting rid of the user's self
+                //permissions, since the API always gives you full permissions over your own content. That MUST be enforced
+                //by the SSR frontend
+                await AddGeneralPage(content, con, trans, (oldThread.status & 4) > 0, true, null, values);
             }
 
             logger.LogInformation($"Inserted {oldThreads.Count} forum threads (chunk {start})");

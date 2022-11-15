@@ -114,21 +114,27 @@ public partial class OldSbsConvertController
                     literalType = type
                 };
 
-                await AddGeneralPage(page, con, trans);
-                await con.InsertAsync(keywords.Select(x => new Db.ContentKeyword() {contentId = page.id, value = x.keyword}), trans);
-                await con.InsertAsync(categories.Select(x => CreateValue(page.id, "tag:" + categoryMapping[x.cid], true)), trans);
+                var values = new List<Db.ContentValue>
+                {
+                    CreateValue(0, "pid", oldPage.pid), 
+                    CreateValue(0, "edited", oldPage.edited), 
+                    CreateValue(0, "dlkey", oldPage.dlkey), 
+                    CreateValue(0, "version", oldPage.version), 
+                    CreateValue(0, "size", oldPage.size), 
+                    CreateValue(0, "dmca", oldPage.dmca), 
+                    //NOTE: this needs to be translated into some other identifier, for searching of ptc/sb3/switch programs!
+                    CreateValue(0, "support", oldPage.support), 
+                    CreateValue(0, "translatedfor", bodyJson.translatedfor), 
+                    CreateValue(0, "notes", bodyJson.notes), 
+                    CreateValue(0, "instructions", bodyJson.instructions), 
+                };
+
+                values.AddRange(categories.Select(x => CreateValue(0, "tag:" + categoryMapping[x.cid], true)));
+
+                var ckeywords = keywords.Select(x => new Db.ContentKeyword() {value = x.keyword}).ToList();
+
+                await AddGeneralPage(page, con, trans, false, true, null, values, ckeywords);
                 await con.InsertAsync(votes.Select(x => new Db.ContentEngagement() {contentId = page.id, type="vote", userId = x.uid, engagement=(x.vote == 0) ? "-" : "+"}), trans);
-                await con.InsertAsync(CreateValue(page.id, "pid", oldPage.pid), trans);
-                await con.InsertAsync(CreateValue(page.id, "edited", oldPage.edited), trans);
-                await con.InsertAsync(CreateValue(page.id, "dlkey", oldPage.dlkey), trans);
-                await con.InsertAsync(CreateValue(page.id, "version", oldPage.version), trans);
-                await con.InsertAsync(CreateValue(page.id, "size", oldPage.size), trans);
-                await con.InsertAsync(CreateValue(page.id, "dmca", oldPage.dmca), trans);
-                //NOTE: this needs to be translated into some other identifier, for searching of ptc/sb3/switch programs!
-                await con.InsertAsync(CreateValue(page.id, "support", oldPage.support), trans);
-                await con.InsertAsync(CreateValue(page.id, "translatedfor", bodyJson.translatedfor), trans);
-                await con.InsertAsync(CreateValue(page.id, "notes", bodyJson.notes), trans);
-                await con.InsertAsync(CreateValue(page.id, "instructions", bodyJson.instructions), trans);
 
                 //Now we have to convert all the comments. 
                 await ConvertComments(comments, page.id, con, trans);
@@ -256,19 +262,5 @@ public partial class OldSbsConvertController
 
         logger.LogInformation("Converted all page history!");
     }
-
-    //protected async Task ConvertComments()
-    //{
-    //    logger.LogTrace("ConvertComments called");
-
-    //    var pageMapping = await GetOldToNewMapping("pid", "pag");
-
-    //    await PerformChunkedTransfer<oldsbs.Pages>("pages", "pid", async (oldcon, con, trans, oldPages, start) =>
-    //    {
-
-    //    });
-
-    //    logger.LogInformation("Converted all comments!");
-    //}
 }
         

@@ -24,6 +24,14 @@ public partial class OldSbsConvertController
 
         int skippedImportant = 0;
         int skippedTrash = 0;
+        long maxMessageId = 0;
+        long maxActivityId = 0;
+
+        using (var con = services.dbFactory.CreateRaw())
+        {
+            maxMessageId = await con.ExecuteScalarAsync<long>("select max(id) from messages");
+            maxActivityId = await con.ExecuteScalarAsync<long>("select max(id) from content_history");
+        }
 
         await PerformChunkedTransfer<oldsbs.Notifications>("notifications", "nid", async (oldcon, con, trans, oldNotifications, start) =>
         {
@@ -57,8 +65,8 @@ public partial class OldSbsConvertController
                     {
                         userId = oldNotif.uid,
                         contentId = contentId.Value,
-                        lastCommentId = Int64.MaxValue,
-                        lastActivityId = Int64.MaxValue,
+                        lastCommentId = maxMessageId,
+                        lastActivityId = maxActivityId,
                         createDate = DateTime.UtcNow
                     };
 
@@ -70,6 +78,20 @@ public partial class OldSbsConvertController
         });
 
         logger.LogInformation($"Converted all notifications! Skipped {skippedImportant} important, {skippedTrash} not important");
+    }
+
+    //Events are RELATED to notifications... right?
+    protected async Task ConvertEvents()
+    {
+        logger.LogTrace("ConvertEvents called");
+
+        await ConvertHistoryGeneral<oldsbs.Events>("events", "eid", (m, h) =>
+        {
+            m.createDate = h.time;
+            m.createUserId = h.uid; //Permissions don't matter with direct insert
+        });
+
+        logger.LogInformation("Converted all events!");
     }
 
 }

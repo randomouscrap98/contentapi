@@ -1,6 +1,7 @@
 using System.Data;
 using System.Text.RegularExpressions;
 using contentapi.Controllers;
+using contentapi.History;
 using contentapi.Main;
 using contentapi.Search;
 using Dapper;
@@ -32,15 +33,17 @@ public partial class OldSbsConvertController : BaseController
     protected IFileService fileService;
     protected IGenericSearch searcher;
     protected IDbWriter writer;
+    protected IHistoryConverter historyService;
     private static long nextId = 0;
 
     public OldSbsConvertController(BaseControllerServices services, OldSbsConvertControllerConfig config,
-        IFileService fileService) : base(services)
+        IFileService fileService, IHistoryConverter historyConverter) : base(services)
     {
         this.config = config;
         this.fileService = fileService;
         this.searcher = services.dbFactory.CreateSearch();
         this.writer = services.dbFactory.CreateWriter();
+        this.historyService = historyConverter;
     }
 
     protected IDbConnection GetOldSbsConnection()
@@ -80,8 +83,18 @@ public partial class OldSbsConvertController : BaseController
         content.id = id;
 
         //And now we have to add the permission and the value
-        await con.InsertAsync(globalCreate ? CreateBasicPermission(id) : CreateReadonlyPermission(id), trans);
-        await con.InsertAsync(CreateSelfPermission(id, content.createUserId), trans);
+        var perms = new List<Db.ContentPermission> {
+            globalCreate ? CreateBasicPermission(id) : CreateReadonlyPermission(id),
+            CreateSelfPermission(id, content.createUserId)
+        };
+        //We're going to ASSUME it's setting the id!!
+        await con.InsertAsync(perms, trans);
+
+        //The history!
+        var snapshot = services.mapper.Map<ContentSnapshot>(content);
+        snapshot.permissions = perms;
+        var history = await historyService.ContentToHistoryAsync(snapshot, config.SuperUserId, data.UserAction.create);
+        await con.InsertAsync(history, trans);
 
         //WARN: DON'T use values to indicate system, even if system files might need that! The system content might
         //require those fields, and it's harder to filter out! 
@@ -98,7 +111,8 @@ public partial class OldSbsConvertController : BaseController
     /// <param name="con"></param>
     /// <param name="trans"></param>
     /// <returns></returns>
-    protected async Task<Db.Content> AddGeneralPage(Db.Content content, IDbConnection con, IDbTransaction trans, bool isReadonly = false, bool setBbcode = true)
+    protected async Task<Db.Content> AddGeneralPage(Db.Content content, IDbConnection con, IDbTransaction trans, bool isReadonly = false, bool setBbcode = true,
+        List<Db.ContentPermission>? permissions = null, List<Db.ContentValue>? values = null, List<Db.ContentKeyword>? keywords = null)
     {
         //Assume the other fields are as people want them
         if(string.IsNullOrEmpty(content.hash))
@@ -110,11 +124,38 @@ public partial class OldSbsConvertController : BaseController
         var id = await con.InsertAsync(content, trans);
         content.id = id;
 
-        await con.InsertAsync(isReadonly ? CreateReadonlyPermission(id) : CreateBasicPermission(id));
-        await con.InsertAsync(CreateSelfPermission(id, content.createUserId), trans);
+        var snapshot = services.mapper.Map<ContentSnapshot>(content);
 
-        if(setBbcode)
-            await con.InsertAsync(CreateValue(id, "markup", "bbcode"));
+        //Permissions
+        if(permissions != null)
+        {
+            permissions.ForEach(x => x.contentId = id);
+            snapshot.permissions.AddRange(permissions);
+        }
+        snapshot.permissions.Add(isReadonly ? CreateReadonlyPermission(id) : CreateBasicPermission(id));
+        snapshot.permissions.Add(CreateSelfPermission(id, content.createUserId));
+        await con.InsertAsync(snapshot.permissions, trans);
+
+        //Values
+        if(values != null)
+        {
+            values.ForEach(x => x.contentId = id);
+            snapshot.values.AddRange(values);
+        }
+        if(setBbcode) snapshot.values.Add(CreateValue(id, "markup", "bbcode"));
+        if(snapshot.values.Count > 0) await con.InsertAsync(snapshot.values, trans);
+        
+        //Keywords
+        if(keywords != null)
+        {
+            keywords.ForEach(x => x.contentId = id);
+            snapshot.keywords.AddRange(keywords);
+        }
+        if(snapshot.keywords.Count > 0) await con.InsertAsync(snapshot.keywords, trans);
+
+        //The history!
+        var history = await historyService.ContentToHistoryAsync(snapshot, content.createUserId, data.UserAction.create);
+        await con.InsertAsync(history, trans);
 
         logger.LogInformation($"Inserted general page {CSTR(content)}");
 
@@ -440,6 +481,7 @@ public partial class OldSbsConvertController : BaseController
         await ConvertPageHistory();
         await ConvertInspector();
         await ConvertMessages();
+        await ConvertEvents(); //First, because we fill up the message id space
         await ConvertNotifications();
 
         // Need to keep the skip markers around long enough to insert content with new ids
