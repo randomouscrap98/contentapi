@@ -330,6 +330,50 @@ public partial class OldSbsConvertController : BaseController
         return checkTitle;
     }
 
+    protected async Task<data.Views.ContentView?> UploadImage(string link, long parentId, long userId, HttpClient httpClient)
+    {
+        Stream? fstream = null;
+
+        try
+        {
+            if (link.StartsWith("http"))
+            {
+                logger.LogWarning($"Image {link} ({parentId}) is an external link, downloading it now");
+                var response = await httpClient.GetAsync(link);
+                response.EnsureSuccessStatusCode();
+                fstream = await response.Content.ReadAsStreamAsync();
+            }
+            else
+            {
+                //The image link comes with the forward slash
+                fstream = System.IO.File.Open(config.BasePath + link, FileMode.Open, FileAccess.Read);
+            }
+
+            //oops, we have to actually upload the file
+            var fcontent = await fileService.UploadFile(new data.Views.ContentView
+            {
+                name = link,
+                parentId = parentId,
+                contentType = data.InternalContentType.file
+            }, new UploadFileConfig(), fstream!, userId);
+
+            logger.LogDebug($"Uploaded image for page {parentId}: {fcontent.name} ({fcontent.hash})");
+            return fcontent;
+            //imageList.Add(fcontent.hash);
+        }
+        catch (Exception ex)
+        {
+            logger.LogError($"Couldn't retrieve image {link} ({parentId}), skipping entirely: {ex}");
+            return null;
+            //continue;
+        }
+        finally
+        {
+            if (fstream != null)
+                await fstream.DisposeAsync();
+        }
+    }
+
     protected Task SkipIds()
     {
         logger.LogTrace("SkipIds called");
@@ -389,6 +433,7 @@ public partial class OldSbsConvertController : BaseController
         await ConvertForumThreads();
         await ConvertForumPosts();
         await ConvertForumHistory();
+        await ConvertOsp();
         await ConvertPageCategories();
         await ConvertPages();
         await ConvertPageHistory();

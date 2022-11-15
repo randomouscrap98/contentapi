@@ -213,44 +213,10 @@ public partial class OldSbsConvertController
             var imageList = new List<string>();
             foreach(var image in imageSet.Value.OrderBy(x => x.number)) 
             {
-                Stream? fstream = null;
+                var iview = await UploadImage(image.link, imageSet.Key, image.uid, httpClient);
 
-                try
-                {
-                    if(image.link.StartsWith("http"))
-                    {
-                        logger.LogWarning($"Image {image.link} ({image.iid}) is an external link, downloading it now");
-                        var response = await httpClient.GetAsync(image.link);
-                        response.EnsureSuccessStatusCode();
-                        fstream = await response.Content.ReadAsStreamAsync();
-                    }
-                    else
-                    {
-                        //The image link comes with the forward slash
-                        fstream = System.IO.File.Open(config.BasePath + image.link, FileMode.Open, FileAccess.Read);
-                    }
-
-                    //oops, we have to actually upload the file
-                    var fcontent = await fileService.UploadFile(new data.Views.ContentView
-                    {
-                        name = image.link,
-                        parentId = imageSet.Key,
-                        contentType = data.InternalContentType.file
-                    }, new UploadFileConfig(), fstream!, image.uid);
-
-                    logger.LogDebug($"Uploaded image for page {imageSet.Key}: {fcontent.name} ({fcontent.hash})");
-                    imageList.Add(fcontent.hash);
-                }
-                catch(Exception ex)
-                {
-                    logger.LogError($"Couldn't retrieve image {image.link} ({image.iid}), skipping entirely: {ex}");
-                    continue;
-                }
-                finally
-                {
-                    if(fstream != null)
-                        await fstream.DisposeAsync();
-                }
+                if(iview != null)
+                    imageList.Add(iview.hash);
             }
             writePageImagelist.Add(imageSet.Key, imageList);
         }
