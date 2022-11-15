@@ -440,6 +440,7 @@ public partial class OldSbsConvertController : BaseController
         await ConvertPageHistory();
         await ConvertInspector();
         await ConvertMessages();
+        await ConvertNotifications();
 
         // Need to keep the skip markers around long enough to insert content with new ids
         await RemoveSkipMarkers();
