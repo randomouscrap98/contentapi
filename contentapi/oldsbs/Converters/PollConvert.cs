@@ -13,10 +13,13 @@ public partial class OldSbsConvertController
         {
             var polls = await oldcon.QueryAsync<oldsbs.Polls>("select * from polls");
 
+            var pollParent = await AddSystemContent("polls", con, trans, true);
+
             foreach(var poll in polls)
             {
                 var content = new Db.Content
                 {
+                    parentId = pollParent.id,
                     literalType = "poll",
                     createUserId = poll.uid,
                     createDate = poll.created,

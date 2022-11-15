@@ -179,7 +179,7 @@ public partial class OldSbsConvertController
 
         await PerformDbTransfer(async (oldcon, con, trans) =>
         {
-            await con.InsertAsync(users, trans);
+            await con.UpdateAsync(users, trans);
             logger.LogInformation($"Updated all avatars for {users.Count()} users");
         });
     }

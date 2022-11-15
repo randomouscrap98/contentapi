@@ -73,6 +73,12 @@ public partial class OldSbsConvertController
         var inverseBasePageTypes = config.BasePageTypes.ToDictionary(k => k.Value, v => v.Key);
         var categoryMapping = await GetOldToNewMapping("cid", "category");
         var allImages = new Dictionary<long, List<oldsbs.PageImages>>();
+        var submissionParent = new Db.Content();
+
+        await PerformDbTransfer(async (oldcon, con, trans) =>
+        {
+            submissionParent = await AddSystemContent("submissions", con, trans, true);
+        });
 
         await PerformChunkedTransfer<oldsbs.Pages>("pages", "pid", async (oldcon, con, trans, oldPages, start) =>
         {
@@ -103,7 +109,7 @@ public partial class OldSbsConvertController
 
                 var page = new Db.Content
                 {
-                    parentId = 0,
+                    parentId = submissionParent.parentId,
                     createUserId = oldPage.euid,
                     createDate = oldPage.created,
                     description = bodyJson.tagline,
