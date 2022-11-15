@@ -80,7 +80,7 @@ public partial class OldSbsConvertController : BaseController
         content.id = id;
 
         //And now we have to add the permission and the value
-        await con.InsertAsync(globalCreate ? CreateBasicGlobalPermission(id) : CreateReadonlyGlobalPermission(id), trans);
+        await con.InsertAsync(globalCreate ? CreateBasicPermission(id) : CreateReadonlyPermission(id), trans);
         await con.InsertAsync(CreateSelfPermission(id, content.createUserId), trans);
 
         //WARN: DON'T use values to indicate system, even if system files might need that! The system content might
@@ -110,7 +110,7 @@ public partial class OldSbsConvertController : BaseController
         var id = await con.InsertAsync(content, trans);
         content.id = id;
 
-        await con.InsertAsync(isReadonly ? CreateReadonlyGlobalPermission(id) : CreateBasicGlobalPermission(id));
+        await con.InsertAsync(isReadonly ? CreateReadonlyPermission(id) : CreateBasicPermission(id));
         await con.InsertAsync(CreateSelfPermission(id, content.createUserId), trans);
 
         if(setBbcode)
@@ -173,15 +173,15 @@ public partial class OldSbsConvertController : BaseController
         value = JsonConvert.SerializeObject(value)
     };
 
-    protected Db.ContentPermission CreateReadonlyGlobalPermission(long contentId) => new Db.ContentPermission {
+    protected Db.ContentPermission CreateReadonlyPermission(long contentId, long userId = 0) => new Db.ContentPermission {
         contentId = contentId,
-        userId = 0,
+        userId = userId,
         read = true 
     };
 
-    protected Db.ContentPermission CreateBasicGlobalPermission(long contentId) => new Db.ContentPermission {
+    protected Db.ContentPermission CreateBasicPermission(long contentId, long userId = 0) => new Db.ContentPermission {
         contentId = contentId,
-        userId = 0,
+        userId = userId,
         create = true,
         read = true 
     };
@@ -393,6 +393,7 @@ public partial class OldSbsConvertController : BaseController
         await ConvertPages();
         await ConvertPageHistory();
         await ConvertInspector();
+        await ConvertMessages();
 
         // Need to keep the skip markers around long enough to insert content with new ids
         await RemoveSkipMarkers();
