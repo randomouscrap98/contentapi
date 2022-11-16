@@ -15,6 +15,12 @@ then
     port=22
 fi
 
+if [ "$1" = "sbsdev" ]
+then
+    echo "Publishing SBS development"
+    pfolder="/storage/random/sbs_${name}"
+fi
+
 # space separated
 deploy="Deploy"
 copyfolders="$deploy/dbmigrate.sh $deploy/dbmigrations"

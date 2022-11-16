@@ -45,9 +45,7 @@ contentapi/LanguageFiles
 mytemp
 secrets.json
 appsettings.json
-appsettings.Debugger.json
-appsettings.Development.json
-appsettings.Production.json
+appsettings.*.json
 uploads
 .vscode_old
 moduledata.db
@@ -56,6 +54,7 @@ profiler.txt
 contentapi/dbmigrate.sh
 tempfiles
 emails
+contentapi*.service
 
 # Now, ALWAYS ignore content.db! we have dbmigrations set up, people can run them on their own
 content.db

@@ -378,6 +378,7 @@ function page_onload(template, state)
             template.querySelector("#page-raw-link").removeAttribute("hidden");
             template.querySelector("#page-history-section").removeAttribute("hidden");
             template.querySelector("#page-delete").removeAttribute("hidden");
+            template.querySelector("#vote-submit-page").removeAttribute("hidden");
             template.querySelector("#page-raw-link").setAttribute("href", api.GetRawContentUrl(page.hash));
 
             if(page.contentType == 3) //A file
