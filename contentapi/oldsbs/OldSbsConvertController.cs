@@ -61,6 +61,7 @@ public partial class OldSbsConvertController : BaseController
     {
         return AddSystemContent(new Db.Content {
             literalType = type,
+            name = type
         }, con, trans, globalCreate);
     }
 

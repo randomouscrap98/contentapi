@@ -20,6 +20,8 @@ public partial class OldSbsConvertController
             var mappedMessages = messages.ToDictionary(x => x.mid, y => y);
             logger.LogInformation($"Found {oldRecipients.Count()} message recipients in old database");
 
+            var messageparent = await AddSystemContent("directmessages", con, trans, true);
+
             //A manual grouping but whatever
             var messageRecipients = new Dictionary<long, List<long>>();
 
@@ -35,16 +37,19 @@ public partial class OldSbsConvertController
 
             foreach(var mr in messageRecipients.OrderBy(x => x.Key))
             {
-                var key = string.Join(",", mr.Value.OrderBy(x => x));
                 var message = mappedMessages[mr.Key];
+                var realRecipients = new List<long>(mr.Value);
+                realRecipients.Add(message.sender); //the sender wasn't included in the recipients list before
+
+                var key = string.Join(",", realRecipients.OrderBy(x => x));
 
                 if(!recipientsToContent.ContainsKey(key))
                 {
                     //create content and save the mapping
                     var content = new Db.Content
                     {
-                        //No text, no parent id, etc
-                        name = "legacy private room!",
+                        parentId = messageparent.id,
+                        name = "legacy private room (" + key + ")",
                         contentType = data.InternalContentType.page,
                         literalType = "directmessage",
                         createDate = message.senddate, //This is PROBABLY ok
@@ -56,7 +61,7 @@ public partial class OldSbsConvertController
                     recipientsToContent.Add(key, id);
 
                     //Now you also need at LEAST the permissions
-                    foreach(var recipient in mr.Value)
+                    foreach(var recipient in realRecipients)
                         await con.InsertAsync(CreateBasicPermission(id, recipient), trans);
                 }
 

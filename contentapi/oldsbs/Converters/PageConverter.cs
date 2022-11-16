@@ -109,7 +109,7 @@ public partial class OldSbsConvertController
 
                 var page = new Db.Content
                 {
-                    parentId = submissionParent.parentId,
+                    parentId = submissionParent.id,
                     createUserId = oldPage.euid,
                     createDate = oldPage.created,
                     description = bodyJson.tagline,
