@@ -264,9 +264,23 @@ public class UserService : IUserService
         if(user.registrationKey != null)
             throw new ForbiddenException("User not registered! Can't log in!");
         
-        //BEFORE checking the password, we want to see if the password itself is expired. We throw a special exception if so
-        if(user.lastPasswordDate.Ticks == 0 || (config.PasswordExpire.Ticks > 0 && (user.lastPasswordDate + config.PasswordExpire) < DateTime.UtcNow))
+        if(TemporaryPasswordMatches(user.id, password))
         {
+            //This is a SUCCESS! there's no throw
+            await WriteAdminLog(new AdminLog()
+            {
+                type = AdminLogType.login_temporary,
+                initiator = user.id,
+                target = user.id,
+                text = $"User '{user.username}'({user.id}) logged in with a temporary password"
+            }, dbcon);
+
+            ExpireTemporaryPassword(user.id);
+        }
+        //Check for expiration first so users don't know if it was right or wrong
+        else if(user.lastPasswordDate.Ticks == 0 || (config.PasswordExpire.Ticks > 0 && (user.lastPasswordDate + config.PasswordExpire) < DateTime.UtcNow))
+        {
+            //This is a FAILURE!
             await WriteAdminLog(new AdminLog()
             {
                 type = AdminLogType.login_passwordexpired,
@@ -277,37 +291,22 @@ public class UserService : IUserService
 
             throw new TokenException("Your password is expired, please send the recovery password to your email associated with this account");
         }
-
-        //Finally, compare hashes and if good, send out the token
-        if(!hashService.VerifyText(password, Convert.FromBase64String(user.password), Convert.FromBase64String(user.salt)))
+        //Compare password hashes; if bad, throw error
+        else if(!hashService.VerifyText(password, Convert.FromBase64String(user.password), Convert.FromBase64String(user.salt)))
         {
-            if(!TemporaryPasswordMatches(user.id, password))
+            //This is a FAILURE!
+            await WriteAdminLog(new AdminLog()
             {
-                await WriteAdminLog(new AdminLog()
-                {
-                    type = AdminLogType.login_failure,
-                    initiator = user.id,
-                    target = user.id,
-                    text = $"Failed login attempt for '{user.username}'({user.id}): incorrect password"
-                }, dbcon);
+                type = AdminLogType.login_failure,
+                initiator = user.id,
+                target = user.id,
+                text = $"Failed login attempt for '{user.username}'({user.id}): incorrect password"
+            }, dbcon);
 
-                throw new RequestException("Password incorrect!");
-            }
-            else
-            {
-                await WriteAdminLog(new AdminLog()
-                {
-                    type = AdminLogType.login_temporary,
-                    initiator = user.id,
-                    target = user.id,
-                    text = $"User '{user.username}'({user.id}) logged in with a temporary password"
-                }, dbcon);
-
-                ExpireTemporaryPassword(user.id);
-            }
+            throw new RequestException("Password incorrect!");
         }
-        
-        //Right now, I don't really have anything that needs to go in here
+
+        //If everything above passes, we're good to go
         return GetNewTokenForUser (user.id, expireOverride);
     }
 
