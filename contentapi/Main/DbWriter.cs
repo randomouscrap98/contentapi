@@ -21,7 +21,7 @@ public class DbWriterConfig
    public string HashRegex {get;set;} = @"^[a-z0-9\-]+$";
    public string ForbiddenKeywordRegex {get;set;} = @"[\s""]";
    public int HashMinLength {get;set;} = 8;
-   public int HashMaxLength {get;set;} = 32;
+   public int HashMaxLength {get;set;} = 64;
    public List<string> ReservedModuleNames {get;set;} = new List<string> {
        "system"
    };

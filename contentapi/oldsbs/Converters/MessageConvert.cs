@@ -38,7 +38,7 @@ public partial class OldSbsConvertController
             foreach(var mr in messageRecipients.OrderBy(x => x.Key))
             {
                 var message = mappedMessages[mr.Key];
-                var realRecipients = new List<long>(mr.Value);
+                var realRecipients = new HashSet<long>(mr.Value);
                 realRecipients.Add(message.sender); //the sender wasn't included in the recipients list before
 
                 var key = string.Join(",", realRecipients.OrderBy(x => x));
