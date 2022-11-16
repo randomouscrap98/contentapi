@@ -93,7 +93,7 @@ public partial class OldSbsConvertController : BaseController
         //The history!
         var snapshot = services.mapper.Map<ContentSnapshot>(content);
         snapshot.permissions = perms;
-        var history = await historyService.ContentToHistoryAsync(snapshot, config.SuperUserId, data.UserAction.create);
+        var history = await historyService.ContentToHistoryAsync(snapshot, config.SuperUserId, data.UserAction.create, content.createDate);
         await con.InsertAsync(history, trans);
 
         //WARN: DON'T use values to indicate system, even if system files might need that! The system content might
@@ -154,7 +154,7 @@ public partial class OldSbsConvertController : BaseController
         if(snapshot.keywords.Count > 0) await con.InsertAsync(snapshot.keywords, trans);
 
         //The history!
-        var history = await historyService.ContentToHistoryAsync(snapshot, content.createUserId, data.UserAction.create);
+        var history = await historyService.ContentToHistoryAsync(snapshot, content.createUserId, data.UserAction.create, content.createDate);
         await con.InsertAsync(history, trans);
 
         logger.LogInformation($"Inserted general page {CSTR(content)}");
@@ -371,6 +371,7 @@ public partial class OldSbsConvertController : BaseController
         return checkTitle;
     }
 
+    private static int UploadImageCount = 0;
     protected async Task<data.Views.ContentView?> UploadImage(string link, long parentId, long userId, HttpClient httpClient)
     {
         Stream? fstream = null;
@@ -390,12 +391,15 @@ public partial class OldSbsConvertController : BaseController
                 fstream = System.IO.File.Open(config.BasePath + link, FileMode.Open, FileAccess.Read);
             }
 
+            int hashId = Interlocked.Increment(ref UploadImageCount);
+
             //oops, we have to actually upload the file
             var fcontent = await fileService.UploadFile(new data.Views.ContentView
             {
                 name = link,
                 parentId = parentId,
-                contentType = data.InternalContentType.file
+                contentType = data.InternalContentType.file,
+                hash = $"cnvsbs-upload-{hashId}"
             }, new UploadFileConfig(), fstream!, userId);
 
             logger.LogDebug($"Uploaded image for page {parentId}: {fcontent.name} ({fcontent.hash})");

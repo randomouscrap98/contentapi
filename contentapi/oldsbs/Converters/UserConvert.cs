@@ -144,6 +144,8 @@ public partial class OldSbsConvertController
             logger.LogDebug($"Found {users.Count()} users to update avatars");
         });
 
+        int avatarNum = 1; 
+
         foreach(var user in users)
         {
             //Simple case: just use the default avatar (no upload required)
@@ -161,7 +163,8 @@ public partial class OldSbsConvertController
                         //oops, we have to actually upload the file
                         var fcontent = await fileService.UploadFile(new UploadFileConfigExtra()
                         {
-                            name = user.avatar
+                            name = user.avatar,
+                            hash = $"cnvsbs-avatar-{avatarNum++}",
                         }, fstream, user.id);
 
                         logger.LogDebug($"Uploaded avatar for {user.username}({user.id}): {fcontent.name} ({fcontent.hash})");

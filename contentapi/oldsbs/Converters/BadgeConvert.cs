@@ -60,6 +60,8 @@ public partial class OldSbsConvertController
             groupContentMapping.Add(0, 0); //Make sure "no group" matches to root
         });
 
+        using var readcon = services.dbFactory.CreateRaw();
+
         //Now we insert files outside the transaction... note that this IS inserting all the badges, since badges
         //are files with no additional data now. This is in contrast with users, where their avatar is a file but is also a field
         //associated with them
@@ -84,6 +86,7 @@ public partial class OldSbsConvertController
                     contentType = data.InternalContentType.file, 
                     description = oldBadge.description,
                     parentId = parentId,
+                    hash = await GetTitleHash("badge-" + oldBadge.name, readcon),
                     values = new Dictionary<string, object> {
                         { "system", true }, //We may want to skip system content in browsing
                         { "badge", true }, //Might need to know if a file is a badge. since files literaltypes are stuck with the mimetype...
