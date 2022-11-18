@@ -83,6 +83,10 @@ public class ContentView : IIdView
     [Expensive(2)]
     public Dictionary<string, Dictionary<string, int>> engagement {get;set;} = new Dictionary<string, Dictionary<string, int>>();
 
+    //[NoQuery]
+    //[Expensive(2)]
+    //public Dictionary<string, string> myEngagement {get;set;} = new Dictionary<string, string>();
+
     [Expensive(1)]
     [DbField("select max(id) from " + MessagesTable + " where main.id = contentId and " + NaturalCommentQuery )]
     public long? lastCommentId {get;set;}

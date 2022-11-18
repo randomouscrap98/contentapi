@@ -286,6 +286,13 @@ public class LiveEventQueue : ILiveEventQueue
                 fields = "*",
                 query = "id in @content.createUserId or id in @message.createUserId or id in @message.editUserId or id in @message.uidsInText"
             });
+            //Users probably want to know what their own personal engagement on the message is
+            requests.requests.Add(new SearchRequest()
+            {
+                type = RequestType.message_engagement.ToString(),
+                fields = "*",
+                query = "messageId in @message.id"
+            });
         }
         else if(first.type == EventType.activity_event)
         {
@@ -298,6 +305,13 @@ public class LiveEventQueue : ILiveEventQueue
                 fields = "*",
                 query = "id in @content.createUserId or id in @activity.userId"
             });
+            //Maybe this will come later...
+            //requests.requests.Add(new SearchRequest()
+            //{
+            //    type = RequestType.content_engagement.ToString(),
+            //    fields = "*",
+            //    query = $"contentId in @content.id or contentId in @content.parentId"
+            //});
         }
         else if(first.type == EventType.user_event)
         {

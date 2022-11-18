@@ -161,7 +161,9 @@ body[data-sidebarhidden] {
     height: 2.7em; 
     margin-top: 0.29em;
     margin-right: 0.35em;
-    border: var(--stdborder);
+    border: none;
+    border-radius: 0.3em;
+    /*border: var(--stdborder);*/
 }
 
 [data-fancy] .leftmessage { flex: none; }
@@ -186,6 +188,8 @@ body[data-sidebarhidden] {
     height: 100%; 
     margin: 0;
 }
+
+[data-fancy] .userinfo .user { text-decoration: none; }
 
 [data-fancy] ::-webkit-scrollbar {
   background-color: var(--T-bg); /* or add it to the track */

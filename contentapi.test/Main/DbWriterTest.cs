@@ -1356,7 +1356,9 @@ public class DbWriterTest : ViewUnitTestBase, IDisposable
             Assert.Equal(content, writtenVote.contentId);
             Assert.Equal(messageId, writtenVote.messageId);
             Assert.Equal(uid, writtenVote.userId);
-            Assert.Empty(events.Events); //There should be NO events for votes right now!
+            Assert.Single(events.Events);
+            Assert.Equal(messageId, events.Events.First().refId);
+            Assert.Equal(EventType.message_event, events.Events.First().type);
         }
         else if(content <= 0 || content >= 1000)
         {

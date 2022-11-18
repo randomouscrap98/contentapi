@@ -515,9 +515,10 @@ public class DbWriter : IDbWriter
         }
         else if (view is MessageEngagementView)
         {
-            id = await DatabaseWork_ContentUserRelated<MessageEngagementView, Db.MessageEngagement>(
-                new DbWorkUnit<MessageEngagementView>((view as MessageEngagementView)!, requester, typeInfo, action, existing as MessageEngagementView, message),
-                EventType.none);
+            var work = new DbWorkUnit<MessageEngagementView>((view as MessageEngagementView)!, requester, typeInfo, action, existing as MessageEngagementView, message);
+            id = await DatabaseWork_ContentUserRelated<MessageEngagementView, Db.MessageEngagement>(work, EventType.none);
+            //We require a special event for message engagement, it'll send a standard message_event for updates
+            await eventQueue.AddEventAsync(new LiveEvent(work.requester.id, UserAction.update, EventType.message_event, work.view.messageId));
         }
         else if (view is UserVariableView)
         {
