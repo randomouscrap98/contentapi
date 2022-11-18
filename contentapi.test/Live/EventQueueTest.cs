@@ -344,6 +344,57 @@ public class EventQueueTest : ViewUnitTestBase //, IClassFixture<DbUnitTestSearc
     }
 
     [Fact]
+    public async Task FullCombo_MessageAndMessageEngagement()
+    {
+        //Need a message to put engagement on
+        var user = await searcher.GetById<UserView>(RequestType.user, NormalUserId);
+        var message = GetNewCommentView(AllAccessContentId);
+        var writtenMessage = await writer.WriteAsync(message, NormalUserId); //this is NOT a super user
+
+        //Now if we wait for the new data from the beginning, we should get a collection with certain values in it...
+        var liveData = await queue.ListenAsync(user, -1, safetySource.Token);
+
+        Assert.True(liveData.optimized);
+        Assert.True(liveData.lastId > 0, "LiveData didn't return a positive lastId after an event was clearly retrieved!");
+        Assert.Single(liveData.events);
+        Assert.Equal(liveData.lastId, liveData.events.Max(x => x.id));
+
+        Assert.Contains(EventType.message_event, liveData.objects.Keys);
+
+        //Note: we don't have to get too technical with the event tests, because we already tested to see if the writer is emitting appropriate events. This is just testing
+        //to see if we GET the events we expect
+        Assert.Equal(UserAction.create, liveData.events.First().action);
+        Assert.Equal(writtenMessage.id, liveData.events.First().refId);
+        Assert.Equal(NormalUserId, liveData.events.First().userId);
+
+        //OK whatever, what we really care about is user engagement
+        var engagement = new MessageEngagementView()
+        {
+            messageId = writtenMessage.id,
+            type = "vote",
+            engagement = "good"
+        };
+        var writtenEngagement = await writer.WriteAsync(engagement, NormalUserId);
+
+        //Now we listen again but from the next spot
+        var liveData2 = await queue.ListenAsync(user, liveData.lastId, safetySource.Token);
+
+        //We should still have just one event, and it'll LOOK like a message event (it is)
+        Assert.Contains(EventType.message_event, liveData2.objects.Keys);
+        Assert.Single(liveData2.events);
+        Assert.Equal(UserAction.update, liveData2.events.First().action);
+        Assert.Equal(writtenMessage.id, liveData2.events.First().refId);
+        Assert.Equal(NormalUserId, liveData2.events.First().userId);
+
+        var liveMessages = searcher.ToStronglyTyped<MessageView>(liveData2.objects[EventType.message_event][RequestType.message.ToString()]);
+        Assert.Contains("vote", liveMessages.First().engagement.Keys);
+        Assert.Contains("good", liveMessages.First().engagement["vote"].Keys);
+        Assert.Equal(1, liveMessages.First().engagement["vote"]["good"]);
+
+        //AssertSimpleActivityListenResult(liveData2.objects[EventType.message_event], writtenPage, activity.First());
+    }
+
+    [Fact]
     public async Task Regression_OldMessagesExposeNewParent()
     {
         //Force the cache to invalidate every time

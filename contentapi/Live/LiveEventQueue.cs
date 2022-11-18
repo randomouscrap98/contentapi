@@ -287,12 +287,13 @@ public class LiveEventQueue : ILiveEventQueue
                 query = "id in @content.createUserId or id in @message.createUserId or id in @message.editUserId or id in @message.uidsInText"
             });
             //Users probably want to know what their own personal engagement on the message is
-            requests.requests.Add(new SearchRequest()
-            {
-                type = RequestType.message_engagement.ToString(),
-                fields = "*",
-                query = "messageId in @message.id"
-            });
+            //NO CAN'T, this is CACHED STUFF!! Can't add any user-specific information!
+            //requests.requests.Add(new SearchRequest()
+            //{
+            //    type = RequestType.message_engagement.ToString(),
+            //    fields = "*",
+            //    query = "messageId in @message.id"
+            //});
         }
         else if(first.type == EventType.activity_event)
         {
