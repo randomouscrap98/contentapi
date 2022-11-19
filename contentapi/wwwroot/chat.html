@@ -12,22 +12,22 @@
     <link rel="icon" href="favicon.ico" type="image/x-icon">
     <!-- The MAIN api consumer script, it comes with most things you need to work with the API. 
         In particular, it has an auto websocket manager for building quick chatrooms -->
-    <script src="api.js?v=1668796192"></script>
+    <script src="api.js?v=1668894138"></script>
     <!-- These are required for the 12y parser (markup) -->
-    <script src="markup/langs.js?v=1668796192"></script>
-    <script src="markup/legacy.js?v=1668796192"></script>
-    <script src="markup/parse.js?v=1668796192"></script>
-    <script src="markup/render.js?v=1668796192"></script>
-    <script src="markup/helpers.js?v=1668796192"></script>
-    <link rel="stylesheet" href="markup/markup.css?v=1668796192">
-    <link rel="stylesheet" href="markup.css?v=1668796192">
-    <script src="markup.js?v=1668796192"></script>
+    <script src="markup/langs.js?v=1668894138"></script>
+    <script src="markup/legacy.js?v=1668894138"></script>
+    <script src="markup/parse.js?v=1668894138"></script>
+    <script src="markup/render.js?v=1668894138"></script>
+    <script src="markup/helpers.js?v=1668894138"></script>
+    <link rel="stylesheet" href="markup/markup.css?v=1668894138">
+    <link rel="stylesheet" href="markup.css?v=1668894138">
+    <script src="markup.js?v=1668894138"></script>
 
     <!-- These are really unnecessary, and you can ignore them. They just add some quality of life
         updates to the chat while we lived there; they don't do anything for this example though! 
         If you are copying this example, you can safely leave these out! -->
-    <script src="chatfancy.js?v=1668796192"></script>
-    <link rel="stylesheet" href="chatfancy.css?v=1668796192">
+    <script src="chatfancy.js?v=1668894138"></script>
+    <link rel="stylesheet" href="chatfancy.css?v=1668894138">
 
     <script>
 //NOTE: this file has nothing to do with index.html or any script/etc other than api.js
@@ -68,6 +68,9 @@ window.onload = function()
         alert("No page id set! This chat only works with one room at a time");
         return;
     }
+
+    //because we are using the markup, we have to define certain methods for it to work on the chat
+    Markup.renderer.url_scheme['sbs:'] = chatHandleLink;
 
     pid = Number(parameters.get("pid"));
 
@@ -266,6 +269,19 @@ window.onload = function()
         });
     };
 };
+
+function chatHandleLink(url, type)
+{
+    if (type === "link") {
+        if(url.pathname.startsWith("page/"))
+            return "?pid=" + url.pathname.replace("page/", "");
+    }
+    //Return a string that is the href for the link
+    if (type === "image") {
+        return api.GetFileUrl(url.pathname.replace("image/", ""));
+    }
+    return "#UNKNOWN-SORRY";
+}
 
 // We need to track your current user information in order to use it for special fields in message posting. Your user data could be
 // ANYWHERE, so we just scan all the data for users and do a little extra work to find yourself
