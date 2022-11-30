@@ -355,7 +355,7 @@ public class UserService : IUserService
         var sets = new Dictionary<string,object>();
 
         //Go find the data to add
-        if(data.password != null)
+        if(!string.IsNullOrWhiteSpace(data.password)) // != null)
         {
             CheckValidPassword(data.password);
             var pwdata = GenerateNewPasswordData(data.password);
@@ -364,7 +364,7 @@ public class UserService : IUserService
             sets.Add(nameof(User.lastPasswordDate), DateTime.UtcNow);
         }
 
-        if(data.email != null)
+        if(!string.IsNullOrWhiteSpace(data.email)) // != null)
         {
             await CheckValidEmailAsync(data.email);
             sets.Add(nameof(User.email), data.email);
