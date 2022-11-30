@@ -54,4 +54,20 @@ public class RandomGeneratorTest : UnitTestBase
         foreach(var i1 in set1)
             Assert.DoesNotContain(i1, set2);
     }
+
+    [Fact]
+    public void GetRandomPassword_CharCount()
+    {
+        var result = generator.GetRandomPassword();
+        Assert.Equal(16, result.Length);
+        Assert.DoesNotContain("=", result);
+    }
+
+    [Fact]
+    public void GetRandomPassword_Different()
+    {
+        var result = generator.GetRandomPassword();
+        var result2 = generator.GetRandomPassword();
+        Assert.NotEqual(result, result2);
+    }
 }

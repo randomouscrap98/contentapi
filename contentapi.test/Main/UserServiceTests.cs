@@ -301,6 +301,9 @@ public class UserServiceTests : UnitTestBase, IClassFixture<DbUnitTestBase>
 
         //This should be fine, ticks 0 means "no expiration"
         loginToken = await service.LoginUsernameAsync(username, password);
+
+        //Oh also, IsPasswordExpired should match
+        Assert.False(await service.IsPasswordExpired(userId));
     });
 
     [Fact]
@@ -311,6 +314,9 @@ public class UserServiceTests : UnitTestBase, IClassFixture<DbUnitTestBase>
 
         //Now that expiration is instant, this should fail
         await Assert.ThrowsAnyAsync<TokenException>(() => service.LoginUsernameAsync(username, password));
+
+        //Oh also, IsPasswordExpired should match
+        Assert.True(await service.IsPasswordExpired(userId));
     });
 
     [Fact]
@@ -320,6 +326,9 @@ public class UserServiceTests : UnitTestBase, IClassFixture<DbUnitTestBase>
 
         //Now that expiration is instant, this should fail
         await Assert.ThrowsAnyAsync<TokenException>(() => service.LoginUsernameAsync(username, password));
+
+        //Oh also, IsPasswordExpired should match
+        Assert.True(await service.IsPasswordExpired(userId));
     });
 
     [Fact]

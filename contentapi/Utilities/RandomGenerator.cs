@@ -30,4 +30,15 @@ public class RandomGenerator : IRandomGenerator
 
         return sb.ToString();
     }
+
+    /// <summary>
+    /// Get a fixed-length random password of length 16 (so it lines up nicely with base64)
+    /// </summary>
+    /// <returns></returns>
+    public string GetRandomPassword()
+    {
+        //12 so it becomes 16 characters
+        var bytes = System.Security.Cryptography.RandomNumberGenerator.GetBytes(12);
+        return Convert.ToBase64String(bytes);
+    }
 }

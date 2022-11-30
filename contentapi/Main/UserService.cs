@@ -110,6 +110,16 @@ public class UserService : IUserService
         if(password.Length > config.MaxPasswordLength)
             throw new ArgumentException($"Password too long! Must be at most {config.MaxPasswordLength} characters");
     }
+
+    public bool IsPasswordExpired(User user)
+    {
+        return (user.lastPasswordDate.Ticks == 0 || (config.PasswordExpire.Ticks > 0 && (user.lastPasswordDate + config.PasswordExpire) < DateTime.UtcNow));
+    }
+
+    public async Task<bool> IsPasswordExpired(long userId)
+    {
+        return IsPasswordExpired(await GetUserById(userId));
+    }
     
     /// <summary>
     /// Item1 is salt, Item2 is password, both are ready to be stored in a user
@@ -278,7 +288,7 @@ public class UserService : IUserService
             ExpireTemporaryPassword(user.id);
         }
         //Check for expiration first so users don't know if it was right or wrong
-        else if(user.lastPasswordDate.Ticks == 0 || (config.PasswordExpire.Ticks > 0 && (user.lastPasswordDate + config.PasswordExpire) < DateTime.UtcNow))
+        else if(IsPasswordExpired(user))
         {
             //This is a FAILURE!
             await WriteAdminLog(new AdminLog()
