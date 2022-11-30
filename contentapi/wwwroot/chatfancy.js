@@ -52,6 +52,8 @@ window.addEventListener('load', function()
     var oldCreateMessage = window.createMessage;
     window.createMessage = (m) =>
     {
+        fancyCustomMessageStyle(m);
+
         var container = oldCreateMessage(m);
         var userArea = container.querySelector(".userinfo");
         var firstControl = container.querySelector(".commentcontrol");
@@ -102,6 +104,28 @@ window.addEventListener('load', function()
     //Should override the boring title for something fancier!
     window.setTitle = fancySetTitle;
 });
+
+function fancyCustomMessageStyle(message)
+{
+    return; 
+
+    var styleId = "mu-" + message.createUserId;
+    var existing = document.getElementById(styleId);
+
+    if(!existing)
+    {
+        var style = document.createElement("style");
+        var sibling = `[data-uid="${message.createUserId}"] + [data-uid="${message.createUserId}"]`;
+        style.textContent = `
+            ${sibling} .userinfo .user { display: none; }
+            ${sibling} .userinfo { float: right; }
+            /*${sibling}:hover .userinfo, ${sibling}:focus .userinfo { display: block; }*/
+            ${sibling} .leftmessage .avatar { width: 1.5em; height: 1.5em; margin-left: 1.2em; margin-top: 0 !important; }
+        `;
+        style.id = styleId;
+        this.document.head.appendChild(style);
+    }
+}
 
 function fancySetTitle(title, content)
 {

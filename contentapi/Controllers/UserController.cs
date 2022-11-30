@@ -13,6 +13,7 @@ public class UserControllerConfig
     public bool AccountCreationEnabled {get;set;} = true;
     public string ConfirmationType {get;set;} = "Standard";
     //Also accepts "Instant" and "Restricted:email,email,etc"
+    public string HostName {get;set;} = "";
 }
 
 public class UserController : BaseController
@@ -127,6 +128,14 @@ public class UserController : BaseController
         return config.ConfirmationType.Substring(RestrictedConfirmation.Length).Split(",", StringSplitOptions.RemoveEmptyEntries).Select(x => x.Trim()).ToList();
     }
 
+    protected string GetHost()
+    {
+        if(!string.IsNullOrWhiteSpace(config.HostName))
+            return config.HostName;
+        else
+            return Request.Host.ToString();
+    }
+
     [HttpPost("sendregistrationcode")]
     public Task<ActionResult<bool>> SendRegistrationCode([FromBody]string email)
     {
@@ -147,7 +156,7 @@ public class UserController : BaseController
                 var message = new EmailMessage();
                 message.Recipients = GetRestrictedEmails();
                 message.Title = $"User {user.username} would like to create an account";
-                message.Body = $"User {user.username} is trying to create an account using email {email} on {Request.Host}\n\nIf this looks acceptable, please send them " +
+                message.Body = $"User {user.username} is trying to create an account using email {email} on {GetHost()}\n\nIf this looks acceptable, please send them " +
                     $"an email with instructions on how to create an account, using registration code:\n\n{registrationCode}";
 
                 //TODO: language? Configuration? I don't know
@@ -156,8 +165,17 @@ public class UserController : BaseController
             else
             {
                 //TODO: language? Configuration? I don't know
+                //if(!string.IsNullOrWhiteSpace(config.CustomEmailBody))
+                //{
+                //    var emailMessage = new EmailMessage (email, "Registration instructions", config.CustomEmailBody.Replace("{{code}}", registrationCode));
+                //    emailMessage.IsHtml = true;
+                //    await emailer.SendEmailAsync(emailMessage);
+                //}
+                //else
+                //{
                 await emailer.SendEmailAsync(new EmailMessage(email, "Registration instructions",
-                    $"Your registration code for '{Request.Host}' is:\n\n{registrationCode}"));
+                    $"Your registration code for '{GetHost()}' is:\n\n{registrationCode}"));
+                //}
             }
 
             return true;
@@ -209,7 +227,7 @@ public class UserController : BaseController
                 var message = new EmailMessage();
                 message.Recipients = GetRestrictedEmails();
                 message.Title = $"User {user.username} is trying to recover their account";
-                message.Body = $"User {user.username} is trying to recover their account using email {email} on {Request.Host}\n\nIf this looks acceptable, please send them " +
+                message.Body = $"User {user.username} is trying to recover their account using email {email} on {GetHost()}\n\nIf this looks acceptable, please send them " +
                     $"an email stating they have a ONE TIME USE temporary password that will last until {utcExpire} UTC ({StaticUtils.HumanTime(utcExpire - DateTime.UtcNow)}):\n\n{tempPassword.Key}";
 
                 //TODO: language? Configuration? I don't know
@@ -219,7 +237,7 @@ public class UserController : BaseController
             {
                 //TODO: language? Configuration? I don't know
                 await emailer.SendEmailAsync(new EmailMessage(email, "Account Recovery",
-                    $"You can temporarily access your account on '{Request.Host}' for another {StaticUtils.HumanTime(utcExpire - DateTime.UtcNow)} using the ONE TIME USE temporary password:\n\n{tempPassword.Key}"));
+                    $"You can temporarily access your account on '{GetHost()}' for another {StaticUtils.HumanTime(utcExpire - DateTime.UtcNow)} using the ONE TIME USE temporary password:\n\n{tempPassword.Key}"));
             }
 
             return true;

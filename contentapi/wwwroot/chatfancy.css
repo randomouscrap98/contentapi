@@ -155,7 +155,7 @@ body[data-sidebarhidden] {
 [data-fancy] .avatar { border-radius: 0; box-sizing: border-box; }
 
 [data-fancy] .message { display: flex; }
-[data-fancy] .message .content { margin-left: 0; /*margin-top: 0.3em;*/ }
+[data-fancy] .message .content { margin-left: 0.1em; /*margin-top: 0.3em;*/ }
 [data-fancy] .message .avatar { 
     width: 2.7em; 
     height: 2.7em; 
