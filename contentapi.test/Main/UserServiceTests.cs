@@ -391,4 +391,23 @@ public class UserServiceTests : UnitTestBase, IClassFixture<DbUnitTestBase>
         //Should not be able to login with some random password now
         await Assert.ThrowsAnyAsync<RequestException>(() => service.LoginUsernameAsync(username, tempPassword.Key));
     });
+
+    [Fact]
+    public Task Regression_GetTemporaryPassword_RefreshOld() => GeneralNewUserTest(async (username, password, userId, loginToken) =>
+    {
+        config.TemporaryPasswordExpire = TimeSpan.FromMilliseconds(50);
+
+        //Generate a temp password
+        var tempPassword = service.GetTemporaryPassword(userId).Key;
+        var tempPassword2 = service.GetTemporaryPassword(userId).Key;
+
+        Assert.Equal(tempPassword, tempPassword2); //No refresh
+
+        //Wait a bit
+        await Task.Delay(60);
+
+        var tempPassword3 = service.GetTemporaryPassword(userId);
+        Assert.NotEqual(tempPassword, tempPassword3.Key); //refreshed
+        Assert.True(tempPassword3.ExpireDate > DateTime.Now);
+    });
 }

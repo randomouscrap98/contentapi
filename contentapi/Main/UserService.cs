@@ -411,7 +411,7 @@ public class UserService : IUserService
         var tempPassword = TempPasswordSet.GetOrAdd(uid, uid => RefreshPassword(new TemporaryPassword()));
 
         //Regen the password if it expired
-        if(tempPassword.ExpireDate > DateTime.Now)
+        if(tempPassword.ExpireDate < DateTime.Now)
             RefreshPassword(tempPassword);
 
         return tempPassword;
