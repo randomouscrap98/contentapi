@@ -120,6 +120,9 @@ public partial class OldSbsConvertController
                     literalType = type
                 };
 
+                //Oops, looks like some images have weird owners. I'd rather all the images be owned by the page owner
+                images.ForEach(x => x.uid = page.createUserId);
+
                 var values = new List<Db.ContentValue>
                 {
                     CreateValue(0, "pid", oldPage.pid), 
