@@ -77,8 +77,10 @@ public partial class OldSbsConvertController : BaseController
         content.createUserId = config.SuperUserId; //NOTE: it was changed such that most system content needs to be owned by the super user just in case.
         content.createDate = DateTime.UtcNow;
         content.deleted = false;
-        content.hash = GetNextHash();
         content.contentType = data.InternalContentType.system;
+
+        if(string.IsNullOrWhiteSpace(content.hash))
+            content.hash = GetNextHash();
 
         var id = await con.InsertAsync(content, trans);
         content.id = id;

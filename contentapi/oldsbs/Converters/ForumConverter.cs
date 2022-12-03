@@ -1,6 +1,5 @@
 using Dapper;
 using Dapper.Contrib.Extensions;
-using Newtonsoft.Json;
 
 namespace contentapi.oldsbs;
 
@@ -23,6 +22,7 @@ public partial class OldSbsConvertController
                     literalType = "forumcategory",
                     name = oldCategory.name,
                     description = oldCategory.description,
+                    hash = await GetTitleHash(oldCategory.name, con),
                 }, con, trans, true);
                 //Now link the old fcid just in case
                 await con.InsertAsync(CreateValue(newCategory.id, "fcid", oldCategory.fcid));
