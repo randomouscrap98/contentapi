@@ -1782,6 +1782,47 @@ public class GenericSearchDbTests : ViewUnitTestBase
         }
     }
 
+    [Fact]
+    public async Task SearchAsync_BasicCommentMacro()
+    {
+        var search = new SearchRequest()
+        {
+            type = "message",
+            fields = "id, createUserId, deleted, module",
+            query = "!basiccomments()"
+        };
+        //var values = new Dictionary<string, object> { { "userpage", InternalContentType.userpage } };
+
+        //You should be able to reuse the search and values
+        var comments = await service.SearchSingleTypeUnrestricted<MessageView>(search); //, values);
+
+        Assert.NotEmpty(comments);
+        Assert.All(comments, (comment) =>
+        {
+            Assert.False(comment.deleted);
+            Assert.Null(comment.module);
+        });
+        //comments.
+
+        //Now go try to lookup all the junk, there should be one userpage for each createuser in the userpage list
+        //foreach(var up in userpages)
+        //{
+        //    search = new SearchRequest()
+        //    {
+        //        type = "content",
+        //        fields = "id, createUserId, contentType",
+        //        query = "!userpage(@uid)"
+        //    };
+        //    values = new Dictionary<string, object> { { "uid", up.createUserId } };
+        //    var thisuserpages = await service.SearchSingleTypeUnrestricted<ContentView>(search, values);
+        //    Assert.NotEmpty(thisuserpages);
+        //    Assert.All(thisuserpages, x => {
+        //        Assert.Equal(InternalContentType.userpage, x.contentType);
+        //        Assert.Equal(up.createUserId, x.createUserId);
+        //    });
+        //}
+    }
+
     protected SearchRequests GetCountSearch(string type, string query = "", List<string>? extraFields = null)
     {
         var realFields = extraFields ?? new List<string>();

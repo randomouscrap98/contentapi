@@ -6,6 +6,7 @@ namespace contentapi.data.Views;
 public class ContentView : IIdView
 {
     public const string MessagesTable = "messages";
+    public const string ContentTable = "content";
     public const string VotesTable = "content_votes";
     public const string NaturalCommentQuery = "deleted = 0 and module IS NULL";
 
@@ -94,6 +95,10 @@ public class ContentView : IIdView
     [Expensive(3)]
     [DbField("select count(*) from " + MessagesTable + " where main.id = contentId and " + NaturalCommentQuery)]
     public int commentCount {get;set;}
+
+    //[Expensive(3)]
+    //[DbField("select count(*) from " + ContentTable + " where parentId = main.id and deleted = 0")]
+    //public int childCount {get;set;}
 
     [Expensive(1)]
     [DbField("select count(*) from content_watches where main.id = contentId")]

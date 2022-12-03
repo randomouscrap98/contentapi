@@ -40,6 +40,7 @@ public class QueryBuilder : IQueryBuilder
         { "onlynotparents", new MacroDescription("", "OnlyNotParents", new List<RequestType> { RequestType.content }) },
         { "userpage", new MacroDescription("v", "OnlyUserpage", new List<RequestType> { RequestType.content }) },
         { "basichistory", new MacroDescription("", "BasicHistory", new List<RequestType> { RequestType.activity }) },
+        { "basiccomments", new MacroDescription("", "BasicComments", new List<RequestType> { RequestType.message }) },
         { "notdeleted", new MacroDescription("", "NotDeletedMacro", new List<RequestType> { RequestType.content, RequestType.message, RequestType.user }) }, 
         { "notnull", new MacroDescription("f", "NotNullMacro", Enum.GetValues<RequestType>().ToList()) },
         { "null", new MacroDescription("f", "NullMacro", Enum.GetValues<RequestType>().ToList()) },
@@ -228,6 +229,13 @@ public class QueryBuilder : IQueryBuilder
              where contentType = {(int)InternalContentType.page}
              and deleted = 0
             )";
+    }
+
+    public string BasicComments(SearchRequestPlus request)
+    {
+        //var typeInfo = typeService.GetTypeInfo<Message>();
+        //WARN: this adds a dependency on data.Views! Consider putting it somewhere else!
+        return data.Views.ContentView.NaturalCommentQuery; 
     }
 
     public string InGroupMacro(SearchRequestPlus request, string group)
