@@ -42,6 +42,8 @@ public partial class OldSbsConvertController
 
         await PerformChunkedTransfer<oldsbs.ForumThreads>("forumthreads", "ftid", async (oldcon, con, trans, oldThreads, start) =>
         {
+            var newCategoryValues = new List<Db.ContentValue>();
+
             //Each category is another system content with create perms for a general audience. This is so people can
             //create threads inside. But, in the future, we can remove the create perm from specific categories!
             foreach(var oldThread in oldThreads)
@@ -75,20 +77,23 @@ public partial class OldSbsConvertController
                     logger.LogDebug($"Thread marked important: {CSTR(content)}");
                 }
 
-                //Bit 2 is a sticky thread
-                if((oldThread.status & 2) > 0) 
-                {
-                    values.Add(CreateValue(0, $"sticky:{content.id}", true));
-                    logger.LogDebug($"Stickied thread {CSTR(content)} to category {content.parentId}/fcid-{oldThread.fcid}");
-                }
-
                 //Bit 4 is 'locked', which means it's readonly. Unfortunately there's no point getting rid of the user's self
                 //permissions, since the API always gives you full permissions over your own content. That MUST be enforced
                 //by the SSR frontend
-                await AddGeneralPage(content, con, trans, (oldThread.status & 4) > 0, true, null, values);
+                var newContent = await AddGeneralPage(content, con, trans, (oldThread.status & 4) > 0, true, null, values);
+
+                //Bit 2 is a sticky thread, need the id
+                if((oldThread.status & 2) > 0) 
+                {
+                    newCategoryValues.Add(CreateValue(newContent.parentId, $"sticky:{newContent.id}", newContent.id));
+                    logger.LogDebug($"Stickied thread {CSTR(newContent)} to category {newContent.parentId}/fcid-{oldThread.fcid}");
+                }
+
             }
 
             logger.LogInformation($"Inserted {oldThreads.Count} forum threads (chunk {start})");
+            await con.InsertAsync(newCategoryValues, trans);
+            logger.LogInformation($"Inserted {newCategoryValues.Count} sticky values (chunk {start})");
         });
 
         logger.LogInformation("Converted all forum threads!");

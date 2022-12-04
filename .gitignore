@@ -62,3 +62,5 @@ content.db
 
 # Temporary(?) special ignores
 OLDSYSTEM/contentapi/publishAndConvert.sh
+Deploy/plan.txt
+Deploy/pubandconv.sh
