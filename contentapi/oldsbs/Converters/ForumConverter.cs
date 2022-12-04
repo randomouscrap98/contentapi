@@ -39,6 +39,7 @@ public partial class OldSbsConvertController
 
         //We have to get the fcid to id mapping
         var categoryMapping = await GetOldToNewMapping("fcid", "forumcategory");
+        var stickies = categoryMapping.ToDictionary(x => x.Value, y => new List<long>()); //new Dictionary<long, List<long>>();
 
         await PerformChunkedTransfer<oldsbs.ForumThreads>("forumthreads", "ftid", async (oldcon, con, trans, oldThreads, start) =>
         {
@@ -85,15 +86,20 @@ public partial class OldSbsConvertController
                 //Bit 2 is a sticky thread, need the id
                 if((oldThread.status & 2) > 0) 
                 {
-                    newCategoryValues.Add(CreateValue(newContent.parentId, $"sticky:{newContent.id}", newContent.id));
+                    stickies[newContent.parentId].Add(newContent.id);
+                    //newCategoryValues.Add(CreateValue(newContent.parentId, $"sticky:{newContent.id}", newContent.id));
                     logger.LogDebug($"Stickied thread {CSTR(newContent)} to category {newContent.parentId}/fcid-{oldThread.fcid}");
                 }
 
             }
 
             logger.LogInformation($"Inserted {oldThreads.Count} forum threads (chunk {start})");
-            await con.InsertAsync(newCategoryValues, trans);
-            logger.LogInformation($"Inserted {newCategoryValues.Count} sticky values (chunk {start})");
+        });
+
+        await PerformDbTransfer(async (oldcon, con, trans) =>
+        {
+            await con.InsertAsync(stickies.Select(x => CreateValue(x.Key, "stickies", x.Value)), trans);
+            logger.LogInformation($"Inserted sticky values for categories");
         });
 
         logger.LogInformation("Converted all forum threads!");
