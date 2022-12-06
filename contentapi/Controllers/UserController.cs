@@ -269,19 +269,6 @@ public class UserController : BaseController
         });
     }
 
-    //[HttpGet("emaillog")]
-    //public Task<ActionResult<List<EmailLog>>> GetEmailLog()
-    //{
-    //    return MatchExceptions(() =>
-    //    {
-    //        if(!config.BackdoorEmailLog)
-    //            throw new ForbiddenException("This is a debug endpoint that has been deactivated!");
-    //        
-    //        return Task.FromResult((emailer as NullEmailService ?? 
-    //            throw new InvalidOperationException("The emailer is not set up for logging! This endpoint is only for the null email service")).Log);
-    //    });
-    //}
-
     [Authorize()]
     [HttpGet("privatedata")]
     public Task<ActionResult<UserGetPrivateData>> GetPrivateData()
@@ -291,19 +278,21 @@ public class UserController : BaseController
 
     public class UserSetPrivateDataProtected : UserSetPrivateData
     {
+        public string currentEmail {get;set;} = "";
         public string currentPassword {get;set;} = "";
     }
 
-    [Authorize()]
+    //NOTE: This used to be an "authorize" endpoint, but then the catch-22 of needing a password to CHANGE your password
+    //came up, so now it takes a full login
     [HttpPost("privatedata")]
-    public Task<ActionResult<bool>> SetPrivateData([FromBody]UserSetPrivateDataProtected data)
+    public Task<ActionResult<string>> SetPrivateData([FromBody]UserSetPrivateDataProtected data)
     {
         return MatchExceptions(async () => 
         {
-            var userId = GetUserIdStrict();
-            await userService.VerifyPasswordAsync(userId, data.currentPassword); //have to make sure the password given is accurate
+            var userId = await userService.GetUserIdFromEmailAsync(data.currentEmail);
+            var token = await userService.LoginEmailAsync(data.currentEmail, data.currentPassword);
             await userService.SetPrivateData(userId, data);
-            return true;
+            return token;
         });
     }
 }
