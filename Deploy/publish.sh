@@ -21,6 +21,14 @@ then
     pfolder="/storage/random/sbs_${name}"
 fi
 
+if [ "$1" = "sbsproduction" ]
+then
+    echo "Publishing SBS PRODUCTION!!"
+    phost=publisher@smilebasicsource.com   # The default server (development) (and user to connect)
+    pfolder="/var/www/sbs/${name}"
+    port=22
+fi
+
 # space separated
 deploy="Deploy"
 copyfolders="$deploy/dbmigrate.sh $deploy/dbmigrations"
