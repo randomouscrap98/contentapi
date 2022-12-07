@@ -64,3 +64,6 @@ content.db
 OLDSYSTEM/contentapi/publishAndConvert.sh
 Deploy/plan.txt
 Deploy/pubandconv.sh
+Deploy/fixup.sh
+Deploy/publishDev.sh
+Deploy/master.sh

@@ -1,4 +1,6 @@
 # General publish script for dotnet core projects
+# NOTE: THIS DOES NOT PUBLISH CONTENTAPI AS A SERVICE! It only publishes it 
+# as the conversion program!
 
 name="contentapi"
 phost=csanchez@oboy.smilebasicsource.com   
