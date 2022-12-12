@@ -1,4 +1,5 @@
 using System.Runtime.ExceptionServices;
+using System.Web;
 using contentapi.data;
 using contentapi.data.Views;
 using contentapi.Main;
@@ -24,6 +25,14 @@ public class FileController : BaseController
       public List<IFormFile>? files = null;
    }
 
+   public class UploadFileLowModel
+   {
+      public IFormFile? file {get;set;} = null;
+      public string token {get;set;} = "";
+      public string? successUrl {get;set;} = null;
+      public string? errorUrl {get;set;} = null;
+   }
+
    public class UploadFileObject : UploadFileConfig
    {
       public string base64blob {get;set;} = "";
@@ -39,6 +48,49 @@ public class FileController : BaseController
       });
    }
 
+   [HttpPost("low")]
+   //Use bool as a placeholder: it's really going to return some redirects and stuff
+   public async Task<ActionResult<bool>> UploadFileLow([FromForm] UploadFileLowModel model)
+   {
+      try
+      {
+         if(model.file == null)
+            return BadRequest("No file form data found!");
+         
+         //OK now we have a userId (probably).
+         var userId = GetUserIdFromToken(model.token);
+
+         RateLimit(RateFile);
+
+         var newModel = new UploadFileConfigExtra { }; //All default for now?
+         var result = await service.UploadFile(newModel, model.file.OpenReadStream(), userId);
+
+         //Ok guess it was fine. Now we... redirect to the success url? Otherwise redirect to the link
+         var url = model.successUrl ?? GetRoute(nameof(GetFileAsync)) ?? 
+            throw new InvalidOperationException("No success URL found (programming error!)");
+         
+         //Unless something is terribly wrong, hash is always url safe
+         url = url.Replace("{{hash}}", result.hash)
+                  .Replace("{{id}}", result.id.ToString());
+         
+         return Redirect(url);
+      }
+      catch(Exception ex)
+      {
+         services.logger.LogError($"ERROR DURING FILE UPLOAD: {ex}");
+
+         if(!string.IsNullOrWhiteSpace(model.errorUrl))
+         {
+            string url = model.errorUrl;
+            url = url.Replace("{{error}}", HttpUtility.UrlEncode(ex.Message));
+            return Redirect(url);
+         }
+         else 
+         {
+            return BadRequest("Error during file upload: " + ex.Message);
+         }
+      }
+   }
 
    [HttpPost]
    [Authorize]
