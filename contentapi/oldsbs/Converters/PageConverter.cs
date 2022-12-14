@@ -120,6 +120,44 @@ public partial class OldSbsConvertController
                     literalType = type
                 };
 
+                var systems = new List<string>();
+                var syslimits = new List<string>();
+
+                //VERY IMPORTANT to get right!!
+                if((oldPage.support & 1) > 0) {
+                    systems.Add("3ds");
+                }
+                if((oldPage.support & 2) > 0) {
+                    systems.Add("3ds");
+                    syslimits.Add("new");
+                }
+                if((oldPage.support & 4) > 0) {
+                    systems.Add("wiiu");
+                }
+                if((oldPage.support & 8) > 0) {
+                    syslimits.Add("dlc");
+                }
+                if((oldPage.support & 16) > 0) {
+                    syslimits.Add("switch");
+                }
+
+                //I want to stop using these specialized setions, not necessary to be so strict!
+                if(!string.IsNullOrWhiteSpace(bodyJson.instructions))
+                {
+                    page.text += "\n\n[h2]Instructions:[/h2]\n" + bodyJson.instructions;
+                }
+                if(!string.IsNullOrWhiteSpace(bodyJson.notes))
+                {
+                    page.text += "\n\n[h2]Notes:[/h2]\n" + bodyJson.notes;
+                }
+
+
+                //NO! Don't reuse text as description! There could be bbcode in it! UGH!
+                //if(string.IsNullOrWhiteSpace(page.description))
+                //{
+                //    page.description = page.text.Substring(0, 100); //Arbitrary?
+                //}
+
                 //Oops, looks like some images have weird owners. I'd rather all the images be owned by the page owner
                 images.ForEach(x => x.uid = page.createUserId);
 
@@ -131,6 +169,8 @@ public partial class OldSbsConvertController
                     CreateValue(0, "version", oldPage.version), 
                     CreateValue(0, "size", oldPage.size), 
                     CreateValue(0, "dmca", oldPage.dmca), 
+                    CreateValue(0, "systems", systems),
+                    CreateValue(0, "syslimits", systems),
                     //NOTE: this needs to be translated into some other identifier, for searching of ptc/sb3/switch programs!
                     CreateValue(0, "support", oldPage.support), 
                     CreateValue(0, "translatedfor", bodyJson.translatedfor), 
