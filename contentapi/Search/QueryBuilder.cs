@@ -405,7 +405,10 @@ public class QueryBuilder : IQueryBuilder
 
         //Redo fieldlist if they asked for special formats
         if (r.fields == "*")
-            fields = new List<string>(r.typeInfo.fields.Keys);
+        {
+            fields = r.typeInfo.fields.Where(x => x.Value.expensive <= config.ExpensiveMax || r.expensive).Select(x => x.Key).ToList();
+            //new List<string>(r.typeInfo.fields.Keys);
+        }
         
         if (inverted)
             fields = r.typeInfo.fields.Keys.Except(fields).ToList();

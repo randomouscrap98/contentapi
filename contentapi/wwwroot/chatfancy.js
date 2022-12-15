@@ -145,7 +145,7 @@ function fancySetTitle(title, content)
 
     if (api.IsPrivate(content))
         privateText += "🔒";
-    if (userSelf && !api.IsAllowed(content, userSelf.id, "C"))
+    if (userSelf && !api.IsUserAllowed(content, userSelf, "C"))
         privateText += "❌";
     
     if(privateText)

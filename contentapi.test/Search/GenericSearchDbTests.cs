@@ -138,6 +138,7 @@ public class GenericSearchDbTests : ViewUnitTestBase
             name = "test",
             type = "content",
             fields = "*", //THIS is what we're testing
+            expensive = true //NEED this to get ALL fields
         });
 
         var result = (await service.SearchUnrestricted(search)).objects["test"];
