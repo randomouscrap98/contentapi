@@ -11,6 +11,13 @@ using Newtonsoft.Json.Linq;
 
 namespace contentapi.Search;
 
+public class QueryBuilderConfig 
+{
+    public int expensiveMax {get;set;} = 2; //Can go UP TO 2 with fields *
+    public double pop1CommentValue {get;set;} = 1;
+    public Dictionary<double, List<string>> pop1EngagementValue {get;set;} = new Dictionary<double, List<string>>();
+}
+
 //This assumes that WHATEVER is given, that's EXACTLY what's used. No limits, no nothing.
 public class QueryBuilder : IQueryBuilder
 {
@@ -19,6 +26,7 @@ public class QueryBuilder : IQueryBuilder
     protected ISearchQueryParser parser;
     protected IMapper mapper;
     protected IPermissionService permissionService;
+    protected QueryBuilderConfig config;
 
     public const string DescendingAppend = "_desc";
     public const string CountSelect = $"count(*) as {Constants.CountField}";
@@ -64,13 +72,15 @@ public class QueryBuilder : IQueryBuilder
     protected Dictionary<RequestType, Type> StandardViewRequests;
 
     public QueryBuilder(ILogger<QueryBuilder> logger, IViewTypeInfoService typeInfoService, 
-        IMapper mapper, ISearchQueryParser parser, IPermissionService permissionService)
+        IMapper mapper, ISearchQueryParser parser, IPermissionService permissionService,
+        QueryBuilderConfig config)
     {
         this.logger = logger;
         this.typeService = typeInfoService;
         this.mapper = mapper;
         this.parser = parser;
         this.permissionService = permissionService;
+        this.config = config;
 
         var assembly = System.Reflection.Assembly.GetAssembly(typeof(contentapi.data.Views.UserView)) ?? throw new InvalidOperationException("NO ASSEMBLY FOR QUERYBUILDER???");
 

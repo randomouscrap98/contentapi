@@ -55,9 +55,8 @@ contentapi/dbmigrate.sh
 tempfiles
 emails
 contentapi*.service
+Deploy/publish*.sh
 
 # Now, ALWAYS ignore content.db! we have dbmigrations set up, people can run them on their own
 content.db
 
-# Temporary(?) special ignores
-OLDSYSTEM/contentapi/publishAndConvert.sh

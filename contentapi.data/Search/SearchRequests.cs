@@ -16,6 +16,8 @@ public class SearchRequest
     public int limit {get;set;} = -1;
     public int skip {get;set;}
 
+    public bool expensive {get;set;} = false;
+
     public SearchRequest Copy()
     {
         return (SearchRequest)this.MemberwiseClone();

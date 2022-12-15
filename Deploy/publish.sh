@@ -1,33 +1,19 @@
 # General publish script for dotnet core projects
 
 name="contentapi"
-pfolder="/var/www/${name}"                  # The REMOTE location to PLACE all files
-phost=publisher@oboy.smilebasicsource.com   # The default server (development) (and user to connect)
-pfolder="/storage/random/${name}"           # The REMOTE location to PLACE all files
 rdf="rl"
-port=240
 
-if [ "$1" = "production" ]
-then
-    echo "WARN: PUBLISHING PRODUCTION"
-    phost=publisher@smilebasicsource.com   # The default server (development) (and user to connect)
-    pfolder="/var/www/${name}"
-    port=22
+if [ -z "$phost" ] ; then
+   echo "YOU MUST PROVIDE 'phost', the username@host to publish to!"
+   exit 1
+elif [ -z "$pfolder" ] ; then
+   echo "YOU MUST PROVIDE 'pfolder', the final destination of contentapi!"
+   exit 1
+elif [ -z "$port" ] ; then
+   echo "YOU MUST PROVIDE 'port', the port for login (even if it's just 22!)"
+   exit 1
 fi
 
-if [ "$1" = "sbsdev" ]
-then
-    echo "Publishing SBS development"
-    pfolder="/storage/random/sbs_${name}"
-fi
-
-if [ "$1" = "sbsproduction" ]
-then
-    echo "Publishing SBS PRODUCTION!!"
-    phost=publisher@smilebasicsource.com   # The default server (development) (and user to connect)
-    pfolder="/var/www/sbs/${name}"
-    port=22
-fi
 
 # space separated
 deploy="Deploy"
