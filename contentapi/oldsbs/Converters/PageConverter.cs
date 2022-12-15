@@ -138,7 +138,12 @@ public partial class OldSbsConvertController
                     syslimits.Add("dlc");
                 }
                 if((oldPage.support & 16) > 0) {
-                    syslimits.Add("switch");
+                    systems.Add("switch");
+                }
+
+                //Is this OK?? Also hardcoded "program", where does it come from?
+                if(systems.Count == 0 && type == "program") {
+                    systems.Add("3ds");
                 }
 
                 //I want to stop using these specialized setions, not necessary to be so strict!
@@ -165,18 +170,24 @@ public partial class OldSbsConvertController
                 {
                     CreateValue(0, "pid", oldPage.pid), 
                     CreateValue(0, "edited", oldPage.edited), 
-                    CreateValue(0, "dlkey", oldPage.dlkey), 
                     CreateValue(0, "version", oldPage.version), 
                     CreateValue(0, "size", oldPage.size), 
                     CreateValue(0, "dmca", oldPage.dmca), 
-                    CreateValue(0, "systems", systems),
-                    CreateValue(0, "syslimits", systems),
                     //NOTE: this needs to be translated into some other identifier, for searching of ptc/sb3/switch programs!
                     CreateValue(0, "support", oldPage.support), 
                     CreateValue(0, "translatedfor", bodyJson.translatedfor), 
                     CreateValue(0, "notes", bodyJson.notes), 
                     CreateValue(0, "instructions", bodyJson.instructions), 
                 };
+
+                if(systems.Count > 0)
+                {
+                    values.Add(CreateValue(0, "systems", systems.Distinct().ToList()));
+                    values.Add(CreateValue(0, "syslimits", syslimits.Distinct().ToList()));
+                }
+
+                if(!string.IsNullOrWhiteSpace(oldPage.dlkey) && !oldPage.dlkey.Trim().ToLower().StartsWith("remove"))
+                    values.Add(CreateValue(0, "dlkey", oldPage.dlkey));
 
                 values.AddRange(categories.Select(x => CreateValue(0, "tag:" + categoryMapping[x.cid], true)));
 

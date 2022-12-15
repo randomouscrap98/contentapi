@@ -110,7 +110,13 @@ public class ImageManipulator_IMagick : IImageManipulator
 
         realInfo.Width = geometryInfo.width;
         realInfo.Height = geometryInfo.height;
-        realInfo.MimeType = imageInfo.mimeType ?? throw new InvalidOperationException("No 'mimeType' found in image json!");
+
+        if(imageInfo.mimeType != null) 
+            realInfo.MimeType = imageInfo.mimeType;
+        else if(imageInfo.format != null && imageInfo.format.StartsWith("BMP"))
+            realInfo.MimeType = "image/bitmap"; //Doesn't have mimeType for some reason?
+        else
+            throw new InvalidOperationException("No 'mimeType' found in image json!");
 
         return realInfo;
     }
