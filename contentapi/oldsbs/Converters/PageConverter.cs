@@ -141,8 +141,12 @@ public partial class OldSbsConvertController
                     systems.Add("switch");
                 }
 
+                systems = systems.Distinct().ToList();
+
                 //Is this OK?? Also hardcoded "program", where does it come from?
-                if(systems.Count == 0 && type == "program") {
+                if((systems.Count == 0 || systems.Count >= 3) && type == "program") 
+                {
+                    systems.Clear();
                     systems.Add("3ds");
                 }
 
