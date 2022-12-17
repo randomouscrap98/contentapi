@@ -73,11 +73,14 @@ public partial class OldSbsConvertController
         var inverseBasePageTypes = config.BasePageTypes.ToDictionary(k => k.Value, v => v.Key);
         var categoryMapping = await GetOldToNewMapping("cid", "category");
         var allImages = new Dictionary<long, List<oldsbs.PageImages>>();
-        var submissionParent = new Db.Content();
+        var submissionParent = new Db.Content() { 
+            hash = "submissions", literalType = "submissions", name = "Submissions",
+            description = "All submitted programs are actually just fancy threads, you can view them here in forum format if you want!"
+        }; //this hash may be taken! be careful!
 
         await PerformDbTransfer(async (oldcon, con, trans) =>
         {
-            submissionParent = await AddSystemContent("submissions", con, trans, true);
+            submissionParent = await AddSystemContent(submissionParent, con, trans, true); //AddSystemContent("Submissions", con, trans, true);
         });
 
         await PerformChunkedTransfer<oldsbs.Pages>("pages", "pid", async (oldcon, con, trans, oldPages, start) =>
@@ -239,10 +242,20 @@ public partial class OldSbsConvertController
                 text = comment.content
             };
 
-            if(comment.euid != null)//comment.edited != null && comment.edited?.Ticks > 0 && comment.edited != comment.created)
+            if (comment.pcid != null)
             {
+                var pcm = comments.FirstOrDefault(x => x.cid == comment.pcid); 
+                if(pcm != null)
+                {
+                    var username = await con.ExecuteScalarAsync<string>("select username from users where id=@id", new {id=pcm.uid});
+                    var text = pcm.content.Length > 100 ? pcm.content.Substring(0, 100) + "..." : pcm.content;
+                    message.text = $"[quote={username??"???"}]{text}[/quote]\n{message.text}";
+                }
+            }
+            if(comment.euid != null)//comment.edited != null && comment.edited?.Ticks > 0 && comment.edited != comment.created)
+            { 
                 //Checking just euid might be enough!
-                message.editDate = comment.edited;
+                message.editDate = comment.edited; 
                 editCount++;
             }
             
@@ -252,7 +265,7 @@ public partial class OldSbsConvertController
             if(comment.pcid != null)
             {
                 await con.InsertAsync(CreateMValue(id, "pcid", comment.pcid));
-                await con.InsertAsync(CreateMValue(id, "parent", commentMapping[comment.pcid.Value]));
+                //await con.InsertAsync(CreateMValue(id, "parent", commentMapping[comment.pcid.Value]));
             }
 
             await con.InsertAsync(CreateMValue(id, "status", comment.status));
@@ -261,10 +274,10 @@ public partial class OldSbsConvertController
             await con.InsertAsync(CreateMValue(id, "pid", comment.pid));
         }
 
-        logger.LogDebug($"Inserted {comments.Count} comments for page {contentId} ({editCount} edited)");
-    }
-
-    /// <summary>
+        logger.LogDebug($"Inserted {comments.Count} comments for page {contentId} ({editCount} edited)"); 
+    } 
+         
+         /// <summary>
     /// Convert all images collected from all pages, including upload and linking to content. This must be done outside
     /// the normal flow of conversion so we don't deadlock from transactions
     /// </summary>
