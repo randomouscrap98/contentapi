@@ -72,6 +72,7 @@ window.addEventListener('load', function()
             leftCon.appendChild(container.querySelector(".avatar"));
             rightCon.appendChild(userArea);
             rightCon.appendChild(content);
+            rightCon.appendChild(fancyRethreadDisplay(m));
             container.appendChild(leftCon);
             container.appendChild(rightCon);
         }
@@ -104,6 +105,25 @@ window.addEventListener('load', function()
     //Should override the boring title for something fancier!
     window.setTitle = fancySetTitle;
 });
+
+function fancyRethreadDisplay(m)
+{
+    var fragment = document.createDocumentFragment();
+
+    if(m.values.rethread)
+    {
+        var r = m.values.rethread;
+        var rethread = document.createElement("div");
+        rethread.className = "annotation rethread";
+        rethread.innerHTML = `${r.position.toUpperCase()}: Rethreaded ${r.count} messages from <a href="?pid=${r.lastContentId}" target="_blank">page ${r.lastContentId}</a>`;
+        if(r.lastContentId !== m.values.originalContentId)
+            rethread.innerHTML += ` (orig: <a href="?pid=${m.values.originalContentId}" target="_blank">page ${m.values.originalContentId}</a>)`;
+        rethread.innerHTML += ` - ${(new Date(r.date)).toLocaleString()}`
+        fragment.appendChild(rethread);
+    }
+
+    return fragment;
+}
 
 function fancyCustomMessageStyle(message)
 {

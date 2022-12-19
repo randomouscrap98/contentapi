@@ -199,7 +199,10 @@ body[data-sidebarhidden] {
   background: var(--notificationbg);
 }
 
-
+[data-fancy] .rethread {
+    margin-left: 0.5em;
+    margin-top: 0.25em;
+}
 
 /* this is irritating, how do I fix this? */
 body[data-theme="purple"][data-fancy] .message .avatar { margin-top: 0.18em; }
