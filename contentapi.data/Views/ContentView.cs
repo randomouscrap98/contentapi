@@ -7,7 +7,7 @@ public class ContentView : IIdView
 {
     public const string MessagesTable = "messages";
     public const string ContentTable = "content";
-    public const string VotesTable = "content_votes";
+    public const string EngagementTable = "content_engagement";
     public const string NaturalCommentQuery = "deleted = 0 and module IS NULL";
 
     [DbField]
@@ -95,6 +95,14 @@ public class ContentView : IIdView
     [Expensive(3)]
     [DbField("select count(*) from " + MessagesTable + " where main.id = contentId and " + NaturalCommentQuery)]
     public int commentCount {get;set;}
+
+    //Initially, this will be a hardcoded field. Sorry...
+    //Ignore natural comment query to make it faster(?)
+    [Expensive(3)]
+    [DbField("select (select count(*) from " + MessagesTable + " where contentId=main.id) + 5 * (select count(*) from " +
+        EngagementTable + " where contentId=main.id and engagement in (\"good\",\"+\",\"👍\")) - 3 * (select count(*) from " +
+        EngagementTable + " where contentId=main.id and engagement in (\"bad\",\"-\",\"👎\"))")]
+    public double popScore1 {get;set;}
 
     //[Expensive(3)]
     //[DbField("select count(*) from " + ContentTable + " where parentId = main.id and deleted = 0")]

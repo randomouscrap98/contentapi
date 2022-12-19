@@ -14,8 +14,8 @@ namespace contentapi.Search;
 public class QueryBuilderConfig 
 {
     public int ExpensiveMax {get;set;} = 2; //Can go UP TO 2 with fields *
-    public double Pop1CommentValue {get;set;} = 1;
-    public Dictionary<double, List<string>> Pop1EngagementValue {get;set;} = new Dictionary<double, List<string>>();
+    //public double Pop1CommentValue {get;set;} = 1;
+    //public Dictionary<double, List<string>> Pop1EngagementValue {get;set;} = new Dictionary<double, List<string>>();
 }
 
 //This assumes that WHATEVER is given, that's EXACTLY what's used. No limits, no nothing.

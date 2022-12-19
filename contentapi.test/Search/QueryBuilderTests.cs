@@ -244,4 +244,37 @@ public class QueryBuilderTests : UnitTestBase
             Assert.ThrowsAny<ParseException>(work);
         }
     }
+
+    [Fact]
+    public void FullParseRequest_SkipExpensiveFields() //This ASSUMES certain fields are expensive! If those change, change this!
+    {
+        var request =new SearchRequest()
+        {
+            name = "contentTest",
+            type = "content",
+            fields = "*"
+        };
+
+        var values = new Dictionary<string, object>();
+        var result = service.FullParseRequest(request, values);
+
+        Assert.DoesNotContain(nameof(ContentView.popScore1), result.requestFields);
+    }
+
+    [Fact]
+    public void FullParseRequest_GetExpensiveFields() //This ASSUMES certain fields are expensive! If those change, change this!
+    {
+        var request =new SearchRequest()
+        {
+            name = "contentTest",
+            type = "content",
+            fields = "*",
+            expensive = true
+        };
+
+        var values = new Dictionary<string, object>();
+        var result = service.FullParseRequest(request, values);
+
+        Assert.Contains(nameof(ContentView.popScore1), result.requestFields);
+    }
 }
