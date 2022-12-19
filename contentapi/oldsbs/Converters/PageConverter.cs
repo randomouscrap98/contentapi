@@ -93,7 +93,7 @@ public partial class OldSbsConvertController
                 var keywords = (await oldcon.QueryAsync<oldsbs.PageKeywords>("select * from pagekeywords where pid=@id", parameters)).ToList();
                 var images = (await oldcon.QueryAsync<oldsbs.PageImages>("select * from pageimages where pid=@id", parameters)).ToList();
                 var votes = (await oldcon.QueryAsync<oldsbs.PageVotes>("select * from pagevotes where pid=@id", parameters)).ToList();
-                var comments = (await oldcon.QueryAsync<oldsbs.Comments>("select * from comments where pid=@id and created!='0000-00-00 00:00:00' order by pcid", parameters)).ToList();
+                var comments = (await oldcon.QueryAsync<oldsbs.Comments>("select * from comments where pid=@id and created!='0000-00-00 00:00:00' order by cid", parameters)).ToList();
                 //Remember: don't need authors because there are none
                 //Also: not actually doing anything with images, just... there for counting sake
 
@@ -264,8 +264,9 @@ public partial class OldSbsConvertController
 
             if(comment.pcid != null)
             {
+                var realParentId = commentMapping[comment.pcid.Value];
                 await con.InsertAsync(CreateMValue(id, "pcid", comment.pcid));
-                //await con.InsertAsync(CreateMValue(id, "parent", commentMapping[comment.pcid.Value]));
+                await con.InsertAsync(CreateMValue(id, $"re:{realParentId}", realParentId));
             }
 
             await con.InsertAsync(CreateMValue(id, "status", comment.status));
