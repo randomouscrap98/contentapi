@@ -277,4 +277,23 @@ public class QueryBuilderTests : UnitTestBase
 
         Assert.Contains(nameof(ContentView.popScore1), result.requestFields);
     }
+
+    [Fact]
+    public void FullparseRequest_RandomSort()
+    {
+        var request =new SearchRequest()
+        {
+            name = "randomTest",
+            type = "content",
+            fields = "*",
+            order = "random"
+        };
+
+        var values = new Dictionary<string, object>();
+        var result = service.FullParseRequest(request, values);
+
+        //Implementation specific of course, but it should be fine. How else would 
+        //you sort randomly without using the RANDOM function?? Or is this sqlite only?
+        Assert.Contains("RANDOM()", result.computedSql);
+    }
 }

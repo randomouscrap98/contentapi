@@ -774,23 +774,32 @@ public class QueryBuilder : IQueryBuilder
                 var order = orders[i];
                 var descending = false;
 
-                if (order.EndsWith(DescendingAppend))
+                //Special sorting 
+                if (order.ToLower() == "random") 
                 {
-                    descending = true;
-                    order = order.Substring(0, order.Length - DescendingAppend.Length);
+                    queryStr.Append("RANDOM()");
                 }
+                //Regular field sorting
+                else 
+                {
+                    if (order.EndsWith(DescendingAppend))
+                    {
+                        descending = true;
+                        order = order.Substring(0, order.Length - DescendingAppend.Length);
+                    }
 
-                //We don't need the result, just the checking
-                var parsedOrder = ParseField(order, r);
+                    //We don't need the result, just the checking
+                    var parsedOrder = ParseField(order, r);
 
-                queryStr.Append(order);
+                    queryStr.Append(order);
 
-                if(r.typeInfo.fields[order].fieldType == typeof(string))
-                    queryStr.Append(" COLLATE NOCASE ");
+                    if(r.typeInfo.fields[order].fieldType == typeof(string))
+                        queryStr.Append(" COLLATE NOCASE ");
+                }
 
                 if (descending)
                     queryStr.Append(" DESC ");
-                
+
                 if(i < orders.Length - 1)
                     queryStr.Append(", ");
                 else

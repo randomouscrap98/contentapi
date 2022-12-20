@@ -2008,4 +2008,28 @@ public class GenericSearchDbTests : ViewUnitTestBase
         Assert.Contains(nameof(RequestType.content), result.objects.Keys);
         Assert.Equal(0, (long)result.objects[nameof(RequestType.content)].First()[Constants.CountField]);
     }
+
+    [Fact]
+    public async Task SearchAsync_RandomSort()
+    {
+        var generate = new Func<Task<List<MessageView>>>(() => service.SearchSingleType<MessageView>(NormalUserId,
+            new SearchRequest() {
+                type = nameof(RequestType.message),
+                fields = "id,createUserId,contentId", // this 'contentId' requirement is probably a glitch
+                query = "",
+                order = "random",
+                limit = 5
+            }
+        ));
+
+        var lastResult = await generate();
+
+        for(var i = 0; i < 10; i++)
+        {
+            var thisResult = await generate();
+            Assert.Equal(lastResult.Count, thisResult.Count);
+            Assert.False(lastResult.Select(x => x.id).SequenceEqual(thisResult.Select(x => x.id)));
+            lastResult = thisResult;
+        }
+    }
 }
