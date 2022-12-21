@@ -242,16 +242,17 @@ public partial class OldSbsConvertController
                 text = comment.content
             };
 
-            if (comment.pcid != null)
-            {
-                var pcm = comments.FirstOrDefault(x => x.cid == comment.pcid); 
-                if(pcm != null)
-                {
-                    var username = await con.ExecuteScalarAsync<string>("select username from users where id=@id", new {id=pcm.uid});
-                    var text = pcm.content.Length > 100 ? pcm.content.Substring(0, 100) + "..." : pcm.content;
-                    message.text = $"[quote={username??"???"}]{text}[/quote]\n{message.text}";
-                }
-            }
+            //if (comment.pcid != null)
+            //{
+            //    //var pcm = comments.FirstOrDefault(x => x.cid == comment.pcid); 
+            //    //.if(pcm != null)
+            //    //{
+            //        //var username = await con.ExecuteScalarAsync<string>("select username from users where id=@id", new {id=pcm.uid});
+            //        //var text = pcm.content.Length > 100 ? pcm.content.Substring(0, 100) + "..." : pcm.content;
+            //        //message.text = $"[quote={username??"???"}]{text}[/quote]\n{message.text}";
+            //    message.text = $"[reply={commentMapping[comment.pcid.Value]}][/reply]\n{message.text}";
+            //    //}
+            //}
             if(comment.euid != null)//comment.edited != null && comment.edited?.Ticks > 0 && comment.edited != comment.created)
             { 
                 //Checking just euid might be enough!
@@ -266,7 +267,9 @@ public partial class OldSbsConvertController
             {
                 var realParentId = commentMapping[comment.pcid.Value];
                 await con.InsertAsync(CreateMValue(id, "pcid", comment.pcid));
-                await con.InsertAsync(CreateMValue(id, $"re:{realParentId}", realParentId));
+                await con.InsertAsync(CreateMValue(id, $"re", realParentId));
+                await con.InsertAsync(CreateMValue(id, $"re-top", realParentId));
+                //await con.InsertAsync(CreateMValue(id, $"re-all", realParentId));
             }
 
             await con.InsertAsync(CreateMValue(id, "status", comment.status));
