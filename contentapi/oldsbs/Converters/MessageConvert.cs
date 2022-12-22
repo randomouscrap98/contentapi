@@ -17,10 +17,18 @@ public partial class OldSbsConvertController
         {
             var oldRecipients = await oldcon.QueryAsync<oldsbs.MessageRecipients>("select * from messagerecipients");
             var messages = await oldcon.QueryAsync<oldsbs.Messages>("select * from messages");
+            var users = await oldcon.QueryAsync<oldsbs.Users>("select * from users");
             var mappedMessages = messages.ToDictionary(x => x.mid, y => y);
+            var mappedUsers = users.ToDictionary(x => x.uid, y => y);
             logger.LogInformation($"Found {oldRecipients.Count()} message recipients in old database");
 
-            var messageparent = await AddSystemContent("directmessages", con, trans, true);
+            var parentcontent = new Db.Content
+            {
+                literalType = "directmessages",
+                name = "Private Threads",
+                hash = "private-threads"
+            };
+            var messageparent = await AddSystemContent(parentcontent, con, trans, true);
 
             //A manual grouping but whatever
             var messageRecipients = new Dictionary<long, List<long>>();
@@ -41,7 +49,13 @@ public partial class OldSbsConvertController
                 var realRecipients = new HashSet<long>(mr.Value);
                 realRecipients.Add(message.sender); //the sender wasn't included in the recipients list before
 
-                var key = string.Join(",", realRecipients.OrderBy(x => x));
+                var keylist = realRecipients.OrderBy(x => x);
+                var key = "";
+
+                if(keylist.Count() <= 5) 
+                    key = string.Join(",", keylist.Select(x => mappedUsers.ContainsKey(x) ? mappedUsers[x].username : x.ToString()));
+                else 
+                    key = string.Join(",", keylist);
 
                 if(!recipientsToContent.ContainsKey(key))
                 {
@@ -49,7 +63,7 @@ public partial class OldSbsConvertController
                     var content = new Db.Content
                     {
                         parentId = messageparent.id,
-                        name = "legacy private room (" + key + ")",
+                        name = "legacy dm (" + key + ")",
                         contentType = data.InternalContentType.page,
                         literalType = "directmessage",
                         createDate = message.senddate, //This is PROBABLY ok
