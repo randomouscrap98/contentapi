@@ -2032,4 +2032,31 @@ public class GenericSearchDbTests : ViewUnitTestBase
             lastResult = thisResult;
         }
     }
+
+    [Fact]
+    public async Task SearchAsync_MessageExtraFields()
+    {
+        var all_content = await service.SearchSingleType<ContentView>(NormalUserId, new SearchRequest()
+        {
+            type = nameof(RequestType.content),
+            fields = "*",
+            query = "id = @id"
+        }, new Dictionary<string, object> { {"id", AllAccessContentId }});
+
+        var messages = await service.SearchSingleType<MessageView>(NormalUserId, new SearchRequest()
+        {
+            type = nameof(RequestType.message),
+            fields = "*",
+            query = "contentId = @id",
+            expensive = true
+        }, new Dictionary<string, object> { {"id", AllAccessContentId }});
+
+        var content = all_content.First();
+
+        Assert.All(messages, x =>
+        {
+            Assert.Equal(content.literalType, x.content_literalType);
+            Assert.Equal(content.contentType, x.content_contentType);
+        });
+    }
 }

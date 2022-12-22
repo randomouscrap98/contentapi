@@ -2,7 +2,7 @@
 namespace contentapi.data.Views;
 
 [ResultFor(RequestType.message)]
-[SelectFrom("messages")]
+[SelectFrom("messages AS main")]
 [WriteAs(typeof(Db.Message))]
 public class MessageView : IContentRelatedView
 {
@@ -70,4 +70,12 @@ public class MessageView : IContentRelatedView
     [NoQuery]
     [Expensive(1)]
     public List<long> uidsInText {get;set;} = new List<long>();
+
+    [Expensive(3)]
+    [DbField("select c.literalType from content as c where main.contentId = c.id")]
+    public string? content_literalType {get;set;}
+
+    [Expensive(3)]
+    [DbField("select c.contentType from content as c where main.contentId = c.id")]
+    public InternalContentType content_contentType {get;set;}
 }
