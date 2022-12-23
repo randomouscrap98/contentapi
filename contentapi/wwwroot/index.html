@@ -6,19 +6,19 @@
     <meta name="rating" content="general">
     <meta name="description" content="SBS default implementation">
     <link rel="icon" href="favicon.ico" type="image/x-icon">
-    <script src="api.js?v=1671748687"></script>
+    <script src="api.js?v=1671832809"></script>
     <!-- These are required for the 12y parser (markup) -->
-    <script src="markup/langs.js?v=1671748687"></script>
-    <script src="markup/legacy.js?v=1671748687"></script>
-    <script src="markup/parse.js?v=1671748687"></script>
-    <script src="markup/render.js?v=1671748687"></script>
-    <script src="markup/helpers.js?v=1671748687"></script>
-    <link rel="stylesheet" href="markup/markup.css?v=1671748687">
-    <link rel="stylesheet" href="markup.css?v=1671748687">
-    <script src="markup.js?v=1671748687"></script>
+    <script src="markup/langs.js?v=1671832809"></script>
+    <script src="markup/legacy.js?v=1671832809"></script>
+    <script src="markup/parse.js?v=1671832809"></script>
+    <script src="markup/render.js?v=1671832809"></script>
+    <script src="markup/helpers.js?v=1671832809"></script>
+    <link rel="stylesheet" href="markup/markup.css?v=1671832809">
+    <link rel="stylesheet" href="markup.css?v=1671832809">
+    <script src="markup.js?v=1671832809"></script>
     <!-- The scripts and styling for this page in particular -->
-    <script src="index.js?v=1671748687"></script>
-    <link rel="stylesheet" href="index.css?v=1671748687">
+    <script src="index.js?v=1671832809"></script>
+    <link rel="stylesheet" href="index.css?v=1671832809">
 </head>
 
 <body>
@@ -130,16 +130,16 @@
             </div>
         </div>
         <div id="t_page" data-onload="page_onload">
-            <h2 id="page-title"></h2>
-            <div id="page-links" class="allblock">
+            <div id="page-links" class="allblock flexrow">
                 <a id="page-parent-link" hidden =""></a>
                 <a href="#" id="page-chat-link" hidden="">Go to chat for this page</a>
                 <a href="#" id="page-raw-link" hidden="">View raw content</a>
                 <a hidden="" id="filepage-link"><img id="filepage-image"></a>
             </div>
+            <h2 id="page-title"></h2>
             <div id="page-content" title="This is lightly-rendered markup" hidden="" class="content"></div>
             <table class="describe" id="page-table"></table>
-            <div id="page-interactions" data-pageid="">
+            <div id="page-interactions" data-pageid="" class="flexrow">
                 <button id="watch-page" hidden="" onclick="return t_page_watch(this, true)">Watch</button>
                 <button id="unwatch-page" hidden="" onclick="return t_page_watch(this, false)">Unwatch</button>
                 <div id="current-vote-container-page" hidden="">Current vote: <span id="current-vote-page"></span></div>
@@ -221,11 +221,8 @@
                 <label for="search-text">Search:</label>
                 <input id="search-text" name="search">
                 <label for="search-field">Field:</label>
-                <!--<input id="search-field" list="search-field-options" name="field" required="">-->
                 <select id="search-field" name="field"></select>
                 <label for="search-sort">Sort:</label>
-                <!--<input id="search-sort" list="search-sort-options" name="sort">
-                <datalist id="search-sort-options"></datalist>-->
                 <select id="search-sort" name="sort"></select>
                 <input type="submit" value="Search">
             </form>
@@ -274,10 +271,8 @@
             <h2>Admin log:</h2>
             <div id="adminlog-container"></div>
             <div id="adminlog-controls" class="marginvertical">
-                <!--<form onsubmit="return t_filter_adminlog_submit(this)">-->
                 <select id="filter-logtype"></select>
                 <button id="filter-submit">Filter</button>
-                <!--</form>-->
             </div>
             <div id="adminlog-nav" class="nav">
                 <a href="#" id="adminlog-down">Newer</a>
@@ -311,12 +306,6 @@
                 </label>
                 <input type="submit" value="Submit">
             </form>
-            <!--<h3>Delete activity (restore)</h3>
-            <div id="activity-list"></div>
-            <div id="activity-nav" class="nav">
-                <a href="#" id="activity-newer">Newer</a>
-                <a href="#" id="activity-older">Older</a>
-            </div>-->
         </div>
         <div id="t_groupmanage" data-onload="groupmanage_onload">
             <h2>Group Editor</h2>
@@ -367,7 +356,6 @@
             </span>
             <time data-time class="annotation"></time>
             <button data-restore="" hidden="" onclick="return t_activity_item_restore(this)">Restore</button>
-            <!--<button data-undelete="" class="error" hidden="" onclick="return t_activity_item_undelete(this)">Undelete</button>-->
         </div>
         <div id="user_item" data-onload="user_item_onload">
             <img data-avatar>
@@ -415,28 +403,11 @@
             <span data-message></span>
             <span data-id></span>
         </div>
-        <!-- The container for the editor portion of groups -->
-        <!--<div id="group_edit" data-onload="group_edit_onload">
-            <form data-groupform onsubmit="return t_group_edit_submit(this)">
-                <input type="hidden" data-id>
-                <label>
-                    <div>Name:</div>
-                    <input data-name >
-                </label>
-                <label> 
-                    <input type="checkbox" data-super>
-                    <span>Super (regular users can't add or remove themselves)</span>
-                </label>
-                <input type="submit">
-            </form>
-        </div>-->
         <div id="group_item" data-onload="group_item_onload">
             <div><b>ID:</b> <span data-id>0</span></div>
             <div><b>Creator:</b> <span data-createuserid>0</span></div>
             <div><b>Create date:</b> <time data-createdate></time></div>
             <div data-editcontainer></div>
-            <!--<button data-edit>Edit group</button>
-            <button data-delete>Remove group</button>-->
         </div>
         <div id="user_editor" data-onload="user_editor_onload">
             <form onsubmit="return t_user_update_submit(this)">
