@@ -143,6 +143,12 @@ table, td, th {
     margin: 0.2em;
 }
 
+/* Hacks! */
+.activity .username {
+    margin-right: 0.2em;
+    margin-left: -0.3em;
+}
+
 /* ------------------------------------ */
 /* Comments always seem to require MORE */
 /* ------------------------------------ */

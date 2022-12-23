@@ -6,19 +6,19 @@
     <meta name="rating" content="general">
     <meta name="description" content="SBS default implementation">
     <link rel="icon" href="favicon.ico" type="image/x-icon">
-    <script src="api.js?v=1671838268"></script>
+    <script src="api.js?v=1671839355"></script>
     <!-- These are required for the 12y parser (markup) -->
-    <script src="markup/langs.js?v=1671838268"></script>
-    <script src="markup/legacy.js?v=1671838268"></script>
-    <script src="markup/parse.js?v=1671838268"></script>
-    <script src="markup/render.js?v=1671838268"></script>
-    <script src="markup/helpers.js?v=1671838268"></script>
-    <link rel="stylesheet" href="markup/markup.css?v=1671838268">
-    <link rel="stylesheet" href="markup.css?v=1671838268">
-    <script src="markup.js?v=1671838268"></script>
+    <script src="markup/langs.js?v=1671839355"></script>
+    <script src="markup/legacy.js?v=1671839355"></script>
+    <script src="markup/parse.js?v=1671839355"></script>
+    <script src="markup/render.js?v=1671839355"></script>
+    <script src="markup/helpers.js?v=1671839355"></script>
+    <link rel="stylesheet" href="markup/markup.css?v=1671839355">
+    <link rel="stylesheet" href="markup.css?v=1671839355">
+    <script src="markup.js?v=1671839355"></script>
     <!-- The scripts and styling for this page in particular -->
-    <script src="index.js?v=1671838268"></script>
-    <link rel="stylesheet" href="index.css?v=1671838268">
+    <script src="index.js?v=1671839355"></script>
+    <link rel="stylesheet" href="index.css?v=1671839355">
 </head>
 
 <body>
@@ -98,7 +98,7 @@
         </div>
         <div id="t_user" data-onload="user_onload">
             <img src="" id="user-avatar">
-            <table class="describe" id="user-table"></table>
+            <table class="describe striped" id="user-table"></table>
             <button onclick="t_user_logout()">Logout</button>
             <a href="?t=uservariables">Manage user variables</a>
             <div id="user-update">
@@ -124,7 +124,7 @@
                 </form>
                 <!-- Looking for 'currentPassword' for updating secret data? It doesn't exist yet lol -->
                 <h2>Your files:</h2>
-                <div id="user-files-container"></div>
+                <div id="user-files-container" class="resultlist"></div>
                 <div id="user-files-nav" class="nav">
                     <a href="#" id="user-files-pagedown">Newer files</a>
                     <a href="#" id="user-files-pageup">Older files</a>
@@ -271,7 +271,7 @@
         </div>
         <div id="t_admin" data-onload="admin_onload">
             <h2>Admin log:</h2>
-            <div id="adminlog-container"></div>
+            <div id="adminlog-container" class="resultlist"></div>
             <div id="adminlog-controls" class="marginvertical">
                 <select id="filter-logtype"></select>
                 <button id="filter-submit">Filter</button>
@@ -283,7 +283,7 @@
             <hr>
             <h2 id="ban-title">Bans:</h2>
             <label><input type="checkbox" id="ban-activeonly">Active only</label>
-            <div id="ban-container"></div>
+            <div id="ban-container" class="resultlist"></div>
             <div id="ban-nav" class="nav">
                 <a href="#" id="ban-down">Newer</a>
                 <a href="#" id="ban-up">Older</a>
@@ -328,7 +328,7 @@
         </div>
         <div id="t_activity" data-onload="activity_onload">
             <h2>Page activity</h2>
-            <div id="activity-list"></div>
+            <div id="activity-list" class="resultlist"></div>
             <div id="activity-nav" class="nav">
                 <a href="#" id="activity-newer">Newer</a>
                 <a href="#" id="activity-older">Older</a>
@@ -355,7 +355,7 @@
                 <div data-comment class="content"></div>
             </div>
         </div>
-        <div id="activity_item" data-onload="activity_item_onload" class="flexrow">
+        <div id="activity_item" data-onload="activity_item_onload" class="flexrow activity">
             <img data-avatar>
             <span data-username class="important username"></span>
             <span data-activty>
@@ -372,7 +372,7 @@
             <span data-super>⭐</span>
             <span data-group>🫂</span>
         </div>
-        <div id="file_item" data-onload="file_item_onload">
+        <div id="file_item" data-onload="file_item_onload" class="flexrow">
             <a data-filelink><img data-file></a>
             <a data-id href="#" class="important"></a>
             <span data-hash class="important"></span>
@@ -393,12 +393,12 @@
             <button data-edit>Edit</button>
             <button data-delete>Remove variable</button>
         </div>
-        <div id="adminlog_item" data-onload="adminlog_item_onload"> 
+        <div id="adminlog_item" data-onload="adminlog_item_onload" class="flexrow"> 
             <time data-time class="annotation"></time>
             <span data-id></span>
             <span data-text></span>
         </div>
-        <div id="ban_item" data-onload="ban_item_onload"> 
+        <div id="ban_item" data-onload="ban_item_onload" class="flexrow"> 
             <time data-time class="annotation"></time>
             <span>
                 <span data-banner></span>
