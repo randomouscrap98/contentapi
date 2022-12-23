@@ -8,11 +8,16 @@ body {
     margin: 1em;
 }
 
-label, input:not([type="checkbox"]), textarea, select {
+label {
+    display: block;
+    margin-bottom: 0.3em;
+}
+
+input:not([type="checkbox"]), textarea, select {
     display: block;
     width: 100%;
     max-width: 350px;
-    margin-bottom: 0.3em;
+    margin-bottom: 0.5em;
 }
 
 textarea {
@@ -93,7 +98,8 @@ table, td, th {
     padding: 0.75em;
     background-color: #f7f7f7;
     border: 1px solid #DDD;
-    border-radius: 0.5em;
+    border-radius: 0.3em;
+    word-wrap: break-word;
 }
 
 .console {
@@ -107,9 +113,12 @@ table, td, th {
     white-space: pre-wrap;
 }
 
-.allblock > *:not([hidden]) {
-    display: block;
-}
+/* Simple classes that just do one thing really well */
+.allblock > *:not([hidden]) { display: block; }
+.resultlist > :nth-child(even), .striped > :nth-child(even){ background-color: #EEE; }
+.resultlist > :not(:last-child), .lined > :not(:last-child) { border-bottom: 1px solid #DDD; }
+.pushright { margin-left: auto; }
+[hidden] { display: none !important; }
 
 .flexrow, .nav {
     display: flex;
@@ -120,7 +129,46 @@ table, td, th {
     margin-right: 0.75em;
 }
 
+.resultlist > *, .clean {
+    padding: 0.05em 0.2em;
+    align-items: center;
+}
+
 .marginvertical {
     margin-top: 1em;
     margin-bottom: 1em;
+}
+
+.notifications {
+    margin: 0.2em;
+}
+
+/* ------------------------------------ */
+/* Comments always seem to require MORE */
+/* ------------------------------------ */
+
+.comment {
+    display: flex;
+    align-items: flex-start; /* So they don't stretch */
+    margin-bottom: 0.4em;
+}
+.commentleft {
+    margin-right: 0.5em;
+    flex: none;
+}
+.commentleft img {
+    border-radius: 0.2em;
+    margin-top: 0.2em;
+}
+.commentright {
+    width: 100%;
+    min-width: 0; /* to break content */
+}
+.commenttop {
+    margin-bottom: 0.1em;
+    display: flex;
+    align-items: flex-end;
+}
+.comment .content {
+    padding: 0.2em 0.4em;
 }

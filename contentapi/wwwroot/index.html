@@ -6,19 +6,19 @@
     <meta name="rating" content="general">
     <meta name="description" content="SBS default implementation">
     <link rel="icon" href="favicon.ico" type="image/x-icon">
-    <script src="api.js?v=1671832809"></script>
+    <script src="api.js?v=1671837763"></script>
     <!-- These are required for the 12y parser (markup) -->
-    <script src="markup/langs.js?v=1671832809"></script>
-    <script src="markup/legacy.js?v=1671832809"></script>
-    <script src="markup/parse.js?v=1671832809"></script>
-    <script src="markup/render.js?v=1671832809"></script>
-    <script src="markup/helpers.js?v=1671832809"></script>
-    <link rel="stylesheet" href="markup/markup.css?v=1671832809">
-    <link rel="stylesheet" href="markup.css?v=1671832809">
-    <script src="markup.js?v=1671832809"></script>
+    <script src="markup/langs.js?v=1671837763"></script>
+    <script src="markup/legacy.js?v=1671837763"></script>
+    <script src="markup/parse.js?v=1671837763"></script>
+    <script src="markup/render.js?v=1671837763"></script>
+    <script src="markup/helpers.js?v=1671837763"></script>
+    <link rel="stylesheet" href="markup/markup.css?v=1671837763">
+    <link rel="stylesheet" href="markup.css?v=1671837763">
+    <script src="markup.js?v=1671837763"></script>
     <!-- The scripts and styling for this page in particular -->
-    <script src="index.js?v=1671832809"></script>
-    <link rel="stylesheet" href="index.css?v=1671832809">
+    <script src="index.js?v=1671837763"></script>
+    <link rel="stylesheet" href="index.css?v=1671837763">
 </head>
 
 <body>
@@ -61,8 +61,10 @@
                 <input id="login-username" name="username" required="">
                 <label for="login-password">Password:</label>
                 <input id="login-password" name="password" type="password" required="">
-                <label for="login-extended">Stay logged in (1 year):</label>
-                <input id="login-extended" name="extended" type="checkbox">
+                <div class="flexrow">
+                    <label for="login-extended">Stay logged in (1 year):</label>
+                    <input id="login-extended" name="extended" type="checkbox">
+                </div>
                 <input type="submit" value="Login">
             </form>
             <hr>
@@ -138,7 +140,7 @@
             </div>
             <h2 id="page-title"></h2>
             <div id="page-content" title="This is lightly-rendered markup" hidden="" class="content"></div>
-            <table class="describe" id="page-table"></table>
+            <table class="describe striped" id="page-table"></table>
             <div id="page-interactions" data-pageid="" class="flexrow">
                 <button id="watch-page" hidden="" onclick="return t_page_watch(this, true)">Watch</button>
                 <button id="unwatch-page" hidden="" onclick="return t_page_watch(this, false)">Unwatch</button>
@@ -157,7 +159,7 @@
             <div id="page-history-section" hidden="">
                 <h3>Page history: <button id="page-history-toggle"></button></h3>
                 <div id="page-history-container">
-                    <div id="page-history-list"></div>
+                    <div id="page-history-list" class="striped"></div>
                     <div id="page-history-nav" class="nav">
                         <a href="#" id="history-newer">Newer</a>
                         <a href="#" id="history-older">Older</a>
@@ -168,7 +170,7 @@
             <h3>New Page Here: <button id="page-submit-toggle"></button></h3>
             <div id="page-submit-container"></div>
             <h3>Subpages:</h3>
-            <div id="page-subpages" class="results"></div>
+            <div id="page-subpages" class="resultlist"></div>
             <div id="page-subpages-nav" class="nav">
                 <a href="#" id="page-subpageup">Next Subpages</a>
                 <a href="#" id="page-subpagedown">Previous Subpages</a>
@@ -205,7 +207,7 @@
             <p><b>NOTE:</b> There's a chance the blog generator doesn't run instantly for any blog creates or updates. If you just created or made
             changes to your blog that aren't showing up in the published link, give it up to a few minutes.</p>
             <h3>Published blogs:</h3>
-            <div id="published-blogs">Loading... please wait</div>
+            <div id="published-blogs" class="resultlist">Loading... please wait</div>
         </div>
         <div id="t_search" data-onload="search_onload">
             <form id="search-form"> <!-- onsubmit="return t_search_submit(this)">-->
@@ -227,7 +229,7 @@
                 <input type="submit" value="Search">
             </form>
             <div id="search-about" class="annotation"></div>
-            <div id="search-results" class="results"></div>
+            <div id="search-results" class="resultlist"></div>
             <div id="search-results-nav" class="nav">
                 <a href="#" id="search-up">Next results</a>
                 <a href="#" id="search-down">Previous results</a>
@@ -235,7 +237,7 @@
         </div>
         <div id="t_notifications" data-onload="notifications_onload">
             <h3>Your notifications:</h3>
-            <div id="notifications-container"></div>
+            <div id="notifications-container" class="resultlist"></div>
             <div id="notifications-nav" class="nav">
                 <a href="#" id="notifications-up">Older Notifications</a>
                 <a href="#" id="notifications-down">Newer Notifications</a>
@@ -333,19 +335,25 @@
             </div>
         </div>
         <!-- The rest of this stuff are sort of "subtemplates", like little repeated items used within the page -->
-        <div id="page_item" data-onload="page_item_onload">
+        <div id="page_item" data-onload="page_item_onload" class="flexrow clean">
             <a data-title></a>
-            <span data-type></span>
-            <time data-time class="annotation"></time>
             <span data-private>🔒</span>
-            <span data-bloglink-container hidden="">Published: <a data-bloglink></a></span>
-        </div>
-        <div id="comment_item" data-onload="comment_item_onload">
-            <img data-avatar>
-            <span data-username class="important label username"></span>
-            <span data-comment></span>
+            <span data-type class="pushright"></span>
             <time data-time class="annotation"></time>
-            <span data-contentid class="annotation"></span>
+            <div data-bloglink-container class="flexrow" hidden=""><span>Published:</span><a data-bloglink></a></div>
+        </div>
+        <div id="comment_item" data-onload="comment_item_onload" class="comment">
+            <div class="commentleft">
+                <img data-avatar>
+            </div>
+            <div class="commentright">
+                <div class="commenttop">
+                    <span data-username class="important label username"></span>
+                    <time data-time class="annotation pushright"></time>
+                    <span data-contentid class="annotation"></span>
+                </div>
+                <div data-comment class="content"></div>
+            </div>
         </div>
         <div id="activity_item" data-onload="activity_item_onload">
             <img data-avatar>
@@ -373,7 +381,7 @@
         </div>
         <div id="notification_item" data-onload="notification_item_onload">
             <div data-pagedata></div>
-            <div data-notifications>
+            <div data-notifications class="flexrow notifications">
                 <span>Comments: </span> <span data-commentcount></span>
                 <span>Activity: </span> <span data-activitycount></span>
                 <button data-clear data-pageid="" onclick="return t_notification_item_clear(this)">Clear notifications</button>
