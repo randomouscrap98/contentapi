@@ -1252,7 +1252,7 @@ Api.prototype.IsPrivate = function(content)
 {
     return !this.IsAllowed(content, 0, "R");
     //return !(content.permissions[0] && content.permissions[0].indexOf("R") >= 0);
-}
+};
 
 //Return whether or not the content has granted the given action to the given
 //user (you can pass 0 or undefined or any falsey value for userId if it's general)
@@ -1260,4 +1260,16 @@ Api.prototype.IsAllowed = function(content, userId, action)
 {
     return (content.permissions[0] && content.permissions[0].indexOf(action) >= 0) ||
            (userId && content.permissions[userId] && content.permissions[userId].indexOf(action) >= 0);
-}
+};
+
+Api.prototype.IsUserAllowed = function(content, user, action)
+{
+    if(user.groups){
+        for(var i = 0; i < user.groups.length; i++)
+        {
+            if(this.IsAllowed(content, user.groups[i], action))
+                return true;
+        }
+    }
+    return this.IsAllowed(content, user.id, action);
+};

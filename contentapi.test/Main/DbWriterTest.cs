@@ -1208,7 +1208,7 @@ public class DbWriterTest : ViewUnitTestBase, IDisposable
 
         for(var i = 0; i < rng.AlphaSequenceAvailableAlphabet; i++)
         {
-            var page = GetNewPageView();
+            var page = GetNewFileView(); //only files have random hashes now
             var written = await writer.WriteAsync(page, uid);
             Assert.Single(written.hash);
             hashSet.Add(written.hash);
@@ -1216,8 +1216,40 @@ public class DbWriterTest : ViewUnitTestBase, IDisposable
         }
 
         //BUT, attempting to add just ONE more should fail!
-        var failPage = GetNewPageView();
+        var failPage = GetNewFileView();
         await Assert.ThrowsAnyAsync<InvalidOperationException>(() => writer.WriteAsync(failPage, uid));
+    }
+
+    [Theory]
+    [InlineData("this is normal", "this-is-normal")]
+    [InlineData("isn't this CRAZY&&*(no)", "isnt-this-crazyno")]
+    [InlineData("nono", null)]
+    public async Task GenerateHash_FromName(string name, string? hash)
+    {
+        config.AutoHashChars = 1;
+        config.AutoHashMaxRetries = 20;
+        config.HashMinLength = 8;
+
+        var page = GetNewPageView(); //only files have random hashes now
+        page.name = name;
+        var written = await writer.WriteAsync(page, NormalUserId);
+
+        Assert.NotEmpty(written.hash);
+
+        if(hash == null)
+        {
+            Assert.Equal(1, written.hash.Length);
+        }
+        else 
+        {
+            Assert.Equal(hash, written.hash);
+
+            //Write another page with the same name
+            var page2 = GetNewPageView();
+            page2.name = name;
+            var written2 = await writer.WriteAsync(page2, NormalUserId);
+            Assert.Equal($"{hash}1", written2.hash);
+        }
     }
 
     [Theory]
@@ -1356,7 +1388,9 @@ public class DbWriterTest : ViewUnitTestBase, IDisposable
             Assert.Equal(content, writtenVote.contentId);
             Assert.Equal(messageId, writtenVote.messageId);
             Assert.Equal(uid, writtenVote.userId);
-            Assert.Empty(events.Events); //There should be NO events for votes right now!
+            Assert.Single(events.Events);
+            Assert.Equal(messageId, events.Events.First().refId);
+            Assert.Equal(EventType.message_event, events.Events.First().type);
         }
         else if(content <= 0 || content >= 1000)
         {

@@ -13,6 +13,7 @@ public class UserControllerConfig
     public bool AccountCreationEnabled {get;set;} = true;
     public string ConfirmationType {get;set;} = "Standard";
     //Also accepts "Instant" and "Restricted:email,email,etc"
+    public string HostName {get;set;} = "";
 }
 
 public class UserController : BaseController
@@ -20,18 +21,20 @@ public class UserController : BaseController
     protected IUserService userService;
     protected UserControllerConfig config;
     protected IEmailService emailer;
+    protected IRandomGenerator random;
 
     const string InstantConfirmation = "Instant";
     const string StandardConfirmation = "Standard";
     const string RestrictedConfirmation = "Restricted:";
 
     public UserController(BaseControllerServices services, IUserService userService,
-        UserControllerConfig config, IEmailService emailer)
+        UserControllerConfig config, IEmailService emailer, IRandomGenerator random)
         : base(services)
     {
         this.userService = userService;
         this.emailer = emailer;
         this.config = config;
+        this.random = random;
     }
 
     public class UserCredentials
@@ -127,6 +130,14 @@ public class UserController : BaseController
         return config.ConfirmationType.Substring(RestrictedConfirmation.Length).Split(",", StringSplitOptions.RemoveEmptyEntries).Select(x => x.Trim()).ToList();
     }
 
+    protected string GetHost()
+    {
+        if(!string.IsNullOrWhiteSpace(config.HostName))
+            return config.HostName;
+        else
+            return Request.Host.ToString();
+    }
+
     [HttpPost("sendregistrationcode")]
     public Task<ActionResult<bool>> SendRegistrationCode([FromBody]string email)
     {
@@ -147,7 +158,7 @@ public class UserController : BaseController
                 var message = new EmailMessage();
                 message.Recipients = GetRestrictedEmails();
                 message.Title = $"User {user.username} would like to create an account";
-                message.Body = $"User {user.username} is trying to create an account using email {email} on {Request.Host}\n\nIf this looks acceptable, please send them " +
+                message.Body = $"User {user.username} is trying to create an account using email {email} on {GetHost()}\n\nIf this looks acceptable, please send them " +
                     $"an email with instructions on how to create an account, using registration code:\n\n{registrationCode}";
 
                 //TODO: language? Configuration? I don't know
@@ -156,8 +167,17 @@ public class UserController : BaseController
             else
             {
                 //TODO: language? Configuration? I don't know
+                //if(!string.IsNullOrWhiteSpace(config.CustomEmailBody))
+                //{
+                //    var emailMessage = new EmailMessage (email, "Registration instructions", config.CustomEmailBody.Replace("{{code}}", registrationCode));
+                //    emailMessage.IsHtml = true;
+                //    await emailer.SendEmailAsync(emailMessage);
+                //}
+                //else
+                //{
                 await emailer.SendEmailAsync(new EmailMessage(email, "Registration instructions",
-                    $"Your registration code for '{Request.Host}' is:\n\n{registrationCode}"));
+                    $"Your registration code for '{GetHost()}' is:\n\n{registrationCode}"));
+                //}
             }
 
             return true;
@@ -200,44 +220,54 @@ public class UserController : BaseController
                 throw new RequestException("User account creation is instant, meaning there is no email system in place and no way to recover passwords!");
             
             var userId = await userService.GetUserIdFromEmailAsync(email);
-            var tempPassword = userService.GetTemporaryPassword(userId);
-            var user = await CachedSearcher.GetById<UserView>(RequestType.user, userId);
-            var utcExpire = tempPassword.ExpireDate.ToUniversalTime();
 
-            if(config.ConfirmationType.StartsWith(RestrictedConfirmation))
-            {
-                var message = new EmailMessage();
-                message.Recipients = GetRestrictedEmails();
-                message.Title = $"User {user.username} is trying to recover their account";
-                message.Body = $"User {user.username} is trying to recover their account using email {email} on {Request.Host}\n\nIf this looks acceptable, please send them " +
-                    $"an email stating they have a ONE TIME USE temporary password that will last until {utcExpire} UTC ({StaticUtils.HumanTime(utcExpire - DateTime.UtcNow)}):\n\n{tempPassword.Key}";
+            //if(await userService.IsPasswordExpired(userId))
+            //{
+            //    //Generate a new password for the user. Is this OK? They MUST have a new password
+            //    //in order to change values for themselves, LIKE their password itself! They're stuck
+            //    //in a contradiction if not: their password is expired, but the only way to change
+            //    //your password is to HAVE a valid password...
+            //    var secretData = new UserSetPrivateData() {
+            //        password = random.GetRandomPassword()
+            //    };
 
-                //TODO: language? Configuration? I don't know
-                await emailer.SendEmailAsync(message);
-            }
-            else
-            {
+            //    await userService.SetPrivateData(userId, secretData);
+
+            //    await emailer.SendEmailAsync(new EmailMessage(email, "Account Recovery",
+            //        $"Someone (hopefully you!) requested account recovery on '{GetHost()}' for the user associated with this email. Usually this generates " +
+            //        "a temporary one-time-use password which expires quickly. However, because your password is expired, we have generated a new " +
+            //        "permanent password for you. We recommend you change it as soon as possible"));
+            //}
+            //else
+            //{
+                var tempPassword = userService.GetTemporaryPassword(userId);
+                var utcExpire = tempPassword.ExpireDate.ToUniversalTime();
+
                 //TODO: language? Configuration? I don't know
                 await emailer.SendEmailAsync(new EmailMessage(email, "Account Recovery",
-                    $"You can temporarily access your account on '{Request.Host}' for another {StaticUtils.HumanTime(utcExpire - DateTime.UtcNow)} using the ONE TIME USE temporary password:\n\n{tempPassword.Key}"));
-            }
+                    $"You can temporarily access your account on '{GetHost()}' for another {StaticUtils.HumanTime(utcExpire - DateTime.UtcNow)} using the ONE TIME USE temporary password:\n\n{tempPassword.Key}"));
+            //}
+            //var user = await CachedSearcher.GetById<UserView>(RequestType.user, userId);
+
+            //if(config.ConfirmationType.StartsWith(RestrictedConfirmation))
+            //{
+            //    var message = new EmailMessage();
+            //    message.Recipients = GetRestrictedEmails();
+            //    message.Title = $"User {user.username} is trying to recover their account";
+            //    message.Body = $"User {user.username} is trying to recover their account using email {email} on {GetHost()}\n\nIf this looks acceptable, please send them " +
+            //        $"an email stating they have a ONE TIME USE temporary password that will last until {utcExpire} UTC ({StaticUtils.HumanTime(utcExpire - DateTime.UtcNow)}):\n\n{tempPassword.Key}";
+
+            //    //TODO: language? Configuration? I don't know
+            //    await emailer.SendEmailAsync(message);
+            //}
+            //else
+            //{
+
+            //}
 
             return true;
         });
     }
-
-    //[HttpGet("emaillog")]
-    //public Task<ActionResult<List<EmailLog>>> GetEmailLog()
-    //{
-    //    return MatchExceptions(() =>
-    //    {
-    //        if(!config.BackdoorEmailLog)
-    //            throw new ForbiddenException("This is a debug endpoint that has been deactivated!");
-    //        
-    //        return Task.FromResult((emailer as NullEmailService ?? 
-    //            throw new InvalidOperationException("The emailer is not set up for logging! This endpoint is only for the null email service")).Log);
-    //    });
-    //}
 
     [Authorize()]
     [HttpGet("privatedata")]
@@ -248,19 +278,21 @@ public class UserController : BaseController
 
     public class UserSetPrivateDataProtected : UserSetPrivateData
     {
+        public string currentEmail {get;set;} = "";
         public string currentPassword {get;set;} = "";
     }
 
-    [Authorize()]
+    //NOTE: This used to be an "authorize" endpoint, but then the catch-22 of needing a password to CHANGE your password
+    //came up, so now it takes a full login
     [HttpPost("privatedata")]
-    public Task<ActionResult<bool>> SetPrivateData([FromBody]UserSetPrivateDataProtected data)
+    public Task<ActionResult<string>> SetPrivateData([FromBody]UserSetPrivateDataProtected data)
     {
         return MatchExceptions(async () => 
         {
-            var userId = GetUserIdStrict();
-            await userService.VerifyPasswordAsync(userId, data.currentPassword); //have to make sure the password given is accurate
+            var userId = await userService.GetUserIdFromEmailAsync(data.currentEmail);
+            var token = await userService.LoginEmailAsync(data.currentEmail, data.currentPassword);
             await userService.SetPrivateData(userId, data);
-            return true;
+            return token;
         });
     }
 }

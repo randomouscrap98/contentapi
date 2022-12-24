@@ -220,4 +220,26 @@ public class BaseController : Controller
         if(count > limit.Item1)
             throw new RateLimitException($"{limit.Item1} requests per {limit.Item2.TotalSeconds} seconds, you're at {count}");
     }
+
+    protected string? GetRoute(string action, string? controller = null)
+    {
+        return Url.Action(action, controller ?? GetType().Name, new { httproute = "DefaultApi" });
+    }
+
+    /// <summary>
+    /// Get a user id from the given token, if it's valid. Throws exceptions on failure (does not return invalid userIds)
+    /// </summary>
+    /// <param name="token"></param>
+    /// <returns></returns>
+    protected long GetUserIdFromToken(string token)
+    {
+        //Have to authenticate
+        var claims = services.authService.ValidateToken(token) ?? throw new TokenException("Couldn't validate token!");
+        var userId = services.authService.GetUserId(claims.Claims) ?? throw new TokenException("No valid userID assigned to token! Is it expired?");
+
+        if (userId == 0)
+            throw new InvalidOperationException("UNEXPECTED: token had uid 0!");
+
+        return userId;
+    }
 }

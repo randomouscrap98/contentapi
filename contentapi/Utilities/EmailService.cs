@@ -34,6 +34,9 @@ public class EmailService : IEmailService
             mailMessage.Subject = $"{Config.SubjectFront} - {message.Title}";
             mailMessage.Body = message.Body;
 
+            if(message.IsHtml)
+                mailMessage.IsBodyHtml = true;
+
             logger.LogDebug($"Sending email to {string.Join(",", message.Recipients)} using {Config.Host}:{Config.User}");
 
             using (var client = new SmtpClient(Config.Host))

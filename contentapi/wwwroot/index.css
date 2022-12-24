@@ -1,5 +1,6 @@
 body {
-    font-family: monospace;
+    font-family: sans-serif;
+    line-height: 1.4;
     margin: 0;
 }
 
@@ -7,11 +8,16 @@ body {
     margin: 1em;
 }
 
-label, input:not([type="checkbox"]), textarea, select {
+label {
+    display: block;
+    margin-bottom: 0.3em;
+}
+
+input:not([type="checkbox"]), textarea, select {
     display: block;
     width: 100%;
     max-width: 350px;
-    margin-bottom: 0.3em;
+    margin-bottom: 0.5em;
 }
 
 textarea {
@@ -33,6 +39,7 @@ header a:visited, header a:link {
     color: #CCC;
     text-decoration: none;
     font-weight: bold;
+    margin-right: 0.25em;
 }
 
 header a.active {
@@ -44,12 +51,22 @@ img {
     max-height: 50vh;
 }
 
+table, td, th {
+    border: 1px solid #DDD;
+    border-collapse: collapse;
+    padding: 0.2em 0.5em;
+}
+
 .error { color: red; }
 .success { color: green; }
 .systemmsg { color: cornflowerblue; }
 .successmsg { color: darkseagreen; }
 .broadcastmsg { color: palevioletred; }
 .userlistmsg { color: coral; }
+
+.describe {
+    margin: 1em;
+}
 
 .describe tr td:first-of-type {
     font-weight: bold;
@@ -78,10 +95,11 @@ img {
 
 .content {
     white-space: pre-wrap;
-    margin: 0.5em;
-    padding: 0.3em;
+    padding: 0.75em;
     background-color: #f7f7f7;
     border: 1px solid #DDD;
+    border-radius: 0.3em;
+    word-wrap: break-word;
 }
 
 .console {
@@ -95,11 +113,68 @@ img {
     white-space: pre-wrap;
 }
 
-.allblock > *:not([hidden]) {
-    display: block;
+/* Simple classes that just do one thing really well */
+.allblock > *:not([hidden]) { display: block; }
+.resultlist > :nth-child(even), .striped > :nth-child(even){ background-color: #EEE; }
+.resultlist > :not(:last-child), .lined > :not(:last-child) { border-bottom: 1px solid #DDD; }
+.pushright { margin-left: auto; }
+[hidden] { display: none !important; }
+
+.flexrow, .nav {
+    display: flex;
+    flex-wrap: wrap;
+}
+
+.flexrow > *, .nav > * {
+    margin-right: 0.75em;
+}
+
+.resultlist > *, .clean {
+    padding: 0.05em 0.2em;
+    align-items: center;
 }
 
 .marginvertical {
     margin-top: 1em;
     margin-bottom: 1em;
+}
+
+.notifications {
+    margin: 0.2em;
+}
+
+/* Hacks! */
+.activity .username {
+    margin-right: 0.2em;
+    margin-left: -0.3em;
+}
+
+/* ------------------------------------ */
+/* Comments always seem to require MORE */
+/* ------------------------------------ */
+
+.comment {
+    display: flex;
+    align-items: flex-start; /* So they don't stretch */
+    margin-bottom: 0.4em;
+}
+.commentleft {
+    margin-right: 0.5em;
+    flex: none;
+}
+.commentleft img {
+    border-radius: 0.2em;
+    margin-top: 0.2em;
+}
+.commentright {
+    width: 100%;
+    min-width: 0; /* to break content */
+}
+.commenttop {
+    margin-bottom: 0.1em;
+    display: flex;
+    align-items: flex-end;
+}
+.comment .content {
+    padding: 0.2em 0.4em;
 }

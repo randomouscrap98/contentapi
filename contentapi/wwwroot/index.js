@@ -111,6 +111,10 @@ function activity_loadinto(container, result, restorable)
     });
 }
 
+function ObjectToDisplay(obj)
+{
+    return JSON.stringify(obj).replaceAll("\",\"", "\", \"");
+}
 
 // Essentially a spoiler maker, useful for collapsible elements. The button is the control for showing or hiding
 // the cointainer, and the visibleState is the initial visibility (set to false to hide initially). Note: the
@@ -366,10 +370,10 @@ function page_onload(template, state)
             //content.appendChild(Parse.parseLang(page.text, page.values.markupLang || "plaintext"));
             delete page.name;
             delete page.text;
-            page.engagement = JSON.stringify(page.engagement);
-            page.values = JSON.stringify(page.values);
-            page.keywords = JSON.stringify(page.keywords);
-            page.permissions = JSON.stringify(page.permissions);
+            page.engagement = ObjectToDisplay(page.engagement);
+            page.values = ObjectToDisplay(page.values);
+            page.keywords = ObjectToDisplay(page.keywords);
+            page.permissions = ObjectToDisplay(page.permissions);
             MakeTable(page, table);
 
             setupEditor("edit", originalPage);
@@ -378,6 +382,7 @@ function page_onload(template, state)
             template.querySelector("#page-raw-link").removeAttribute("hidden");
             template.querySelector("#page-history-section").removeAttribute("hidden");
             template.querySelector("#page-delete").removeAttribute("hidden");
+            template.querySelector("#vote-submit-page").removeAttribute("hidden");
             template.querySelector("#page-raw-link").setAttribute("href", api.GetRawContentUrl(page.hash));
 
             if(page.contentType == 3) //A file
@@ -608,7 +613,6 @@ function admin_onload(template, state)
 {
     SetupPagination(template.querySelector("#adminlog-up"), template.querySelector("#adminlog-down"), state, "alp");
     SetupPagination(template.querySelector("#ban-up"), template.querySelector("#ban-down"), state, "bp", "ban-title");
-    //SetupPagination(template.querySelector("#activity-older"), template.querySelector("#activity-newer"), state, "actp");
 
     var activeOnlyInput = template.querySelector("#ban-activeonly");
     activeOnlyInput.checked = state.abonly;
@@ -653,16 +657,6 @@ function admin_onload(template, state)
             container.appendChild(item);
         });
     }));
-
-    //api.Search(new RequestParameter({ delete : APICONST.ACTIONS.DELETE }, [
-    //    new RequestSearchParameter("activity", "*", "action = @delete", "date_desc", SEARCHRESULTSPERPAGE, SEARCHRESULTSPERPAGE * state.actp),
-    //    new RequestSearchParameter("activity", "*", "contentId in @activity.contentId", "date_desc", 1, 1, "previous"),
-    //    new RequestSearchParameter("content", APICONST.FIELDSETS.CONTENTQUICK, "id in @activity.contentId"),
-    //    new RequestSearchParameter("user", "*", "id in @activity.userId or id in @previous.userId")
-    //]), new ApiHandler(d =>
-    //{
-    //    activity_loadinto(template.querySelector("#activity-list"), d.result);
-    //}));
 
     api.Search(new RequestParameter({ }, [
         new RequestSearchParameter("ban", "*", state.abonly ? "!activebans()" : "", "id_desc", SEARCHRESULTSPERPAGE, SEARCHRESULTSPERPAGE * state.bp),
@@ -875,7 +869,7 @@ function comment_item_onload(template, state)
         username.textContent = "???";
     }
     username.title = state.createUserId;
-    comment.textContent = state.text;
+    Markup.convert_lang(state.text, state.values.markupLang || "plaintext", comment);
     comment.title = state.id;
     time.textContent = state.createDate;
     contentid.textContent = `(${state.contentId})`;
@@ -891,7 +885,6 @@ function activity_item_onload(template, state)
 
     template.setAttribute("data-id", state.id);
     template.setAttribute("data-contentid", state.contentId);
-    //template.setAttribute("data-undeleteid", state.undeleteId);
 
     if(state.user)
     {
@@ -912,8 +905,6 @@ function activity_item_onload(template, state)
         pagelink.textContent = `??? (${state.contentId})`;
     if(state.restorable)
         template.querySelector("[data-restore]").removeAttribute("hidden");
-    //if(state.undeleteId)
-    //    template.querySelector("[data-undelete]").removeAttribute("hidden");
         
     time.textContent = state.date;
 }
@@ -1315,8 +1306,3 @@ function t_ban_submit(form)
 
     return false;
 }
-
-//function t_filter_adminlog_submit(form)
-//{
-//    return false;
-//}

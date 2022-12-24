@@ -155,13 +155,15 @@ body[data-sidebarhidden] {
 [data-fancy] .avatar { border-radius: 0; box-sizing: border-box; }
 
 [data-fancy] .message { display: flex; }
-[data-fancy] .message .content { margin-left: 0; /*margin-top: 0.3em;*/ }
+[data-fancy] .message .content { margin-left: 0.1em; /*margin-top: 0.3em;*/ }
 [data-fancy] .message .avatar { 
     width: 2.7em; 
     height: 2.7em; 
     margin-top: 0.29em;
     margin-right: 0.35em;
-    border: var(--stdborder);
+    border: none;
+    border-radius: 0.3em;
+    /*border: var(--stdborder);*/
 }
 
 [data-fancy] .leftmessage { flex: none; }
@@ -187,6 +189,8 @@ body[data-sidebarhidden] {
     margin: 0;
 }
 
+[data-fancy] .userinfo .user { text-decoration: none; }
+
 [data-fancy] ::-webkit-scrollbar {
   background-color: var(--T-bg); /* or add it to the track */
 }
@@ -195,7 +199,10 @@ body[data-sidebarhidden] {
   background: var(--notificationbg);
 }
 
-
+[data-fancy] .rethread {
+    margin-left: 0.5em;
+    margin-top: 0.25em;
+}
 
 /* this is irritating, how do I fix this? */
 body[data-theme="purple"][data-fancy] .message .avatar { margin-top: 0.18em; }

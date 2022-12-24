@@ -2,12 +2,14 @@ using System;
 using System.Data;
 using System.Linq;
 using System.Threading;
+using contentapi.data.Views;
 using contentapi.Db;
 using contentapi.History;
 using contentapi.Setup;
 using Microsoft.Data.Sqlite;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Logging;
+using Newtonsoft.Json.Linq;
 using Xunit;
 
 namespace contentapi.test;
@@ -125,4 +127,8 @@ public class UnitTestBase
         return folder;
     }
 
+    public T? GetValue<T>(MessageView view, string key)
+    {
+        return ((JToken)view.values[key]).ToObject<T>();
+    }
 }

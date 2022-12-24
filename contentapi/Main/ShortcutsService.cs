@@ -12,6 +12,11 @@ public class ShortcutsService
     protected IMapper mapper;
     protected ILogger logger;
 
+    public const string RethreadKey = "rethread";
+    public const string OriginalContentIdKey = "originalContentId";
+    public const string StartIdentifier = "start";
+    public const string EndIdentifier = "end";
+
     public ShortcutsService(ILogger<ShortcutsService> logger, IDbServicesFactory factory, IViewTypeInfoService typeInfoService, IMapper mapper)
     {
         this.dbFactory = factory;
@@ -106,6 +111,14 @@ public class ShortcutsService
         return variables.First();
     }
 
+    public class RethreadMeta 
+    {
+        public DateTime date {get;set;} = DateTime.UtcNow;
+        public int count {get;set;}
+        public string position {get;set;} = "";
+        public long lastContentId {get;set;}
+    }
+
     /// <summary>
     /// Move all the given messages (by id) to the given parent. Fails early if any message is not found, or a problem is found
     /// with permissions before the move. May still fail in the middle.
@@ -123,6 +136,10 @@ public class ShortcutsService
 
         if(string.IsNullOrWhiteSpace(message))
             message = $"Rethreading {messageIds.Count} comments to content {newParent}";
+        
+        //Just do nothing so we don't have to worry about empty!
+        if(messageIds.Count == 0)
+            return new List<MessageView>();
 
         //Go lookup the messages
         var messages = await search.SearchSingleType<MessageView>(requester, new SearchRequest()
@@ -136,18 +153,49 @@ public class ShortcutsService
             { "ids", messageIds }
         });
 
+        //Find ids that weren't in the resultset; if there are any, the rethread fails early
         var leftovers = messageIds.Except(messages.Select(x => x.id)).ToList();
 
         if(leftovers.Count > 0)
             throw new RequestException($"(Precheck): Some messages were not found: {string.Join(",", leftovers)}");
+        
+        //WARN: Assume all messages come from the same content!
+        var oldContentId = messages.First().contentId;
 
         //Get a copy of them but with the parent reset
         var newMessages = messages.Select(x => 
         {
             var m = mapper.Map<MessageView>(x);
+            //If this is the first rethread for this message, stamp it with the original contentId it was posted in
+            if(!m.values.ContainsKey(OriginalContentIdKey))
+                m.values.Add(OriginalContentIdKey, x.contentId);
             m.contentId = newParent;
             return m;
         }).OrderBy(x => x.id).ToList();
+
+        var addMeta = new Action<MessageView, string>((view,position) => {
+            //We overwrite previous metadata, so to make that easier, always add the key
+            //(so whether it existed or not, it's fine)
+            if(!view.values.ContainsKey(RethreadKey))
+                view.values.Add(RethreadKey, true); //Placeholder value
+            view.values[RethreadKey] = new RethreadMeta { 
+                date = DateTime.UtcNow,
+                position = position,
+                count = newMessages.Count,
+                lastContentId = oldContentId //DON'T use the view, they already have the contentId set!
+            };
+        });
+
+        //Stamp the first and last messages (or the singular message) with rethread metadata
+        if(newMessages.Count == 1)
+        {
+            addMeta(newMessages.First(), $"{StartIdentifier}|{EndIdentifier}");
+        }
+        else
+        {
+            addMeta(newMessages.First(), StartIdentifier);
+            addMeta(newMessages.Last(), EndIdentifier);
+        }
         
         //Now, verify them all. If ANY of them throw an error, it will happen BEFORE work was performed
         for(var i = 0; i < newMessages.Count; i++) 

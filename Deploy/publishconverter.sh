@@ -8,6 +8,7 @@ pfolder="/home/csanchez/contentapi_convert"           # The REMOTE location to P
 rdf="rl"
 port=241
 
+
 # space separated
 deploy="Deploy"
 copyfolders="$deploy/dbmigrate.sh $deploy/dbmigrations"

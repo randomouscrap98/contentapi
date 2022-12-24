@@ -6,19 +6,19 @@
     <meta name="rating" content="general">
     <meta name="description" content="SBS default implementation">
     <link rel="icon" href="favicon.ico" type="image/x-icon">
-    <script src="api.js?v=1671729500"></script>
+    <script src="api.js?v=1671839705"></script>
     <!-- These are required for the 12y parser (markup) -->
-    <script src="markup/langs.js?v=1671729500"></script>
-    <script src="markup/legacy.js?v=1671729500"></script>
-    <script src="markup/parse.js?v=1671729500"></script>
-    <script src="markup/render.js?v=1671729500"></script>
-    <script src="markup/helpers.js?v=1671729500"></script>
-    <link rel="stylesheet" href="markup/markup.css?v=1671729500">
-    <link rel="stylesheet" href="markup.css?v=1671729500">
-    <script src="markup.js?v=1671729500"></script>
+    <script src="markup/langs.js?v=1671839705"></script>
+    <script src="markup/legacy.js?v=1671839705"></script>
+    <script src="markup/parse.js?v=1671839705"></script>
+    <script src="markup/render.js?v=1671839705"></script>
+    <script src="markup/helpers.js?v=1671839705"></script>
+    <link rel="stylesheet" href="markup/markup.css?v=1671839705">
+    <link rel="stylesheet" href="markup.css?v=1671839705">
+    <script src="markup.js?v=1671839705"></script>
     <!-- The scripts and styling for this page in particular -->
-    <script src="index.js?v=1671729500"></script>
-    <link rel="stylesheet" href="index.css?v=1671729500">
+    <script src="index.js?v=1671839705"></script>
+    <link rel="stylesheet" href="index.css?v=1671839705">
 </head>
 
 <body>
@@ -61,8 +61,10 @@
                 <input id="login-username" name="username" required="">
                 <label for="login-password">Password:</label>
                 <input id="login-password" name="password" type="password" required="">
-                <label for="login-extended">Stay logged in (1 year):</label>
-                <input id="login-extended" name="extended" type="checkbox">
+                <div class="flexrow">
+                    <label for="login-extended">Stay logged in (1 year):</label>
+                    <input id="login-extended" name="extended" type="checkbox">
+                </div>
                 <input type="submit" value="Login">
             </form>
             <hr>
@@ -96,7 +98,7 @@
         </div>
         <div id="t_user" data-onload="user_onload">
             <img src="" id="user-avatar">
-            <table class="describe" id="user-table"></table>
+            <table class="describe striped" id="user-table"></table>
             <button onclick="t_user_logout()">Logout</button>
             <a href="?t=uservariables">Manage user variables</a>
             <div id="user-update">
@@ -120,8 +122,9 @@
                     <input type="checkbox" name="tryResize" id="user-files-tryresize" checked="true" value="true">
                     <input type="submit" value="Upload">
                 </form>
+                <!-- Looking for 'currentPassword' for updating secret data? It doesn't exist yet lol -->
                 <h2>Your files:</h2>
-                <div id="user-files-container"></div>
+                <div id="user-files-container" class="resultlist"></div>
                 <div id="user-files-nav" class="nav">
                     <a href="#" id="user-files-pagedown">Newer files</a>
                     <a href="#" id="user-files-pageup">Older files</a>
@@ -129,20 +132,20 @@
             </div>
         </div>
         <div id="t_page" data-onload="page_onload">
-            <h2 id="page-title"></h2>
-            <div id="page-links" class="allblock">
+            <div id="page-links" class="allblock flexrow">
                 <a id="page-parent-link" hidden =""></a>
                 <a href="#" id="page-chat-link" hidden="">Go to chat for this page</a>
                 <a href="#" id="page-raw-link" hidden="">View raw content</a>
                 <a hidden="" id="filepage-link"><img id="filepage-image"></a>
             </div>
+            <h2 id="page-title"></h2>
             <div id="page-content" title="This is lightly-rendered markup" hidden="" class="content"></div>
-            <table class="describe" id="page-table"></table>
-            <div id="page-interactions" data-pageid="">
+            <table class="describe striped" id="page-table"></table>
+            <div id="page-interactions" data-pageid="" class="flexrow">
                 <button id="watch-page" hidden="" onclick="return t_page_watch(this, true)">Watch</button>
                 <button id="unwatch-page" hidden="" onclick="return t_page_watch(this, false)">Unwatch</button>
                 <div id="current-vote-container-page" hidden="">Current vote: <span id="current-vote-page"></span></div>
-                <div id="vote-submit-page">
+                <div id="vote-submit-page" hidden="">
                     <select id="vote-options-page"></select>
                     <button id="vote-page">Submit vote</button>
                     <button id="vote-delete-page" hidden="">Delete vote</button>
@@ -156,7 +159,7 @@
             <div id="page-history-section" hidden="">
                 <h3>Page history: <button id="page-history-toggle"></button></h3>
                 <div id="page-history-container">
-                    <div id="page-history-list"></div>
+                    <div id="page-history-list" class="resultlist"></div>
                     <div id="page-history-nav" class="nav">
                         <a href="#" id="history-newer">Newer</a>
                         <a href="#" id="history-older">Older</a>
@@ -167,7 +170,7 @@
             <h3>New Page Here: <button id="page-submit-toggle"></button></h3>
             <div id="page-submit-container"></div>
             <h3>Subpages:</h3>
-            <div id="page-subpages" class="results"></div>
+            <div id="page-subpages" class="resultlist"></div>
             <div id="page-subpages-nav" class="nav">
                 <a href="#" id="page-subpageup">Next Subpages</a>
                 <a href="#" id="page-subpagedown">Previous Subpages</a>
@@ -204,7 +207,7 @@
             <p><b>NOTE:</b> There's a chance the blog generator doesn't run instantly for any blog creates or updates. If you just created or made
             changes to your blog that aren't showing up in the published link, give it up to a few minutes.</p>
             <h3>Published blogs:</h3>
-            <div id="published-blogs">Loading... please wait</div>
+            <div id="published-blogs" class="resultlist">Loading... please wait</div>
         </div>
         <div id="t_search" data-onload="search_onload">
             <form id="search-form"> <!-- onsubmit="return t_search_submit(this)">-->
@@ -220,16 +223,13 @@
                 <label for="search-text">Search:</label>
                 <input id="search-text" name="search">
                 <label for="search-field">Field:</label>
-                <!--<input id="search-field" list="search-field-options" name="field" required="">-->
                 <select id="search-field" name="field"></select>
                 <label for="search-sort">Sort:</label>
-                <!--<input id="search-sort" list="search-sort-options" name="sort">
-                <datalist id="search-sort-options"></datalist>-->
                 <select id="search-sort" name="sort"></select>
                 <input type="submit" value="Search">
             </form>
             <div id="search-about" class="annotation"></div>
-            <div id="search-results" class="results"></div>
+            <div id="search-results" class="resultlist"></div>
             <div id="search-results-nav" class="nav">
                 <a href="#" id="search-up">Next results</a>
                 <a href="#" id="search-down">Previous results</a>
@@ -237,7 +237,7 @@
         </div>
         <div id="t_notifications" data-onload="notifications_onload">
             <h3>Your notifications:</h3>
-            <div id="notifications-container"></div>
+            <div id="notifications-container" class="resultlist"></div>
             <div id="notifications-nav" class="nav">
                 <a href="#" id="notifications-up">Older Notifications</a>
                 <a href="#" id="notifications-down">Newer Notifications</a>
@@ -271,12 +271,10 @@
         </div>
         <div id="t_admin" data-onload="admin_onload">
             <h2>Admin log:</h2>
-            <div id="adminlog-container"></div>
+            <div id="adminlog-container" class="resultlist"></div>
             <div id="adminlog-controls" class="marginvertical">
-                <!--<form onsubmit="return t_filter_adminlog_submit(this)">-->
                 <select id="filter-logtype"></select>
                 <button id="filter-submit">Filter</button>
-                <!--</form>-->
             </div>
             <div id="adminlog-nav" class="nav">
                 <a href="#" id="adminlog-down">Newer</a>
@@ -285,7 +283,7 @@
             <hr>
             <h2 id="ban-title">Bans:</h2>
             <label><input type="checkbox" id="ban-activeonly">Active only</label>
-            <div id="ban-container"></div>
+            <div id="ban-container" class="resultlist"></div>
             <div id="ban-nav" class="nav">
                 <a href="#" id="ban-down">Newer</a>
                 <a href="#" id="ban-up">Older</a>
@@ -310,12 +308,6 @@
                 </label>
                 <input type="submit" value="Submit">
             </form>
-            <!--<h3>Delete activity (restore)</h3>
-            <div id="activity-list"></div>
-            <div id="activity-nav" class="nav">
-                <a href="#" id="activity-newer">Newer</a>
-                <a href="#" id="activity-older">Older</a>
-            </div>-->
         </div>
         <div id="t_groupmanage" data-onload="groupmanage_onload">
             <h2>Group Editor</h2>
@@ -336,28 +328,34 @@
         </div>
         <div id="t_activity" data-onload="activity_onload">
             <h2>Page activity</h2>
-            <div id="activity-list"></div>
+            <div id="activity-list" class="resultlist"></div>
             <div id="activity-nav" class="nav">
                 <a href="#" id="activity-newer">Newer</a>
                 <a href="#" id="activity-older">Older</a>
             </div>
         </div>
         <!-- The rest of this stuff are sort of "subtemplates", like little repeated items used within the page -->
-        <div id="page_item" data-onload="page_item_onload">
+        <div id="page_item" data-onload="page_item_onload" class="flexrow clean">
             <a data-title></a>
-            <span data-type></span>
-            <time data-time class="annotation"></time>
             <span data-private>🔒</span>
-            <span data-bloglink-container hidden="">Published: <a data-bloglink></a></span>
-        </div>
-        <div id="comment_item" data-onload="comment_item_onload">
-            <img data-avatar>
-            <span data-username class="important label username"></span>
-            <span data-comment></span>
+            <span data-type class="pushright"></span>
             <time data-time class="annotation"></time>
-            <span data-contentid class="annotation"></span>
+            <div data-bloglink-container class="flexrow" hidden=""><span>Published:</span><a data-bloglink></a></div>
         </div>
-        <div id="activity_item" data-onload="activity_item_onload">
+        <div id="comment_item" data-onload="comment_item_onload" class="comment">
+            <div class="commentleft">
+                <img data-avatar>
+            </div>
+            <div class="commentright">
+                <div class="commenttop">
+                    <span data-username class="important label username"></span>
+                    <time data-time class="annotation pushright"></time>
+                    <span data-contentid class="annotation"></span>
+                </div>
+                <div data-comment class="content"></div>
+            </div>
+        </div>
+        <div id="activity_item" data-onload="activity_item_onload" class="flexrow activity">
             <img data-avatar>
             <span data-username class="important username"></span>
             <span data-activty>
@@ -366,7 +364,6 @@
             </span>
             <time data-time class="annotation"></time>
             <button data-restore="" hidden="" onclick="return t_activity_item_restore(this)">Restore</button>
-            <!--<button data-undelete="" class="error" hidden="" onclick="return t_activity_item_undelete(this)">Undelete</button>-->
         </div>
         <div id="user_item" data-onload="user_item_onload">
             <img data-avatar>
@@ -375,7 +372,7 @@
             <span data-super>⭐</span>
             <span data-group>🫂</span>
         </div>
-        <div id="file_item" data-onload="file_item_onload">
+        <div id="file_item" data-onload="file_item_onload" class="flexrow">
             <a data-filelink><img data-file></a>
             <a data-id href="#" class="important"></a>
             <span data-hash class="important"></span>
@@ -384,7 +381,7 @@
         </div>
         <div id="notification_item" data-onload="notification_item_onload">
             <div data-pagedata></div>
-            <div data-notifications>
+            <div data-notifications class="flexrow notifications">
                 <span>Comments: </span> <span data-commentcount></span>
                 <span>Activity: </span> <span data-activitycount></span>
                 <button data-clear data-pageid="" onclick="return t_notification_item_clear(this)">Clear notifications</button>
@@ -396,12 +393,12 @@
             <button data-edit>Edit</button>
             <button data-delete>Remove variable</button>
         </div>
-        <div id="adminlog_item" data-onload="adminlog_item_onload"> 
+        <div id="adminlog_item" data-onload="adminlog_item_onload" class="flexrow"> 
             <time data-time class="annotation"></time>
             <span data-id></span>
             <span data-text></span>
         </div>
-        <div id="ban_item" data-onload="ban_item_onload"> 
+        <div id="ban_item" data-onload="ban_item_onload" class="flexrow"> 
             <time data-time class="annotation"></time>
             <span>
                 <span data-banner></span>
@@ -414,28 +411,11 @@
             <span data-message></span>
             <span data-id></span>
         </div>
-        <!-- The container for the editor portion of groups -->
-        <!--<div id="group_edit" data-onload="group_edit_onload">
-            <form data-groupform onsubmit="return t_group_edit_submit(this)">
-                <input type="hidden" data-id>
-                <label>
-                    <div>Name:</div>
-                    <input data-name >
-                </label>
-                <label> 
-                    <input type="checkbox" data-super>
-                    <span>Super (regular users can't add or remove themselves)</span>
-                </label>
-                <input type="submit">
-            </form>
-        </div>-->
         <div id="group_item" data-onload="group_item_onload">
             <div><b>ID:</b> <span data-id>0</span></div>
             <div><b>Creator:</b> <span data-createuserid>0</span></div>
             <div><b>Create date:</b> <time data-createdate></time></div>
             <div data-editcontainer></div>
-            <!--<button data-edit>Edit group</button>
-            <button data-delete>Remove group</button>-->
         </div>
         <div id="user_editor" data-onload="user_editor_onload">
             <form onsubmit="return t_user_update_submit(this)">

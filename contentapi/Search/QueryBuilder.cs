@@ -11,6 +11,13 @@ using Newtonsoft.Json.Linq;
 
 namespace contentapi.Search;
 
+public class QueryBuilderConfig 
+{
+    public int ExpensiveMax {get;set;} = 2; //Can go UP TO 2 with fields *
+    //public double Pop1CommentValue {get;set;} = 1;
+    //public Dictionary<double, List<string>> Pop1EngagementValue {get;set;} = new Dictionary<double, List<string>>();
+}
+
 //This assumes that WHATEVER is given, that's EXACTLY what's used. No limits, no nothing.
 public class QueryBuilder : IQueryBuilder
 {
@@ -19,6 +26,7 @@ public class QueryBuilder : IQueryBuilder
     protected ISearchQueryParser parser;
     protected IMapper mapper;
     protected IPermissionService permissionService;
+    protected QueryBuilderConfig config;
 
     public const string DescendingAppend = "_desc";
     public const string CountSelect = $"count(*) as {Constants.CountField}";
@@ -35,11 +43,13 @@ public class QueryBuilder : IQueryBuilder
         { "valuekeyin", new MacroDescription("v", "ValueKeyIn", new List<RequestType> { RequestType.content, RequestType.message }) }, 
         { "valuekeynotin", new MacroDescription("v", "ValueKeyNotIn", new List<RequestType> { RequestType.content, RequestType.message }) }, 
         { "valuekeynotlike", new MacroDescription("v", "ValueKeyNotLike", new List<RequestType> { RequestType.content, RequestType.message }) }, 
-        { "contenttype", new MacroDescription("v", "IsContentType", new List<RequestType> { RequestType.keyword_aggregate, RequestType.message_aggregate, RequestType.activity_aggregate}) }, 
+        { "contenttype", new MacroDescription("v", "IsContentType", new List<RequestType> { RequestType.keyword_aggregate, RequestType.message_aggregate, RequestType.activity_aggregate, RequestType.message, RequestType.activity}) }, 
+        { "literaltypein", new MacroDescription("v", "LiteralTypeIn", new List<RequestType> { RequestType.keyword_aggregate, RequestType.message_aggregate, RequestType.activity_aggregate, RequestType.message, RequestType.activity}) }, 
         { "onlyparents", new MacroDescription("", "OnlyParents", new List<RequestType> { RequestType.content }) },
         { "onlynotparents", new MacroDescription("", "OnlyNotParents", new List<RequestType> { RequestType.content }) },
         { "userpage", new MacroDescription("v", "OnlyUserpage", new List<RequestType> { RequestType.content }) },
         { "basichistory", new MacroDescription("", "BasicHistory", new List<RequestType> { RequestType.activity }) },
+        { "basiccomments", new MacroDescription("", "BasicComments", new List<RequestType> { RequestType.message }) },
         { "notdeleted", new MacroDescription("", "NotDeletedMacro", new List<RequestType> { RequestType.content, RequestType.message, RequestType.user }) }, 
         { "notnull", new MacroDescription("f", "NotNullMacro", Enum.GetValues<RequestType>().ToList()) },
         { "null", new MacroDescription("f", "NullMacro", Enum.GetValues<RequestType>().ToList()) },
@@ -63,13 +73,15 @@ public class QueryBuilder : IQueryBuilder
     protected Dictionary<RequestType, Type> StandardViewRequests;
 
     public QueryBuilder(ILogger<QueryBuilder> logger, IViewTypeInfoService typeInfoService, 
-        IMapper mapper, ISearchQueryParser parser, IPermissionService permissionService)
+        IMapper mapper, ISearchQueryParser parser, IPermissionService permissionService,
+        QueryBuilderConfig config)
     {
         this.logger = logger;
         this.typeService = typeInfoService;
         this.mapper = mapper;
         this.parser = parser;
         this.permissionService = permissionService;
+        this.config = config;
 
         var assembly = System.Reflection.Assembly.GetAssembly(typeof(contentapi.data.Views.UserView)) ?? throw new InvalidOperationException("NO ASSEMBLY FOR QUERYBUILDER???");
 
@@ -204,6 +216,16 @@ public class QueryBuilder : IQueryBuilder
             )";
     }
 
+    public string LiteralTypeIn(SearchRequestPlus request, string value)
+    {
+        var typeInfo = typeService.GetTypeInfo<Content>();
+        return $@"{nameof(data.Views.IContentRelatedView.contentId)} in
+            (select {nameof(Content.id)}
+             from {typeInfo.selfDbInfo?.modelTable}
+             where {nameof(Content.literalType)} in {value}
+            )";
+    }
+
     public string OnlyParents(SearchRequestPlus request) => ParentQueryGenericMacro(request, true);
     public string OnlyNotParents(SearchRequestPlus request) => ParentQueryGenericMacro(request, false);
 
@@ -228,6 +250,13 @@ public class QueryBuilder : IQueryBuilder
              where contentType = {(int)InternalContentType.page}
              and deleted = 0
             )";
+    }
+
+    public string BasicComments(SearchRequestPlus request)
+    {
+        //var typeInfo = typeService.GetTypeInfo<Message>();
+        //WARN: this adds a dependency on data.Views! Consider putting it somewhere else!
+        return data.Views.ContentView.NaturalCommentQuery; 
     }
 
     public string InGroupMacro(SearchRequestPlus request, string group)
@@ -387,7 +416,10 @@ public class QueryBuilder : IQueryBuilder
 
         //Redo fieldlist if they asked for special formats
         if (r.fields == "*")
-            fields = new List<string>(r.typeInfo.fields.Keys);
+        {
+            fields = r.typeInfo.fields.Where(x => x.Value.expensive <= config.ExpensiveMax || r.expensive).Select(x => x.Key).ToList();
+            //new List<string>(r.typeInfo.fields.Keys);
+        }
         
         if (inverted)
             fields = r.typeInfo.fields.Keys.Except(fields).ToList();
@@ -753,23 +785,32 @@ public class QueryBuilder : IQueryBuilder
                 var order = orders[i];
                 var descending = false;
 
-                if (order.EndsWith(DescendingAppend))
+                //Special sorting 
+                if (order.ToLower() == "random") 
                 {
-                    descending = true;
-                    order = order.Substring(0, order.Length - DescendingAppend.Length);
+                    queryStr.Append("RANDOM()");
                 }
+                //Regular field sorting
+                else 
+                {
+                    if (order.EndsWith(DescendingAppend))
+                    {
+                        descending = true;
+                        order = order.Substring(0, order.Length - DescendingAppend.Length);
+                    }
 
-                //We don't need the result, just the checking
-                var parsedOrder = ParseField(order, r);
+                    //We don't need the result, just the checking
+                    var parsedOrder = ParseField(order, r);
 
-                queryStr.Append(order);
+                    queryStr.Append(order);
 
-                if(r.typeInfo.fields[order].fieldType == typeof(string))
-                    queryStr.Append(" COLLATE NOCASE ");
+                    if(r.typeInfo.fields[order].fieldType == typeof(string))
+                        queryStr.Append(" COLLATE NOCASE ");
+                }
 
                 if (descending)
                     queryStr.Append(" DESC ");
-                
+
                 if(i < orders.Length - 1)
                     queryStr.Append(", ");
                 else

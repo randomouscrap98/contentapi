@@ -515,9 +515,10 @@ public class DbWriter : IDbWriter
         }
         else if (view is MessageEngagementView)
         {
-            id = await DatabaseWork_ContentUserRelated<MessageEngagementView, Db.MessageEngagement>(
-                new DbWorkUnit<MessageEngagementView>((view as MessageEngagementView)!, requester, typeInfo, action, existing as MessageEngagementView, message),
-                EventType.none);
+            var work = new DbWorkUnit<MessageEngagementView>((view as MessageEngagementView)!, requester, typeInfo, action, existing as MessageEngagementView, message);
+            id = await DatabaseWork_ContentUserRelated<MessageEngagementView, Db.MessageEngagement>(work, EventType.none);
+            //We require a special event for message engagement, it'll send a standard message_event for updates
+            await eventQueue.AddEventAsync(new LiveEvent(work.requester.id, UserAction.update, EventType.message_event, work.view.messageId));
         }
         else if (view is UserVariableView)
         {
@@ -741,7 +742,10 @@ public class DbWriter : IDbWriter
                     await GenerateContentHash(async x => {
                         content.hash = x;
                         work.view.id = await dbcon.InsertAsync(content, tsx);
-                    });
+                    }, (content.contentType != InternalContentType.file && content.name.Length >= config.HashMinLength) ? content.name : null);
+                    //New rule (above): we try to use the name of the content IFF:
+                    //- the name is greater than the min user hash anyway
+                    //- the content type is not file
                 }
                 else
                 {
@@ -1338,9 +1342,19 @@ public class DbWriter : IDbWriter
         return CanUserAsync(new UserView() { id = 0, super = false, groups = new List<long>() }, UserAction.read, thing);
     }
 
-    public async Task<string> GenerateContentHash(Func<string, Task> writeHash)
+    public async Task<string> GenerateContentHash(Func<string, Task> writeHash, string? fromTitle = null)
     {
         await hashLock.WaitAsync();
+
+        string? normalizedTitle = null;
+        
+        if(fromTitle != null)
+        {
+            normalizedTitle = Regex.Replace(Regex.Replace(fromTitle.ToLower(), @"\s+", "-"), @"[^a-z0-9\-]+", "");
+
+            if(normalizedTitle.Length > config.HashMaxLength - 2)
+                normalizedTitle = normalizedTitle.Substring(0, normalizedTitle.Length - 2);
+        }
 
         try
         {
@@ -1348,7 +1362,10 @@ public class DbWriter : IDbWriter
             int retries = 0;
             while (true)
             {
-                hash = rng.GetAlphaSequence(config.AutoHashChars);
+                if(normalizedTitle != null) 
+                    hash = normalizedTitle + (retries > 0 ? retries.ToString() : "");
+                else 
+                    hash = rng.GetAlphaSequence(config.AutoHashChars);
 
                 //Not a duplicate hash? We can quit!
                 if(!(await IsDuplicateHash(hash)))

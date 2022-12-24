@@ -5,6 +5,7 @@ public class EmailMessage
     public List<string> Recipients { get; set; } = new List<string>();
     public string Title { get; set; } = "";
     public string Body { get; set; } = "";
+    public bool IsHtml {get;set;} = false;
 
     public EmailMessage() { }
 

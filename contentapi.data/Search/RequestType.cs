@@ -14,5 +14,6 @@ public enum RequestType
     content_engagement,
     ban,
     keyword_aggregate,
-    message_engagement
+    message_engagement,
+    userrelation
 }

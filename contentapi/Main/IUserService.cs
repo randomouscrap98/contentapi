@@ -9,6 +9,7 @@ public interface IUserService
 
     Task<string?> GetRegistrationKeyRawAsync(long userId);
 
+    Task<bool> IsPasswordExpired(long userId);
     Task ExpirePasswordNow(long userId);
 
     /// <summary>

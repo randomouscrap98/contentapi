@@ -138,6 +138,7 @@ public class GenericSearchDbTests : ViewUnitTestBase
             name = "test",
             type = "content",
             fields = "*", //THIS is what we're testing
+            expensive = true //NEED this to get ALL fields
         });
 
         var result = (await service.SearchUnrestricted(search)).objects["test"];
@@ -1782,6 +1783,47 @@ public class GenericSearchDbTests : ViewUnitTestBase
         }
     }
 
+    [Fact]
+    public async Task SearchAsync_BasicCommentMacro()
+    {
+        var search = new SearchRequest()
+        {
+            type = "message",
+            fields = "id, createUserId, deleted, module",
+            query = "!basiccomments()"
+        };
+        //var values = new Dictionary<string, object> { { "userpage", InternalContentType.userpage } };
+
+        //You should be able to reuse the search and values
+        var comments = await service.SearchSingleTypeUnrestricted<MessageView>(search); //, values);
+
+        Assert.NotEmpty(comments);
+        Assert.All(comments, (comment) =>
+        {
+            Assert.False(comment.deleted);
+            Assert.Null(comment.module);
+        });
+        //comments.
+
+        //Now go try to lookup all the junk, there should be one userpage for each createuser in the userpage list
+        //foreach(var up in userpages)
+        //{
+        //    search = new SearchRequest()
+        //    {
+        //        type = "content",
+        //        fields = "id, createUserId, contentType",
+        //        query = "!userpage(@uid)"
+        //    };
+        //    values = new Dictionary<string, object> { { "uid", up.createUserId } };
+        //    var thisuserpages = await service.SearchSingleTypeUnrestricted<ContentView>(search, values);
+        //    Assert.NotEmpty(thisuserpages);
+        //    Assert.All(thisuserpages, x => {
+        //        Assert.Equal(InternalContentType.userpage, x.contentType);
+        //        Assert.Equal(up.createUserId, x.createUserId);
+        //    });
+        //}
+    }
+
     protected SearchRequests GetCountSearch(string type, string query = "", List<string>? extraFields = null)
     {
         var realFields = extraFields ?? new List<string>();
@@ -1966,4 +2008,144 @@ public class GenericSearchDbTests : ViewUnitTestBase
         Assert.Contains(nameof(RequestType.content), result.objects.Keys);
         Assert.Equal(0, (long)result.objects[nameof(RequestType.content)].First()[Constants.CountField]);
     }
+
+    [Fact]
+    public async Task SearchAsync_RandomSort()
+    {
+        var generate = new Func<Task<List<MessageView>>>(() => service.SearchSingleType<MessageView>(NormalUserId,
+            new SearchRequest() {
+                type = nameof(RequestType.message),
+                fields = "id,createUserId,contentId", // this 'contentId' requirement is probably a glitch
+                query = "",
+                order = "random",
+                limit = 5
+            }
+        ));
+
+        var lastResult = await generate();
+
+        for(var i = 0; i < 10; i++)
+        {
+            var thisResult = await generate();
+            Assert.Equal(lastResult.Count, thisResult.Count);
+            Assert.False(lastResult.Select(x => x.id).SequenceEqual(thisResult.Select(x => x.id)));
+            lastResult = thisResult;
+        }
+    }
+
+    [Fact]
+    public async Task SearchAsync_Messages_LiteralTypeMacro()
+    {
+        var literalTypes = fixture.StandardPublicTypes.Take(4).ToList(); //new List<string> { "" };
+        var all_content = await service.SearchSingleType<ContentView>(NormalUserId, new SearchRequest()
+        {
+            type = nameof(RequestType.content),
+            fields = "*",
+            query = "literalType in @id"
+        }, new Dictionary<string, object> { {"id", literalTypes }});
+
+        var messages = await service.SearchSingleType<MessageView>(NormalUserId, new SearchRequest()
+        {
+            type = nameof(RequestType.message),
+            fields = "*",
+            query = "!literaltypein(@types)"
+        }, new Dictionary<string, object> { {"types", literalTypes }});
+
+        Assert.NotEmpty(messages);
+        Assert.NotEmpty(all_content);
+        Assert.NotEqual(fixture.StandardPublicTypes.Count, all_content.Select(x => x.literalType).Distinct().Count());
+
+        Assert.All(messages, x =>
+        {
+            Assert.Contains(x.contentId, all_content.Select(x => x.id));
+            //Assert.Equal(content.literalType, x.content_literalType);
+            //Assert.Equal(content.contentType, x.content_contentType);
+        });
+    }
+
+    [Fact]
+    public async Task SearchAsync_Activity_LiteralTypeMacro()
+    {
+        var literalTypes = fixture.StandardPublicTypes.Take(4).ToList(); //new List<string> { "" };
+        var all_content = await service.SearchSingleType<ContentView>(NormalUserId, new SearchRequest()
+        {
+            type = nameof(RequestType.content),
+            fields = "*",
+            query = "literalType in @id"
+        }, new Dictionary<string, object> { {"id", literalTypes }});
+
+        var activity = await service.SearchSingleType<ActivityView>(NormalUserId, new SearchRequest()
+        {
+            type = nameof(RequestType.activity),
+            fields = "*",
+            query = "!literaltypein(@types)"
+        }, new Dictionary<string, object> { {"types", literalTypes }});
+
+        Assert.NotEmpty(activity);
+        Assert.NotEmpty(all_content);
+        Assert.NotEqual(fixture.StandardPublicTypes.Count, all_content.Select(x => x.literalType).Distinct().Count());
+
+        Assert.All(activity, x =>
+        {
+            Assert.Contains(x.contentId, all_content.Select(x => x.id));
+            //Assert.Equal(content.literalType, x.content_literalType);
+            //Assert.Equal(content.contentType, x.content_contentType);
+        });
+    }
+    //[Fact]
+    //public async Task SearchAsync_Messages_ExtraContentFields()
+    //{
+    //    var all_content = await service.SearchSingleType<ContentView>(NormalUserId, new SearchRequest()
+    //    {
+    //        type = nameof(RequestType.content),
+    //        fields = "*",
+    //        query = "id = @id"
+    //    }, new Dictionary<string, object> { {"id", AllAccessContentId }});
+
+    //    var messages = await service.SearchSingleType<MessageView>(NormalUserId, new SearchRequest()
+    //    {
+    //        type = nameof(RequestType.message),
+    //        fields = "*",
+    //        query = "contentId = @id",
+    //        expensive = true
+    //    }, new Dictionary<string, object> { {"id", AllAccessContentId }});
+
+    //    var content = all_content.First();
+
+    //    Assert.NotEmpty(messages);
+
+    //    Assert.All(messages, x =>
+    //    {
+    //        Assert.Equal(content.literalType, x.content_literalType);
+    //        Assert.Equal(content.contentType, x.content_contentType);
+    //    });
+    //}
+
+    //[Fact]
+    //public async Task SearchAsync_Activity_ExtraContentFields()
+    //{
+    //    var all_content = await service.SearchSingleType<ContentView>(NormalUserId, new SearchRequest()
+    //    {
+    //        type = nameof(RequestType.content),
+    //        fields = "*",
+    //        query = "id = @id"
+    //    }, new Dictionary<string, object> { {"id", AllAccessContentId }});
+
+    //    var activity = await service.SearchSingleType<ActivityView>(NormalUserId, new SearchRequest()
+    //    {
+    //        type = nameof(RequestType.activity),
+    //        fields = "*",
+    //        query = "contentId = @id",
+    //        expensive = true
+    //    }, new Dictionary<string, object> { {"id", AllAccessContentId }});
+
+    //    Assert.NotEmpty(activity);
+    //    var content = all_content.First();
+
+    //    Assert.All(activity, x =>
+    //    {
+    //        Assert.Equal(content.literalType, x.content_literalType);
+    //        Assert.Equal(content.contentType, x.content_contentType);
+    //    });
+    //}
 }

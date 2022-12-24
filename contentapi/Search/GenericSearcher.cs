@@ -119,6 +119,7 @@ public class GenericSearcher : IGenericSearch
             const string uidskey = nameof(MessageView.uidsInText);
             const string textkey = nameof(MessageView.text);
             const string engagementkey = nameof(MessageView.engagement);
+            //const string myEngagementKey = nameof(MessageView.myEngagement);
 
             if(r.requestFields.Contains(valkey))
             {
@@ -140,6 +141,10 @@ public class GenericSearcher : IGenericSearch
             {
                 await AddEngagement<Db.MessageEngagement>(cidkey, index, engagementkey, x => x.messageId);
             }
+            //if(r.requestFields.Contains(myEngagementKey))
+            //{
+            //    await AddMyEngagement<Db.MessageEngagement>(r.)
+            //}
         }
 
         if(r.requestType == RequestType.content)
@@ -217,6 +222,33 @@ public class GenericSearcher : IGenericSearch
             c.Value[engagementkey] = engres;
         }
     }
+
+    //public async Task AddMyEngagement<T>(long userId, string entityKey, Dictionary<long, QueryResult> index, string engagementkey, Func<dynamic, dynamic> getIndex) 
+    //{
+    //    var engagementInfo = typeService.GetTypeInfo<T>();
+    //    var engagement = await dbcon.QueryAsync($"select {entityKey}, type, engagement from {engagementInfo.selfDbInfo?.modelTable} where {entityKey} in @ids and userId in @uid",
+    //        new { ids = index.Keys.ToList(), uid = userId });
+
+    //    var lookup = engagement.ToLookup(getIndex); //x => x[entityKey]); //getIndex); //x => getIndex(x));
+
+    //    foreach (var c in index)
+    //    {
+    //        var engres = new Dictionary<string, Dictionary<string, int>>();
+
+    //        if (lookup.Contains(c.Key))
+    //        {
+    //            foreach (var e in lookup[c.Key])
+    //            {
+    //                var type = (string)e.type;
+    //                if (!engres.ContainsKey(type))
+    //                    engres.Add(type, new Dictionary<string, int>());
+    //                engres[type].Add(e.engagement, (int)e.count);
+    //            }
+    //        }
+
+    //        c.Value[engagementkey] = engres;
+    //    }
+    //}
 
     public void GetEngagementLookup(long userId, long id, string type, out string query, out Dictionary<string, object> objects)
     {

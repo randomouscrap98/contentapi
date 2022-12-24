@@ -20,7 +20,7 @@ public interface IDbWriter : IDisposable
     /// Generate a RANDOM new content hash
     /// </summary>
     /// <returns></returns>
-    Task<string> GenerateContentHash(Func<string, Task> writeHash);
+    Task<string> GenerateContentHash(Func<string, Task> writeHash, string? fromTitle = null);
 
     /// <summary>
     /// Verify that a given hash is unique and usable

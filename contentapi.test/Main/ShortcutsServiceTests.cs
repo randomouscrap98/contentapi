@@ -9,6 +9,8 @@ using contentapi.data.Views;
 using Microsoft.Extensions.Logging;
 using Xunit;
 using contentapi.data;
+using System.Dynamic;
+using Newtonsoft.Json.Linq;
 
 namespace contentapi.test;
 
@@ -190,5 +192,100 @@ public class ShortcutsServiceTests : ViewUnitTestBase
                 Assert.NotEqual(rethreadUser, x.editUserId);
             });
         }
+    }
+
+    protected async Task<Tuple<List<MessageView>,List<MessageView>>> RethreadMessages(int count, long oldContentId, long newContentId, long createUserId)
+    {
+        var written = new List<MessageView>();
+        for(var i = 0; i < count; i++)
+        {
+            var message = GetNewCommentView(oldContentId);
+            written.Add(await writer.WriteAsync(message,createUserId));
+        }
+        var rethreaded = await service.RethreadMessagesAsync(written.Select(x => x.id).ToList(), newContentId, createUserId);
+        return Tuple.Create(written, rethreaded);
+    }
+
+    //Make sure messages that are rethreaded are stamped with the appropriate garbage
+    [Fact]
+    public async Task RethreadStamped()
+    {
+        var rethreads = await RethreadMessages(10, AllAccessContentId, SuperAccessContentId, SuperUserId);
+        var rethreadFirst = rethreads.Item2.First();
+        var rethreadLast = rethreads.Item2.Last();
+        Assert.Contains(ShortcutsService.RethreadKey, rethreadFirst.values.Keys);
+        Assert.Contains(ShortcutsService.RethreadKey, rethreadLast.values.Keys);
+        for(var i = 1; i < 9; i++)
+            Assert.DoesNotContain(ShortcutsService.RethreadKey, rethreads.Item2[i].values.Keys);
+        var rfmeta = GetValue<ShortcutsService.RethreadMeta>(rethreadFirst, ShortcutsService.RethreadKey)!;
+        var rlmeta = GetValue<ShortcutsService.RethreadMeta>(rethreadLast, ShortcutsService.RethreadKey)!;
+        Assert.Equal(ShortcutsService.StartIdentifier, rfmeta.position);
+        Assert.Equal(ShortcutsService.EndIdentifier, rlmeta.position);
+        Assert.Equal(10, rfmeta.count);
+        Assert.Equal(10, rlmeta.count);
+        Assert.All(rethreads.Item2, (x) =>
+        {
+            Assert.Contains(ShortcutsService.OriginalContentIdKey, x.values.Keys);
+            Assert.Equal(AllAccessContentId, (long)x.values[ShortcutsService.OriginalContentIdKey]);
+        });
+    }
+
+    [Fact]
+    public async Task RethreadStamped_Single()
+    {
+        var rethreads = await RethreadMessages(1, AllAccessContentId, SuperAccessContentId, SuperUserId);
+        var rt = rethreads.Item2.First();
+        Assert.Contains(ShortcutsService.RethreadKey, rt.values.Keys);
+        var rmeta = GetValue<ShortcutsService.RethreadMeta>(rt, ShortcutsService.RethreadKey)!;
+        Assert.Equal($"{ShortcutsService.StartIdentifier}|{ShortcutsService.EndIdentifier}", rmeta.position);
+        Assert.Equal(1, rmeta.count);
+        Assert.All(rethreads.Item2, (x) =>
+        {
+            Assert.Contains(ShortcutsService.OriginalContentIdKey, x.values.Keys);
+            Assert.Equal(AllAccessContentId, (long)x.values[ShortcutsService.OriginalContentIdKey]);
+        });
+    }
+
+    [Fact]
+    public async Task RethreadStamped_NoOverwrite()
+    {
+        //Write two ranges of rethreaded messages
+        var rethreads = await RethreadMessages(10, AllAccessContentId, SuperAccessContentId, SuperUserId);
+        var rethreads2 = await RethreadMessages(10, AllAccessContentId, SuperAccessContentId, SuperUserId);
+        //Grab the very end of rethreads 1 and the entirety of rethreads 2, this will be weird
+        var ids = rethreads2.Item2.Select(x => x.id).ToList();
+        ids.Insert(0, rethreads.Item2.Last().id);
+        var nextRethreads = await service.RethreadMessagesAsync(ids, AllAccessContentId2, SuperUserId);
+
+        //So, what we should have is: the first id should say it's from the original AllAccessContentId thread,
+        //but with a "start" rethread from now, not the original. The second should still have the original id
+        //AND the original rethread metadata. The last will still be end but have a new count because it's a new
+        //rethread meta
+
+        var rethreadFirst = nextRethreads.First();
+        var rethreadSecond = nextRethreads[1];
+        var rethreadLast = nextRethreads.Last();
+        for(var i = 2; i < 10; i++)
+            Assert.DoesNotContain(ShortcutsService.RethreadKey, nextRethreads[i].values.Keys);
+        Assert.Contains(ShortcutsService.RethreadKey, rethreadFirst.values.Keys);
+        Assert.Contains(ShortcutsService.RethreadKey, rethreadLast.values.Keys);
+        Assert.Contains(ShortcutsService.RethreadKey, rethreadSecond.values.Keys);
+        var rfmeta = GetValue<ShortcutsService.RethreadMeta>(rethreadFirst, ShortcutsService.RethreadKey)!;
+        var r2meta = GetValue<ShortcutsService.RethreadMeta>(rethreadSecond, ShortcutsService.RethreadKey)!;
+        var rlmeta = GetValue<ShortcutsService.RethreadMeta>(rethreadLast, ShortcutsService.RethreadKey)!;
+        Assert.Equal(ShortcutsService.StartIdentifier, rfmeta.position);
+        Assert.Equal(ShortcutsService.StartIdentifier, r2meta.position);
+        Assert.Equal(ShortcutsService.EndIdentifier, rlmeta.position);
+        Assert.Equal(11, rfmeta.count);
+        Assert.Equal(10, r2meta.count);
+        Assert.Equal(11, rlmeta.count);
+        //For these, I'm assuming the system works kinda stupidly. Oh well
+        Assert.Equal(SuperAccessContentId, rfmeta.lastContentId);
+        Assert.Equal(AllAccessContentId, r2meta.lastContentId); //THIS ONE WASN'T CHANGED!
+        Assert.Equal(SuperAccessContentId, rlmeta.lastContentId);
+        //But these, these should always be good!
+        Assert.Equal(AllAccessContentId, (long)rethreadFirst.values[ShortcutsService.OriginalContentIdKey]);
+        Assert.Equal(AllAccessContentId, (long)rethreadSecond.values[ShortcutsService.OriginalContentIdKey]);
+        Assert.Equal(AllAccessContentId, (long)rethreadLast.values[ShortcutsService.OriginalContentIdKey]);
     }
 }

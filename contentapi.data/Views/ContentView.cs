@@ -6,7 +6,8 @@ namespace contentapi.data.Views;
 public class ContentView : IIdView
 {
     public const string MessagesTable = "messages";
-    public const string VotesTable = "content_votes";
+    public const string ContentTable = "content";
+    public const string EngagementTable = "content_engagement";
     public const string NaturalCommentQuery = "deleted = 0 and module IS NULL";
 
     [DbField]
@@ -83,6 +84,10 @@ public class ContentView : IIdView
     [Expensive(2)]
     public Dictionary<string, Dictionary<string, int>> engagement {get;set;} = new Dictionary<string, Dictionary<string, int>>();
 
+    //[NoQuery]
+    //[Expensive(2)]
+    //public Dictionary<string, string> myEngagement {get;set;} = new Dictionary<string, string>();
+
     [Expensive(1)]
     [DbField("select max(id) from " + MessagesTable + " where main.id = contentId and " + NaturalCommentQuery )]
     public long? lastCommentId {get;set;}
@@ -90,6 +95,18 @@ public class ContentView : IIdView
     [Expensive(3)]
     [DbField("select count(*) from " + MessagesTable + " where main.id = contentId and " + NaturalCommentQuery)]
     public int commentCount {get;set;}
+
+    //Initially, this will be a hardcoded field. Sorry...
+    //Ignore natural comment query to make it faster(?)
+    [Expensive(3)]
+    [DbField("select (select count(*) from " + MessagesTable + " where contentId=main.id) + 5 * (select count(*) from " +
+        EngagementTable + " where contentId=main.id and engagement in (\"good\",\"+\",\"👍\")) - 3 * (select count(*) from " +
+        EngagementTable + " where contentId=main.id and engagement in (\"bad\",\"-\",\"👎\"))")]
+    public double popScore1 {get;set;}
+
+    //[Expensive(3)]
+    //[DbField("select count(*) from " + ContentTable + " where parentId = main.id and deleted = 0")]
+    //public int childCount {get;set;}
 
     [Expensive(1)]
     [DbField("select count(*) from content_watches where main.id = contentId")]

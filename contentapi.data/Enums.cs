@@ -37,7 +37,7 @@ public enum UserType : long
 public enum UserRelationType : long
 {
     in_group = 1,
-    holds_content = 2
+    assign_content = 2
 }
 
 public enum AdminLogType : long
@@ -58,5 +58,6 @@ public enum AdminLogType : long
     ban_edit = 13,
     login_temporary = 14,
     login_passwordexpired = 15,
-    content_restore = 16
+    content_restore = 16,
+    content_assign = 17
 }

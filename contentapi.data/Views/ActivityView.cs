@@ -3,7 +3,7 @@ using System;
 namespace contentapi.data.Views;
 
 [ResultFor(RequestType.activity)]
-[SelectFrom("content_history")]
+[SelectFrom("content_history AS main")]
 public class ActivityView : IContentUserRelatedView
 {
     [DbField]
@@ -23,4 +23,12 @@ public class ActivityView : IContentUserRelatedView
 
     [DbField]
     public UserAction action {get;set;}
+
+    //[Expensive(3)]
+    //[DbField("select c.literalType from content as c where main.contentId = c.id")]
+    //public string? content_literalType {get;set;}
+
+    //[Expensive(3)]
+    //[DbField("select c.contentType from content as c where main.contentId = c.id")]
+    //public InternalContentType content_contentType {get;set;}
 }

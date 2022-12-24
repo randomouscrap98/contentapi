@@ -39,7 +39,7 @@ public class ImageManipulator_IMagick : IImageManipulator
     /// </summary>
     /// <param name="arguments"></param>
     /// <returns></returns>
-    public async Task<string> RunImagick(List<string> arguments)
+    public async Task<string> RunImagick(List<string> arguments, bool ignoreStatus = false)
     {
         var startInfo = new ProcessStartInfo()
         {
@@ -61,7 +61,7 @@ public class ImageManipulator_IMagick : IImageManipulator
             var output = await process.StandardOutput.ReadToEndAsync();
             await process.WaitForExitAsync();
 
-            if(process.ExitCode != 0)
+            if(process.ExitCode != 0 && !ignoreStatus)
                 throw new InvalidOperationException($"Process {startInfo.FileName} exited with code {process.ExitCode}, output: {output}");
             else
                 return output;
@@ -80,7 +80,7 @@ public class ImageManipulator_IMagick : IImageManipulator
     /// <returns></returns>
     public async Task<ImageManipulationInfo> FillImageManipulationInfo(string filename, ImageManipulationInfo? info = null)
     {
-        var raw = await RunImagick(new List<string> { filename + "[0]", "json:"});
+        var raw = await RunImagick(new List<string> { filename + "[0]", "json:"}, true);
         var result = ParseImageManipulationInfo(raw, info);
         result.LoadCount++;
         return result;
@@ -111,12 +111,12 @@ public class ImageManipulator_IMagick : IImageManipulator
         realInfo.Width = geometryInfo.width;
         realInfo.Height = geometryInfo.height;
 
-        if(imageInfo.mimeType != null) 
+        if(imageInfo.mimeType != null)
             realInfo.MimeType = imageInfo.mimeType;
         else if(imageInfo.format != null && imageInfo.format.StartsWith("BMP"))
             realInfo.MimeType = "image/bitmap"; //Doesn't have mimeType for some reason?
         else
-            throw new InvalidOperationException("No 'mimeType' found in image json!");
+            throw new InvalidOperationException($"No 'mimeType' found in image json! Format: {imageInfo.format ?? "NULL"}");
 
         return realInfo;
     }

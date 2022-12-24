@@ -20,7 +20,7 @@
     <PackageReference Include="Moonsharp" Version="2.0.0" />
     <PackageReference Include="Mysql.Data" Version="8.0.31" />
     <PackageReference Include="SixLabors.ImageSharp" Version="2.1.2" />
-    <PackageReference Include="sly" Version="2.8.0" />
+    <PackageReference Include="sly" Version="2.9.3" />
     <PackageReference Include="Swashbuckle.AspNetCore" Version="6.2.3" />
   </ItemGroup>
 

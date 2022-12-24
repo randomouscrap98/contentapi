@@ -28,6 +28,7 @@ var builder = WebApplication.CreateBuilder(args);
 var constring = builder.Configuration.GetConnectionString("contentapi");
 DefaultSetup.AddDefaultServices(builder.Services, () => new SqliteConnection(constring), builder.Configuration);
 DefaultSetup.AddConfigBinding<GenericSearcherConfig>(builder.Services, builder.Configuration);
+DefaultSetup.AddConfigBinding<QueryBuilderConfig>(builder.Services, builder.Configuration);
 DefaultSetup.AddConfigBinding<UserServiceConfig>(builder.Services, builder.Configuration);
 DefaultSetup.AddConfigBinding<UserControllerConfig>(builder.Services, builder.Configuration);
 DefaultSetup.AddConfigBinding<FileServiceConfig>(builder.Services, builder.Configuration);
