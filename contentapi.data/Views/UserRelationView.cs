@@ -1,11 +1,11 @@
 using contentapi.data;
 
-namespace contentapi.Db;
+namespace contentapi.data.Views;
 
-[ResultFor(RequestType.activity)]
+[ResultFor(RequestType.userrelation)]
 [SelectFrom("user_relations")]
 [WriteAs(typeof(Db.UserRelation))]
-public class UserRelationView
+public class UserRelationView : IIdView
 {
     [DbField]
     public long id { get; set; }

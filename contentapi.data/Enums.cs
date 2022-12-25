@@ -59,5 +59,6 @@ public enum AdminLogType : long
     login_temporary = 14,
     login_passwordexpired = 15,
     content_restore = 16,
-    content_assign = 17
+    userrelation_set = 17,
+    userrelation_delete = 18,
 }

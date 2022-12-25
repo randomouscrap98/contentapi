@@ -2088,64 +2088,22 @@ public class GenericSearchDbTests : ViewUnitTestBase
         Assert.All(activity, x =>
         {
             Assert.Contains(x.contentId, all_content.Select(x => x.id));
-            //Assert.Equal(content.literalType, x.content_literalType);
-            //Assert.Equal(content.contentType, x.content_contentType);
         });
     }
-    //[Fact]
-    //public async Task SearchAsync_Messages_ExtraContentFields()
-    //{
-    //    var all_content = await service.SearchSingleType<ContentView>(NormalUserId, new SearchRequest()
-    //    {
-    //        type = nameof(RequestType.content),
-    //        fields = "*",
-    //        query = "id = @id"
-    //    }, new Dictionary<string, object> { {"id", AllAccessContentId }});
 
-    //    var messages = await service.SearchSingleType<MessageView>(NormalUserId, new SearchRequest()
-    //    {
-    //        type = nameof(RequestType.message),
-    //        fields = "*",
-    //        query = "contentId = @id",
-    //        expensive = true
-    //    }, new Dictionary<string, object> { {"id", AllAccessContentId }});
+    [Fact]
+    public async Task SearchAsync_UserRelation()
+    {
+        var all_relations = await service.SearchSingleType<UserRelationView>(NormalUserId, new SearchRequest()
+        {
+            type = nameof(RequestType.userrelation),
+            fields = "*",
+            query = ""
+        }, new Dictionary<string, object> {});
 
-    //    var content = all_content.First();
+        Assert.NotEmpty(all_relations);
 
-    //    Assert.NotEmpty(messages);
-
-    //    Assert.All(messages, x =>
-    //    {
-    //        Assert.Equal(content.literalType, x.content_literalType);
-    //        Assert.Equal(content.contentType, x.content_contentType);
-    //    });
-    //}
-
-    //[Fact]
-    //public async Task SearchAsync_Activity_ExtraContentFields()
-    //{
-    //    var all_content = await service.SearchSingleType<ContentView>(NormalUserId, new SearchRequest()
-    //    {
-    //        type = nameof(RequestType.content),
-    //        fields = "*",
-    //        query = "id = @id"
-    //    }, new Dictionary<string, object> { {"id", AllAccessContentId }});
-
-    //    var activity = await service.SearchSingleType<ActivityView>(NormalUserId, new SearchRequest()
-    //    {
-    //        type = nameof(RequestType.activity),
-    //        fields = "*",
-    //        query = "contentId = @id",
-    //        expensive = true
-    //    }, new Dictionary<string, object> { {"id", AllAccessContentId }});
-
-    //    Assert.NotEmpty(activity);
-    //    var content = all_content.First();
-
-    //    Assert.All(activity, x =>
-    //    {
-    //        Assert.Equal(content.literalType, x.content_literalType);
-    //        Assert.Equal(content.contentType, x.content_contentType);
-    //    });
-    //}
+        for(var i = 1; i <= fixture.GroupCount; i++)
+            Assert.Contains(all_relations, x => x.type == UserRelationType.in_group && x.relatedId == fixture.UserCount + i);
+    }
 }

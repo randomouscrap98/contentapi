@@ -45,4 +45,8 @@ public class WriteController : BaseController
     [HttpPost("ban")]
     public Task<ActionResult<BanView>> WriteBanVariableAsync([FromBody]BanView ban) =>
         MatchExceptions(() => WriteAsync(ban));
+
+    [HttpPost("userrelation")]
+    public Task<ActionResult<UserRelationView>> WriteUserRelationVariableAsync([FromBody]UserRelationView userRelation) =>
+        MatchExceptions(() => WriteAsync(userRelation));
 }
