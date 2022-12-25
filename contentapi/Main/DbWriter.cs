@@ -49,7 +49,8 @@ public class DbWriter : IDbWriter
     public List<RequestType> TrueDeletes = new List<RequestType> {
         RequestType.watch,
         RequestType.content_engagement,
-        RequestType.uservariable
+        RequestType.uservariable,
+        RequestType.userrelation
     };
 
     public DbWriter(ILogger<DbWriter> logger, IGenericSearch searcher, IDbConnection connection,
@@ -387,10 +388,18 @@ public class DbWriter : IDbWriter
                 throw new ForbiddenException("Only supers can set user relations!");
             
             //Go lookup the user, simply doing so should throw the not found exception
-            var user = await searcher.GetById<UserView>(RequestType.user, urView.userId, true);
+            _ = await searcher.GetById<UserView>(RequestType.user, urView.userId, true);
 
-            //And same for the content
-            var content = await searcher.GetById<ContentView>(RequestType.content, urView.relatedId, true);
+            //And same for the content or user or whatever
+            if(urView.type == UserRelationType.in_group)
+            {
+                //the compiler doesn't optimize this dead code out? idk...
+                _ = await searcher.GetById<UserView>(RequestType.user, urView.relatedId, true);
+            }
+            else if(urView.type == UserRelationType.assign_content)
+            {
+                _ = await searcher.GetById<ContentView>(RequestType.content, urView.relatedId, true);
+            }
         }
         else 
         {

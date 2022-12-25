@@ -2173,4 +2173,57 @@ public class DbWriterTest : ViewUnitTestBase, IDisposable
         }
 
     }
+
+    [Theory]
+    [InlineData(SuperUserId, NormalUserId, AllAccessContentId, 0)]
+    [InlineData(SuperUserId, NormalUserId, AllAccessContentId2, 0)]
+    [InlineData(SuperUserId, SuperUserId, SuperAccessContentId, 0)]
+    [InlineData(SuperUserId, 9999, AllAccessContentId, 1)]
+    [InlineData(SuperUserId, NormalUserId, 9999, 1)]
+    [InlineData(NormalUserId, NormalUserId, AllAccessContentId, 2)]
+    public async Task Write_UserRelation_AssignContent(long writerId, long userId, long relatedId, int failType)
+    {
+        var relation = new UserRelationView {
+            type = UserRelationType.assign_content,
+            userId = userId,
+            relatedId = relatedId
+        };
+
+        var writing = new Func<Task<UserRelationView>>(() => writer.WriteAsync(relation,writerId));
+
+        if(failType == 0)
+        {
+            var result = await writing();
+            Assert.True(result.id > 0);
+            Assert.Equal(userId, result.userId);
+            Assert.Equal(relatedId, result.relatedId);
+            Assert.Equal(UserRelationType.assign_content, result.type);
+            AssertDateClose(result.createDate);
+
+            //And you know what, I'm tired, just test this too
+            var deleteResult = await writer.DeleteAsync<UserRelationView>(result.id, writerId);
+            Assert.Equal(result.id, deleteResult.id);
+            Assert.Equal(userId, deleteResult.userId);
+            Assert.Equal(relatedId, deleteResult.relatedId);
+            Assert.Equal(UserRelationType.assign_content, deleteResult.type);
+
+            //And go look it up too just because
+            var lookup_relation = await searcher.SearchSingleType<UserRelationView>(writerId, new SearchRequest()
+            {
+                type = nameof(RequestType.userrelation),
+                fields = "*",
+                query = "id = @id"
+            }, new Dictionary<string, object> { {"id", result.id}});
+
+            Assert.Empty(lookup_relation);
+        }
+        else if(failType == 1)
+        {
+            await Assert.ThrowsAnyAsync<NotFoundException>(writing);
+        }
+        else if (failType == 2)
+        {
+            await Assert.ThrowsAnyAsync<ForbiddenException>(writing);
+        }
+    }
 }
