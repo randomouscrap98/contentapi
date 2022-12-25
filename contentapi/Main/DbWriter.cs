@@ -378,6 +378,20 @@ public class DbWriter : IDbWriter
                     throw new ForbiddenException($"You can only modify your own variables!");
             }
         }
+        else if (view is UserRelationView)
+        {
+            var urView = (view as UserRelationView)!;
+            var exView = existing as UserRelationView;
+
+            if (!requester.super)
+                throw new ForbiddenException("Only supers can set user relations!");
+            
+            //Go lookup the user, simply doing so should throw the not found exception
+            var user = await searcher.GetById<UserView>(RequestType.user, urView.userId, true);
+
+            //And same for the content
+            var content = await searcher.GetById<ContentView>(RequestType.content, urView.relatedId, true);
+        }
         else 
         {
             //Be SAFER than sorry! All views when created are by default NOT writable!
@@ -529,6 +543,11 @@ public class DbWriter : IDbWriter
         {
             id = await DatabaseWork_Ban(
                 new DbWorkUnit<BanView>((view as BanView)!, requester, typeInfo, action, existing as BanView, message));
+        }
+        else if (view is UserRelationView)
+        {
+            id = await DatabaseWork_UserRelation(
+                new DbWorkUnit<UserRelationView>((view as UserRelationView)!, requester, typeInfo, action, existing as UserRelationView, message));
         }
         else
         {
@@ -1053,6 +1072,59 @@ public class DbWriter : IDbWriter
             //await eventQueue.AddEventAsync(new LiveEvent(work.requester.id, work.action, EventType.uservariable_event, work.view.id));
 
             logger.LogDebug($"User {work.requester.id} did '{work.action}' on ban for user {work.view.bannedUserId}: {work.view.message}"); 
+
+            //NOTE: this is the newly computed id, we place it inside the view for safekeeping 
+            return work.view.id;
+        }
+    }
+
+    public async Task<long> DatabaseWork_UserRelation(DbWorkUnit<UserRelationView> work)
+    {
+        //NOTE: As usual, validation is performed outside this function!
+        var dbItem = new UserRelation();
+        var unmapped = MapSimpleViewFields(work, dbItem); 
+
+        if(unmapped.Count > 0)
+            logger.LogWarning($"Fields '{string.Join(",", unmapped)}' not mapped in user relation!");
+
+        //Need to update the edit history with the previous comment!
+        //Always need an ID to link to, so we actually need to create the content first and get the ID.
+        using(var tsx = dbcon.BeginTransaction())
+        {
+            //The baseline admin log
+            var adminLog = NewBaseLog(work); 
+
+            //This doesn't need a history, so write it as-is
+            if(work.action == UserAction.create)
+            {
+                work.view.id = await dbcon.InsertAsync(dbItem, tsx);
+                adminLog.type = AdminLogType.userrelation_set;
+            }
+            else if(work.action == UserAction.update)
+            {
+                await dbcon.UpdateAsync(dbItem, tsx);
+                adminLog.type = AdminLogType.userrelation_set;
+            }
+            else if(work.action == UserAction.delete)
+            {
+                await dbcon.DeleteAsync(dbItem, tsx);
+                adminLog.type = AdminLogType.userrelation_delete;
+            }
+            //else if(work.action == UserAction.delete)
+            //    await dbcon.DeleteAsync(dbItem, tsx);
+            else 
+            {
+                throw new InvalidOperationException($"Can't perform action {work.action} in DatabaseWork_UserRelation!");
+            }
+
+            adminLog.text = $"User {work.requester.username}({work.requester.id}) {work.action}d user relation '{work.view.type}' for user {work.view.userId} to entity {work.view.relatedId}";
+            await dbcon.InsertAsync(adminLog, tsx);
+            tsx.Commit();
+
+            //No event reporting yet
+            //await eventQueue.AddEventAsync(new LiveEvent(work.requester.id, work.action, EventType.uservariable_event, work.view.id));
+
+            logger.LogDebug(adminLog.text); //$"User {work.requester.id} did '{work.action}' on ban for user {work.view.bannedUserId}: {work.view.message}"); 
 
             //NOTE: this is the newly computed id, we place it inside the view for safekeeping 
             return work.view.id;

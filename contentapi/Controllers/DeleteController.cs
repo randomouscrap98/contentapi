@@ -80,4 +80,14 @@ public class DeleteController : BaseController
             return await CachedWriter.DeleteAsync<UserVariableView>(id, GetUserIdStrict()); 
         });
     }
+
+    [HttpPost("userrelation/{id}")]
+    public Task<ActionResult<UserRelationView>> DeleteUserRelationAsync([FromRoute]long id)
+    {
+        return MatchExceptions(async () => 
+        {
+            RateLimit(RateWrite);
+            return await CachedWriter.DeleteAsync<UserRelationView>(id, GetUserIdStrict()); 
+        });
+    }
 }
