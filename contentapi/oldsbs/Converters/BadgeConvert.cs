@@ -130,7 +130,7 @@ public partial class OldSbsConvertController
                     relatedId = badgeMapping[oldBadgeAssign.bid],
                     userId = oldBadgeAssign.uid,
                     createDate = oldBadgeAssign.received,
-                    type = data.UserRelationType.holds_content
+                    type = data.UserRelationType.assign_content
                 };
 
                 await con.InsertAsync(relation, trans);
