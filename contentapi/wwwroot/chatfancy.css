@@ -45,8 +45,8 @@ body[data-theme="blue"] {
     --notificationbg: #d5e5ec;
     --notificationalertbg: #fa72ff;
     --font: sans-serif;
-    --linkcolor: #0669da;
-    --linkvisitedcolor: rgb(36 26 139);
+    --linkcolor: #00428d; /*#0669da;*/
+    --linkvisitedcolor: #472f8a; /*rgb(97 93 144); /*rgb(36 26 139);*/
     --T-bg: #f2fbff;
     --T-color: #1c2363;
 }
@@ -103,6 +103,7 @@ body[data-sidebarhidden] {
     --rightpanewidth: 0px;
 }
 
+
 #titleicons { 
     display: flex;
     flex-direction: column;
@@ -129,33 +130,41 @@ body[data-sidebarhidden] {
     flex: none;
 }
 
-/*.privateparent { position: relative; }*/
+/* Make right content flex so it's not impossible to use*/
+#rightpanecontent {
+    display: flex;
+    flex-direction: column;
+    height: 100%;
+}
+#userlist { flex: none; }
+#activitylist { overflow: auto; } /* Let this shrink as needed */
+#imagemini { flex: none; height: 15em; }
+#chatcontrols { margin: 0.3em; flex: none; }
+#linkslist { flex: none; margin: 0.3em; margin-top: 0; }
+
 .private {
-    /*position: absolute;
-    bottom: 0em;*/
-    /*left: 100%;*/
-    /*right: -1em;
-    top: -0.22em;*/
-    /*right: -1.1em;*/
-    /*z-index: 100;*/
-    /*font-size: 0.7em;*/
     font-size: 0.6em;
     display: inline;
     background-color: black;
-    padding: 0.25em;
+    padding: 0 0.15em;
+    line-height: 1.9;
     border-radius: 0.6em;
 }
-.content_title img, .title img {
+.content_title {
+    display: flex;
+    gap: 0.15em;
+    text-decoration: none;
+}
+.content_title img {
     height: 1.2em;
     image-rendering: -webkit-optimize-contrast;
-    margin-right: 0.25em;
-    vertical-align: middle;
+    border-radius: 0.1em;
 }
 
 [data-fancy] .avatar { border-radius: 0; box-sizing: border-box; }
 
 [data-fancy] .message { display: flex; }
-[data-fancy] .message .content { margin-left: 0.1em; /*margin-top: 0.3em;*/ }
+[data-fancy] .message .content { margin-left: 0.1em; line-height: 1.4; }
 [data-fancy] .message .avatar { 
     width: 2.7em; 
     height: 2.7em; 
@@ -163,7 +172,6 @@ body[data-sidebarhidden] {
     margin-right: 0.35em;
     border: none;
     border-radius: 0.3em;
-    /*border: var(--stdborder);*/
 }
 
 [data-fancy] .leftmessage { flex: none; }
@@ -178,7 +186,8 @@ body[data-sidebarhidden] {
 [data-fancy] #activitylist > div {
     display: flex;
     align-items: center;
-    min-height: 2em;
+    margin: 0.2em;
+    /*min-height: 2em;*/
 }
 [data-fancy] .notification_bubble { flex: none; }
 

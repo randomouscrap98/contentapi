@@ -23,12 +23,6 @@
     <link rel="stylesheet" href="markup.css?v=1671839705">
     <script src="markup.js?v=1671839705"></script>
 
-    <!-- These are really unnecessary, and you can ignore them. They just add some quality of life
-        updates to the chat while we lived there; they don't do anything for this example though! 
-        If you are copying this example, you can safely leave these out! -->
-    <script src="chatfancy.js?v=1671839705"></script>
-    <link rel="stylesheet" href="chatfancy.css?v=1671839705">
-
     <script>
 //NOTE: this file has nothing to do with index.html or any script/etc other than api.js
 //Use it as a starting point for a chat if you want.
@@ -592,8 +586,10 @@ function updateNotification(existing, addCount, createDate, doAlert)
     {
         //If we aren't already a notification, start from 0, because we're overwriting the "not alert" number
         if(notification.className.indexOf("notification_alert") < 0)
+        {
             oldAlerts = 0;
-        notification.className += " notification_alert";
+            notification.className += " notification_alert";
+        }
     }
     notification.textContent = String(oldAlerts + addCount);
     var oldDate = notification.getAttribute("data-date") || "";
@@ -819,9 +815,12 @@ body, input, textarea, select {
 .notification_bubble {
     padding: 0.25em;
     background: var(--notificationbg);
-    border-radius: 0.2em;
-    margin: 0 0.5em;
+    border-radius: 0.4em;
+    margin-right: 0.3em;
+    /*margin: 0 0.5em;*/
     cursor: pointer;
+    min-width: 2em;
+    text-align: center;
 }
 .notification_alert {
     background: var(--notificationalertbg);
@@ -847,13 +846,19 @@ body, input, textarea, select {
 }
     </style>
 
+    <!-- These are really unnecessary, and you can ignore them. They just add some quality of life
+        updates to the chat while we lived there; they don't do anything for this example though! 
+        If you are copying this example, you can safely leave these out! -->
+    <script src="chatfancy.js?v=1671839705"></script>
+    <link rel="stylesheet" href="chatfancy.css?v=1671839705">
+
 </head>
 
 <!-- Most chat content is auto-generated, but we have a lot of the scaffolding to hold it all here in the actual page -->
 <body class="">
     <div id="leftpane" class="">
         <div id="titlearea">
-            <h2 class="title"><a id="pagetitle" href="#"></a></h2>
+            <h2 class="title"><a id="pagetitle" class="content_title" href="#"></a></h2>
             <div id="titleicons">
                 <div id="connectionstatus" class="disconnected"></div>
             </div>
