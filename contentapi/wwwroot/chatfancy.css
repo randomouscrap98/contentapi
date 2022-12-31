@@ -29,6 +29,9 @@ body[data-theme="purple"] {
     --T-bg: #fff8ff;
     --T-color: #4c4264;
 }
+body[data-theme="purple"] button {
+    filter: sepia(0.5) hue-rotate(233deg); 
+}
 
 body[data-theme="blue"] {
     --stdborder: 1px solid #7ea0c1;
@@ -49,6 +52,9 @@ body[data-theme="blue"] {
     --linkvisitedcolor: #472f8a; /*rgb(97 93 144); /*rgb(36 26 139);*/
     --T-bg: #f2fbff;
     --T-color: #1c2363;
+}
+body[data-theme="blue"] button {
+    filter: sepia(0.25) hue-rotate(169deg);
 }
 
 body[data-theme="terminal"] {
@@ -149,16 +155,22 @@ body[data-sidebarhidden] {
     padding: 0 0.15em;
     line-height: 1.9;
     border-radius: 0.6em;
+    flex: none;
 }
-.content_title {
-    display: flex;
-    gap: 0.15em;
-    text-decoration: none;
-}
+#activitylist .content_title { width: 100%; }
+#activitylist .content_title .private { margin-left: auto; }
+#titlearea .title { display: flex; flex-wrap: wrap; }
 .content_title img {
     height: 1.2em;
     image-rendering: -webkit-optimize-contrast;
     border-radius: 0.1em;
+}
+
+[data-fancy] .content_title {
+    display: flex;
+    gap: 0.15em;
+    text-decoration: none;
+    align-items: center;
 }
 
 [data-fancy] .avatar { border-radius: 0; box-sizing: border-box; }
@@ -202,6 +214,7 @@ body[data-sidebarhidden] {
 
 [data-fancy] ::-webkit-scrollbar {
   background-color: var(--T-bg); /* or add it to the track */
+  width: 0.5em;
 }
 
 [data-fancy] ::-webkit-scrollbar-thumb {
