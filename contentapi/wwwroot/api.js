@@ -506,6 +506,16 @@ Api.prototype.About = function(handler)
     this.Raw("status", null, handler);
 };
 
+Api.prototype.GetRegistrationConfig = function(handler)
+{
+    this.Raw("user/registrationconfig", null, handler, "GET");
+};
+
+Api.prototype.SetRegistrationConfig = function(config, handler)
+{
+    this.Raw("user/registrationconfig", config, handler, "POST");
+};
+
 // For now, this is the only way for you to know who you are. This will return an object
 // with your userId that is attached to the current token, which you can then use in a 
 // second request to lookup any data about yourself that you want using the standard

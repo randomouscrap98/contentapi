@@ -123,6 +123,7 @@ table, td, th {
 .flexrow, .nav {
     display: flex;
     flex-wrap: wrap;
+    align-items: baseline; /* Is this ok??? */
 }
 
 .flexrow > *, .nav > * {

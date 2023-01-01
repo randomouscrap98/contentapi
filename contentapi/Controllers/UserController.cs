@@ -23,6 +23,8 @@ public class UserController : BaseController
     protected IEmailService emailer;
     protected IRandomGenerator random;
 
+    protected static bool? AccountCreationOverride = null;
+
     const string InstantConfirmation = "Instant";
     const string StandardConfirmation = "Standard";
     const string RestrictedConfirmation = "Restricted:";
@@ -53,6 +55,41 @@ public class UserController : BaseController
     {
         public string email {get;set;} = "";
         public string key {get;set;} = "";
+    }
+
+    protected bool IsAccountCreationEnabled()
+    {
+        if(AccountCreationOverride != null)
+            return AccountCreationOverride.Value;
+        else
+            return config.AccountCreationEnabled;
+    }
+
+    public class RegistrationConfiguration
+    {
+        public bool enabled {get;set;}    
+    }
+
+    [HttpGet("registrationconfig")]
+    public ActionResult<RegistrationConfiguration> GetAccountCreationEnabled()
+    {
+        return new RegistrationConfiguration {
+            enabled = IsAccountCreationEnabled()
+        };
+    }
+
+    [Authorize]
+    [HttpPost("registrationconfig")]
+    public Task<ActionResult<bool>> SetAccountCreationEnabled([FromBody]RegistrationConfiguration config)
+    {
+        return MatchExceptions(async () =>
+        {
+            var user = await GetUserViewStrictAsync();
+            if(!user.super)
+                throw new ForbiddenException("Only supers can set account creation status!");
+            AccountCreationOverride = config.enabled;
+            return AccountCreationOverride.Value;
+        });
     }
 
     [HttpPost("login")]
@@ -108,7 +145,7 @@ public class UserController : BaseController
         //A service which can be tested!
         return MatchExceptions<UserView>(async () =>
         {
-            if(!config.AccountCreationEnabled)
+            if(!IsAccountCreationEnabled())
                 throw new ForbiddenException("We're sorry, account creation is disabled at this time");
 
             var userId = await userService.CreateNewUser(credentials.username, credentials.password, credentials.email);

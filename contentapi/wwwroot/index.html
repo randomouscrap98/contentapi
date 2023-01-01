@@ -308,6 +308,14 @@
                 </label>
                 <input type="submit" value="Submit">
             </form>
+            <h3>Account creation:</h3>
+            <form onsubmit="return t_registrationenabled_submit(this)">
+                <div class="flexrow">
+                    <label for="admin-registrationenabled">Enabled:</label>
+                    <input id="admin-registrationenabled" name="enabled" type="checkbox" value="true" disabled="">
+                </div>
+                <input type="submit" value="Set">
+            </form>
         </div>
         <div id="t_groupmanage" data-onload="groupmanage_onload">
             <h2>Group Editor</h2>

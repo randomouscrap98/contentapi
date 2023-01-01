@@ -625,6 +625,13 @@ function admin_onload(template, state)
     var adminLogTypeElement = template.querySelector("#filter-logtype")
     var adminFilterSubmit = template.querySelector("#filter-submit")
 
+    api.GetRegistrationConfig(new ApiHandler(dd =>
+    {
+        var registrationInput = template.querySelector("#admin-registrationenabled");
+        registrationInput.checked = dd.result.enabled;
+        registrationInput.disabled = false;
+    }));
+
     api.AboutSearch(new ApiHandler(dd =>
     {
         AboutToOptions(dd.result.details.codes.AdminLogType, adminLogTypeElement);
@@ -1303,6 +1310,19 @@ function t_ban_submit(form)
     );
 
     api.Ban(ban, new ApiHandler(d => { location.reload(); }));
+
+    return false;
+}
+
+function t_registrationenabled_submit(form)
+{
+    var enabled = form.querySelector("#admin-registrationenabled").checked;
+    console.log("Enabled: ", enabled);
+
+    if(confirm("This is a temporary setting; if the API restarts, registration will be set to the default. Are you SURE you want to change user registration to " + (enabled ? "true" : "false")+ "?"))
+    {
+        api.SetRegistrationConfig({ enabled: enabled }, new ApiHandler(d => { location.reload(); }));
+    }
 
     return false;
 }
