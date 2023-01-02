@@ -195,7 +195,7 @@ public class DbWriter : IDbWriter
             //WARN : NO PARENTID VALIDATION!
 
             //Now for general validation
-            await ValidateBanOnContent(cView.id, requesterBan);
+            ValidateBanOnContent(cView, requesterBan);
             await ValidatePermissionFormat(cView.permissions);
 
             //Just throw away empty keywords
@@ -408,15 +408,23 @@ public class DbWriter : IDbWriter
         }
     }
 
-    public async Task ValidateBanOnContent(long contentId, BanView? requesterBan)
+    private void ValidBanOnContentGeneric(bool isPublic, BanView? requesterBan)
     {
         if (requesterBan != null)
         {
-            var isPublic = await IsItemPublic(contentId);
-
             if (isPublic && (requesterBan.type & BanType.@public) > 0 || !isPublic && (requesterBan.type & BanType.@private) > 0)
                 throw new BannedException($"You are banned from posting on {(isPublic ? "public" : "private")} content until {requesterBan.expireDate}. Reason: {requesterBan.message}");
         }
+    }
+
+    public async Task ValidateBanOnContent(long contentId, BanView? requesterBan)
+    {
+        ValidBanOnContentGeneric(await IsItemPublic(contentId), requesterBan);
+    }
+
+    public void ValidateBanOnContent(ContentView content, BanView? requesterBan)
+    {
+        ValidBanOnContentGeneric(IsItemPublic(content.permissions), requesterBan);
     }
 
     /// <summary>
@@ -1418,10 +1426,16 @@ public class DbWriter : IDbWriter
             ", new { contentId = thing, requesters = permissionService.GetPermissionIdsForUser(requester) })) > 0;
     }
 
-    public Task<bool> IsItemPublic(long thing)
+    private UserView GetDefaultUser()
     {
-        return CanUserAsync(new UserView() { id = 0, super = false, groups = new List<long>() }, UserAction.read, thing);
+        return new UserView() { id = 0, super = false, groups = new List<long>() };
     }
+
+    public Task<bool> IsItemPublic(long thing) =>
+        CanUserAsync(GetDefaultUser(), UserAction.read, thing);
+
+    public bool IsItemPublic(Dictionary<long, string> thing_perms) =>
+        permissionService.CanUserStatic(GetDefaultUser(), UserAction.read, thing_perms);
 
     public async Task<string> GenerateContentHash(Func<string, Task> writeHash, string? fromTitle = null)
     {
