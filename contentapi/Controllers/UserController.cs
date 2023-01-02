@@ -23,7 +23,7 @@ public class UserController : BaseController
     protected IEmailService emailer;
     protected IRandomGenerator random;
 
-    protected static bool? AccountCreationOverride = null;
+    protected static RegistrationConfiguration? RegistrationOverride = null;
 
     const string InstantConfirmation = "Instant";
     const string StandardConfirmation = "Standard";
@@ -59,8 +59,8 @@ public class UserController : BaseController
 
     protected bool IsAccountCreationEnabled()
     {
-        if(AccountCreationOverride != null)
-            return AccountCreationOverride.Value;
+        if(RegistrationOverride != null)
+            return RegistrationOverride.enabled;
         else
             return config.AccountCreationEnabled;
     }
@@ -80,15 +80,15 @@ public class UserController : BaseController
 
     [Authorize]
     [HttpPost("registrationconfig")]
-    public Task<ActionResult<bool>> SetAccountCreationEnabled([FromBody]RegistrationConfiguration config)
+    public Task<ActionResult<RegistrationConfiguration>> SetAccountCreationEnabled([FromBody]RegistrationConfiguration config)
     {
         return MatchExceptions(async () =>
         {
             var user = await GetUserViewStrictAsync();
             if(!user.super)
                 throw new ForbiddenException("Only supers can set account creation status!");
-            AccountCreationOverride = config.enabled;
-            return AccountCreationOverride.Value;
+            RegistrationOverride = config;
+            return RegistrationOverride;
         });
     }
 
