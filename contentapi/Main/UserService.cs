@@ -67,7 +67,9 @@ public class UserService : IUserService
 
     public Task<User> GetUserById(long userId) => GetUserByWhatever($"where {nameof(User.id)} = @user", new { user = userId });
     public Task<User> GetUserByEmail(string email) => GetUserByWhatever($"where {nameof(User.email)} = @email", new { email = email });
+    public Task<User> GetUserByUsername(string username) => GetUserByWhatever($"where {nameof(User.username)} = @username", new { username = username });
     public async Task<long> GetUserIdFromEmailAsync(string email) => (await GetUserByEmail(email)).id;
+    public async Task<long> GetUserIdFromUsernameAsync(string username) => (await GetUserByUsername(username)).id;
 
     public async Task CheckValidUsernameAsync(string username, long existingUserId = 0)
     {

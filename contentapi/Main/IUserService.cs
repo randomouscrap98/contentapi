@@ -41,6 +41,8 @@ public interface IUserService
     /// <returns></returns>
     Task<long> GetUserIdFromEmailAsync(string email);
 
+    Task<long> GetUserIdFromUsernameAsync(string username);
+
     Task<string> CompleteRegistration(long userId, string registrationKey);
 
     Task<UserGetPrivateData> GetPrivateData(long userId);

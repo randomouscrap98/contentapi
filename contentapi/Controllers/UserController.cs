@@ -234,17 +234,29 @@ public class UserController : BaseController
         });
     }
 
+    private async Task<string> GetRegistrationCode(long id)
+    {
+        if(!config.BackdoorRegistration)
+            throw new ForbiddenException("This is a debug endpoint that has been deactivated!");
+
+        var registrationCode = await userService.GetRegistrationKeyAsync(id);
+
+        return registrationCode;
+    }
+
     [HttpGet("getregistrationcode/{id}")]
-    public Task<ActionResult<string>> GetRegistrationCode([FromRoute]long id)
+    public Task<ActionResult<string>> GetRegistrationCodeById([FromRoute]long id)
+    {
+        return MatchExceptions(() => GetRegistrationCode(id));
+    }
+
+    [HttpGet("getregistrationcodebyusername/{username}")]
+    public Task<ActionResult<string>> GetRegistrationCodeByUsername([FromRoute]string username)
     {
         return MatchExceptions(async () =>
         {
-            if(!config.BackdoorRegistration)
-                throw new ForbiddenException("This is a debug endpoint that has been deactivated!");
-
-            var registrationCode = await userService.GetRegistrationKeyAsync(id);
-
-            return registrationCode;
+            var userId = await userService.GetUserIdFromUsernameAsync(username);
+            return await GetRegistrationCode(userId);
         });
     }
 
