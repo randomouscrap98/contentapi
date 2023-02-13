@@ -425,12 +425,5 @@ public class UserServiceTests : UnitTestBase, IClassFixture<DbUnitTestBase>
         await service.SetSuperStatus(userId, false);
         user = await searcher.GetById<UserView>(RequestType.user, userId);
         Assert.False(user.super);
-        
-        //await searcher.SearchSingleType<UserView>(userId, new SearchRequest()
-        //{
-        //    type = nameof(RequestType.user),
-        //    fields = "*",
-        //    query = "userId = @id"
-        //}, new Dictionary<string, object> { {"id", userId }});
     });
 }

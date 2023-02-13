@@ -9,7 +9,8 @@ namespace contentapi.Controllers;
 
 public class UserControllerConfig 
 {
-    public bool BackdoorRegistration {get;set;}
+    public bool BackdoorRegistration {get;set;} = false;
+    public bool BackdoorSuper {get;set;} = false; //THIS IS SO IMPORTANT TO BE FALSE AAAA
     public bool AccountCreationEnabled {get;set;} = true;
     public string ConfirmationType {get;set;} = "Standard";
     //Also accepts "Instant" and "Restricted:email,email,etc"
@@ -234,32 +235,6 @@ public class UserController : BaseController
         });
     }
 
-    private async Task<string> GetRegistrationCode(long id)
-    {
-        if(!config.BackdoorRegistration)
-            throw new ForbiddenException("This is a debug endpoint that has been deactivated!");
-
-        var registrationCode = await userService.GetRegistrationKeyAsync(id);
-
-        return registrationCode;
-    }
-
-    [HttpGet("getregistrationcode/{id}")]
-    public Task<ActionResult<string>> GetRegistrationCodeById([FromRoute]long id)
-    {
-        return MatchExceptions(() => GetRegistrationCode(id));
-    }
-
-    [HttpGet("getregistrationcodebyusername/{username}")]
-    public Task<ActionResult<string>> GetRegistrationCodeByUsername([FromRoute]string username)
-    {
-        return MatchExceptions(async () =>
-        {
-            var userId = await userService.GetUserIdFromUsernameAsync(username);
-            return await GetRegistrationCode(userId);
-        });
-    }
-
     [HttpPost("sendpasswordrecovery")]
     public Task<ActionResult<bool>> SendPasswordRecovery([FromBody]string email)
     {
@@ -342,6 +317,49 @@ public class UserController : BaseController
             var token = await userService.LoginEmailAsync(data.currentEmail, data.currentPassword);
             await userService.SetPrivateData(userId, data);
             return token;
+        });
+    }
+
+    private async Task<string> GetRegistrationCode(long id)
+    {
+        if(!config.BackdoorRegistration)
+            throw new ForbiddenException("This is a debug endpoint that has been deactivated!");
+
+        var registrationCode = await userService.GetRegistrationKeyAsync(id);
+
+        return registrationCode;
+    }
+
+    [HttpGet("debug/getregistrationcode/{id}")]
+    public Task<ActionResult<string>> GetRegistrationCodeById([FromRoute]long id)
+    {
+        return MatchExceptions(() => GetRegistrationCode(id));
+    }
+
+    [HttpGet("debug/getregistrationcodebyusername/{username}")]
+    public Task<ActionResult<string>> GetRegistrationCodeByUsername([FromRoute]string username)
+    {
+        return MatchExceptions(async () =>
+        {
+            var userId = await userService.GetUserIdFromUsernameAsync(username);
+            return await GetRegistrationCode(userId);
+        });
+    }
+
+    //A debug endpoint to set the given uid to super. It only sets the super status to true, you can't set it to
+    //false through this. Also, please always ensure this endpoint is disabled for anything you deploy! It is 
+    //disabled by default, just be careful!
+    [HttpPost("debug/setsuper/{uid}")]
+    public Task<ActionResult<bool>> SetSuperDebug([FromRoute]long uid)
+    {
+        return MatchExceptions(async () =>
+        {
+            if(!config.BackdoorSuper)
+                throw new ForbiddenException("This is a debug endpoint that has been deactivated!");
+            
+            await userService.SetSuperStatus(uid, true);
+            
+            return true;
         });
     }
 }
