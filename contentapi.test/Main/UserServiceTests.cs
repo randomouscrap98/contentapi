@@ -1,18 +1,16 @@
 using System;
+using System.Collections.Generic;
 using System.Threading.Tasks;
 using contentapi.data;
 using contentapi.data.Views;
-using contentapi.Db;
 using contentapi.Main;
 using contentapi.Search;
 using contentapi.Security;
-using contentapi.Utilities;
 using Microsoft.Extensions.Logging;
 using Xunit;
 
 namespace contentapi.test;
 
-//[Collection("PremadeDatabase")]
 public class UserServiceTests : UnitTestBase, IClassFixture<DbUnitTestBase>
 {
     protected DbUnitTestBase fixture;
@@ -409,5 +407,30 @@ public class UserServiceTests : UnitTestBase, IClassFixture<DbUnitTestBase>
         var tempPassword3 = service.GetTemporaryPassword(userId);
         Assert.NotEqual(tempPassword, tempPassword3.Key); //refreshed
         Assert.True(tempPassword3.ExpireDate > DateTime.Now);
+    });
+
+    [Fact]
+    public Task SetSuperStatus() => GeneralNewUserTest(async (username, password, userId, loginToken) =>
+    {
+        //First, ensure they aren't already super
+        var user = await searcher.GetById<UserView>(RequestType.user, userId);
+        Assert.False(user.super);
+
+        //Now, try to set super
+        await service.SetSuperStatus(userId, true);
+        user = await searcher.GetById<UserView>(RequestType.user, userId);
+        Assert.True(user.super);
+
+        //Now, try to remove super
+        await service.SetSuperStatus(userId, false);
+        user = await searcher.GetById<UserView>(RequestType.user, userId);
+        Assert.False(user.super);
+        
+        //await searcher.SearchSingleType<UserView>(userId, new SearchRequest()
+        //{
+        //    type = nameof(RequestType.user),
+        //    fields = "*",
+        //    query = "userId = @id"
+        //}, new Dictionary<string, object> { {"id", userId }});
     });
 }

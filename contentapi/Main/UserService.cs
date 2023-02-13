@@ -390,6 +390,15 @@ public class UserService : IUserService
             throw new ArgumentException($"Couldn't find user {userId}");
     }
 
+    public async Task SetSuperStatus(long userId, bool super)
+    {
+        using var dbcon = dbFactory.CreateRaw();
+        var count = await dbcon.ExecuteAsync($"update {userTable} set super = @super where id = @id", new { super = super, id = userId});
+
+        if(count != 1)
+            throw new ArgumentException($"Couldn't find user {userId}");
+    }
+
     //Just yet another admin log writer... probably need to fix this
     public async Task<AdminLog> WriteAdminLog(AdminLog log, IDbConnection dbcon)
     {

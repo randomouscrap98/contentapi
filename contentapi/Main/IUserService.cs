@@ -48,5 +48,11 @@ public interface IUserService
     Task<UserGetPrivateData> GetPrivateData(long userId);
     Task SetPrivateData(long userId, UserSetPrivateData data);
 
+    /// <summary> 
+    /// A special endpoint to set just the super status. This sometimes has to be done outside of the normal course
+    /// of action, so it can be done here without any pesky permissions checks
+    /// </summary>
+    Task SetSuperStatus(long userId, bool super);
+
     TemporaryPassword GetTemporaryPassword(long userId);
 }
