@@ -906,8 +906,8 @@ function activity_item_onload(template, state)
     action.textContent = api.ActionToVerb(state.action);
     action.title = state.id;
     pagelink.href = `?t=page&pid=${state.contentId}`;
-    if(state.content) 
-        pagelink.textContent = state.content.name;
+    if(state.content)  //This replaces the name with the hash since the name is removed but the hash can't be. 
+        pagelink.textContent = state.content.deleted ? `${state.content.hash} (${state.contentId})` : state.content.name;
     else
         pagelink.textContent = `??? (${state.contentId})`;
     if(state.restorable)

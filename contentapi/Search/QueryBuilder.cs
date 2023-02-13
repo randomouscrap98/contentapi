@@ -249,7 +249,7 @@ public class QueryBuilder : IQueryBuilder
              from {typeInfo.selfDbInfo?.modelTable}
              where contentType = {(int)InternalContentType.page}
              and deleted = 0
-            )";
+            ) or {nameof(ContentHistory.action)} = {(int)UserAction.delete}";
     }
 
     public string BasicComments(SearchRequestPlus request)

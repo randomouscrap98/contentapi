@@ -406,7 +406,10 @@ public class DbWriterTest : ViewUnitTestBase, IDisposable
             Assert.NotEqual(originalContent.name, result.name);
             Assert.Empty(result.keywords);
             Assert.Empty(result.values);
-            Assert.Empty(result.permissions);
+            //NOTE: this USED to be "empty" because we used to clear out ALL the associated data, but now we 
+            //specifically leave the permissions alone.
+            Assert.NotEmpty(result.permissions);
+            //Assert.Empty(result.permissions);
             Assert.True(result.deleted, "Item wasn't marked deleted!");
         }
         else

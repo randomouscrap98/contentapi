@@ -1237,8 +1237,8 @@ public class GenericSearchDbTests : ViewUnitTestBase
         Assert.All(castResult, x =>
         {
             var c = content.First(y => y.id == x.contentId);
-            Assert.False(c.deleted);
-            Assert.Equal(InternalContentType.page, c.contentType);
+            Assert.True(!c.deleted || x.action == UserAction.delete);
+            if(!c.deleted) Assert.Equal(InternalContentType.page, c.contentType);
         });
     }
 

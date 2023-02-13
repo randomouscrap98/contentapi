@@ -692,11 +692,19 @@ public class DbWriter : IDbWriter
     /// <param name="id"></param>
     /// <param name="tsx"></param>
     /// <returns></returns>
-    public async Task DeleteContentAssociatedAll(long id, IDbTransaction tsx)
+    public async Task DeleteContentAssociatedAll(long id, IDbTransaction tsx, bool fullDelete = true)
     {
         await DeleteContentAssociatedType<ContentValue>(id, tsx);
         await DeleteContentAssociatedType<ContentKeyword>(id, tsx);
-        await DeleteContentAssociatedType<ContentPermission>(id, tsx);
+
+        //NOTE: when ACTUALLY deleting content, we have to keep some of the data around in order to make certain
+        //parts of the system... well, make any sense. For instance, even though content is deleted, we probably
+        //want people to be able to see THAT the content was deleted, but the permission system prevents us from
+        //doing so. People will ask "where did this content go" and won't be able to see it because it has no
+        //permissions. So, we leave the permissions there so the people who could originally see the content can
+        //now see the delete activity
+        if(fullDelete)
+            await DeleteContentAssociatedType<ContentPermission>(id, tsx);
     }
 
     public AdminLog MakeContentLog(UserView requester, ContentView view, UserAction action)
@@ -791,8 +799,9 @@ public class DbWriter : IDbWriter
             }
             else if(work.action == UserAction.update || work.action == UserAction.delete)
             {
-                //Remove the old associated values
-                await DeleteContentAssociatedAll(content.id, tsx);
+                //Remove the old associated values. Note that we disable full delete if the action is delete... see the function 
+                //itself for more information
+                await DeleteContentAssociatedAll(content.id, tsx, work.action != UserAction.delete);
                 await dbcon.UpdateAsync(content, tsx);
             }
             else 
