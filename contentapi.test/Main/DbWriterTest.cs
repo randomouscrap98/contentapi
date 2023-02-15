@@ -2266,4 +2266,69 @@ public class DbWriterTest : ViewUnitTestBase, IDisposable
             await Assert.ThrowsAnyAsync<ForbiddenException>(writing);
         }
     }
+
+    //private async Task<AdminLogView> GetLastAdminLog()
+    //{
+    //    var log = await searcher.SearchSingleTypeUnrestricted<AdminLogView>(new SearchRequest() {
+    //        type = nameof(RequestType.adminlog),
+    //        fields = "*",
+    //        query = "",
+    //        limit = 1,
+    //        order = "id_desc"
+    //    }, new Dictionary<string, object>() { });
+    //}
+
+    [Fact]
+    public async Task WriteAsync_NewMessage_NoAdminLog()
+    {
+        var message = GetNewCommentView(AllAccessContentId);
+        var result = await writer.WriteAsync(message, NormalUserId);
+
+        var log = await searcher.SearchSingleTypeUnrestricted<AdminLogView>(new SearchRequest() {
+            type = nameof(RequestType.adminlog),
+            fields = "*",
+            query = "target = @id"
+        }, new Dictionary<string, object>() { { "id", result.id }, });
+
+        Assert.Empty(log);
+    }
+
+    [Fact]
+    public async Task WriteAsync_EditMessage_AdminLog()
+    {
+        var message = GetNewCommentView(AllAccessContentId);
+        var result = await writer.WriteAsync(message, NormalUserId);
+        result.text = "WOWEEXZONGHE";
+        var result2 = await writer.WriteAsync(result, NormalUserId);
+
+        var log = await searcher.SearchSingleTypeUnrestricted<AdminLogView>(new SearchRequest() {
+            type = nameof(RequestType.adminlog),
+            fields = "*",
+            query = "target = @id"
+        }, new Dictionary<string, object>() { { "id", result.id }, });
+
+        Assert.Single(log);
+        var item = log.First();
+        Assert.Equal(NormalUserId, item.initiator);
+        Assert.Equal(AdminLogType.message_edit, item.type);
+    }
+
+    [Fact]
+    public async Task WriteAsync_DeleteMessage_AdminLog()
+    {
+        var message = GetNewCommentView(AllAccessContentId);
+        var result = await writer.WriteAsync(message, NormalUserId);
+        var result2 = await writer.DeleteAsync<MessageView>(result.id, NormalUserId);
+
+        var log = await searcher.SearchSingleTypeUnrestricted<AdminLogView>(new SearchRequest() {
+            type = nameof(RequestType.adminlog),
+            fields = "*",
+            query = "target = @id"
+        }, new Dictionary<string, object>() { { "id", result.id }, });
+
+        Assert.Single(log);
+        var item = log.First();
+        Assert.Equal(NormalUserId, item.initiator);
+        Assert.Equal(AdminLogType.message_delete, item.type);
+    }
 }
