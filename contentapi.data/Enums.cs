@@ -61,4 +61,6 @@ public enum AdminLogType : long
     content_restore = 16,
     userrelation_set = 17,
     userrelation_delete = 18,
+    message_delete = 19,
+    message_edit = 20
 }

@@ -959,6 +959,24 @@ public class DbWriter : IDbWriter
                 await dbcon.InsertAsync(GetCommentValuesFromView(work.view), tsx);
             }
 
+            if(work.action == UserAction.delete || work.action == UserAction.update)
+            {
+                if(work.existing == null)
+                    throw new InvalidOperationException($"Somehow, update or delete action on message {work.view.id} didn't have previous iteration!");
+
+                var adminLog = new AdminLog()
+                {
+                    text = $"User '{work.requester.username}'({work.requester.id}) {work.action}d message {work.view.id} on content {work.existing.contentId}",
+                    type = work.action == UserAction.delete ? AdminLogType.message_delete : 
+                           work.action == UserAction.update ? AdminLogType.message_edit :
+                           throw new InvalidOperationException($"Invalid action on message for admin log, somehow: {work.action}"),
+                    target = work.view.id,
+                    initiator = work.requester.id,
+                    createDate = DateTime.UtcNow
+                };
+                await dbcon.InsertAsync(adminLog, tsx);
+            }
+
             tsx.Commit();
 
             await eventQueue.AddEventAsync(new LiveEvent(work.requester.id, work.action, EventType.message_event, work.view.id));
