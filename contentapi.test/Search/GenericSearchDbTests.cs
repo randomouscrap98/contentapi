@@ -1243,6 +1243,24 @@ public class GenericSearchDbTests : ViewUnitTestBase
     }
 
     [Fact]
+    public async Task GenericSearch_Search_BasicHistoryMacro_SelfContained()
+    {
+        //This query should NORMALLY return nothing. However, we had issues where it would return many
+        //things and ignore the queries after the macro because the macro was not self contained
+        var results = await service.SearchSingleTypeUnrestricted<ActivityView>(
+            new SearchRequest()
+            {
+                name = "historymacro",
+                type = "activity",
+                fields = "*",
+                query = "!basichistory() and id = {{9999999}}"
+            }
+        );
+
+        Assert.Empty(results);
+    }
+
+    [Fact]
     public async Task GenericSearch_Search_OnlyUserWatches()
     {
         //Do a NORMAL search with a requester

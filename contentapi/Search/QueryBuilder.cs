@@ -698,9 +698,10 @@ public class QueryBuilder : IQueryBuilder
             }
         }
 
-        //At this point, we have the macro function info, so we can just call it
-        return (string)(macDef.macroMethod.Invoke(this, argVals.ToArray()) ?? 
-            throw new InvalidOperationException($"Macro method for macro {m} returned null in request {request.name}!"));
+        //At this point, we have the macro function info, so we can just call it. Also, surround the results in parenthesis
+        //so the macro is self contained.
+        return "(" + (string)(macDef.macroMethod.Invoke(this, argVals.ToArray()) ?? 
+            throw new InvalidOperationException($"Macro method for macro {m} returned null in request {request.name}!")) + ")";
     }
 
     /// <summary>
