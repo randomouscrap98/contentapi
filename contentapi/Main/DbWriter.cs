@@ -782,11 +782,18 @@ public class DbWriter : IDbWriter
                 //time we need to worry about the hash!
                 if(string.IsNullOrWhiteSpace(content.hash))
                 {
+                    string potentialHash = content.name;
+
+                    if(potentialHash.Length < config.HashMinLength)
+                    {
+                        potentialHash = $"{content.literalType}-{potentialHash}";
+                    }
+
                     //Autogenerate
                     await GenerateContentHash(async x => {
                         content.hash = x;
                         work.view.id = await dbcon.InsertAsync(content, tsx);
-                    }, (content.contentType != InternalContentType.file && content.name.Length >= config.HashMinLength) ? content.name : null);
+                    }, (content.contentType != InternalContentType.file && potentialHash.Length >= config.HashMinLength) ? potentialHash : null);
                     //New rule (above): we try to use the name of the content IFF:
                     //- the name is greater than the min user hash anyway
                     //- the content type is not file

@@ -1224,16 +1224,19 @@ public class DbWriterTest : ViewUnitTestBase, IDisposable
     }
 
     [Theory]
-    [InlineData("this is normal", "this-is-normal")]
-    [InlineData("isn't this CRAZY&&*(no)", "isnt-this-crazyno")]
-    [InlineData("nono", null)]
-    public async Task GenerateHash_FromName(string name, string? hash)
+    [InlineData("this is normal", "this-is-normal", "")]
+    [InlineData("isn't this CRAZY&&*(no)", "isnt-this-crazyno", "")]
+    [InlineData("nono", null, "")]
+    [InlineData("nono", "page-nono", "page")]
+    [InlineData("nono", "wbubualfl-nono", "wbu$bu%al(fl)")]
+    public async Task GenerateHash_FromName(string name, string? hash, string literalType)
     {
         config.AutoHashChars = 1;
         config.AutoHashMaxRetries = 20;
         config.HashMinLength = 8;
 
         var page = GetNewPageView(); //only files have random hashes now
+        page.literalType = literalType;
         page.name = name;
         var written = await writer.WriteAsync(page, NormalUserId);
 
@@ -1249,6 +1252,7 @@ public class DbWriterTest : ViewUnitTestBase, IDisposable
 
             //Write another page with the same name
             var page2 = GetNewPageView();
+            page2.literalType = literalType;
             page2.name = name;
             var written2 = await writer.WriteAsync(page2, NormalUserId);
             Assert.Equal($"{hash}1", written2.hash);
