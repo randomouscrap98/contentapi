@@ -2124,4 +2124,5 @@ public class GenericSearchDbTests : ViewUnitTestBase
         for(var i = 1; i <= fixture.GroupCount; i++)
             Assert.Contains(all_relations, x => x.type == UserRelationType.in_group && x.relatedId == fixture.UserCount + i);
     }
+
 }

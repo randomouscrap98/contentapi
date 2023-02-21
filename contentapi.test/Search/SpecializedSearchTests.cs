@@ -351,4 +351,17 @@ public class SpecializedSearchTests : ViewUnitTestBase //, IClassFixture<DbUnitT
         Assert.True(engagement["reaction"].ContainsKey("💙"));
         Assert.Equal(2, engagement["reaction"]["💙"]);
     }
+
+    [Fact]
+    public async Task Content_LastActionDate()
+    {
+        var new_message = GetNewCommentView(AllAccessContentId);
+        var written_message = await writer.WriteAsync(new_message, SuperUserId);
+        var content = await searcher.GetById<ContentView>(RequestType.content, AllAccessContentId);
+        var message = await searcher.GetById<MessageView>(RequestType.message, content.lastCommentId ?? throw new InvalidOperationException("No last comment!"));
+        var activity = await searcher.GetById<ActivityView>(RequestType.activity, content.lastRevisionId); // ?? throw new InvalidOperationException("No last activity!"));
+
+        Assert.NotEqual(activity.date, message.createDate);
+        Assert.Equal(message.createDate > activity.date ? message.createDate : activity.date, content.lastActionDate);
+    }
 }

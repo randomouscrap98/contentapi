@@ -6,6 +6,7 @@ namespace contentapi.data.Views;
 public class ContentView : IIdView
 {
     public const string MessagesTable = "messages";
+    public const string HistoryTable = "content_history";
     public const string ContentTable = "content";
     public const string EngagementTable = "content_engagement";
     public const string NaturalCommentQuery = "deleted = 0 and module IS NULL";
@@ -103,6 +104,11 @@ public class ContentView : IIdView
         EngagementTable + " where contentId=main.id and engagement in (\"good\",\"+\",\"👍\")) - 3 * (select count(*) from " +
         EngagementTable + " where contentId=main.id and engagement in (\"bad\",\"-\",\"👎\"))")]
     public double popScore1 {get;set;}
+
+    [Expensive(2)]
+    [DbField("select max(date) from (select max(createDate) as date from " + MessagesTable + " where contentId = main.id " +
+        "union select max(createDate) as date from " + HistoryTable + " where contentId = main.id)")]
+    public DateTime lastActionDate {get;set;}
 
     //[Expensive(3)]
     //[DbField("select count(*) from " + ContentTable + " where parentId = main.id and deleted = 0")]
