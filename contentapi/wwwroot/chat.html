@@ -12,16 +12,16 @@
     <link rel="icon" href="favicon.ico" type="image/x-icon">
     <!-- The MAIN api consumer script, it comes with most things you need to work with the API. 
         In particular, it has an auto websocket manager for building quick chatrooms -->
-    <script src="api.js?v=1677038344"></script>
+    <script src="api.js?v=1677467549"></script>
     <!-- These are required for the 12y parser (markup) -->
-    <script src="markup/langs.js?v=1677038344"></script>
-    <script src="markup/legacy.js?v=1677038344"></script>
-    <script src="markup/parse.js?v=1677038344"></script>
-    <script src="markup/render.js?v=1677038344"></script>
-    <script src="markup/helpers.js?v=1677038344"></script>
-    <link rel="stylesheet" href="markup/markup.css?v=1677038344">
-    <link rel="stylesheet" href="markup.css?v=1677038344">
-    <script src="markup.js?v=1677038344"></script>
+    <script src="markup/langs.js?v=1677467549"></script>
+    <script src="markup/legacy.js?v=1677467549"></script>
+    <script src="markup/parse.js?v=1677467549"></script>
+    <script src="markup/render.js?v=1677467549"></script>
+    <script src="markup/helpers.js?v=1677467549"></script>
+    <link rel="stylesheet" href="markup/markup.css?v=1677467549">
+    <link rel="stylesheet" href="markup.css?v=1677467549">
+    <script src="markup.js?v=1677467549"></script>
 
     <script>
 //NOTE: this file has nothing to do with index.html or any script/etc other than api.js
@@ -155,7 +155,7 @@ window.onload = function()
         new RequestSearchParameter("content", APICONST.FIELDSETS.CONTENTQUICK, "id = @pid or id in @message_aggregate.contentId"),
         new RequestSearchParameter("message", "*", "contentId = @pid and !notdeleted()", "id_desc", FIRSTLOADMESSAGES),
         new RequestSearchParameter("user", "*", "id in @message.createUserId or id in @message.uidsInText"),
-        new RequestSearchParameter("uservariable", "*", "key = {{chatjs}}"),
+        new RequestSearchParameter("uservariable", "*", "key = {{chatjs}} or key = {{chatnickname}}"),
     ]), response =>
     {
         //Websocket acts like a proxy, so your standard 'request' result is wrapped in the standard websocket result
@@ -169,10 +169,15 @@ window.onload = function()
 
         displayMessages(response.data.objects); //don't keep scroll, don't update notifications with unique messages
 
-        if(response.data.objects.uservariable.length && !parameters.has("nochatjs"))
-        {
-            try { window.eval(response.data.objects.uservariable[0].value); }
-            catch (ex) { console.error("Error executing chatjs: ", ex); }
+        for(var i = 0; i < response.data.objects.uservariable.length; i++) {
+            var uvar = response.data.objects.uservariable[i];
+            if(uvar.key === "chatjs" && !parameters.has("nochatjs")) {
+                try { window.eval(uvar.value); }
+                catch (ex) { console.error("Error executing chatjs: ", ex); }
+            }
+            else if(uvar.key === "chatnickname") {
+                userNickname = uvar.value;
+            }
         }
     });
 
@@ -858,8 +863,8 @@ body, input, textarea, select {
     <!-- These are really unnecessary, and you can ignore them. They just add some quality of life
         updates to the chat while we lived there; they don't do anything for this example though! 
         If you are copying this example, you can safely leave these out! -->
-    <script src="chatfancy.js?v=1677038344"></script>
-    <link rel="stylesheet" href="chatfancy.css?v=1677038344">
+    <script src="chatfancy.js?v=1677467549"></script>
+    <link rel="stylesheet" href="chatfancy.css?v=1677467549">
 
 </head>
 
@@ -896,7 +901,7 @@ body, input, textarea, select {
                 <a href="index.html?t=login">Login</a>
             </div>
             <!-- A special miniature page in the api run frontend for managing images -->
-            <iframe id="imagemini" src="imagemini.html?v=1677038344"></iframe>
+            <iframe id="imagemini" src="imagemini.html?v=1677467549"></iframe>
         </div>
     </div>
 </body>
