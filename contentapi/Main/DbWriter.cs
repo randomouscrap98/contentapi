@@ -249,10 +249,13 @@ public class DbWriter : IDbWriter
             
             //This ensures that the "super" field, no matter where it is, is only modifyable with supers.
             if((uView.super || exView?.super == true) && !requester.super)
-                throw new ForbiddenException("You can't minipulate the super field through this endpoint unless you're a super user!");
+                throw new ForbiddenException("You can't manipulate the super field through this endpoint unless you're a super user!");
 
             if(uView.deleted)
                 throw new RequestException("Don't delete users by setting the deleted flag!");
+            
+            if(requesterBan != null && (requesterBan.type & BanType.user) > 0)
+                throw new BannedException($"You are banned from modifying user data until {requesterBan.expireDate}. Reason: {requesterBan.message}");
 
             //Never allow usersInGroup to be set for non-group items
             if(uView.type != UserType.group && uView.usersInGroup.Count > 0)

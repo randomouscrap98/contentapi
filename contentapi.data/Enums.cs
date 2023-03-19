@@ -6,7 +6,9 @@ public enum BanType : long
 {
     none = 0,
     @public = 1,    // Ban from public pages only
-    @private = 2    // Ban from private pages only (mix with public for a "full" ban)
+    @private = 2,   // Ban from private pages only (mix with public for a "full" ban)
+    user = 4        // Ban from user related things (self modifications)
+    //login = 8       // Ban from login + reject tokens (basically a true 'full ban')
 }
 
 //Nobody will see this type most likely

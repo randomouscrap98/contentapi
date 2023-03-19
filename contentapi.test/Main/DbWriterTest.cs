@@ -2017,10 +2017,13 @@ public class DbWriterTest : ViewUnitTestBase, IDisposable
     [InlineData("CRUD", BanType.none, true)]
     [InlineData("CRUD", BanType.@public, false)]
     [InlineData("CRUD", BanType.@private, true)]
+    [InlineData("CRUD", BanType.user, true)]
     [InlineData("", BanType.@public, true)]
     [InlineData("", BanType.@private, false)]
+    [InlineData("", BanType.user, true)]
     [InlineData("CRUD", BanType.@public | BanType.@private, false)]
     [InlineData("", BanType.@public | BanType.@private, false)]
+    [InlineData("", BanType.@public | BanType.@private | BanType.user, false)]
     public async Task WriteAsync_Ban_AllowedOnContent(string publicperms, BanType type, bool allowed)
     {
         //This should be all you need
@@ -2054,10 +2057,13 @@ public class DbWriterTest : ViewUnitTestBase, IDisposable
     [InlineData("CRUD", BanType.none, true)]
     [InlineData("CRUD", BanType.@public, false)]
     [InlineData("CRUD", BanType.@private, true)]
+    [InlineData("CRUD", BanType.user, true)]
     [InlineData("", BanType.@public, true)]
     [InlineData("", BanType.@private, false)]
+    [InlineData("", BanType.user, true)]
     [InlineData("CRUD", BanType.@public | BanType.@private, false)]
     [InlineData("", BanType.@public | BanType.@private, false)]
+    [InlineData("", BanType.@public | BanType.@private | BanType.user, false)]
     public async Task WriteAsync_Ban_AllowedOnContent_Edit(string publicperms, BanType type, bool allowed)
     {
         //This should be all you need
@@ -2086,6 +2092,85 @@ public class DbWriterTest : ViewUnitTestBase, IDisposable
         else
         {
             await Assert.ThrowsAnyAsync<BannedException>(() => writer.WriteAsync(writtenContent, NormalUserId));
+        }
+    }
+
+    [Theory]
+    [InlineData(BanType.none, NormalUserId, NormalUserId, true)]
+    [InlineData(BanType.@public, NormalUserId, NormalUserId, true)]
+    [InlineData(BanType.@private, NormalUserId, NormalUserId, true)]
+    [InlineData(BanType.@public | BanType.@private, NormalUserId, NormalUserId, true)]
+    [InlineData(BanType.user, NormalUserId, NormalUserId, false)]
+    [InlineData(BanType.user | BanType.@public | BanType.@private, NormalUserId, NormalUserId, false)]
+    [InlineData(BanType.user, SuperUserId, NormalUserId, false)]
+    [InlineData(BanType.user, SuperUserId, SuperUserId, false)]
+    public async Task WriteAsync_Ban_UserEdits(BanType bantype, long banUserId, long modifyUserId, bool allowed)
+    {
+        //This should be all you need
+        var ban = new BanView()
+        {
+            type = bantype,
+            bannedUserId = banUserId,
+            message = "You are banned",
+            expireDate = DateTime.UtcNow.AddDays(1)
+        };
+
+        var writtenBan = await writer.WriteAsync(ban, SuperUserId);
+
+        var user = await searcher.GetById<UserView>(RequestType.user, modifyUserId);
+        user.special = "THIS IS A BAN OR SOMETHING!!";
+
+        if(allowed)
+        {
+            var finalUser = await writer.WriteAsync(user, banUserId);
+            Assert.Equal(user.special, finalUser.special);
+        }
+        else
+        {
+            await Assert.ThrowsAnyAsync<BannedException>(() => writer.WriteAsync(user, banUserId));
+        }
+    }
+
+    [Theory]
+    [InlineData(BanType.none, NormalUserId, true)]
+    [InlineData(BanType.@public, NormalUserId, true)]
+    [InlineData(BanType.@private, NormalUserId, true)]
+    [InlineData(BanType.@public | BanType.@private, NormalUserId, true)]
+    [InlineData(BanType.none, SuperUserId, true)]
+    [InlineData(BanType.@public, SuperUserId, true)]
+    [InlineData(BanType.@private, SuperUserId, true)]
+    [InlineData(BanType.@public | BanType.@private, SuperUserId, true)]
+    [InlineData(BanType.user, NormalUserId, false)]
+    [InlineData(BanType.user | BanType.@public | BanType.@private, NormalUserId, false)]
+    [InlineData(BanType.user, SuperUserId, false)]
+    [InlineData(BanType.user | BanType.@public | BanType.@private, SuperUserId, false)]
+    public async Task WriteAsync_Ban_NewUser(BanType bantype, long banUserId, bool allowed)
+    {
+        //This should be all you need
+        var ban = new BanView()
+        {
+            type = bantype,
+            bannedUserId = banUserId,
+            message = "You are banned",
+            expireDate = DateTime.UtcNow.AddDays(1)
+        };
+
+        var writtenBan = await writer.WriteAsync(ban, SuperUserId);
+
+        var group = new UserView()
+        {
+            username = "some_group",
+            type = UserType.group
+        };
+
+        if(allowed)
+        {
+            var finalGroup = await writer.WriteAsync(group, banUserId);
+            Assert.Equal(group.username, finalGroup.username);
+        }
+        else
+        {
+            await Assert.ThrowsAnyAsync<BannedException>(() => writer.WriteAsync(group, banUserId));
         }
     }
 
