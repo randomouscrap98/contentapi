@@ -409,6 +409,46 @@ public class UserServiceTests : UnitTestBase, IClassFixture<DbUnitTestBase>
         Assert.True(tempPassword3.ExpireDate > DateTime.Now);
     });
 
+    [Theory]
+    [InlineData("email@email.com", "email@email.com", true)]
+    [InlineData("email@email.com", "EMAIL@email.com", true)]
+    [InlineData("email@email.com", "EmAiL@eMaIl.CoM", true)]
+    [InlineData("email@email.com", "emal@email.com", false)]
+    [InlineData("email@email.com", "EMAL@email.com", false)]
+    public async Task Regression_GetByEmail_CaseInsensitive(string email, string search, bool allowed)
+    {
+        var userId = await service.CreateNewUser("hello", "short", email);
+        var token = await service.CompleteRegistration(userId, service.RegistrationLog[userId]);
+
+        if (allowed) {
+            var found = await service.GetUserByEmail(search);
+            Assert.Equal(email, found.email);
+        }
+        else {
+            await Assert.ThrowsAnyAsync<NotFoundException>(async () => await service.GetUserByEmail(search));
+        }
+    }
+
+    [Theory]
+    [InlineData("whatever", "whatever", true)]
+    [InlineData("whatever", "WHATEVER", true)]
+    [InlineData("whatever", "wHaTeVeR", true)]
+    [InlineData("whatever", "watever", false)]
+    [InlineData("whatever", "WaTeVeR", false)]
+    public async Task Regression_GetByUsername_CaseInsensitive(string username, string search, bool allowed)
+    {
+        var userId = await service.CreateNewUser(username, "short", "email@email.com");
+        var token = await service.CompleteRegistration(userId, service.RegistrationLog[userId]);
+
+        if (allowed) {
+            var found = await service.GetUserByUsername(search);
+            Assert.Equal(username, found.username);
+        }
+        else {
+            await Assert.ThrowsAnyAsync<NotFoundException>(async () => await service.GetUserByUsername(search));
+        }
+    }
+
     [Fact]
     public Task SetSuperStatus() => GeneralNewUserTest(async (username, password, userId, loginToken) =>
     {
