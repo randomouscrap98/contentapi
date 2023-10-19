@@ -30,7 +30,7 @@ public class SmallController : BaseController
         this.permissions = permissions;
     }
 
-    protected string GenericStatus(ContentView? content, MessageView? message, UserView? user)
+    protected string GenericStatus(ContentView? content, MessageView? message, UserView? currentUser)
     {
         StringBuilder sb = new();
 
@@ -40,11 +40,11 @@ public class SmallController : BaseController
             {
                 sb.Append('R');
             }
-            if (user != null)
+            if (currentUser != null)
             {
-                if (permissions.CanUserStatic(user, UserAction.create, content.permissions))
+                if (permissions.CanUserStatic(currentUser, UserAction.create, content.permissions))
                     sb.Append('P');
-                if (content.createUserId == user.id)
+                if (content.createUserId == currentUser.id)
                     sb.Append('O');
             }
         }
@@ -72,7 +72,7 @@ public class SmallController : BaseController
         public long? mid;
     }
 
-    protected GenericMessageResult MakeGenericMessageResult(ContentView? content, MessageView? message, UserView? user)
+    protected GenericMessageResult MakeGenericMessageResult(ContentView? content, MessageView? message, UserView? user, UserView? currentUser)
     {
         return new GenericMessageResult {
             contentTitle = content?.name,
@@ -80,7 +80,7 @@ public class SmallController : BaseController
             message = message?.text,
             datetime = message != null ? Constants.ToCommonDateString(message.createDate) : null,
             type = message?.module,
-            state = GenericStatus(content, message, user),
+            state = GenericStatus(content, message, currentUser),
             cid = content?.id,
             uid = user?.id,
             mid = message?.id
@@ -168,7 +168,8 @@ public class SmallController : BaseController
             using var searcher = services.dbFactory.CreateSearch();
             var result = await searcher.GetByField<ContentView>(RequestType.content, nameof(ContentView.name), search, "like");
 
-            return result.Select(x => (x.id, x.name, GenericStatus(x, null, user))).ToList();
+            return result.Select(x => MakeGenericMessageResult(x, null, null, user)).ToList();
+            //return result.Select(x => (x.id, x.name, GenericStatus(x, null, user))).ToList();
         });
     }
 
@@ -191,7 +192,7 @@ public class SmallController : BaseController
             var content = await searcher.GetById<ContentView>(result.contentId);
 
             return new List<GenericMessageResult> {
-                MakeGenericMessageResult(content, result, user)
+                MakeGenericMessageResult(content, result, user, user)
             };
         });
     }
