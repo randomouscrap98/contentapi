@@ -15,7 +15,7 @@ public class CustomDateTimeConverter : DateTimeConverterBase
         if(value == null)
             writer.WriteValue((string?)null);
         else
-            writer.WriteValue(((DateTime)value).ToUniversalTime().ToString("yyyy-MM-ddTHH:mm:ss.ffZ", CultureInfo.InvariantCulture));
+            writer.WriteValue(Constants.ToCommonDateString((DateTime)value));
     }
 
     public override bool CanRead => false;

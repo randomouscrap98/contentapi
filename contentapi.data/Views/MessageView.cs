@@ -8,11 +8,9 @@ namespace contentapi.data.Views;
 public class MessageView : IContentRelatedView
 {
     [DbField]
-    //[Writable(WriteRule.Preserve, WriteRule.Preserve)] //Why preserve? So it's forced to be 0
     public long id {get;set;}
 
     [DbField]
-    //[Writable(WriteRule.User, WriteRule.Preserve)] //This USED to be preserved, but now that we can rethread, we don't want to
     [Writable()]
     public long contentId {get;set;}
 
@@ -40,11 +38,6 @@ public class MessageView : IContentRelatedView
     [Expensive(2)]
     public Dictionary<string, Dictionary<string, int>> engagement {get;set;} = new Dictionary<string, Dictionary<string, int>>();
 
-    //[NoQuery]
-    //[Expensive(2)]
-    //public Dictionary<string, string> myEngagement {get;set;} = new Dictionary<string, string>();
-
-
     [DbField]
     [Writable(WriteRule.Preserve, WriteRule.AutoDate)]
     public DateTime? editDate {get;set;}
@@ -60,6 +53,7 @@ public class MessageView : IContentRelatedView
     //Note: completely not writable
     public bool deleted {get;set;}
 
+
     [DbField] 
     [Writable(WriteRule.User, WriteRule.Preserve)] //Is this necessary?
     public string? module { get; set; }
@@ -71,12 +65,4 @@ public class MessageView : IContentRelatedView
     [NoQuery]
     [Expensive(1)]
     public List<long> uidsInText {get;set;} = new List<long>();
-
-    //[Expensive(3)]
-    //[DbField("select c.literalType from content as c where main.contentId = c.id")]
-    //public string? content_literalType {get;set;}
-
-    //[Expensive(3)]
-    //[DbField("select c.contentType from content as c where main.contentId = c.id")]
-    //public InternalContentType content_contentType {get;set;}
 }

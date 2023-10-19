@@ -7,6 +7,10 @@ using Microsoft.AspNetCore.Mvc;
 using contentapi.data;
 using CsvHelper;
 using System.Globalization;
+using contentapi.Search;
+using System.Net.WebSockets;
+using System.Text;
+using System.Linq;
 
 namespace contentapi.Controllers;
 
@@ -18,10 +22,69 @@ public class SmallController : BaseController
 
     //protected ShortcutsService shortcuts;
     protected IUserService userService;
+    protected IPermissionService permissions;
 
-    public SmallController(BaseControllerServices services, IUserService userService) : base(services) 
+    public SmallController(BaseControllerServices services, IUserService userService, IPermissionService permissions) : base(services) 
     { 
         this.userService = userService;
+        this.permissions = permissions;
+    }
+
+    protected string GenericStatus(ContentView? content, MessageView? message, UserView? user)
+    {
+        StringBuilder sb = new();
+
+        if(content != null)
+        {
+            if (permissions.CanUserStatic(new UserView { id = 0 }, UserAction.read, content.permissions))
+            {
+                sb.Append('R');
+            }
+            if (user != null)
+            {
+                if (permissions.CanUserStatic(user, UserAction.create, content.permissions))
+                    sb.Append('P');
+                if (content.createUserId == user.id)
+                    sb.Append('O');
+            }
+        }
+        if(message != null)
+        {
+            if(message.edited)
+                sb.Append('E');
+            if(message.deleted)
+                sb.Append('D');
+        }
+
+        return sb.ToString();
+    }
+
+    public class GenericMessageResult
+    {
+        public string? contentTitle;
+        public string? username;
+        public string? message;
+        public string? datetime;
+        public string? type;
+        public string? state;
+        public long? cid;
+        public long? uid;
+        public long? mid;
+    }
+
+    protected GenericMessageResult MakeGenericMessageResult(ContentView? content, MessageView? message, UserView? user)
+    {
+        return new GenericMessageResult {
+            contentTitle = content?.name,
+            username = user?.username,
+            message = message?.text,
+            datetime = message != null ? Constants.ToCommonDateString(message.createDate) : null,
+            type = message?.module,
+            state = GenericStatus(content, message, user),
+            cid = content?.id,
+            uid = user?.id,
+            mid = message?.id
+        };
     }
 
     /// <summary>
@@ -92,4 +155,44 @@ public class SmallController : BaseController
         });
     }
 
+    [HttpGet("search")]
+    public Task<ActionResult> Search([FromQuery]string search)
+    {
+        return SmallTaskCatch(async () => 
+        {
+            UserView user;
+            try { user = await GetUserViewStrictAsync(); }
+            catch { user = new UserView() { id = 0, username = "DEFAULT"}; }
+
+            //Construct a search 
+            using var searcher = services.dbFactory.CreateSearch();
+            var result = await searcher.GetByField<ContentView>(RequestType.content, nameof(ContentView.name), search, "like");
+
+            return result.Select(x => (x.id, x.name, GenericStatus(x, null, user))).ToList();
+        });
+    }
+
+    [Authorize()]
+    [HttpGet("post/{id}")]
+    public Task<ActionResult> Post([FromRoute]long id, [FromQuery]string message, [FromQuery(Name = "values")]Dictionary<string, string>? values = null)
+    {
+        return SmallTaskCatch(async () => 
+        {
+            var user = await GetUserViewStrictAsync();
+            var mv = new MessageView {
+                text = message,
+                contentId = id,
+                values = values?.ToDictionary(k=>k.Key, v=>(object)v.Value) ?? new Dictionary<string, object>()
+            };
+            //This will use the cached writer but that's fine, this particular instance of the smallcontroller will NOT
+            //live long, just like the cached values suggest
+            var result = await WriteAsync(mv);
+            using var searcher = services.dbFactory.CreateSearch();
+            var content = await searcher.GetById<ContentView>(result.contentId);
+
+            return new List<GenericMessageResult> {
+                MakeGenericMessageResult(content, result, user)
+            };
+        });
+    }
 }

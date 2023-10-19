@@ -1,3 +1,5 @@
+using System.Globalization;
+
 namespace contentapi;
 
 public static class Constants
@@ -13,4 +15,9 @@ public static class Constants
 
     public const string GifMime = "image/gif";
     public const string JpegMime = "image/jpeg";
+
+    public static string ToCommonDateString(DateTime dt)
+    {
+        return dt.ToUniversalTime().ToString(DateFormat, CultureInfo.InvariantCulture);
+    }
 }
