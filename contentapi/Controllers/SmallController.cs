@@ -1,16 +1,11 @@
-using contentapi.Db;
 using contentapi.Main;
-using contentapi.Utilities;
 using contentapi.data.Views;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
 using contentapi.data;
 using CsvHelper;
 using System.Globalization;
-using contentapi.Search;
-using System.Net.WebSockets;
 using System.Text;
-using System.Linq;
 
 namespace contentapi.Controllers;
 
@@ -19,6 +14,7 @@ public class SmallController : BaseController
 {
     protected const string CSVMIME = "text/csv";
     protected const string PLAINMIME = "text/plain";
+    protected const int DEFAULTPULL = 30;
 
     //protected ShortcutsService shortcuts;
     protected IUserService userService;
@@ -59,6 +55,9 @@ public class SmallController : BaseController
         return sb.ToString();
     }
 
+    /// <summary>
+    /// Nearly all result sets from SmallController will be of this "record" type
+    /// </summary>
     public class GenericMessageResult
     {
         public string? contentTitle;
@@ -165,9 +164,7 @@ public class SmallController : BaseController
             catch { user = new UserView() { id = 0, username = "DEFAULT"}; }
 
             //Construct a search 
-            using var searcher = services.dbFactory.CreateSearch();
-            var result = await searcher.GetByField<ContentView>(RequestType.content, nameof(ContentView.name), search, "like");
-
+            var result = await CachedSearcher.GetByField<ContentView>(RequestType.content, nameof(ContentView.name), search, "like");
             return result.Select(x => MakeGenericMessageResult(x, null, null, user)).ToList();
             //return result.Select(x => (x.id, x.name, GenericStatus(x, null, user))).ToList();
         });
@@ -188,8 +185,7 @@ public class SmallController : BaseController
             //This will use the cached writer but that's fine, this particular instance of the smallcontroller will NOT
             //live long, just like the cached values suggest
             var result = await WriteAsync(mv);
-            using var searcher = services.dbFactory.CreateSearch();
-            var content = await searcher.GetById<ContentView>(result.contentId);
+            var content = await CachedSearcher.GetById<ContentView>(result.contentId);
 
             return new List<GenericMessageResult> {
                 MakeGenericMessageResult(content, result, user, user)

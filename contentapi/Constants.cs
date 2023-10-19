@@ -16,6 +16,12 @@ public static class Constants
     public const string GifMime = "image/gif";
     public const string JpegMime = "image/jpeg";
 
+    /// <summary>
+    /// Shortcut function to compute the default DateTime string using Constants.DateFormat. This is so 
+    /// standardized that I'm fine putting this as a shortcut in Constants
+    /// </summary>
+    /// <param name="dt"></param>
+    /// <returns></returns>
     public static string ToCommonDateString(DateTime dt)
     {
         return dt.ToUniversalTime().ToString(DateFormat, CultureInfo.InvariantCulture);
