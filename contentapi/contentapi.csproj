@@ -4,7 +4,7 @@
     <TargetFramework>net6.0</TargetFramework>
     <Nullable>enable</Nullable>
     <ImplicitUsings>enable</ImplicitUsings>
-	  <Version>3.2.0.652</Version>
+	  <Version>3.2.0.656</Version>
     <InvariantGlobalization>true</InvariantGlobalization>
     <ProduceReferenceAssembly>false</ProduceReferenceAssembly>
   </PropertyGroup>
@@ -13,9 +13,11 @@
     <PackageReference Include="AutoMapper.Extensions.Microsoft.DependencyInjection" Version="11.0.0" />
     <PackageReference Include="AWSSDK.Extensions.NETCore.Setup" Version="3.7.2" />
     <PackageReference Include="AWSSDK.S3" Version="3.7.8.15" />
+    <PackageReference Include="CsvHelper" Version="30.0.1" />
     <PackageReference Include="Dapper.Contrib" Version="2.0.78" />
     <PackageReference Include="Microsoft.AspNetCore.Authentication.JwtBearer" Version="6.0.0" />
     <PackageReference Include="Microsoft.AspNetCore.Mvc.NewtonsoftJson" Version="6.0.0" />
+    <PackageReference Include="Microsoft.Data.Analysis" Version="0.20.1" />
     <PackageReference Include="Microsoft.Data.Sqlite" Version="6.0.0" />
     <PackageReference Include="Moonsharp" Version="2.0.0" />
     <PackageReference Include="SixLabors.ImageSharp" Version="2.1.2" />

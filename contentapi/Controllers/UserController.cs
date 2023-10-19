@@ -204,18 +204,8 @@ public class UserController : BaseController
             }
             else
             {
-                //TODO: language? Configuration? I don't know
-                //if(!string.IsNullOrWhiteSpace(config.CustomEmailBody))
-                //{
-                //    var emailMessage = new EmailMessage (email, "Registration instructions", config.CustomEmailBody.Replace("{{code}}", registrationCode));
-                //    emailMessage.IsHtml = true;
-                //    await emailer.SendEmailAsync(emailMessage);
-                //}
-                //else
-                //{
                 await emailer.SendEmailAsync(new EmailMessage(email, "Registration instructions",
                     $"Your registration code for '{GetHost()}' is:\n\n{registrationCode}"));
-                //}
             }
 
             return true;
@@ -245,49 +235,12 @@ public class UserController : BaseController
             
             var userId = await userService.GetUserIdFromEmailAsync(email);
 
-            //if(await userService.IsPasswordExpired(userId))
-            //{
-            //    //Generate a new password for the user. Is this OK? They MUST have a new password
-            //    //in order to change values for themselves, LIKE their password itself! They're stuck
-            //    //in a contradiction if not: their password is expired, but the only way to change
-            //    //your password is to HAVE a valid password...
-            //    var secretData = new UserSetPrivateData() {
-            //        password = random.GetRandomPassword()
-            //    };
+            var tempPassword = userService.GetTemporaryPassword(userId);
+            var utcExpire = tempPassword.ExpireDate.ToUniversalTime();
 
-            //    await userService.SetPrivateData(userId, secretData);
-
-            //    await emailer.SendEmailAsync(new EmailMessage(email, "Account Recovery",
-            //        $"Someone (hopefully you!) requested account recovery on '{GetHost()}' for the user associated with this email. Usually this generates " +
-            //        "a temporary one-time-use password which expires quickly. However, because your password is expired, we have generated a new " +
-            //        "permanent password for you. We recommend you change it as soon as possible"));
-            //}
-            //else
-            //{
-                var tempPassword = userService.GetTemporaryPassword(userId);
-                var utcExpire = tempPassword.ExpireDate.ToUniversalTime();
-
-                //TODO: language? Configuration? I don't know
-                await emailer.SendEmailAsync(new EmailMessage(email, "Account Recovery",
-                    $"You can temporarily access your account on '{GetHost()}' for another {StaticUtils.HumanTime(utcExpire - DateTime.UtcNow)} using the ONE TIME USE temporary password:\n\n{tempPassword.Key}"));
-            //}
-            //var user = await CachedSearcher.GetById<UserView>(RequestType.user, userId);
-
-            //if(config.ConfirmationType.StartsWith(RestrictedConfirmation))
-            //{
-            //    var message = new EmailMessage();
-            //    message.Recipients = GetRestrictedEmails();
-            //    message.Title = $"User {user.username} is trying to recover their account";
-            //    message.Body = $"User {user.username} is trying to recover their account using email {email} on {GetHost()}\n\nIf this looks acceptable, please send them " +
-            //        $"an email stating they have a ONE TIME USE temporary password that will last until {utcExpire} UTC ({StaticUtils.HumanTime(utcExpire - DateTime.UtcNow)}):\n\n{tempPassword.Key}";
-
-            //    //TODO: language? Configuration? I don't know
-            //    await emailer.SendEmailAsync(message);
-            //}
-            //else
-            //{
-
-            //}
+            //TODO: language? Configuration? I don't know
+            await emailer.SendEmailAsync(new EmailMessage(email, "Account Recovery",
+                $"You can temporarily access your account on '{GetHost()}' for another {StaticUtils.HumanTime(utcExpire - DateTime.UtcNow)} using the ONE TIME USE temporary password:\n\n{tempPassword.Key}"));
 
             return true;
         });
