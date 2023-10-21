@@ -821,6 +821,7 @@ class Markup_Legacy { constructor() {
 		h3(args) {
 			return ['heading', {level: 3}]
 		},
+		// [url=http://example.com]...[/url] form
 		url(args) {
 			return ['link', {url: args['']}]
 		},
@@ -843,20 +844,21 @@ class Markup_Legacy { constructor() {
 				return ['code', {text: contents, lang: args.lang||'sb'}]
 			}
 		},
+		// [url]http://example.com[/url] form
 		url(args, contents) {
 			return ['simple_link', {url: contents}]
 		},
 		youtube(args, contents) {
-			return ['youtube', {url: args['']}] // TODO: set id here
+			return ['youtube', {url: contents}] // TODO: set id here
 		},
 		audio(args, contents) {
-			return ['audio', {url: args['']}]
+			return ['audio', {url: contents}]
 		},
 		video(args, contents) {
-			return ['audio', {url: args['']}]
+			return ['video', {url: contents}]
 		},
 		img(args, contents) {
-			return ['audio', {url: args['']}]
+			return ['image', {url: contents, alt: args['']}]
 		},
 	})
 	

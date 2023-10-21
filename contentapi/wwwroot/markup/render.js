@@ -41,29 +41,7 @@ class Markup_Render_Dom { constructor() {
 		}
 	}
 	
-	let intersection_observer, preview
-	
-	const load_image = (e, src)=>{
-		const set_size = (state)=>{
-			e.width = e.naturalWidth
-			e.height = e.naturalHeight
-			e.dataset.state = state
-			e.style.setProperty('--width', e.naturalWidth)
-			e.style.setProperty('--height', e.naturalHeight)
-		}
-		e.src = src
-		// check whether the image is "available" (i.e. size is known) by looking at naturalHeight
-		// https://html.spec.whatwg.org/multipage/images.html#img-available
-		// this will happen here if the image is VERY cached, i guess
-		if (e.naturalHeight)
-			set_size('loaded')
-		else // otherwise wait for load
-			e.decode().then(ok=>{
-				set_size('loaded')
-			}, no=>{
-				e.dataset.state = 'error'
-			})
-	}
+	let preview
 	
 	let CREATE = {
 		__proto__: null,
@@ -98,38 +76,40 @@ class Markup_Render_Dom { constructor() {
 				url = filter_url(url, 'link')
 				e.target = '_blank'
 			} else
-				e.target = '_self'
+				e.target = '_self' //hack
 			e.href = url
 			return e
 		}.bind(𐀶`<a href="" class='M-link'>`),
 		
 		image: function({url, alt, width, height}) {
-			let e = document.createElement('img')
-			e.tabIndex = 0
-			e.dataset.state = "loading"
-			e.dataset.shrink = ""
-			
 			let src = filter_url(url, 'image')
-			
-			if (alt!=null) e.alt = e.title = alt
-			if (width) {
+			let e = document.createElement('img')
+			e.classList.add('M-image')
+			e.dataset.shrink = ""
+			if (alt!=null)
+				e.alt = e.title = alt
+			e.tabIndex = 0
+			const set_size = (state, width=e.naturalWidth, height=e.naturalHeight)=>{
 				e.width = width
-				e.style.setProperty('--width', width)
-			}
-			if (height) {
 				e.height = height
+				e.style.setProperty('--width', width)
 				e.style.setProperty('--height', height)
-				e.dataset.state = 'size'
+				e.dataset.state = state
 			}
-			
-			// loading maybe
-			if (intersection_observer) {
-				e.dataset.src = src
-				intersection_observer.observe(e)
-				intersection_observer._x_load = load_image//HACK
-			} else {
-				load_image(e, src)
-			}
+			if (height)
+				set_size('size', width, height)
+			e.src = src
+			// check whether the image is "available" (i.e. size is known) by looking at naturalHeight
+			// https://html.spec.whatwg.org/multipage/images.html#img-available
+			// this will happen here if the image is VERY cached, i guess
+			if (e.naturalHeight)
+				set_size('loaded')
+			else // otherwise wait for load
+				e.decode().then(ok=>{
+					set_size('loaded')
+				}, no=>{
+					e.dataset.state = 'error'
+				})
 			return e
 		},
 		
@@ -407,7 +387,6 @@ we should create our own fake bullet elements instead.*/
 		@return {ParentNode} - node with rendered contents. same as `node` if passed, otherwise is a new DocumentFragment.
 	**/
 	this.render = function({args, content}, node=document.createDocumentFragment(), options) {
-		intersection_observer = options && options.intersection_observer
 		preview = options && options.preview
 		node.textContent = "" //mmnn
 		fill_branch(node, content)
@@ -423,6 +402,7 @@ we should create our own fake bullet elements instead.*/
 		@member {Object<string,function>}
 	**/
 	this.url_scheme = URL_SCHEME
+	this.filter_url = filter_url
 }}
 
 if ('object'==typeof module && module) module.exports = Markup_Render_Dom

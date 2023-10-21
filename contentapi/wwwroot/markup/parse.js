@@ -78,7 +78,7 @@ class Markup_12y2 { constructor() {
 		let list = [], named = {}
 		list.named = named
 		for (let arg of arglist.split(";")) {
-			let [, name, value] = /^(?:([^=]*)=)?(.*)$/.exec(arg)
+			let [, name, value] = /^(?:([-\w]*)=)?(.*)$/.exec(arg)
 			// value OR =value
 			// (this is to allow values to contain =. ex: [=1=2] is "1=2")
 			if (!name)
@@ -112,9 +112,9 @@ class Markup_12y2 { constructor() {
 			args.alt = rargs.named.alt
 		// todo: improve this
 		if (!type) {
-			if (/[.](mp3|ogg|wav|m4a|flac)\b/i.test(url))
+			if (/[.](mp3|ogg|wav|m4a|flac|aac|oga|opus|wma)\b/i.test(url))
 				type = 'audio'
-			else if (/[.](mp4|mkv|mov|webm)\b/i.test(url))
+			else if (/[.](mp4|mkv|mov|webm|avi|flv|m4v|mpeg|mpg|ogv|ogm|ogx|wmv|xvid)\b/i.test(url))
 				type = 'video'
 			else if (/^https?:[/][/](?:www[.])?(?:youtube.com[/]watch[?]v=|youtu[.]be[/]|youtube.com[/]shorts[/])[\w-]{11}/.test(url)) {
 				// todo: accept [start-end] args maybe?
@@ -246,7 +246,7 @@ class Markup_12y2 { constructor() {
 				dest = get_last(curr)
 				if (!dest || 'list'!==dest.type || dest.args.indent>indent) {
 					// create a new level in the list
-					dest = push(curr, 'list', {indent}, [])
+					dest = push(curr, 'list', {indent, style:o.args.kind}, [])
 					break
 				}
 			} while (dest.args.indent != indent)
@@ -287,13 +287,14 @@ class Markup_12y2 { constructor() {
 	// parsing //
 	
 	const STYLE_START
-		= /^[\s][^\s,]|^['"}{(>|][^\s,'"]/
+		= /^[\s,][^\s,]|^['"}{(>|][^\s,'"]/
 	const STYLE_END
 		= /^[^\s,][-\s.,:;!?'"}{)<\\|]/
 	const ITALIC_START
-		= /^[\s][^\s,/]|^['"}{(>|][^\s,'"/]/
+		= /^[\s,][^\s,/]|^['"}{(|][^\s,'"/<]/
 	const ITALIC_END
-		= /^[^\s,/][-\s.,:;!?'"}{)<\\|]/
+		= /^[^\s,/>][-\s.,:;!?'"}{)\\|]/
+	// wait, shouldn't \./heck/\. be allowed though? but that wouldn't work since `.` isn't allowed before..
 	
 	const find_style=(token)=>{
 		for (let c=current; 'style'===c.type; c=c.parent)
@@ -476,7 +477,8 @@ class Markup_12y2 { constructor() {
 					body = true // ghhhh?
 					//BLOCK('anchor', {id})
 				} break; case '\\link': {
-					let args = {url: rargs[0]}
+					let [url=""] = rargs
+					let args = {url}
 					if (body) {
 						OPEN('link', args)
 					} else {
@@ -645,9 +647,9 @@ class Markup_12y2 { constructor() {
 				}
 				ACCEPT()
 				let indent = token.indexOf("-")
-				OPEN('list_item', {indent})
+				OPEN('list_item', {indent, kind:rargs[0]==="1"?"1":undefined})
 			} }
-
+			
 			if (body) {
 				text = text.substring(last)
 				last = REGEX.lastIndex = 0

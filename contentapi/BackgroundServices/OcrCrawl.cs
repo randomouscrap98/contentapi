@@ -1,7 +1,11 @@
 
 using System.Diagnostics;
+using System.Net.Mime;
+using System.Text.RegularExpressions;
+using contentapi.data;
 using contentapi.data.Views;
 using contentapi.Main;
+using contentapi.Search;
 
 namespace contentapi.BackgroundServices;
 
@@ -95,6 +99,32 @@ public class OcrCrawl : BackgroundService
     public async Task CrawlOcr(CancellationToken token)
     {
         using var searcher = dbfactory.CreateSearch();
+        using var writer = dbfactory.CreateWriter();
+
+        //Grab content
+        var fileViews = await searcher.SearchSingleTypeUnrestricted<ContentView>(new SearchRequest() {
+            type = nameof(RequestType.content),
+            limit = config.ProcessPerInterval,
+            order = config.PullOrder,
+            fields = "*", //Since we expect to write this back
+            query = "contentType = @filetype and !valuekeynotin(@ocrkey)"
+        }, new Dictionary<string, object> { 
+            { "filetype", InternalContentType.file },
+            { "ocrkey", new[] { config.OcrValueKey } },
+        });
+
+        if(fileViews.Count > 0)
+            logger.LogDebug($"Begin OCR crawl on {fileViews.Count} files: {string.Join(",", fileViews.Select(x => x.hash))}");
+        else
+            logger.LogDebug("No files to OCR crawl, skipping");
+
+        foreach(var file in fileViews)
+        {
+            var ocr = await OcrContent(file, token);
+            file.values[config.OcrValueKey] = ocr;
+            await writer.WriteAsync(file, file.createUserId, $"OCR service: {Constants.ToCommonDateString(DateTime.UtcNow)}");
+            logger.LogInformation($"Wrote OCR for file {file.hash}({file.id}): {ocr.Length} chars");
+        }
     }
 
     /// <summary>
@@ -132,7 +162,7 @@ public class OcrCrawl : BackgroundService
                 var output = await process.StandardOutput.ReadToEndAsync().WaitAsync(token);
                 await process.WaitForExitAsync(token);
                 
-                return string.Join("\n", output.Replace("\r", "").Split("\n", StringSplitOptions.RemoveEmptyEntries));
+                return string.Join("\n", Regex.Replace(output.Replace("\r", ""), @"\s+", " ").Split("\n", StringSplitOptions.RemoveEmptyEntries));
             }
             else
             {

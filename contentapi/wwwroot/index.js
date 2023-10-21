@@ -419,17 +419,26 @@ function page_onload(template, state)
         api.AutoLinkUsers(d.result.objects.subpages, d.result.objects.user);
         api.AutoLinkUsers(d.result.objects.message, d.result.objects.user);
 
-        d.result.objects.subpages.forEach(x => {
-            var template = x.contentType === 3 ? "file_item" : "page_item";
-            var subpage = LoadTemplate(template, x);
-            subpagesElement.appendChild(subpage);
-        });
+        if(d.result.objects.subpages.length === 0)
+        {
+            template.querySelector("#page-subpages-container").setAttribute("hidden", "");
+        }
+        else
+        {
+            d.result.objects.subpages.forEach(x => {
+                var template = x.contentType === 3 ? "file_item" : "page_item";
+                var subpage = LoadTemplate(template, x);
+                subpagesElement.appendChild(subpage);
+            });
+        }
 
         d.result.objects.message.forEach(x => {
             var comment = LoadTemplate("comment_item", x);
             commentsElement.appendChild(comment);
         });
 
+        if(!d.result.requestUser)
+            [...template.querySelectorAll("[data-requireslogin]")].forEach(x => x.setAttribute("hidden", ""));
     }));
 }
 

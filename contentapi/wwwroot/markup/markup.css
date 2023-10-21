@@ -18,6 +18,7 @@ L + ratio { }
 	--T-bg: white;
 	
 	--T-link-color: #056;
+	--T-link-visited-color: #606;
 	--T-link-hover-color: #089;
 	--T-link-decoration: underline #AAAA; /* idk..*/
 	--T-custom-link-decoration: underline blue;
@@ -146,6 +147,7 @@ L + ratio { }
 	border-radius: 4px;
 	margin: 0 0.1em;
 	vertical-align: 1px;
+	/*-webkit-box-decoration-break: clone; box-decoration-break: clone; - actually we want this disabled since that makes it easier to tell if a code block has been split*/
 }
 .Markup th code {
 	white-space: pre-wrap;
@@ -274,6 +276,9 @@ L + ratio { }
 	text-decoration: var(--T-link-decoration, underline #AAAA);
 	-webkit-text-decoration: var(--T-link-decoration, underline #AAAA);
 }
+.M-link:visited {
+	color: var(--T-link-visited-color, #606);
+}
 .M-link:hover {
 	color: var(--T-link-hover-color);
 }
@@ -290,19 +295,25 @@ L + ratio { }
 /***********/
 /** Lists **/
 /***********/
-.Markup ul {
+
+/* todo: having 2 separate list tags sucks. let's just use <ol> and style it with css. there's no such thing as an unordered list, right? even if it's not NUMBERED, it's still ORDERED (implicitly, based on which item you wrote first), maybe? */
+.Markup ul, .Markup ol {
 	padding-left: 1.3125em;
 	/*border: 4px solid transparent;
 	border-left: 4px solid var(--T-border-color);*/
 }
 
-/* todo: this isn't valid, need to change how we generate this */
-.Markup ul > ul {
+/* todo: this isn't valid html, need to change how we generate this */
+.Markup ul > ul, .Markup ol > ul, .Markup ul > ol, .Markup ol > ol, {
 	padding-left: 1em;
 }
 
 .Markup li {
 	margin: 0.25em 0;
+}
+
+.Markup ol > li::marker {
+	font-weight: bold;
 }
 
 /*************/

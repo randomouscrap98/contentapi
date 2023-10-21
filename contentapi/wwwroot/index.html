@@ -6,19 +6,19 @@
     <meta name="rating" content="general">
     <meta name="description" content="SBS default implementation">
     <link rel="icon" href="favicon.ico" type="image/x-icon">
-    <script src="api.js?v=1697867766"></script>
+    <script src="api.js?v=1697885622"></script>
     <!-- These are required for the 12y parser (markup) -->
-    <script src="markup/langs.js?v=1697867766"></script>
-    <script src="markup/legacy.js?v=1697867766"></script>
-    <script src="markup/parse.js?v=1697867766"></script>
-    <script src="markup/render.js?v=1697867766"></script>
-    <script src="markup/helpers.js?v=1697867766"></script>
-    <link rel="stylesheet" href="markup/markup.css?v=1697867766">
-    <link rel="stylesheet" href="markup.css?v=1697867766">
-    <script src="markup.js?v=1697867766"></script>
+    <script src="markup/langs.js?v=1697885622"></script>
+    <script src="markup/legacy.js?v=1697885622"></script>
+    <script src="markup/parse.js?v=1697885622"></script>
+    <script src="markup/render.js?v=1697885622"></script>
+    <script src="markup/helpers.js?v=1697885622"></script>
+    <link rel="stylesheet" href="markup/markup.css?v=1697885622">
+    <link rel="stylesheet" href="markup.css?v=1697885622">
+    <script src="markup.js?v=1697885622"></script>
     <!-- The scripts and styling for this page in particular -->
-    <script src="index.js?v=1697867766"></script>
-    <link rel="stylesheet" href="index.css?v=1697867766">
+    <script src="index.js?v=1697885622"></script>
+    <link rel="stylesheet" href="index.css?v=1697885622">
 </head>
 
 <body>
@@ -139,9 +139,17 @@
                 <a hidden="" id="filepage-link"><img id="filepage-image"></a>
             </div>
             <h2 id="page-title"></h2>
+            <div id="page-subpages-container">
+                <h3>Subpages:</h3>
+                <div id="page-subpages" class="resultlist"></div>
+                <div id="page-subpages-nav" class="nav">
+                    <a href="#" id="page-subpageup">Next Subpages</a>
+                    <a href="#" id="page-subpagedown">Previous Subpages</a>
+                </div>
+            </div>
             <div id="page-content" title="This is lightly-rendered markup" hidden="" class="content"></div>
             <table class="describe striped" id="page-table"></table>
-            <div id="page-interactions" data-pageid="" class="flexrow">
+            <div id="page-interactions" data-pageid="" data-requireslogin="" class="flexrow">
                 <button id="watch-page" hidden="" onclick="return t_page_watch(this, true)">Watch</button>
                 <button id="unwatch-page" hidden="" onclick="return t_page_watch(this, false)">Unwatch</button>
                 <div id="current-vote-container-page" hidden="">Current vote: <span id="current-vote-page"></span></div>
@@ -152,7 +160,7 @@
                 </div>
                 <button class="error" id="page-delete" onclick="return t_page_delete(this)" hidden="">Delete page</button>
             </div>
-            <div id="page-edit-section" class="hidden">
+            <div id="page-edit-section" data-requireslogin="" class="hidden">
                 <h3>Edit: <button id="page-edit-toggle"></button></h3>
                 <div id="page-edit-container"></div>
             </div>
@@ -166,17 +174,13 @@
                     </div>
                 </div>
             </div>
-            <!-- The editor goes here (in this container) -->
-            <h3>New Page Here: <button id="page-submit-toggle"></button></h3>
-            <div id="page-submit-container"></div>
-            <h3>Subpages:</h3>
-            <div id="page-subpages" class="resultlist"></div>
-            <div id="page-subpages-nav" class="nav">
-                <a href="#" id="page-subpageup">Next Subpages</a>
-                <a href="#" id="page-subpagedown">Previous Subpages</a>
+            <div data-requireslogin="">
+                <h3>New Page Here: <button id="page-submit-toggle"></button></h3>
+                <!-- The editor goes here (in this container) -->
+                <div id="page-submit-container"></div>
             </div>
             <h3>Comments:</h3>
-            <div id="comment-submit-container">
+            <div id="comment-submit-container" data-requireslogin="">
                 <form onsubmit="return t_comment_submit_submit(this)">
                     <label for="comment-submit-text">New comment:</label>
                     <textarea id="comment-submit-text" required=""></textarea>
