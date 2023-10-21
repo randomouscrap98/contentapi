@@ -1,8 +1,14 @@
-using blog_generator.Configs;
 using Stubble.Core.Builders;
 using Stubble.Core.Interfaces;
 
-namespace blog_generator;
+namespace contentapi;
+
+//TODO: put this back in appsettings!
+public class TemplateConfig
+{
+    public string TemplatesFolder {get;set;} = "Templates";
+    public string TemplatesExtension {get;set;} = ".mustache";
+}
 
 /// <summary>
 /// A partials (templates) loader for Mustache (called Stubble) which loads partials from files

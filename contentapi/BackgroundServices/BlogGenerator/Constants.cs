@@ -1,3 +1,5 @@
+namespace blog_generator;
+
 public static class Constants
 {
     public const string ShortIsoFormatString = "yyyy-MM-ddTHH:mm:ssZ";

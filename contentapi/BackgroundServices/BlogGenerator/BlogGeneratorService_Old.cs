@@ -9,7 +9,7 @@ using Newtonsoft.Json.Linq;
 
 namespace contentapi.BackgroundServices;
 
-public class BlogGeneratorService : BackgroundService
+public class BlogGeneratorService_Old : BackgroundService
 {
     private readonly ILogger logger;
     protected WebsocketConfig wsconfig;
@@ -37,7 +37,7 @@ public class BlogGeneratorService : BackgroundService
     public const string stylePagesKey = "style_pages";
     public const string styleRefreshKey = "style_refresh";
 
-    public BlogGeneratorService(ILogger<BlogGeneratorService> logger, WebsocketConfig wsconfig, BlogGenerator blogGenerator, IMapper mapper,
+    public BlogGeneratorService_Old(ILogger<BlogGeneratorService_Old> logger, WebsocketConfig wsconfig, BlogGenerator blogGenerator, IMapper mapper,
         BlogPathManager pathManager)
     {
         this.logger = logger;
