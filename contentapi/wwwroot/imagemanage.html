@@ -130,7 +130,8 @@ function ReloadImages()
     if(SearchState.search)
     {
         values['search'] = '%' + SearchState.search + '%';
-        request.query += " and (name LIKE @search or hash LIKE @search or !keywordlike(@search))"
+        values['ocrkey'] = "ocr-crawl";
+        request.query += " and (name LIKE @search or hash LIKE @search or !keywordlike(@search) or !valuelike(@ocrkey, @search))";
     }
 
     var userRequest = new RequestSearchParameter("user", "id,username", "id in @content.createUserId");
