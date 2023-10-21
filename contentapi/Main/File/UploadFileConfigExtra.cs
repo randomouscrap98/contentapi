@@ -6,5 +6,6 @@ public class UploadFileConfigExtra : UploadFileConfig
     public string? name { get; set; } = null;
     public string? hash {get;set; } = null;
     public string? globalPerms { get; set; } = null;
+    public string? keywords {get;set;} = null;
     public Dictionary<string, string> values { get; set; } = new Dictionary<string, string>();
 }

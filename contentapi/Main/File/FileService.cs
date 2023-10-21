@@ -188,6 +188,7 @@ public class FileService : IFileService
             name = fileConfig.name ?? "",
             contentType = InternalContentType.file,
             hash = fileConfig.hash ?? "",
+            keywords = (fileConfig.keywords ?? "").Split(" ", StringSplitOptions.RemoveEmptyEntries).ToList(),
             values = fileConfig.values.ToDictionary(x => x.Key, y => (object)y.Value)
         };
 
