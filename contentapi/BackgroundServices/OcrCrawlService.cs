@@ -32,14 +32,14 @@ public class OcrCrawlConfig
     public string TempLocation {get;set;} = "tempfiles";
 }
 
-public class OcrCrawl : BackgroundService
+public class OcrCrawlService : BackgroundService
 {
     protected ILogger logger;
     protected OcrCrawlConfig config;
     protected IDbServicesFactory dbfactory;
     protected IFileService fileService;
 
-    public OcrCrawl(ILogger<OcrCrawl> logger, OcrCrawlConfig config, IDbServicesFactory dbfactory, IFileService fileService)
+    public OcrCrawlService(ILogger<OcrCrawlService> logger, OcrCrawlConfig config, IDbServicesFactory dbfactory, IFileService fileService)
     {
         this.logger = logger;
         this.config = config;

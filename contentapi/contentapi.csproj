@@ -28,6 +28,7 @@
 
   <ItemGroup>
     <ProjectReference Include="..\contentapi.data\contentapi.data.csproj" />
+    <None Include="Templates\**" CopyToOutputDirectory="Always" LinkBase="Templates\" />
   </ItemGroup>
 
 </Project>

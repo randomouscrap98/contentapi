@@ -158,7 +158,7 @@ public class BlogGenerator
         }).ToList();
 
         //Need to use mustache here to generate the template and write it
-        var renderedPage = await renderer.RenderPageAsync("main", templateData);
+        var renderedPage = await renderer.RenderPageAsync(templateConfig.MainTemplate, templateData);
 
         var path = page.id == parent.id ? pathManager.LocalBlogMainPath(parent.hash) : pathManager.LocalBlogPagePath(parent.hash, page.hash);
         await WriteAny(path, renderedPage, "page");
@@ -191,7 +191,7 @@ public class BlogGenerator
         };
 
         //Need to use mustache here to generate the template and write it
-        var renderedPage = await renderer.RenderPageAsync("style", templateData);
+        var renderedPage = await renderer.RenderPageAsync(templateConfig.StyleTemplate, templateData);
 
         var path = pathManager.LocalStylePath(style.hash);
         await WriteAny(path, renderedPage, "style");
