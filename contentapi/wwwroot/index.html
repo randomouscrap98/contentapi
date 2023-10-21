@@ -1,3 +1,4 @@
+<!DOCTYPE html> 
 <html lang="en">
 
 <head>
@@ -6,19 +7,19 @@
     <meta name="rating" content="general">
     <meta name="description" content="SBS default implementation">
     <link rel="icon" href="favicon.ico" type="image/x-icon">
-    <script src="api.js?v=1697885622"></script>
+    <script src="api.js?v=1697887255"></script>
     <!-- These are required for the 12y parser (markup) -->
-    <script src="markup/langs.js?v=1697885622"></script>
-    <script src="markup/legacy.js?v=1697885622"></script>
-    <script src="markup/parse.js?v=1697885622"></script>
-    <script src="markup/render.js?v=1697885622"></script>
-    <script src="markup/helpers.js?v=1697885622"></script>
-    <link rel="stylesheet" href="markup/markup.css?v=1697885622">
-    <link rel="stylesheet" href="markup.css?v=1697885622">
-    <script src="markup.js?v=1697885622"></script>
+    <script src="markup/langs.js?v=1697887255"></script>
+    <script src="markup/legacy.js?v=1697887255"></script>
+    <script src="markup/parse.js?v=1697887255"></script>
+    <script src="markup/render.js?v=1697887255"></script>
+    <script src="markup/helpers.js?v=1697887255"></script>
+    <link rel="stylesheet" href="markup/markup.css?v=1697887255">
+    <link rel="stylesheet" href="markup.css?v=1697887255">
+    <script src="markup.js?v=1697887255"></script>
     <!-- The scripts and styling for this page in particular -->
-    <script src="index.js?v=1697885622"></script>
-    <link rel="stylesheet" href="index.css?v=1697885622">
+    <script src="index.js?v=1697887255"></script>
+    <link rel="stylesheet" href="index.css?v=1697887255">
 </head>
 
 <body>
@@ -139,6 +140,7 @@
                 <a hidden="" id="filepage-link"><img id="filepage-image"></a>
             </div>
             <h2 id="page-title"></h2>
+            <div id="page-content" title="This is lightly-rendered markup" hidden="" class="content"></div>
             <div id="page-subpages-container">
                 <h3>Subpages:</h3>
                 <div id="page-subpages" class="resultlist"></div>
@@ -147,7 +149,6 @@
                     <a href="#" id="page-subpagedown">Previous Subpages</a>
                 </div>
             </div>
-            <div id="page-content" title="This is lightly-rendered markup" hidden="" class="content"></div>
             <table class="describe striped" id="page-table"></table>
             <div id="page-interactions" data-pageid="" data-requireslogin="" class="flexrow">
                 <button id="watch-page" hidden="" onclick="return t_page_watch(this, true)">Watch</button>
