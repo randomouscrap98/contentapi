@@ -8,6 +8,8 @@ public class UserStatusTracker : IUserStatusTracker
     protected ILogger logger;
     protected ConcurrentDictionary<long, UserStatusCollection> statuses = new ConcurrentDictionary<long, UserStatusCollection>();
 
+    public event Func<long, Task>? StatusUpdated; //EventHandler<long>? StatusUpdated;
+
     public UserStatusTracker(ILogger<UserStatusTracker> logger)
     {
         this.logger = logger;
@@ -54,6 +56,10 @@ public class UserStatusTracker : IUserStatusTracker
         {
             statusCollection.CollectionLock.Release();
         }
+
+        if(!(removeCount == 0 && !added))
+            if(StatusUpdated != null)
+                await StatusUpdated.Invoke(contentId);
 
         return Tuple.Create(removeCount, added);
     }
@@ -148,6 +154,12 @@ public class UserStatusTracker : IUserStatusTracker
                     statusCollection!.CollectionLock.Release();
                 }
             }
+        }
+
+        foreach(var contentId in removed.Keys)
+        {
+            if(StatusUpdated != null)
+                await StatusUpdated.Invoke(contentId);
         }
 
         return removed;

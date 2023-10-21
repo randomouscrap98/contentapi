@@ -33,4 +33,9 @@ public interface IUserStatusTracker
     /// <param name="contentId"></param>
     /// <returns></returns>
     //Task<Dictionary<long, string>> GetStatusForContentAsync(long contentId);
+
+    /// <summary>
+    /// An event that fires when statuses are updated in a given content
+    /// </summary>
+    event Func<long, Task> StatusUpdated;
 }

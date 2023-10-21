@@ -21,14 +21,13 @@ public class LiveController : BaseController
 {
     protected ILiveEventQueue eventQueue;
     protected IUserStatusTracker userStatuses;
-    protected IPermissionService permissionService;
     protected IHostApplicationLifetime appLifetime;
     protected LiveControllerConfig config;
     private static int nextId = 0;
     protected int trackerId = Interlocked.Increment(ref nextId);
     protected Func<WebSocketAcceptContext> acceptContextGenerator;
 
-    protected static ConcurrentDictionary<int, WebsocketListenerData> currentListeners = new ConcurrentDictionary<int, WebsocketListenerData>();
+    protected static ConcurrentDictionary<int, WebsocketListenerData> currentListeners = new();
 
     protected class WebsocketListenerData
     {
@@ -44,16 +43,24 @@ public class LiveController : BaseController
     }
 
     public LiveController(BaseControllerServices services, ILiveEventQueue eventQueue, IUserStatusTracker userStatuses,
-        IPermissionService permissionService, IHostApplicationLifetime appLifetime, LiveControllerConfig config,
+        IHostApplicationLifetime appLifetime, LiveControllerConfig config,
         Func<WebSocketAcceptContext> contextGenerator) : base(services) 
     { 
         this.eventQueue = eventQueue;
         this.userStatuses = userStatuses;
-        this.permissionService = permissionService;
         this.appLifetime = appLifetime;
         this.config = config;
         this.acceptContextGenerator = contextGenerator;
+
+        this.userStatuses.StatusUpdated += HandleStatusUpdated;
     }
+
+    ~LiveController()
+    {
+        this.userStatuses.StatusUpdated -= HandleStatusUpdated;
+    }
+
+    protected Task HandleStatusUpdated(long contentId) => AlertUserlistUpdate(contentId);
 
     protected long ValidateToken(string token)
     {
@@ -84,25 +91,12 @@ public class LiveController : BaseController
         }
     }
 
-    protected async Task AddUserStatusAsync(long userId, long contentId, string status)
-    {
-        if(userId <= 0)
-            throw new InvalidOperationException($"Cannot set user status for user ID {userId}");
-        var addAbout = await userStatuses.AddStatusAsync(userId, contentId, status, trackerId);
-
-        //Alert the userlist if it's specifically not such that nothing was removed and nothing was added.
-        //If nothing was removed AND nothing was added, that's one of the few instances where we can be sure nothing changed
-        if(!(addAbout.Item1 == 0 && !addAbout.Item2))
-            await AlertUserlistUpdate(contentId);
-    }
-
-    protected async Task RemoveStatusesByTrackerAsync()
-    {
-        var removals = await userStatuses.RemoveStatusesByTrackerAsync(trackerId);
-
-        foreach(var contentId in removals.Keys)
-            await AlertUserlistUpdate(contentId);
-    }
+    //protected async Task AddUserStatusAsync(long userId, long contentId, string status)
+    //{
+    //    if(userId <= 0)
+    //        throw new InvalidOperationException($"Cannot set user status for user ID {userId}");
+    //    await userStatuses.AddStatusAsync(userId, contentId, status, trackerId);
+    //}
 
     protected async Task BroadcastToSelfClients(long userId, WebSocketResponse response)
     {
@@ -190,8 +184,10 @@ public class LiveController : BaseController
 
                     //TODO: this will need to do some magic to send the userlist to everyone. I suppose if I
                     //had a list of all waiters and their send queues.... hmmmm that would actually just work.
+                    //if(userId <= 0)
+                    //    throw new InvalidOperationException($"Cannot set user status for user ID {userId}");
                     foreach(var status in statuses)
-                        await AddUserStatusAsync(userId, status.Key, status.Value);
+                        await userStatuses.AddStatusAsync(userId, status.Key, status.Value, trackerId);
                 }
                 catch(Exception ex)
                 {
@@ -439,7 +435,7 @@ public class LiveController : BaseController
         finally
         {
             //This is SO IMPORTANT that I want to do it way out here!
-            await RemoveStatusesByTrackerAsync();
+            await userStatuses.RemoveStatusesByTrackerAsync(trackerId);
         }
 
     }
