@@ -11,25 +11,15 @@ namespace contentapi.BackgroundServices;
 
 public class BlogGeneratorConfig
 {
-    public TimeSpan Interval {get;set;} = TimeSpan.FromMinutes(0);
-    public string TempLocation {get;set;} = "tempfiles";
-    public string BlogsFolder {get;set;} = "blogs";
-    public string StaticFilesBase {get;set;} = "wwwroot";
+    public TimeSpan Interval {get;set;} = TimeSpan.FromMinutes(0);  //Disable by default
+    //public string TempLocation {get;set;} = "tempfiles";
+    public string BlogsFolder {get;set;} = "blogs";         //Might as well have SOME folder so it's not writing in root
+    public string StaticFilesBase {get;set;} = "wwwroot";   //This should basically be a constant
 
     //These are based off the static files base and should be the URL. Path separator will
     //be replaced with system-appropriate for copying
-    public List<string> ScriptIncludes {get;set;} = new List<string>() {
-        "markup/parse.js", 
-        "markup/render.js", 
-        "markup/langs.js", 
-        "markup/legacy.js", 
-        "markup/helpers.js", 
-        "bloggen.js" 
-    };
-    public List<string> StyleIncludes {get;set;} = new List<string>() {
-        "markup/markup.css",
-        "bloggen.css" 
-    };
+    public List<string> ScriptIncludes {get;set;} = new List<string>() { };
+    public List<string> StyleIncludes {get;set;} = new List<string>() { };
 }
 
 public class BlogGeneratorService : BackgroundService
@@ -163,12 +153,12 @@ public class BlogGeneratorService : BackgroundService
             //Now go get another subset of the data: just enough to compute whether this blog needs regeneration.
             var blogContents = await searcher.SearchSingleTypeUnrestricted<ContentView>(new data.SearchRequest() {
                 type = nameof(RequestType.content),
-                fields = "id,hash,literalType,contentType,lastRevisionId",
+                fields = "id,hash,literalType,contentType,parentId,lastRevisionId",
                 query = "id=@id or (parentId=@id and literalType=@resource) or hash in @stylehashes",
             }, new Dictionary<string, object> {
                 { "id", blog.id },
                 { "resource", RESOURCETYPE },
-                { "stylehashes", blog.values[STYLESVALUEKEY] },
+                { "stylehashes", blog.values.GetValueOrDefault(STYLESVALUEKEY, new List<string>()) },
             });
 
             if(await BlogRequiresRegeneration(blog, blogContents))
@@ -231,10 +221,10 @@ public class BlogGeneratorService : BackgroundService
         //Copy all the static files in to this folder
         foreach(var file in config.ScriptIncludes.Union(config.StyleIncludes))
         {
-            var realPath = file.Replace('/', Path.DirectorySeparatorChar);
-            if(realPath.Contains(Path.DirectorySeparatorChar))
-                Directory.CreateDirectory(Path.GetDirectoryName(realPath)!);
-            File.Copy(Path.Join(config.StaticFilesBase, realPath), Path.Join(basePath, realPath), true);
+            var localPath = file.Replace('/', Path.DirectorySeparatorChar);
+            var destinationPath = Path.Join(basePath, localPath);
+            Directory.CreateDirectory(Path.GetDirectoryName(destinationPath)!);
+            File.Copy(Path.Join(config.StaticFilesBase, localPath), destinationPath, true);
         }
 
         //await RegenerateBlogPost(blog, blog, activity, users);

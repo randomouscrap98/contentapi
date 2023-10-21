@@ -47,6 +47,7 @@ secrets.json
 appsettings.json
 appsettings.*.json
 uploads
+blogs
 .vscode_old
 moduledata.db
 profiler.txt
