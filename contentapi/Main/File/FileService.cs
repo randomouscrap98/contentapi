@@ -224,7 +224,7 @@ public class FileService : IFileService
         if (fileConfig.quantize >= 0 && (fileConfig.quantize < config.MinQuantize || fileConfig.quantize > config.MaxQuantize))
             throw new RequestException($"Quantize must be between {config.MinQuantize} and {config.MaxQuantize}");
 
-        int trueQuantize = 0;
+        //int trueQuantize = 0;
         var tempLocation = GetAndMakeTempPath(); //Work is done locally for quantize/etc
 
         var manipResult = await imageManip.FitToSizeAndSave(fileData, tempLocation, config.MaxSize);
@@ -242,10 +242,16 @@ public class FileService : IFileService
 
             //OK the quantization step. This SHOULD modify the view for us!
             if (fileConfig.quantize > 0)
-                trueQuantize = await TryQuantize(fileConfig.quantize, newView, tempLocation);
+            {
+                var quantizeInfo = await TryQuantize(fileConfig.quantize, newView, tempLocation);
 
-            if (trueQuantize > 0)
-                meta["quantize"] = trueQuantize;
+                if (quantizeInfo.Item1 > 0)
+                {
+                    meta["quantize"] = quantizeInfo.Item1;
+                    meta["size"] = quantizeInfo.Item2;
+                }
+            }
+
 
             //We now have the metadata
             newView.meta = JsonConvert.SerializeObject(meta);
@@ -309,7 +315,7 @@ public class FileService : IFileService
     /// <param name="fileLocation"></param>
     /// <param name="requester"></param>
     /// <returns></returns>
-    protected async Task<int> TryQuantize(int quantize, ContentView newView, string fileLocation) //, long requster)
+    protected async Task<Tuple<int, long>> TryQuantize(int quantize, ContentView newView, string fileLocation) //, long requster)
     {
         if (CheckQuantize(newView, quantize))
         {
@@ -333,7 +339,9 @@ public class FileService : IFileService
 
                 logger.LogInformation($"Quantized {fileLocation} to {quantize} colors using '{config.QuantizerProgram} {quantizeParams}'");
 
-                return quantize;
+                var fi = new FileInfo(fileLocation);
+
+                return Tuple.Create(quantize, fi.Length);
             }
             catch (Exception ex)
             {
@@ -341,7 +349,7 @@ public class FileService : IFileService
             }
         }
 
-        return -1;
+        return Tuple.Create(-1, (long)0);
     }
 
     public async Task<Tuple<byte[], string>> GetFileAsync(string hash, GetFileModify modify)

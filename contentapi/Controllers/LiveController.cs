@@ -51,16 +51,7 @@ public class LiveController : BaseController
         this.appLifetime = appLifetime;
         this.config = config;
         this.acceptContextGenerator = contextGenerator;
-
-        this.userStatuses.StatusUpdated += HandleStatusUpdated;
     }
-
-    ~LiveController()
-    {
-        this.userStatuses.StatusUpdated -= HandleStatusUpdated;
-    }
-
-    protected Task HandleStatusUpdated(long contentId) => AlertUserlistUpdate(contentId);
 
     protected long ValidateToken(string token)
     {
@@ -98,7 +89,7 @@ public class LiveController : BaseController
     //    await userStatuses.AddStatusAsync(userId, contentId, status, trackerId);
     //}
 
-    protected async Task BroadcastToSelfClients(long userId, WebSocketResponse response)
+    protected static async Task BroadcastToSelfClients(long userId, WebSocketResponse response)
     {
         foreach(var key in currentListeners.Keys.ToList())
         {
@@ -115,25 +106,44 @@ public class LiveController : BaseController
 
     //This is VERY inefficient, like oh my goodness, but until it becomes a problem, this is how it'll be.
     //It's inefficient because each user does the status lookup and that's entirely unnecessary.
-    protected async Task AlertUserlistUpdate(long contentId)
-    {
-        foreach(var key in currentListeners.Keys.ToList())
-        {
-            WebsocketListenerData? listener;
-            if(currentListeners.TryGetValue(key, out listener))
-            {
-                var statuses = await GetUserStatusesAsync(listener.userId, contentId);
+    //protected async Task AlertUserlistUpdate(long contentId)
+    //{
+    //    foreach(var key in currentListeners.Keys.ToList())
+    //    {
+    //        WebsocketListenerData? listener;
+    //        if(currentListeners.TryGetValue(key, out listener))
+    //        {
+    //            var statuses = await GetUserStatusesAsync(listener.userId, contentId);
 
-                //Note that the listener could be invalid here, but it's OK because after this, hopefully nothing will be 
-                //holding onto it or whatever.
-                var response = new WebSocketResponse()
-                {
-                    type = "userlistupdate",
-                    data = statuses
-                };
-                await listener.sendQueue.SendAsync(response);
-            }
-        }
+    //            //Note that the listener could be invalid here, but it's OK because after this, hopefully nothing will be 
+    //            //holding onto it or whatever.
+    //            var response = new WebSocketResponse()
+    //            {
+    //                type = "userlistupdate",
+    //                data = statuses
+    //            };
+    //            await listener.sendQueue.SendAsync(response);
+    //        }
+    //    }
+    //}
+
+    /// <summary>
+    /// Alert the SINGLE listener given about a userlist update
+    /// </summary>
+    /// <param name="contentId"></param>
+    /// <returns></returns>
+    protected async Task AlertUserlistUpdate(long contentId, WebsocketListenerData listener)
+    {
+        var statuses = await GetUserStatusesAsync(listener.userId, contentId);
+
+        //Note that the listener could be invalid here, but it's OK because after this, hopefully nothing will be 
+        //holding onto it or whatever.
+        var response = new WebSocketResponse()
+        {
+            type = "userlistupdate",
+            data = statuses
+        };
+        await listener.sendQueue.SendAsync(response);
     }
 
     protected async Task ReceiveLoop(CancellationToken cancelToken, WebSocket socket, BufferBlock<object> sendQueue, string token)
@@ -367,16 +377,27 @@ public class LiveController : BaseController
 
                 sendQueue.Post(response);
 
-                if(!currentListeners.TryAdd(trackerId, new WebsocketListenerData() { userId = userId, sendQueue = sendQueue }))
+                var listenerData = new WebsocketListenerData() { userId = userId, sendQueue = sendQueue };
+                if(!currentListeners.TryAdd(trackerId, listenerData))
                     throw new InvalidOperationException("INTERNAL ERROR: couldn't add you to the listener array!");
 
-                //Can send and receive at the same time, but CAN'T send/receive multiple at the same time.
-                runningTasks.Add(ReceiveLoop(dualCancel.Token, socket, sendQueue, token));
-                runningTasks.Add(ListenLoop(dualCancel.Token, realLastId, sendQueue, token));
+                var userlistUpdateFunc = new Func<long, Task>((c) => AlertUserlistUpdate(c, listenerData));
+                this.userStatuses.StatusUpdated += userlistUpdateFunc;
 
-                var completedTask = await Task.WhenAny(runningTasks);
-                runningTasks.Remove(completedTask);
-                await completedTask; //To throw the exception, if there is one
+                try
+                {
+                    //Can send and receive at the same time, but CAN'T send/receive multiple at the same time.
+                    runningTasks.Add(ReceiveLoop(dualCancel.Token, socket, sendQueue, token));
+                    runningTasks.Add(ListenLoop(dualCancel.Token, realLastId, sendQueue, token));
+
+                    var completedTask = await Task.WhenAny(runningTasks);
+                    runningTasks.Remove(completedTask);
+                    await completedTask; //To throw the exception, if there is one
+                }
+                finally
+                {
+                    this.userStatuses.StatusUpdated -= userlistUpdateFunc;
+                }
             }
             catch(OperationCanceledException ex)
             {
