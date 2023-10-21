@@ -1,5 +1,6 @@
 using Amazon.S3;
 using contentapi;
+using contentapi.BackgroundServices;
 using contentapi.Controllers;
 using contentapi.Main;
 using contentapi.Search;
@@ -9,13 +10,6 @@ using Microsoft.AspNetCore.Authentication.JwtBearer;
 using Microsoft.Data.Sqlite;
 using Microsoft.OpenApi.Models;
 using Newtonsoft.Json;
-
-//Be careful with imagesharp buffers, don't need such huge ones
-//SixLabors.ImageSharp.Configuration.Default.MemoryAllocator = SixLabors.ImageSharp.Memory.MemoryAllocator.Create(
-//    new SixLabors.ImageSharp.Memory.MemoryAllocatorOptions()
-//    {
-//        MaximumPoolSizeMegabytes = 64
-//    });
 
 
 var builder = WebApplication.CreateBuilder(args);
@@ -36,8 +30,10 @@ DefaultSetup.AddConfigBinding<RateLimitConfig>(builder.Services, builder.Configu
 DefaultSetup.AddConfigBinding<StatusControllerConfig>(builder.Services, builder.Configuration);
 DefaultSetup.AddConfigBinding<LiveControllerConfig>(builder.Services, builder.Configuration);
 DefaultSetup.AddConfigBinding<FileEmailServiceConfig>(builder.Services, builder.Configuration);
+DefaultSetup.AddConfigBinding<OcrCrawlConfig>(builder.Services, builder.Configuration);
 DefaultSetup.AddConfigBinding<ImageManipulator_IMagickConfig>(builder.Services, builder.Configuration);
 builder.Services.AddTransient<BaseControllerServices>();
+builder.Services.AddHostedService<OcrCrawl>();
 builder.Services.AddSingleton<Func<WebSocketAcceptContext>>(() => new WebSocketAcceptContext()
 {
     DangerousEnableCompression = true,

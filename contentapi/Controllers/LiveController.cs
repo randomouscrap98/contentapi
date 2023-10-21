@@ -82,13 +82,6 @@ public class LiveController : BaseController
         }
     }
 
-    //protected async Task AddUserStatusAsync(long userId, long contentId, string status)
-    //{
-    //    if(userId <= 0)
-    //        throw new InvalidOperationException($"Cannot set user status for user ID {userId}");
-    //    await userStatuses.AddStatusAsync(userId, contentId, status, trackerId);
-    //}
-
     protected static async Task BroadcastToSelfClients(long userId, WebSocketResponse response)
     {
         foreach(var key in currentListeners.Keys.ToList())
@@ -103,29 +96,6 @@ public class LiveController : BaseController
             }
         }
     }
-
-    //This is VERY inefficient, like oh my goodness, but until it becomes a problem, this is how it'll be.
-    //It's inefficient because each user does the status lookup and that's entirely unnecessary.
-    //protected async Task AlertUserlistUpdate(long contentId)
-    //{
-    //    foreach(var key in currentListeners.Keys.ToList())
-    //    {
-    //        WebsocketListenerData? listener;
-    //        if(currentListeners.TryGetValue(key, out listener))
-    //        {
-    //            var statuses = await GetUserStatusesAsync(listener.userId, contentId);
-
-    //            //Note that the listener could be invalid here, but it's OK because after this, hopefully nothing will be 
-    //            //holding onto it or whatever.
-    //            var response = new WebSocketResponse()
-    //            {
-    //                type = "userlistupdate",
-    //                data = statuses
-    //            };
-    //            await listener.sendQueue.SendAsync(response);
-    //        }
-    //    }
-    //}
 
     /// <summary>
     /// Alert the SINGLE listener given about a userlist update
