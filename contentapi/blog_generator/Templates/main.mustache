@@ -1,0 +1,88 @@
+<!DOCTYPE html>
+<html lang="en">
+<!--{{page.lastRevisionId}}-->
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="keywords" content="{{keywords}}">
+    <meta name="description" content="{{page.description}}">
+    <meta name="author" content="{{author}}">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    {{#parent.values.share_theme_color}}
+    <meta name="theme-color" content="{{parent.values.share_theme_color}}">
+    {{/parent.values.share_theme_color}}
+    <title>{{page.name}}</title>
+    {{#parent.values.share_favicon}}
+    <link rel="icon" type="image/png" href="{{parent.values.share_favicon}}">
+    {{/parent.values.share_favicon}}
+    {{#scripts}}
+    <script src="{{.}}?v={{version}}"></script>
+    {{/scripts}}
+    {{#styles}}
+    <link rel="stylesheet" href="{{.}}?v={{version}}">
+    {{/styles}}
+</head>
+
+<body {{#is_parent}}data-isblogroot="true"{{/is_parent}} data-page="{{page.hash}}" data-parent="{{parent.hash}}">
+    <!-- The section that tells what "blog" this is-->
+    <header id="blog_header">
+        <h1 id="blog_title"><a href="{{parent_link}}">{{parent.name}}</a></h1>
+    </header>
+    <!-- The bulk of the page, including navigation -->
+    <main id="main_container">
+        <article id="post_container">
+            <div id="title_container" class="post_title_container">
+                <h2 id="page_title" class="post_title">{{#is_parent}}About{{/is_parent}}{{^is_parent}}{{page.name}}{{/is_parent}}</h2>
+            </div>
+            <div id="publish_info_container" {{#is_edited}}data-edited="true"{{/is_edited}}>
+                <div id="create_publish_info" class="publish_info">
+                    <span class="publish_author">{{author}}</span>
+                    <time class="publish_date" datetime="{{page_create_date_str}}">{{page.createDate}}</time>
+                </div>
+                {{#is_edited}}
+                <div id="edit_publish_info" class="publish_info">
+                    <span class="publish_author">{{edit_author}}</span>
+                    <time class="publish_date" datetime="{{page_edit_date_str}}">{{revision.date}}</time>
+                </div>
+                {{/is_edited}}
+            </div>
+            <noscript id="norender">
+                <div id="norender_extra_1"></div>
+                <div id="norender_extra_2"></div>
+            </noscript>
+            <!-- The page is rendered without any markup applied, so the 'rendered' container is empty. There is a separate
+                container with the raw content; upon load, the raw content is rendered into the render element, the render
+                element is unhidden, and the raw element is hidden -->
+            <div class="content_container">
+                <div id="content_rendered" class="content" 
+                    data-markup="{{page.values.markup}}" data-markuplang="{{page.values.markupLang}}" style="display:none"></div>
+                <pre id="content_raw" class="content">{{page.text}}</pre>
+            </div>
+            <div id="article_extra_1" class="blank_div"></div>
+            <div id="article_extra_2" class="blank_div"></div>
+        </article>
+        <nav id="pagenavigation">
+            <h3 id="pagenavigation_title">More Posts</h3>
+            <ul id="pagenavigation_list">
+            {{#navlinks}}
+                <li class="navitem {{#current}}navcurrent{{/current}}" {{#current}}aria-current="page"{{/current}} data-page={{hash}}>
+                    <a class="navlink" href="{{link}}">{{text}}</a>
+                    <time class="navdate" data-shortdate="" datetime={{create_date_str}}>{{create_date_short}}</time>
+                </li>
+            {{/navlinks}}
+            </ul>
+        </nav>
+        <div id="section_extra_1" class="blank_div"></div>
+        <div id="section_extra_2" class="blank_div"></div>
+    </main>
+    <div id="body_extra_1" class="blank_div"></div>
+    <div id="body_extra_2" class="blank_div"></div>
+    <!-- Whatever extra junk you want to put on the bottom. Don't know what to do with it -->
+    <footer id="blog_footer">
+        <span id="blog_id">{{parent.id}}</span>
+        <span id="page_id">{{page.id}}</span>
+        <time id="render_date" datetime="{{render_date_str}}">{{render_date_str}}</time>
+    </footer>
+</body>
+
+</html>

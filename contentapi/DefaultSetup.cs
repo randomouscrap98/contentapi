@@ -1,6 +1,7 @@
 using System.Data;
 using Amazon.S3;
 using AutoMapper;
+using blog_generator;
 using contentapi.History;
 using contentapi.Live;
 using contentapi.Main;
@@ -85,6 +86,11 @@ public static class DefaultSetup
         services.AddSingleton<IFileService, FileService>();
         services.AddSingleton<IUserService, UserService>();
         services.AddSingleton<IModuleService, ModuleService>();
+
+        // Blog generator stuff
+        services.AddSingleton<TemplateLoader>();
+        services.AddSingleton<BlogPathManager>();
+        services.AddSingleton<BlogGenerator>();
 
         var emailType = configuration?.GetValue<string>("EmailSender");
         var imageManipulator = configuration?.GetValue<string>("ImageManipulator");
