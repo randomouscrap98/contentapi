@@ -51,16 +51,16 @@ public class OcrCrawlService : BackgroundService
     {
         if(config.Program == OcrProgram.none)
         {
-            logger.LogDebug("No OCR set, exiting crawler");
+            logger.LogInformation("No OCR set, exiting crawler");
             return Task.CompletedTask;
         }
         else if(config.ProcessPerInterval == 0)
         {
-            logger.LogDebug("ProcessPerInterval set to 0, exiting OCR crawler");
+            logger.LogInformation("ProcessPerInterval set to 0, exiting OCR crawler");
             return Task.CompletedTask;
         }
         
-        logger.LogDebug($"Beginning OCR crawler for program: {config.Program}, {config.ProcessPerInterval} per {config.Interval}");
+        logger.LogInformation($"Beginning OCR crawler for program: {config.Program}, {config.ProcessPerInterval} per {config.Interval}");
         return CrawlLoop(stoppingToken);
     }
 

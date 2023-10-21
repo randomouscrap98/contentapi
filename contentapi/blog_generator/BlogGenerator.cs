@@ -4,7 +4,7 @@ using contentapi.data.Views;
 
 namespace blog_generator;
 
-public class BlogGenerator
+/*public class BlogGenerator
 {
     protected ILogger<BlogGenerator> logger;
     protected BlogPathManager pathManager;
@@ -196,4 +196,4 @@ public class BlogGenerator
         var path = pathManager.LocalStylePath(style.hash);
         await WriteAny(path, renderedPage, "style");
     }
-}
+}*/

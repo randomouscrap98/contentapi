@@ -31,10 +31,6 @@ public static class DefaultSetup
             SqlMapper.RemoveTypeMap(typeof(DateTime)); 
             SqlMapper.AddTypeHandler(typeof(DateTime), new DapperUtcDateTimeHandler());
 
-            //MappingSchema.Default
-            //MappingSchema.Default.SetConverter<JToken, DataParameter>(json => new DataParameter { Value = json.ToString() });
-            //MappingSchema.Default.SetConverter<string, JToken>(str => JToken.Parse(str));
-
             return true;
         }
     }
@@ -87,10 +83,10 @@ public static class DefaultSetup
         services.AddSingleton<IUserService, UserService>();
         services.AddSingleton<IModuleService, ModuleService>();
 
-        // Blog generator stuff
+        //Non-interface weirdness, may change later
         services.AddSingleton<TemplateLoader>();
-        services.AddSingleton<BlogPathManager>();
-        services.AddSingleton<BlogGenerator>();
+        //services.AddSingleton<BlogPathManager>();
+        //services.AddSingleton<BlogGenerator>();
 
         var emailType = configuration?.GetValue<string>("EmailSender");
         var imageManipulator = configuration?.GetValue<string>("ImageManipulator");
@@ -120,6 +116,7 @@ public static class DefaultSetup
         services.AddSingleton<EventTrackerConfig>();
         services.AddSingleton<FileServiceConfig>();
         services.AddSingleton<QueryBuilderConfig>();
+        services.AddSingleton<TemplateConfig>();
 
         //NOTE: do NOT just add all configs to the service! Only configs which have 
         //reasonable defaults! For instance: the EmailConfig should NOT be added!

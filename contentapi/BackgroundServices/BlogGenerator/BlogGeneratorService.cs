@@ -1,7 +1,9 @@
 
 using System.Text.RegularExpressions;
+using blog_generator;
 using contentapi.data;
 using contentapi.data.Views;
+using contentapi.Db;
 using contentapi.Main;
 using contentapi.Search;
 
@@ -9,7 +11,7 @@ namespace contentapi.BackgroundServices;
 
 public class BlogGeneratorConfig
 {
-    public TimeSpan Interval {get;set;} = TimeSpan.FromMinutes(5);
+    public TimeSpan Interval {get;set;} = TimeSpan.FromMinutes(0);
     public string TempLocation {get;set;} = "tempfiles";
     public string BlogsFolder {get;set;} = "blogs";
     public string StaticFilesBase {get;set;} = "wwwroot";
@@ -35,25 +37,27 @@ public class BlogGeneratorService : BackgroundService
     protected ILogger logger;
     protected BlogGeneratorConfig config;
     protected IDbServicesFactory dbfactory;
+    protected TemplateLoader templateLoader;
 
     public const string SHAREVALUEKEY = "share";
     public const string RESOURCETYPE = "resource";
     public const string STYLESVALUEKEY = "share_styles";
     public const string INDEXFILE = "index.html";
+    public const string REVISIONFILE = ".revision";
 
     public const string MAINTEMPLATE = "bloggen_main";
     public const string STYLETEMPLATE = "bloggen_style";
 
-
-    //public const string ShortIsoFormatString = "yyyy-MM-ddTHH:mm:ssZ";
-    //public static string? ShortIsoFormat(DateTime? date) => date?.ToUniversalTime().ToString(ShortIsoFormatString);
+    public const long TicksPerSecond = 10000000;
 
 
-    public BlogGeneratorService(ILogger<BlogGeneratorService> logger, BlogGeneratorConfig config, IDbServicesFactory dbfactory)
+    public BlogGeneratorService(ILogger<BlogGeneratorService> logger, BlogGeneratorConfig config, IDbServicesFactory dbfactory,
+        TemplateLoader templateLoader)
     {
         this.logger = logger;
         this.config = config;
         this.dbfactory = dbfactory;
+        this.templateLoader = templateLoader;
     }
 
     protected override Task ExecuteAsync(CancellationToken stoppingToken)
@@ -117,20 +121,25 @@ public class BlogGeneratorService : BackgroundService
     /// <returns></returns>
     public async Task<bool> BlogRequiresRegeneration(ContentView blog, List<ContentView> children)
     {
-        var indexPath = Path.Join(BlogPath(blog), INDEXFILE);
+        var revPath = Path.Join(BlogPath(blog), REVISIONFILE);
 
-        if(File.Exists(indexPath))
+        if(File.Exists(revPath))
         {
             //Compute the max revision and blog requires regeneration if the revision in the index
             //is not the same.
             var maxRevision = GetBlogRevision(blog, children);
-            var lines = await File.ReadAllLinesAsync(indexPath);
-            return !Regex.IsMatch(lines[2], @$"^<!--{maxRevision}-->");
+            var text = await File.ReadAllTextAsync(revPath);
+            return !Regex.IsMatch(text, @$"{maxRevision}");
         }
 
         return true;
     }
 
+    /// <summary>
+    /// Find and loop over blogs for generation (or not, maybe they're up-to-date)
+    /// </summary>
+    /// <param name="token"></param>
+    /// <returns></returns>
     public async Task GenerateBlogs(CancellationToken token)
     {
         using var searcher = dbfactory.CreateSearch();
@@ -175,7 +184,29 @@ public class BlogGeneratorService : BackgroundService
                     { "ids", blogContents.Select(x => x.id) }
                 });
 
-                await RegenerateBlog(await searcher.GetById<ContentView>(blog.id), fullChildren);
+                //Also, apparently we need activity for each and a whole bunch of nonsense
+                var activity = await searcher.SearchSingleTypeUnrestricted<ActivityView>(new data.SearchRequest() {
+                    type = nameof(RequestType.activity),
+                    fields = "*",
+                    query = "id in @ids or id = @baseid"
+                }, new Dictionary<string, object> {
+                    { "ids", blogContents.Select(x => x.lastRevisionId) },
+                    { "baseid", blog.lastRevisionId }
+                });
+
+                var userIds = fullChildren.Select(x => x.createUserId).Union(activity.Select(x => x.userId));
+                userIds.Append(blog.createUserId);
+
+                //AND USERS?? This is getting out of hand!
+                var users = await searcher.SearchSingleTypeUnrestricted<UserView>(new data.SearchRequest() {
+                    type = nameof(RequestType.user),
+                    fields = "*",
+                    query = "id in @ids"
+                }, new Dictionary<string, object> {
+                    { "ids", userIds.Distinct() }
+                });
+
+                await RegenerateBlog(await searcher.GetById<ContentView>(blog.id), fullChildren, activity, users);
             }
             else
             {
@@ -190,7 +221,7 @@ public class BlogGeneratorService : BackgroundService
     /// <param name="blog"></param>
     /// <param name="children"></param>
     /// <returns></returns>
-    public async Task RegenerateBlog(ContentView blog, List<ContentView> children)
+    public async Task RegenerateBlog(ContentView blog, List<ContentView> children, List<ActivityView> activity, List<UserView> users)
     {
         var basePath = BlogPath(blog);
 
@@ -205,5 +236,53 @@ public class BlogGeneratorService : BackgroundService
                 Directory.CreateDirectory(Path.GetDirectoryName(realPath)!);
             File.Copy(Path.Join(config.StaticFilesBase, realPath), Path.Join(basePath, realPath), true);
         }
+
+        //await RegenerateBlogPost(blog, blog, activity, users);
+
+        // Only at the END do you write the revision file
+        var revisionId = GetBlogRevision(blog, children);
+        var revPath = Path.Join(BlogPath(blog), REVISIONFILE);
+        await File.WriteAllTextAsync(revPath, @$"{revisionId}");
     }
+
+    public string GetAuthorFromList(long id, IEnumerable<UserView> users) => users.FirstOrDefault(x => x.id == id)?.username ?? "???";
+
+    //public async Task RegenerateBlogPost(ContentView page, ContentView parent, List<ActivityView> activity, List<UserView> users)
+    //{
+    //    var revision = activity.FirstOrDefault(x => x.id == page.lastRevisionId);
+
+    //    //This generates a single blogpost. It figures out how to generate it based on the data given. If the page itself IS the parent,
+    //    //something else MAY be done.
+    //    var templateData = new MainTemplateData()
+    //    {
+    //        scripts = config.ScriptIncludes,
+    //        styles = config.StyleIncludes,
+    //        page = page,
+    //        parent = parent,
+    //        render_date = DateTime.UtcNow,
+    //        version = (DateTime.Now.Ticks / TicksPerSecond).ToString(),
+    //        keywords = string.Join(", ", page.keywords.Union(parent.keywords)),
+    //        parent_link = pathManager.WebBlogMainPath(parent.hash),
+    //        author = GetAuthorFromList(page.createUserId, users),
+    //        edit_author = GetAuthorFromList(revision?.userId ?? -1, users),
+    //        revision = revision
+    //    };
+
+    //    templateData.styles.AddRange(GetStylesForParent(parent).Select(x => pathManager.WebStylePath(x)));
+
+    //    templateData.navlinks = pages.OrderByDescending(x => x.createDate).Select(x => new NavigationItem()
+    //    {
+    //        text = x.name,
+    //        link = pathManager.WebBlogPagePath(parent.hash, x.hash),
+    //        current = x.id == page.id,
+    //        create_date = x.createDate,
+    //        hash = x.hash
+    //    }).ToList();
+
+    //    //Need to use mustache here to generate the template and write it
+    //    var renderedPage = await templateLoader.RenderPageAsync(MAINTEMPLATE, templateData);
+
+    //    var path = Path.Combine(basePath, page.id == parent.id ? INDEXFILE : pathManager.LocalBlogPagePath(parent.hash, page.hash);
+    //    await WriteAny(path, renderedPage, "page");
+    //}
 }
