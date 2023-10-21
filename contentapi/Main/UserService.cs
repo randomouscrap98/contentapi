@@ -13,7 +13,6 @@ namespace contentapi.Main;
 
 public class UserServiceConfig
 {
-    public TimeSpan TokenExpireDefault {get;set;} = TimeSpan.FromDays(10);
     public TimeSpan PasswordExpire {get;set;} = TimeSpan.Zero; //Zero means never expire, UNLESS the lastPasswordDate field is empty!
     public TimeSpan TemporaryPasswordExpire {get;set;} = TimeSpan.FromMinutes(20);
     public string UsernameRegex {get;set;} = "^[a-zA-Z0-9_]+$";
@@ -196,7 +195,7 @@ public class UserService : IUserService
     public string GetNewTokenForUser(long uid, TimeSpan? expireOverride = null)
     {
         var data = new Dictionary<string, string>();
-        return authTokenService.GetNewToken(uid, data, expireOverride ?? config.TokenExpireDefault);
+        return authTokenService.GetNewToken(uid, data, expireOverride);
     }
 
     public async Task<string?> GetRegistrationKeyRawAsync(long userId)
