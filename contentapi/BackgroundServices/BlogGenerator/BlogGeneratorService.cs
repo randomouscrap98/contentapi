@@ -320,8 +320,8 @@ public class BlogGeneratorService : BackgroundService
         //something else MAY be done.
         var templateData = new MainTemplateData()
         {
-            scripts = config.ScriptIncludes,
-            styles = config.StyleIncludes,
+            scripts = config.ScriptIncludes.ToList(),
+            styles = config.StyleIncludes.ToList(),
             page = page,
             parent = data.Parent,
             render_date = DateTime.UtcNow,
