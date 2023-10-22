@@ -117,7 +117,7 @@ public class FileService : IFileService
             var path = Path.Join(config.MainLocation, name);
 
             if (!File.Exists(path))
-                throw new NotFoundException($"File {name} not found");
+                throw new NotFoundException($"File {path} not found");
 
             return await File.ReadAllBytesAsync(path);
         }
