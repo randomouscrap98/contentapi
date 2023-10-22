@@ -1,11 +1,7 @@
-
-using System.Diagnostics;
-using System.Security.Cryptography.Xml;
 using System.Text.RegularExpressions;
 using blog_generator;
 using contentapi.data;
 using contentapi.data.Views;
-using contentapi.Db;
 using contentapi.Main;
 using contentapi.Search;
 
@@ -67,6 +63,8 @@ public class BlogGeneratorService : BackgroundService
             AllActivity = activity;
             AllUsers = users;
             this.logger = logger;
+
+            AllChildren.RemoveAll(x => x.id == Parent.id);
         }
 
         public List<ContentView> GetPages(bool includeParent = false)
