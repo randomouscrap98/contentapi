@@ -22,6 +22,7 @@ public class FileServiceConfig
 
     public TimeSpan LoggingRetainment {get;set;} = TimeSpan.FromDays(1);
 
+    public bool EnableUploads {get;set;} = true;
     public bool HighQualityResize {get;set;} = true;
 }
 
@@ -217,6 +218,12 @@ public class FileService : IFileService
 
     public async Task<ContentView> UploadFile(ContentView newView, UploadFileConfig fileConfig, Stream fileData, long requester)
     {
+        if(!config.EnableUploads)
+        {
+            logger.LogWarning($"Uploads disabled, upload attempted by user {requester}");
+            throw new ForbiddenException("Uploading not allowed at this time!");
+        }
+
         fileData.Seek(0, SeekOrigin.Begin);
 
         if (fileData.Length == 0)
