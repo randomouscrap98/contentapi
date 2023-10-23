@@ -42,7 +42,7 @@ public static class DefaultSetup
     /// To replace services (such as for unit tests), you can do: services.Replace(ServiceDescriptor.Transient<IFoo, FooB>());i
     /// </remarks>
     /// <param name="services"></param>
-    public static void AddDefaultServices(IServiceCollection services, Func<IDbConnection> connectionProvider, IConfiguration? configuration = null)
+    public static void AddDefaultServices(IServiceCollection services, Func<IDbConnection> connectionProvider, IConfiguration configuration) //? configuration = null)
     {
         services.AddAutoMapper(typeof(ContentHistorySnapshotProfile));
         services.AddAutoMapper(typeof(SearchRequestPlusProfile)); //You can pick ANY profile, it just needs some type from this binary
@@ -88,8 +88,8 @@ public static class DefaultSetup
         //services.AddSingleton<BlogPathManager>();
         //services.AddSingleton<BlogGenerator>();
 
-        var emailType = configuration?.GetValue<string>("EmailSender");
-        var imageManipulator = configuration?.GetValue<string>("ImageManipulator");
+        var emailType = configuration.GetValue<string>("EmailSender");
+        var imageManipulator = configuration.GetValue<string>("ImageManipulator");
 
         if(emailType == "functional")
             services.AddSingleton<IEmailService, EmailService>();
@@ -105,18 +105,18 @@ public static class DefaultSetup
         services.AddTransient<ShortcutsService>();
 
         //Configs (these have default values given in configs)
-        services.AddSingleton<GenericSearcherConfig>();
-        services.AddSingleton<JwtAuthTokenServiceConfig>();
-        services.AddSingleton<HashServiceConfig>();
-        services.AddSingleton<UserServiceConfig>();
-        services.AddSingleton<CacheCheckpointTrackerConfig>();
-        services.AddSingleton<LiveEventQueueConfig>();
-        services.AddSingleton<DbWriterConfig>();
-        services.AddSingleton<ModuleServiceConfig>();
-        services.AddSingleton<EventTrackerConfig>();
-        services.AddSingleton<FileServiceConfig>();
-        services.AddSingleton<QueryBuilderConfig>();
-        services.AddSingleton<TemplateConfig>();
+        AddConfigBinding<GenericSearcherConfig>(services, configuration);
+        AddConfigBinding<JwtAuthTokenServiceConfig>(services, configuration);
+        AddConfigBinding<HashServiceConfig>(services, configuration);
+        AddConfigBinding<UserServiceConfig>(services, configuration);
+        AddConfigBinding<CacheCheckpointTrackerConfig>(services, configuration);
+        AddConfigBinding<LiveEventQueueConfig>(services, configuration);
+        AddConfigBinding<DbWriterConfig>(services, configuration);
+        AddConfigBinding<ModuleServiceConfig>(services, configuration);
+        AddConfigBinding<EventTrackerConfig>(services, configuration);
+        AddConfigBinding<FileServiceConfig>(services, configuration);
+        AddConfigBinding<QueryBuilderConfig>(services, configuration);
+        AddConfigBinding<TemplateConfig>(services, configuration);
 
         //NOTE: do NOT just add all configs to the service! Only configs which have 
         //reasonable defaults! For instance: the EmailConfig should NOT be added!

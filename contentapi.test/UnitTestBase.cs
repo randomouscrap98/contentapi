@@ -2,11 +2,13 @@ using System;
 using System.Data;
 using System.Linq;
 using System.Threading;
+//using Castle.Core.Configuration;
 using contentapi.data.Views;
 using contentapi.Db;
 using contentapi.History;
 using contentapi.Setup;
 using Microsoft.Data.Sqlite;
+using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Logging;
 using Newtonsoft.Json.Linq;
@@ -19,6 +21,7 @@ public class UnitTestBase
     protected ILogger logger;
     protected IServiceCollection baseCollection;
     protected IServiceProvider baseProvider;
+    protected IConfiguration configuration;
 
     protected CancellationTokenSource cancelSource;
     protected CancellationTokenSource safetySource;
@@ -31,6 +34,9 @@ public class UnitTestBase
 
     public UnitTestBase()//bool defaultSetup = true) //Func<IDbConnection>? connectionBuilder = null)
     {
+        var configBuilder = new ConfigurationBuilder(); //Maybe do something with this later
+        configuration = configBuilder.Build();
+
         MasterConnectionString = $"Data Source=master_{Guid.NewGuid().ToString().Replace("-", "")};Mode=Memory;Cache=Shared";
         MasterBackupConnectionString = MasterConnectionString.Replace("master", "master_backup");
 
@@ -46,7 +52,7 @@ public class UnitTestBase
 
         DefaultSetup.OneTimeSetup();
 
-        DefaultSetup.AddDefaultServices(baseCollection, () => new SqliteConnection(MasterConnectionString));
+        DefaultSetup.AddDefaultServices(baseCollection, () => new SqliteConnection(MasterConnectionString), configuration);
         DefaultSetup.AddSecurity(baseCollection, SecretKey);
 
         baseProvider = baseCollection.BuildServiceProvider();

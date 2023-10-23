@@ -587,4 +587,34 @@ public class EventQueueTest : ViewUnitTestBase //, IClassFixture<DbUnitTestSearc
         catch(TaskCanceledException) {}
         catch(OperationCanceledException) {}
     }
+
+    [Fact]
+    public async Task Regression_ListenAsync_OverflowMessages()
+    {
+        var id = queue.GetCurrentLastId();
+
+        //Write 10 messages
+        for(var i = 0; i < 10; i++)
+        {
+            var message = GetNewCommentView(AllAccessContentId);
+            message.text = $"Message {i}";
+            var writtenMessage = await writer.WriteAsync(message, NormalUserId);
+        }
+
+        var user = await searcher.GetById<UserView>(RequestType.user, NormalUserId, true);
+
+        //Now, given some funny small configured number of max events to pull, see if we can repeatedly get those amount of events
+        config.MaxEventListen = 2;
+
+        for(var i = 0; i < 10; i += config.MaxEventListen)
+        {
+            Assert.NotEqual(id, queue.GetCurrentLastId());
+            var result = await queue.ListenAsync(user, id, safetySource.Token);
+            Assert.Equal(2, result.events.Count);
+            Assert.Equal(2, result.objects[EventType.message_event]["message"].Count());
+            id = result.lastId;
+        }
+
+        Assert.Equal(id, queue.GetCurrentLastId());
+    }
 }

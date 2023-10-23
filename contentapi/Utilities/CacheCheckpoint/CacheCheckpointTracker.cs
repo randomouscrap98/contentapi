@@ -6,6 +6,9 @@ public class CacheCheckpointTrackerConfig
 {
     public TimeSpan CacheAge {get;set;} = TimeSpan.FromHours(24);
     public int CacheCleanFrequency {get;set;} = 100;
+    public int CacheIdIncrement {get;set;} = 1;
+
+    public int RealCleanFrequency { get => CacheCleanFrequency * CacheIdIncrement; }
 }
 
 public class CacheCheckpointTracker<T> : ICacheCheckpointTracker<T>
@@ -39,9 +42,15 @@ public class CacheCheckpointTracker<T> : ICacheCheckpointTracker<T>
         this.config = config;
     }
 
+    /// <summary>
+    /// A session id is the id for the current runtime. Using an id increment that isn't 1, you can split the id space into
+    /// ids for different "sessions" then only accept the ids for your current session.
+    /// </summary>
+    public int UniqueSessionId {get;set;} = 0;
+
     protected CheckpointData GetCheckpoint(string checkpointName)
     {
-        return checkpoints.GetOrAdd(checkpointName, s => new CheckpointData());
+        return checkpoints.GetOrAdd(checkpointName, s => new CheckpointData() { Checkpoint = UniqueSessionId });
     }
 
     public int UpdateCheckpoint(string checkpointName, T newValue)
@@ -54,9 +63,10 @@ public class CacheCheckpointTracker<T> : ICacheCheckpointTracker<T>
         {
             //Now LEGIT update the value. Interlocked is unnecessary because nobody can touch the value 
             //except in the lock
-            int newKey = Interlocked.Increment(ref thisCheckpoint.Checkpoint);
+            thisCheckpoint.Checkpoint += config.CacheIdIncrement;
+            //int newKey = thisCheckpoint.Checkpoint; //Interlocked.Increment(ref thisCheckpoint.Checkpoint);
 
-            if((newKey % config.CacheCleanFrequency) == 0)
+            if((thisCheckpoint.Checkpoint % config.RealCleanFrequency) == 0)
             {
                 var removeKeys = thisCheckpoint.Cache.Where(x => (DateTime.Now - x.Value.date) > config.CacheAge).Select(x => x.Key);
                 foreach(var key in removeKeys)
@@ -65,9 +75,9 @@ public class CacheCheckpointTracker<T> : ICacheCheckpointTracker<T>
 
             //Special feature! If the value is an ILinkedCheckpointId, it will automatically set the id to match the checkpoint id
             if(newValue is ILinkedCheckpointId)
-                ((ILinkedCheckpointId)newValue).id = newKey;
+                ((ILinkedCheckpointId)newValue).id = thisCheckpoint.Checkpoint;
 
-            thisCheckpoint.Cache.Add(newKey, new CacheData(newValue));
+            thisCheckpoint.Cache.Add(thisCheckpoint.Checkpoint, new CacheData(newValue));
 
             //Signal all waiters. Whatever, they'll all complete I guess.
             foreach(var waiter in thisCheckpoint.Waiters)
@@ -136,10 +146,14 @@ public class CacheCheckpointTracker<T> : ICacheCheckpointTracker<T>
             //NOTE: need a test for lastSeen too high throwing correct exception
             if(lastSeen > thisCheckpoint.Checkpoint)
                 throw new ExpiredCheckpointException($"LastSeen checkpoint too high! {lastSeen} vs {thisCheckpoint.Checkpoint}. Did you send a request after a server restart?");
-
+            
             //The request is TOO OLD, it's beyond the end of the cache!
             if(lastSeen > 0)
             {
+                //This is only valid to check for non-zero lastSeen
+                if(lastSeen % config.CacheIdIncrement != UniqueSessionId)
+                    throw new ExpiredCheckpointException($"LastSeen checkpoint has the wrong embedded session! {lastSeen % config.CacheIdIncrement} vs {UniqueSessionId}. Did you send a request after a server restart?");
+
                 if(thisCheckpoint.Cache.Count == 0)
                     throw new InvalidOperationException($"Somehow, checkpoint {lastSeen} is valid, but there's no cache!");
                 else if(lastSeen < thisCheckpoint.Cache.Keys.Min())

@@ -79,7 +79,7 @@ namespace contentapi.Live;
 public class LiveEventQueueConfig
 {
     public TimeSpan DataCacheExpire {get;set;} = TimeSpan.FromSeconds(10);
-    public int MaxEventListen {get;set;} = 1000;
+    public int MaxEventListen {get;set;} = 200;
 }
 
 public class LiveEventQueue : ILiveEventQueue
@@ -390,10 +390,17 @@ public class LiveEventQueue : ILiveEventQueue
             var events = checkpoint.Data.Where(x => permissionService.CanUserStatic(listener, UserAction.read, x.permissions)); 
 
             if(events.Count() == 0)
+            {
                 continue;  //There is NOTHING to do for this run, because the event(s) in question don't pertain to us
+            }
             else if(events.Count() > config.MaxEventListen)
+            {
                 events = events.OrderBy(x => x.id).Take(config.MaxEventListen); //Don't let the user get too many events all at once!
-            else if(events.Count(x => x.id == 0) > 0) //this adds to the computation but shouldn't take too long to compute...
+                //Since we modified the events and the user should ask for more again, we must set the lastId to the maxId in the new set
+                result.lastId = events.Max(x => x.id);
+            }
+
+            if(events.Count(x => x.id == 0) > 0) //this adds to the computation but shouldn't take too long to compute...
                 throw new InvalidOperationException("SAFETY CHECK FAILED: events with zero ID discovered after listen!");
 
             var optimalRoute = false;
