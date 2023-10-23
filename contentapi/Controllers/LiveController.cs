@@ -125,7 +125,10 @@ public class LiveController : BaseController
             //NOTE: the ReceiveObjectAsync throws an exception on close
             var receiveItem = await socket.ReceiveObjectAsync<WebSocketRequest>(memStream, cancelToken);
             var userId = ValidateToken(token); // Validate every time
-            services.logger.LogDebug($"WS request '{receiveItem.id}'({receiveItem.type}) from {userId}");
+            if(receiveItem.type == "ping")
+                services.logger.LogTrace($"WS ping '{receiveItem.id}' from {userId}");
+            else
+                services.logger.LogDebug($"WS request '{receiveItem.id}'({receiveItem.type}) from {userId}");
             var response = new WebSocketResponse()
             {
                 id = receiveItem.id,

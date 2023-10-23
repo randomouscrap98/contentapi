@@ -4,6 +4,7 @@ using contentapi.data.Views;
 using contentapi.Main;
 using contentapi.Search;
 using contentapi.Utilities;
+using Newtonsoft.Json;
 using QueryResultSet = System.Collections.Generic.IEnumerable<System.Collections.Generic.IDictionary<string, object>>;
 
 namespace contentapi.Live;
@@ -438,6 +439,7 @@ public class LiveEventQueue : ILiveEventQueue
                 {
                     var requests = GetSearchRequestsForEvents(events.Where(x => x.type == type));
                     var searchData = await search.Search(requests, listener.id);
+                    logger.LogInformation($"DBTimes for reconnect uid={listener.id} evt={type} lastId={lastId} rlastId={result.lastId}: {JsonConvert.SerializeObject(searchData.databaseTimes)}");
                     result.objects.Add(type, searchData.objects);
                 }
             }
