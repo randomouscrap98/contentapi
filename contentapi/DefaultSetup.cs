@@ -47,6 +47,10 @@ public static class DefaultSetup
         services.AddAutoMapper(typeof(ContentHistorySnapshotProfile));
         services.AddAutoMapper(typeof(SearchRequestPlusProfile)); //You can pick ANY profile, it just needs some type from this binary
 
+        var storageCon = configuration.GetConnectionString("storage") ;
+        if(string.IsNullOrWhiteSpace(storageCon)) storageCon = "Data Source=valuestore;Mode=Memory;Cache=Shared";
+        services.AddSingleton<IValueStore>(p => new SimpleSqliteValueStore(storageCon, p.GetRequiredService<ILogger<SimpleSqliteValueStore>>()));
+
         //The factory itself is a singleton, but the things it creates aren't. All things created by the factory
         //have user-controlled lifetimes, you MUST dispose them when you create them!
         services.AddSingleton<IDbServicesFactory>(p => 
@@ -67,7 +71,7 @@ public static class DefaultSetup
         services.AddSingleton(p => new S3Provider() { GetRawProvider = new Func<IAmazonS3>(() => p.GetService<IAmazonS3>() ?? throw new InvalidOperationException("Couldn't create IAmazonS3!")) } );
 
         services.AddSingleton<IHistoryConverter, HistoryConverter>();
-        services.AddSingleton<IRuntimeInformation>(new MyRuntimeInformation(DateTime.Now));
+        services.AddSingleton<IRuntimeInformation>(p => new MyRuntimeInformation(DateTime.Now, p.GetRequiredService<IValueStore>()));
         services.AddSingleton<IViewTypeInfoService, ViewTypeInfoService_Cached>();
         services.AddSingleton<IQueryBuilder, QueryBuilder>();
         services.AddSingleton<ISearchQueryParser, SearchQueryParser>();
@@ -83,10 +87,18 @@ public static class DefaultSetup
         services.AddSingleton<IUserService, UserService>();
         services.AddSingleton<IModuleService, ModuleService>();
 
+        //Unfortunately, need to build some of these singletons "special"
+        services.AddSingleton<ICacheCheckpointTracker<LiveEvent>>(p =>
+        {
+            var storage = p.GetRequiredService<IValueStore>();
+            var result = ActivatorUtilities.GetServiceOrCreateInstance<CacheCheckpointTracker<LiveEvent>>(p);
+            result.UniqueSessionId = storage.Get<int>(Constants.StorageKeys.restarts.ToString(), 0) % result.config.CacheIdIncrement;
+            result.logger.LogInformation($"Current Session id: {result.UniqueSessionId}");
+            return result;
+        });
+
         //Non-interface weirdness, may change later
         services.AddSingleton<TemplateLoader>();
-        //services.AddSingleton<BlogPathManager>();
-        //services.AddSingleton<BlogGenerator>();
 
         var emailType = configuration.GetValue<string>("EmailSender");
         var imageManipulator = configuration.GetValue<string>("ImageManipulator");

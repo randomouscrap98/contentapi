@@ -33,8 +33,8 @@ public class CacheCheckpointTracker<T> : ICacheCheckpointTracker<T>
     }
 
     protected ConcurrentDictionary<string, CheckpointData> checkpoints = new ConcurrentDictionary<string, CheckpointData>();
-    protected ILogger logger;
-    protected CacheCheckpointTrackerConfig config;
+    public readonly ILogger logger;
+    public readonly CacheCheckpointTrackerConfig config;
 
     public CacheCheckpointTracker(ILogger<CacheCheckpointTracker<T>> logger, CacheCheckpointTrackerConfig config)
     {

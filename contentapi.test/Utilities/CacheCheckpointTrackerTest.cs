@@ -181,4 +181,56 @@ public class CacheCheckpointTrackerTest : UnitTestBase
         Assert.Single(waiter.Data);
         Assert.Equal(id, waiter.Data.First().id);
     }
+
+    [Fact]
+    public void UpdateCheckpoint_Stepping()
+    {
+        config.CacheIdIncrement = 10;
+        var checkpointObject = new SimpleLinkedCheckpointId();
+        var id = trackerIds.UpdateCheckpoint("simple", checkpointObject);
+        Assert.Equal(10, id);
+        Assert.Equal(10, checkpointObject.id);
+        var checkpoint2 = new SimpleLinkedCheckpointId();
+        id = trackerIds.UpdateCheckpoint("simple", checkpoint2);
+        Assert.Equal(20, id);
+        Assert.Equal(20, checkpoint2.id);
+    }
+
+    [Fact]
+    public void UpdateCheckpoint_SessionBase()
+    {
+        config.CacheIdIncrement = 10;
+        trackerIds.UniqueSessionId = 3;
+        var checkpointObject = new SimpleLinkedCheckpointId();
+        var id = trackerIds.UpdateCheckpoint("simple", checkpointObject);
+        Assert.Equal(13, id);
+        Assert.Equal(13, checkpointObject.id);
+        var checkpoint2 = new SimpleLinkedCheckpointId();
+        id = trackerIds.UpdateCheckpoint("simple", checkpoint2);
+        Assert.Equal(23, id);
+        Assert.Equal(23, checkpoint2.id);
+    }
+
+    [Fact]
+    public async Task UpdateCheckpoint_BadSession()
+    {
+        config.CacheIdIncrement = 10;
+        trackerIds.UniqueSessionId = 3;
+        var id = trackerIds.UpdateCheckpoint("simple", new SimpleLinkedCheckpointId());
+        var checkpointObject = new SimpleLinkedCheckpointId();
+        id = trackerIds.UpdateCheckpoint("simple", checkpointObject);
+        await Assert.ThrowsAnyAsync<ExpiredCheckpointException>(() => trackerIds.WaitForCheckpoint("simple", 14, safetySource.Token));
+        await Assert.ThrowsAnyAsync<ExpiredCheckpointException>(() => trackerIds.WaitForCheckpoint("simple", 10, safetySource.Token));
+        await Assert.ThrowsAnyAsync<ExpiredCheckpointException>(() => trackerIds.WaitForCheckpoint("simple", 6, safetySource.Token));
+        var result = await trackerIds.WaitForCheckpoint("simple", 13, safetySource.Token);
+        Assert.Equal(23, result.LastId);
+        Assert.Single(result.Data);
+        Assert.Equal(23, result.Data.First().id);
+    }
+
+    [Fact]
+    public void UniqueSessionDefaultZero()
+    {
+        Assert.Equal(0, trackerIds.UniqueSessionId);
+    }
 }

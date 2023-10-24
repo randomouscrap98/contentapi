@@ -26,4 +26,9 @@ public static class Constants
     {
         return dt.ToUniversalTime().ToString(DateFormat, CultureInfo.InvariantCulture);
     }
+
+    public enum StorageKeys
+    {
+        restarts
+    }
 }
