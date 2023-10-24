@@ -42,14 +42,15 @@ public static class DefaultSetup
     /// To replace services (such as for unit tests), you can do: services.Replace(ServiceDescriptor.Transient<IFoo, FooB>());i
     /// </remarks>
     /// <param name="services"></param>
-    public static void AddDefaultServices(IServiceCollection services, Func<IDbConnection> connectionProvider, IConfiguration configuration) //? configuration = null)
+    public static void AddDefaultServices(IServiceCollection services, Func<IDbConnection> connectionProvider, IConfiguration configuration, IValueStore storage) //? configuration = null)
     {
         services.AddAutoMapper(typeof(ContentHistorySnapshotProfile));
         services.AddAutoMapper(typeof(SearchRequestPlusProfile)); //You can pick ANY profile, it just needs some type from this binary
 
-        var storageCon = configuration.GetConnectionString("storage") ;
-        if(string.IsNullOrWhiteSpace(storageCon)) storageCon = "Data Source=valuestore;Mode=Memory;Cache=Shared";
-        services.AddSingleton<IValueStore>(p => new SimpleSqliteValueStore(storageCon, p.GetRequiredService<ILogger<SimpleSqliteValueStore>>()));
+        //var storageCon = configuration.GetConnectionString("storage");
+        //if(string.IsNullOrWhiteSpace(storageCon)) storageCon = "Data Source=valuestore;Mode=Memory;Cache=Shared";
+        //services.AddSingleton<IValueStore>(p => new SimpleSqliteValueStore(storageCon, p.GetRequiredService<ILogger<SimpleSqliteValueStore>>()));
+        services.AddSingleton<IValueStore>(storage);
 
         //The factory itself is a singleton, but the things it creates aren't. All things created by the factory
         //have user-controlled lifetimes, you MUST dispose them when you create them!
@@ -71,7 +72,8 @@ public static class DefaultSetup
         services.AddSingleton(p => new S3Provider() { GetRawProvider = new Func<IAmazonS3>(() => p.GetService<IAmazonS3>() ?? throw new InvalidOperationException("Couldn't create IAmazonS3!")) } );
 
         services.AddSingleton<IHistoryConverter, HistoryConverter>();
-        services.AddSingleton<IRuntimeInformation>(p => new MyRuntimeInformation(DateTime.Now, p.GetRequiredService<IValueStore>()));
+        //WARN: THIS HAS TO BE CREATED DIRECTLY!!!
+        services.AddSingleton<IRuntimeInformation>(new MyRuntimeInformation(DateTime.Now)); //, p.GetRequiredService<IValueStore>()));
         services.AddSingleton<IViewTypeInfoService, ViewTypeInfoService_Cached>();
         services.AddSingleton<IQueryBuilder, QueryBuilder>();
         services.AddSingleton<ISearchQueryParser, SearchQueryParser>();
@@ -93,7 +95,7 @@ public static class DefaultSetup
             var storage = p.GetRequiredService<IValueStore>();
             var result = ActivatorUtilities.GetServiceOrCreateInstance<CacheCheckpointTracker<LiveEvent>>(p);
             result.UniqueSessionId = storage.Get<int>(Constants.StorageKeys.restarts.ToString(), 0) % result.config.CacheIdIncrement;
-            result.logger.LogInformation($"Current Session id: {result.UniqueSessionId}");
+            result.logger.LogInformation($"Current Session id: {result.UniqueSessionId}, increment: {result.config.CacheIdIncrement}");
             return result;
         });
 

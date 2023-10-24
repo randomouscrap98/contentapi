@@ -7,6 +7,7 @@ using contentapi.data.Views;
 using contentapi.Db;
 using contentapi.History;
 using contentapi.Setup;
+using contentapi.Utilities;
 using Microsoft.Data.Sqlite;
 using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.DependencyInjection;
@@ -22,6 +23,7 @@ public class UnitTestBase
     protected IServiceCollection baseCollection;
     protected IServiceProvider baseProvider;
     protected IConfiguration configuration;
+    protected IValueStore storage;
 
     protected CancellationTokenSource cancelSource;
     protected CancellationTokenSource safetySource;
@@ -52,7 +54,8 @@ public class UnitTestBase
 
         DefaultSetup.OneTimeSetup();
 
-        DefaultSetup.AddDefaultServices(baseCollection, () => new SqliteConnection(MasterConnectionString), configuration);
+        storage = new SimpleSqliteValueStore("Data Source=valuestore;Mode=Memory;Cache=Shared");
+        DefaultSetup.AddDefaultServices(baseCollection, () => new SqliteConnection(MasterConnectionString), configuration, storage);
         DefaultSetup.AddSecurity(baseCollection, SecretKey);
 
         baseProvider = baseCollection.BuildServiceProvider();

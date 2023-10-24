@@ -16,10 +16,16 @@ var builder = WebApplication.CreateBuilder(args);
 
 // Add services to the container.
 
+var constore = builder.Configuration.GetConnectionString("storage");
+var storage = new SimpleSqliteValueStore(constore);
+
+//Do this NOW
+storage.Set(Constants.StorageKeys.restarts.ToString(), storage.Get<int>(Constants.StorageKeys.restarts.ToString(), 0) + 1);
+
 // We only use defaults for our regular runtime stuff! Overriding defaults is for testing
 // or special deploys or whatever.
 var constring = builder.Configuration.GetConnectionString("contentapi");
-DefaultSetup.AddDefaultServices(builder.Services, () => new SqliteConnection(constring), builder.Configuration);
+DefaultSetup.AddDefaultServices(builder.Services, () => new SqliteConnection(constring), builder.Configuration, storage);
 DefaultSetup.AddConfigBinding<GenericSearcherConfig>(builder.Services, builder.Configuration);
 DefaultSetup.AddConfigBinding<QueryBuilderConfig>(builder.Services, builder.Configuration);
 DefaultSetup.AddConfigBinding<UserServiceConfig>(builder.Services, builder.Configuration);

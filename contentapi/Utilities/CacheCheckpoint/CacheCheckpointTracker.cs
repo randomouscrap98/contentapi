@@ -95,7 +95,7 @@ public class CacheCheckpointTracker<T> : ICacheCheckpointTracker<T>
         {
             var cacheAfter = checkpoint.Cache.Where(x => x.Key > lastSeen);
             return new CacheCheckpointResult<T> { 
-                LastId = cacheAfter.Count() == 0 ? Interlocked.CompareExchange(ref checkpoint.Checkpoint, 0, 0) : cacheAfter.Max(x => x.Key), 
+                LastId = cacheAfter.Any() ? checkpoint.Checkpoint : cacheAfter.Max(x => x.Key), 
                 Data = cacheAfter.Select(x => x.Value.data).ToList() 
             }; 
         }
@@ -117,7 +117,10 @@ public class CacheCheckpointTracker<T> : ICacheCheckpointTracker<T>
     public int MaximumCacheCheckpoint(string checkpointName)
     {
         var thisCheckpoint = GetCheckpoint(checkpointName);
-        return Interlocked.CompareExchange (ref thisCheckpoint.Checkpoint, 0, 0);
+        lock(thisCheckpoint.SignalLock)
+        {
+            return thisCheckpoint.Checkpoint;
+        }
     }
     
     public int TotalCacheCount => checkpoints.Sum(x => x.Value.Cache.Count);
@@ -148,7 +151,7 @@ public class CacheCheckpointTracker<T> : ICacheCheckpointTracker<T>
                 throw new ExpiredCheckpointException($"LastSeen checkpoint too high! {lastSeen} vs {thisCheckpoint.Checkpoint}. Did you send a request after a server restart?");
             
             //The request is TOO OLD, it's beyond the end of the cache!
-            if(lastSeen > 0)
+            if(lastSeen > UniqueSessionId) // UniqueSessionId is always the floor
             {
                 //This is only valid to check for non-zero lastSeen
                 if(lastSeen % config.CacheIdIncrement != UniqueSessionId)
@@ -162,7 +165,7 @@ public class CacheCheckpointTracker<T> : ICacheCheckpointTracker<T>
 
             //Must see if checkpoint even is anything before doing the easy route. If not, you CAN return an empty list for the weird
             //special case of negatives, which I don't want.
-            if(lastSeen < thisCheckpoint.Checkpoint && thisCheckpoint.Checkpoint > 0)
+            if(lastSeen < thisCheckpoint.Checkpoint && thisCheckpoint.Checkpoint > UniqueSessionId)
                 return CacheAfter(thisCheckpoint, lastSeen);
 
             //Oops now we wait, there was nothing.

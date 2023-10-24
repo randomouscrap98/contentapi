@@ -7,7 +7,7 @@ namespace contentapi.Utilities;
 
 public class SimpleSqliteValueStore : IValueStore
 {
-    protected ILogger logger;
+    //protected ILogger logger;
     protected string constring;
     private readonly IDbConnection masterConnection;
 
@@ -15,9 +15,9 @@ public class SimpleSqliteValueStore : IValueStore
     public const string KEYCOLUMN = "vs_key";
     public const string VALUECOLUMN = "vs_value";
 
-    public SimpleSqliteValueStore(string constring, ILogger<SimpleSqliteValueStore> logger)
+    public SimpleSqliteValueStore(string constring) //, ILogger<SimpleSqliteValueStore> logger)
     {
-        this.logger = logger;
+        //this.logger = logger;
         this.constring = constring;
 
         //Need a master connection to keep the database alive IF it's in memory. If it's not... oh well.
