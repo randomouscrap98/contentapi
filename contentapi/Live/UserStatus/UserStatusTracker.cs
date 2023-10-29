@@ -193,9 +193,9 @@ public class UserStatusTracker : IUserStatusTracker
 
                 //Check more particularly for list updates, OUTSIDE the lock!
                 var newStatuses = await GetStatusForContentAsync(key);
-                if(originalStatuses.Count == newStatuses.Count && originalStatuses.All(
+                if(!(originalStatuses.Count == newStatuses.Count && originalStatuses.All(
                     (d1KV) => newStatuses.TryGetValue(d1KV.Key, out var d2Value) && (
-                        d1KV.Value == d2Value)))
+                        d1KV.Value == d2Value))))
                 {
                     updated.Add(key);
                 }

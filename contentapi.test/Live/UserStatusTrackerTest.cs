@@ -1,3 +1,5 @@
+using System.Collections.Generic;
+using System.Linq;
 using System.Threading.Tasks;
 using contentapi.Live;
 using Microsoft.Extensions.Logging;
@@ -145,5 +147,92 @@ public class UserStatusTrackerTest : UnitTestBase
         Assert.Equal("active", result[2][1]);
         Assert.Equal("inactive", result[3][1]);
         Assert.Empty(result[0]);
+    }
+
+    [Theory]
+    [InlineData(1, 1)]
+    [InlineData(1, 2)]
+    public async Task SetUserStatus_ReportEach(int id1, int id2)
+    {
+        // Here, we must subscribe to the event 
+        List<long> updates = new();
+        service.StatusUpdated += (c) => { updates.Add(c); return Task.CompletedTask; };
+
+        //We add two of different statuses from either the same or different tracker ids
+        await service.AddStatusAsync(1, 2, "active", id1);
+        await service.AddStatusAsync(1, 2, "inactive", id2);
+
+        //Regardless, both statuses should've been updated
+        Assert.Equal(2, updates.Count);
+        Assert.All(updates, x => Assert.Equal(2, x));
+    }
+
+    [Theory]
+    [InlineData(1, 1)]
+    [InlineData(1, 2)]
+    public async Task SetUserStatus_NoDoubleReport(int id1, int id2)
+    {
+        // Here, we must subscribe to the event 
+        List<long> updates = new();
+        service.StatusUpdated += (c) => { updates.Add(c); return Task.CompletedTask; };
+
+        //We add two of the same status from either the same or different tracker ids
+        await service.AddStatusAsync(1, 2, "active", id1);
+        await service.AddStatusAsync(1, 2, "active", id2);
+
+        //Regardless, there should've only been 1 update
+        Assert.Single(updates);
+        Assert.Equal(2, updates.First());
+    }
+
+    [Fact]
+    public async Task RemoveStatusesByTrackerId_AllSimple()
+    {
+        List<long> contentIds = new List<long> { 2, 3, 5, 7 };
+
+        foreach(var cid in contentIds)
+            await service.AddStatusAsync(1, cid, "active", 99);
+        
+        //Then, with everything added, listen for contentId updates when the tracker is removed
+        List<long> updates = new();
+        service.StatusUpdated += (c) => { updates.Add(c); return Task.CompletedTask; };
+
+        await service.RemoveStatusesByTrackerAsync(99);
+        Assert.Equal(contentIds.ToHashSet(), updates.ToHashSet());
+        Assert.Equal(contentIds.Count, updates.Count);
+
+        updates = new();
+
+        //Oh also, if you remove them again, nothing should be reported
+        await service.RemoveStatusesByTrackerAsync(99);
+        Assert.Empty(updates);
+    }
+
+    [Fact]
+    public async Task RemoveStatusesByTrackerId_PartialSimple()
+    {
+        List<long> contentIds = new List<long> { 2, 3, 5, 7 };
+        List<long> contentIds2 = new List<long> { 2, 3, 11, 13 };
+
+        foreach(var cid in contentIds)
+            await service.AddStatusAsync(1, cid, "active", 99);
+
+        //Add a DIFFERENT user id under a different tracker to a different but overlapping set of content
+        foreach(var cid in contentIds2)
+            await service.AddStatusAsync(2, cid, "active", 100);
+        
+        //Then, with everything added, listen for contentId updates when the tracker is removed
+        List<long> updates = new();
+        service.StatusUpdated += (c) => { updates.Add(c); return Task.CompletedTask; };
+
+        //Regardless, only the ORIGINAL set of contents should be reported.
+        await service.RemoveStatusesByTrackerAsync(99);
+        Assert.Equal(contentIds.ToHashSet(), updates.ToHashSet());
+
+        updates = new();
+
+        //And then removing the other user should report the other set
+        await service.RemoveStatusesByTrackerAsync(100);
+        Assert.Equal(contentIds2.ToHashSet(), updates.ToHashSet());
     }
 }
