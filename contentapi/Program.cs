@@ -35,6 +35,7 @@ DefaultSetup.AddConfigBinding<EmailConfig>(builder.Services, builder.Configurati
 DefaultSetup.AddConfigBinding<RateLimitConfig>(builder.Services, builder.Configuration);
 DefaultSetup.AddConfigBinding<StatusControllerConfig>(builder.Services, builder.Configuration);
 DefaultSetup.AddConfigBinding<LiveControllerConfig>(builder.Services, builder.Configuration);
+DefaultSetup.AddConfigBinding<SmallControllerConfig>(builder.Services, builder.Configuration);
 DefaultSetup.AddConfigBinding<FileEmailServiceConfig>(builder.Services, builder.Configuration);
 DefaultSetup.AddConfigBinding<OcrCrawlConfig>(builder.Services, builder.Configuration);
 DefaultSetup.AddConfigBinding<BlogGeneratorConfig>(builder.Services, builder.Configuration);
@@ -42,11 +43,13 @@ DefaultSetup.AddConfigBinding<ImageManipulator_IMagickConfig>(builder.Services, 
 builder.Services.AddTransient<BaseControllerServices>();
 builder.Services.AddHostedService<OcrCrawlService>();
 builder.Services.AddHostedService<BlogGeneratorService>();
+builder.Services.AddHostedService<GenericTaskService>();
 builder.Services.AddSingleton<Func<WebSocketAcceptContext>>(() => new WebSocketAcceptContext()
 {
     DangerousEnableCompression = true,
     //DisableServerContextTakeover = true
 });
+builder.Services.AddSingleton<IQueueBackgroundTask, QueueBackgroundTask>();
 
 string secretKey = builder.Configuration.GetValue<string>("SecretKey"); 
 var validationParameters = DefaultSetup.AddSecurity(builder.Services, secretKey);

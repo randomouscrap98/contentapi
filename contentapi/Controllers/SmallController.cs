@@ -12,36 +12,44 @@ using contentapi.Live;
 namespace contentapi.Controllers;
 
 
+public class SmallControllerConfig 
+{
+    public int DefaultPull {get;set;} = 30;
+    public TimeSpan UserStatusExpire = TimeSpan.FromSeconds(30);
+    public TimeSpan LongPollTimeout = TimeSpan.FromMinutes(5);
+}
+
 public class SmallController : BaseController
 {
     protected const string CSVMIME = "text/csv";
     protected const string PLAINMIME = "text/plain";
-    protected const int DEFAULTPULL = 30;
 
     protected IUserService userService;
     protected IPermissionService permissions;
     protected IUserStatusTracker userStatuses;
     protected IHostApplicationLifetime appLifetime;
     protected ILiveEventQueue eventQueue;
+    protected SmallControllerConfig config;
+    protected IQueueBackgroundTask backgroundQueue;
 
-    //public LiveController(BaseControllerServices services, ILiveEventQueue eventQueue, IUserStatusTracker userStatuses,
-    //    IPermissionService permissionService, IHostApplicationLifetime appLifetime, LiveControllerConfig config,
-    //    Func<WebSocketAcceptContext> contextGenerator) : base(services) 
-    //{ 
-    //    this.eventQueue = eventQueue;
-    //    this.userStatuses = userStatuses;
-    //    this.permissionService = permissionService;
-    //    this.appLifetime = appLifetime;
-    //    this.config = config;
         
     public SmallController(BaseControllerServices services, IUserService userService, IPermissionService permissions,
-        IUserStatusTracker userStatuses, IHostApplicationLifetime appLifetime, ILiveEventQueue eventQueue) : base(services) 
+        IUserStatusTracker userStatuses, IHostApplicationLifetime appLifetime, ILiveEventQueue eventQueue,
+        SmallControllerConfig config, IQueueBackgroundTask backgroundQueue) : base(services) 
     { 
         this.userService = userService;
         this.permissions = permissions;
         this.appLifetime = appLifetime;
         this.userStatuses = userStatuses;
         this.eventQueue = eventQueue;
+        this.backgroundQueue = backgroundQueue;
+        this.config = config;
+    }
+
+    protected async Task RemoveStatusAfterExpire()
+    {
+        await Task.Delay(config.UserStatusExpire);
+        await userStatuses.RemoveStatusesByTrackerAsync(trackerId);
     }
 
     protected string GenericStatus(ContentView? content, MessageView? message, UserView? currentUser)
@@ -217,6 +225,28 @@ public class SmallController : BaseController
         public int get {get;set;} = 30;
         public List<long> rooms {get;set;} = new List<long>();
         public bool global {get;set;} = false;
+
+        public List<long> UserlistRooms { get {
+            var result = rooms ?? new List<long>();
+            result.Add(0);
+            return result;
+        }}
+    }
+
+
+    public async Task<List<GenericMessageResult>> GetUserlistMessages(PollQuery query, long userId)
+    {
+        using(var searcher = services.dbFactory.CreateSearch())
+        {
+            var result = await userStatuses.GetUserStatusesAsync(searcher, userId, eventQueue.GetAutoContentRequest().fields, "*", query.UserlistRooms.ToArray());
+            var users = searcher.ToStronglyTyped<UserView>(result.objects[nameof(RequestType.user)]);
+            return result.statuses.Select(x => new GenericMessageResult(){
+                cid = x.Key,
+                datetime = Constants.ToCommonDateString(DateTime.Now),
+                module = "userlist",
+                message = string.Join(", ", x.Value.Keys.Select(uid => users.FirstOrDefault(u => u.id == uid)?.username ?? "???"))
+            }).ToList();
+        }
     }
 
     protected async Task<List<GenericMessageResult>> SearchChatStatic(PollQuery query, UserView currentUser)
@@ -234,7 +264,6 @@ public class SmallController : BaseController
         };
 
         values.Add("mid", query.mid);
-        values.Add("rooms", query.rooms);
 
         if (query.get < 0) //Search backwards
         {
@@ -248,7 +277,10 @@ public class SmallController : BaseController
         }
 
         if (!query.global && query.rooms != null && query.rooms.Count > 0)
+        {
+            values.Add("rooms", query.rooms);
             messageRequest.query += " and contentId in @rooms";
+        }
 
         var contentRequest = new SearchRequest()
         {
@@ -317,15 +349,28 @@ public class SmallController : BaseController
 
             //Step 0: before doing ANYTHING, must retrieve the maxId in the event system. This way, if it increases 
             //while we spend time looking for the non-polling data, we will catch everything
+            var lastId = eventQueue.GetCurrentLastId();
 
             //Step 1: query the normal way for results. Do NOT use any cached stuff here!
             var staticResult = await SearchChatStatic(query, currentUser);
 
             if(staticResult.Any())
-                return staticResult;
-            
-            //Step 2: wait on the listening endpoint. Since we're now "polling", go ahead and report the user's 
-            //requested list of rooms 
+                return staticResult.Union(await GetUserlistMessages(query, currentUser.id)).ToList();
+
+            try
+            {
+                //Step 2: wait on the listening endpoint. Since we're now "polling", go ahead and report the user's 
+                //requested list of rooms 
+                if(query.rooms != null)
+                    foreach(var cid in query.UserlistRooms)
+                        await userStatuses.AddStatusAsync(currentUser.id, cid, "active", trackerId);
+
+                //Step 3: listen on the live events until you get a response in one of the rooms.
+            }
+            finally
+            {
+                backgroundQueue.AddTask(RemoveStatusAfterExpire());
+            }
 
             return new List<GenericMessageResult>();
         });
