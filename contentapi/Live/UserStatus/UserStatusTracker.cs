@@ -28,10 +28,13 @@ public class UserStatusTracker : IUserStatusTracker
     {
         var statusCollection = statuses.GetOrAdd(contentId, x => new UserStatusCollection());
 
-        await statusCollection.CollectionLock.WaitAsync();
-
         int removeCount = 0;
         bool added = false;
+
+        //Must be done OUTSIDE the lock!!
+        var originalStatus = await GetStatusForUserAsync(contentId, userId);
+
+        await statusCollection.CollectionLock.WaitAsync();
 
         try
         {
@@ -57,9 +60,13 @@ public class UserStatusTracker : IUserStatusTracker
             statusCollection.CollectionLock.Release();
         }
 
-        if(!(removeCount == 0 && !added))
-            if(StatusUpdated != null)
-                await StatusUpdated.Invoke(contentId);
+        //If the current set status is specifically different than the previous status, report it as a status "update". 
+        //This prevents repeated setting of the user status from creating an event flood
+        if(originalStatus != status && StatusUpdated != null)
+            await StatusUpdated.Invoke(contentId);
+        //if(!(removeCount == 0 && !added))
+        //    if(StatusUpdated != null)
+        //        await StatusUpdated.Invoke(contentId);
 
         return Tuple.Create(removeCount, added);
     }
@@ -73,13 +80,12 @@ public class UserStatusTracker : IUserStatusTracker
     /// since it should only represent the statuses for users currently connected.
     /// </remarks>
     /// <returns></returns>
-    public async Task<Dictionary<long, Dictionary<long, string>>> GetUserStatusesAsync(params long[] contentIds) //IEnumerable<long>? contentIds = null)
+    public async Task<Dictionary<long, Dictionary<long, string>>> GetUserStatusesAsync(params long[] contentIds) 
     {
         var result = new Dictionary<long, Dictionary<long, string>>();
 
         //If it's empty, get them all
         var searchKeys = contentIds.Length > 0 ? contentIds.ToList() : statuses.Keys.ToList();
-        //var searchKeys = contentIds.Length > 0 ? statuses.Keys.Intersect(contentIds) : statuses.Keys.ToList();
 
         //Use tolist to ensure that the keys don't change from underneath us
         foreach(var key in searchKeys)
@@ -92,6 +98,28 @@ public class UserStatusTracker : IUserStatusTracker
         }
 
         return result;
+    }
+
+    /// <summary>
+    /// Retrieve the single user status for the given content, which might be null
+    /// </summary>
+    /// <param name="contentId"></param>
+    /// <param name="userId"></param>
+    /// <returns></returns>
+    public async Task<string?> GetStatusForUserAsync(long contentId, long userId)
+    {
+        var statusCollection = statuses.GetOrAdd(contentId, x => new UserStatusCollection());
+
+        await statusCollection.CollectionLock.WaitAsync();
+
+        try
+        {
+            return statusCollection.Statuses.LastOrDefault(x => x.userId == userId)?.status;
+        }
+        finally
+        {
+            statusCollection.CollectionLock.Release();
+        }
     }
 
     /// <summary>
@@ -135,28 +163,46 @@ public class UserStatusTracker : IUserStatusTracker
     {
         UserStatusCollection? statusCollection;
         Dictionary<long, int> removed = new Dictionary<long, int>();
+        List<long> updated = new List<long>();
 
         foreach(var key in statuses.Keys.ToList())
         {
+            //It's better to waste computation here than to waste even more resources alerting for 
+            //rooms that didn't even change anything. Also, always must be done OUTSIDE the lock!!
+            var originalStatuses = await GetStatusForContentAsync(key);
+            int thisRemoved = 0;
+
+            //Attempt to remove the status within a lock. We can't do anything else inside that lock
             if(statuses.TryGetValue(key, out statusCollection))
             {
                 await statusCollection!.CollectionLock.WaitAsync();
 
                 try
                 {
-                    var thisRemoved = statusCollection!.Statuses.RemoveAll(x => x.trackerId == trackerId);
-
-                    if(thisRemoved > 0)
-                        removed.Add(key, thisRemoved);
+                    thisRemoved = statusCollection!.Statuses.RemoveAll(x => x.trackerId == trackerId);
                 }
                 finally
                 {
                     statusCollection!.CollectionLock.Release();
                 }
             }
+
+            if(thisRemoved > 0)
+            {
+                removed.Add(key, thisRemoved);
+
+                //Check more particularly for list updates, OUTSIDE the lock!
+                var newStatuses = await GetStatusForContentAsync(key);
+                if(originalStatuses.Count == newStatuses.Count && originalStatuses.All(
+                    (d1KV) => newStatuses.TryGetValue(d1KV.Key, out var d2Value) && (
+                        d1KV.Value == d2Value)))
+                {
+                    updated.Add(key);
+                }
+            }
         }
 
-        foreach(var contentId in removed.Keys)
+        foreach(var contentId in updated)
         {
             if(StatusUpdated != null)
                 await StatusUpdated.Invoke(contentId);

@@ -56,6 +56,12 @@ public class BaseController : Controller
 {
     protected BaseControllerServices services;
 
+    private static int nextId = 0;
+    /// <summary>
+    /// A unique id assigned to this specific request. Useful for various systems that require some id per request
+    /// </summary>
+    protected int trackerId = Interlocked.Increment(ref nextId);
+
     public BaseController(BaseControllerServices services)
     {
         this.services = services;

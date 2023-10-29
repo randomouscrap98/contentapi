@@ -23,8 +23,6 @@ public class LiveController : BaseController
     protected IUserStatusTracker userStatuses;
     protected IHostApplicationLifetime appLifetime;
     protected LiveControllerConfig config;
-    private static int nextId = 0;
-    protected int trackerId = Interlocked.Increment(ref nextId);
     protected Func<WebSocketAcceptContext> acceptContextGenerator;
 
     protected static ConcurrentDictionary<int, WebsocketListenerData> currentListeners = new();
