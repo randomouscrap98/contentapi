@@ -17,12 +17,14 @@ var smallUrl = apiUrl + "small/";
 var token = null;
 var roomId = null;
 var mid = 0;
-function smallFetch(endpoint, data) {
+var abortControl = null;
+function smallFetch(endpoint, data, raw) {
     var postConfig = {
         headers: {
             'Accept': 'application/json, text/csv, text/plaintext'
-        }
+        },
     };
+    if(abortControl) postConfig.signal = abortControl.signal;
     url = smallUrl + endpoint;
     if(token) postConfig.headers['Authorization'] = "Bearer " + token;
     if(data) {
@@ -30,7 +32,7 @@ function smallFetch(endpoint, data) {
         var params = new URLSearchParams(data);
         url += "?" + params.toString();
     }
-    return fetch(url, postConfig).then((response) => { 
+    var result = fetch(url, postConfig).then((response) => { 
         if(!response.ok) 
         {
             var text = `Error: ${response.status}(${response.statusText}) -`;
@@ -41,18 +43,25 @@ function smallFetch(endpoint, data) {
         }
         return response 
     });
+    if(!raw) {
+        result = result
+            .then((response) => response.text())
+            .catch((error) => displayMessage(`${endpoint} error:`, `${error}`, "error"));
+    }
+    return result;
 }
-function displayMessage(title, text)
+function displayMessage(title, text, classname)
 {
     var container = document.createElement("div");
-    if(title)
-    {
+    if(classname) {
+        container.className = classname;
+    }
+    if(title) {
         var titleElement = document.createElement("h3");
         titleElement.textContent = title;
         container.appendChild(titleElement);
     }
-    if(text)
-    {
+    if(text) {
         var textElement = document.createElement("pre");
         textElement.textContent = text;
         container.appendChild(textElement);
@@ -60,26 +69,37 @@ function displayMessage(title, text)
     messagescontainer.appendChild(container);
     messagescontainer.scrollTop = messagescontainer.scrollHeight;
 }
+function longpoll()
+{
+    console.log(`Longpolling in room ${roomId} (mid=${mid})...`);
+    smallFetch("chat", { "get" : 30, rooms : [ roomId ], mid : mid })
+        .then((text) => {
+            //Have to parse the mid out of the mess and set it
+            var lines = text.split(/\r?\n/);
+            for(var line of lines) {
+                var columns = line.split(/,/);
+                mid = Math.max(mid, Number(columns[columns.length - 1]));
+            }
+            displayMessage(`Longpoll (mid=${mid}):`, text);
+        })
+        .finally(() => longpoll());
+}
 window.onload = function() {
     loginform.onsubmit = function(event) {
         event.preventDefault();
         smallFetch("login", loginform)
-            .then((response) => response.text())
             .then((text) => {
                 token = text;
                 displayMessage("Logged in");
                 loginform.setAttribute("data-hidden", "");
-            })
-            .catch((error) => alert(`Login error: ${error}`));
+            });
         return false;
     };
     searchform.onsubmit = function(event) {
         event.preventDefault();
         var s = searchform_search.value;
         smallFetch("search", { "search" : `%${s}%` })
-            .then((response) => response.text())
-            .then((text) => displayMessage(`Search results for '${s}':`, text))
-            .catch((error) => alert(`Search error: ${error}`));
+            .then((text) => displayMessage(`Search results for '${s}':`, text));
         return false;
     };
     roomform.onsubmit = function(event) {
@@ -88,17 +108,20 @@ window.onload = function() {
         mid = 0;
         // Need to cancel any existing lonpolling (if there is one) and start anew. But always pull some 30 or so messages
         smallFetch("chat", { "get" : -30, rooms : [ roomId ], mid : mid })
-            .then((response) => response.text())
-            .then((text) => displayMessage(`Room set to '${roomId}':`, text))
-            .catch((error) => alert(`Initial pull error: ${error}`));
+            .then((text) => displayMessage(`Room set to '${roomId}':`, text));
+        if(abortControl)
+            abortControl.signal();
+        abortControl = new AbortController();
+        longpoll();
         return false;
     };
     postform.onsubmit = function(event) {
         event.preventDefault();
         smallFetch(`post/${roomId}`, { "message" : postform_text.value })
-            .then((response) => response.text())
-            .then((text) => displayMessage("Posted message:", text))
-            .catch((error) => alert(`Post error: ${error}`));
+            .then((text) => { 
+                postform_text.value = "";
+                displayMessage("Posted message:", text);
+            });
         return false;
     };
 };
@@ -107,6 +130,7 @@ window.onload = function() {
 <style>
 h1 { margin: 0; }
 [data-hidden] { display: none !important; }
+.error { color: darkred; }
 textarea {
     resize: vertical;
     min-height: 5em;

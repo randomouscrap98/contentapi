@@ -50,6 +50,7 @@
         </p>
         <p><a href="editmodule.html">Module editor</a> (must be logged in)</p>
         <p><a href="?t=websocket">Rudimentary websocket tester</a></p>
+        <p><a href="smallchat.html">'Small' chat system tester</a> (specialized endpoints for low spec systems)</p>
         <p><a href="imagemanage.html">Image management</a></p>
     </section>
     <!-- For simplicity, all pages are defined directly inside index.html. They are loaded on page load based on
@@ -199,13 +200,11 @@
         </div>
         <div id="t_blogs" data-onload="blogs_onload">
             <h2>Blogs</h2>
-            <p>There is a (currently separate) system for using contentapi to generate your own blogs with your own
-                styling and content, using contentapi to manage and publish your posts! But since it's a separate system,
-                there is a chance this information is out of date. Furthermore, only some hosts have this feature, so if 
-                you're seeing this page, that probably means blogs are active.
+            <p>There is a builtin system for using contentapi to generate your own blogs with your own
+                styling and content, using contentapi to manage and publish your posts! 
             </p>
             <p>A blog is just a page with <b>"share"=true</b> in the values. Child pages with <b>literalType="resource"</b>
-                become the posts in your blog. The blog is then published at <b>host/share/(your-hash)</b>.
+                become the posts in your blog. The blog is then published at <b>host/share/(your-hash)</b> (if configured).
                 The hash is only settable on creation to prevent broken links, make sure you set your page hash on create! For more information, view the readme
                 on <a href="https://github.com/randomouscrap98/blog-generator_contentapi">github</a>.
             </p>
