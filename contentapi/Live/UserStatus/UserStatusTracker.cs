@@ -85,7 +85,7 @@ public class UserStatusTracker : IUserStatusTracker
         var result = new Dictionary<long, Dictionary<long, string>>();
 
         //If it's empty, get them all
-        var searchKeys = contentIds.Length > 0 ? contentIds.ToList() : statuses.Keys.ToList();
+        var searchKeys = contentIds.Length > 0 ? contentIds.Distinct().ToList() : statuses.Keys.ToList();
 
         //Use tolist to ensure that the keys don't change from underneath us
         foreach(var key in searchKeys)

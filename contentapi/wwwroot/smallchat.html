@@ -1,0 +1,160 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width">
+<meta name="rating" content="general">
+<meta name="description" content="SBS default implementation chat">
+
+<title>QCS Small Chat</title>
+<link rel="icon" href="favicon.ico" type="image/x-icon">
+
+<script>
+var apiUrl = "../";
+var smallUrl = apiUrl + "small/";
+var token = null;
+var roomId = null;
+var mid = 0;
+function smallFetch(endpoint, data) {
+    var postConfig = {
+        headers: {
+            'Accept': 'application/json, text/csv, text/plaintext'
+        }
+    };
+    url = smallUrl + endpoint;
+    if(token) postConfig.headers['Authorization'] = "Bearer " + token;
+    if(data) {
+        if(data instanceof HTMLElement) data = Object.fromEntries(new FormData(data));
+        var params = new URLSearchParams(data);
+        url += "?" + params.toString();
+    }
+    return fetch(url, postConfig).then((response) => { 
+        if(!response.ok) 
+        {
+            var text = `Error: ${response.status}(${response.statusText}) -`;
+            return response.text()
+                .then((t) => { text += t; })
+                .catch((error) => text += `COULDN'T PARSE ERROR: ${error}`)
+                .finally(() => { throw text; });
+        }
+        return response 
+    });
+}
+function displayMessage(title, text)
+{
+    var container = document.createElement("div");
+    if(title)
+    {
+        var titleElement = document.createElement("h3");
+        titleElement.textContent = title;
+        container.appendChild(titleElement);
+    }
+    if(text)
+    {
+        var textElement = document.createElement("pre");
+        textElement.textContent = text;
+        container.appendChild(textElement);
+    }
+    messagescontainer.appendChild(container);
+    messagescontainer.scrollTop = messagescontainer.scrollHeight;
+}
+window.onload = function() {
+    loginform.onsubmit = function(event) {
+        event.preventDefault();
+        smallFetch("login", loginform)
+            .then((response) => response.text())
+            .then((text) => {
+                token = text;
+                displayMessage("Logged in");
+                loginform.setAttribute("data-hidden", "");
+            })
+            .catch((error) => alert(`Login error: ${error}`));
+        return false;
+    };
+    searchform.onsubmit = function(event) {
+        event.preventDefault();
+        var s = searchform_search.value;
+        smallFetch("search", { "search" : `%${s}%` })
+            .then((response) => response.text())
+            .then((text) => displayMessage(`Search results for '${s}':`, text))
+            .catch((error) => alert(`Search error: ${error}`));
+        return false;
+    };
+    roomform.onsubmit = function(event) {
+        event.preventDefault();
+        roomId = Number(roomform_id.value);
+        mid = 0;
+        // Need to cancel any existing lonpolling (if there is one) and start anew. But always pull some 30 or so messages
+        smallFetch("chat", { "get" : -30, rooms : [ roomId ], mid : mid })
+            .then((response) => response.text())
+            .then((text) => displayMessage(`Room set to '${roomId}':`, text))
+            .catch((error) => alert(`Initial pull error: ${error}`));
+        return false;
+    };
+    postform.onsubmit = function(event) {
+        event.preventDefault();
+        smallFetch(`post/${roomId}`, { "message" : postform_text.value })
+            .then((response) => response.text())
+            .then((text) => displayMessage("Posted message:", text))
+            .catch((error) => alert(`Post error: ${error}`));
+        return false;
+    };
+};
+</script>
+
+<style>
+h1 { margin: 0; }
+[data-hidden] { display: none !important; }
+textarea {
+    resize: vertical;
+    min-height: 5em;
+    display: block;
+    width: 100%;
+}
+#messagescontainer {
+    flex: auto;
+    overflow-y: scroll;
+    border: 1px solid;
+    padding: 0.5em;
+}
+body {
+    display: flex;
+    flex-direction: column;
+    height: 100vh;
+    box-sizing: border-box;
+    margin: 0;
+    padding: 1em;
+    gap: 0.25em;
+    font-family: monospace;
+}
+</style>
+
+</head>
+
+<body>
+
+<h1>'Small' chat example</h1>
+<div id="messagescontainer">
+
+</div>
+<form id="loginform">
+    <input name="username" placeholder="Username" required="">
+    <input name="password" type="password" placeholder="Password" required="">
+    <input type="submit" value="Login">
+</form>
+<form id="searchform">
+    <input name="search" id="searchform_search" placeholder="Search" required="">
+    <input type="submit" value="Search content">
+</form>
+<form id="roomform">
+    <input id="roomform_id" placeholder="RoomID" required="">
+    <input type="submit" value="Set room id">
+</form>
+<form id="postform">
+    <textarea id="postform_text" placeholder="Enter chat text here (must set room id)"></textarea>
+    <input type="submit" value="Post">
+</form>
+
+</body>

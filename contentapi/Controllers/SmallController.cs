@@ -222,19 +222,22 @@ public class SmallController : BaseController
     public class PollQuery
     {
         public long mid {get;set;} = 0;
+        public int eid {get;set;} = 0;
         public int get {get;set;} = 30;
         public List<long> rooms {get;set;} = new List<long>();
         public bool global {get;set;} = false;
 
         public List<long> UserlistRooms { get {
-            var result = rooms ?? new List<long>();
+            var result = new List<long>();
+            if(rooms != null)
+                result.AddRange(rooms);
             result.Add(0);
             return result;
         }}
     }
 
 
-    public async Task<List<GenericMessageResult>> GetUserlistMessages(PollQuery query, long userId)
+    protected async Task<List<GenericMessageResult>> GetUserlistMessages(PollQuery query, long userId)
     {
         using(var searcher = services.dbFactory.CreateSearch())
         {
@@ -247,6 +250,19 @@ public class SmallController : BaseController
                 message = string.Join(", ", x.Value.Keys.Select(uid => users.FirstOrDefault(u => u.id == uid)?.username ?? "???"))
             }).ToList();
         }
+    }
+
+    protected async Task<List<GenericMessageResult>> FinalizeMessages(List<GenericMessageResult> messages, PollQuery query, long userId, long eventId)
+    {
+        messages.AddRange(await GetUserlistMessages(query, userId));
+        messages.Add(
+            new GenericMessageResult(){
+                datetime = Constants.ToCommonDateString(DateTime.Now),
+                module = "eventId",
+                message = eventId.ToString()
+            }
+        );
+        return messages;
     }
 
     protected async Task<List<GenericMessageResult>> SearchChatStatic(PollQuery query, UserView currentUser)
@@ -305,6 +321,9 @@ public class SmallController : BaseController
         var content = searcher.ToStronglyTyped<ContentView>(result.objects[nameof(RequestType.content)]);
         var users = searcher.ToStronglyTyped<UserView>(result.objects[nameof(RequestType.user)]);
 
+        if(query.get < 0)
+            messages.Reverse();
+
         // No polling required, immediately return
         return messages.Select(x => MakeGenericMessageResult(
             content.FirstOrDefault(c => c.id == x.contentId),
@@ -331,11 +350,97 @@ public class SmallController : BaseController
         //is going to restrict it, maybe it can be the user status tracker?
             
         //TODO: this is using the raw tablename!
-        if(query.mid == 0)
+        if(query.mid <= 0)
         {
-            using var rawDb = services.dbFactory.CreateRaw();
-            query.mid = await rawDb.ExecuteScalarAsync<long>($"select max(id) from message");
+            if(query.get < 0)
+            {
+                //Special case: they're asking for the "last" whatever messages, so mid doesn't have to be queried
+                query.mid = long.MaxValue;
+            }
+            else
+            {
+                using var rawDb = services.dbFactory.CreateRaw();
+                query.mid = await rawDb.ExecuteScalarAsync<long>($"select max(id) from messages"); // - query.mid;
+            }
         }
+    }
+
+    /// <summary>
+    /// Given a query and some position within the live event queue, wait for messages relevant to the query and produce
+    /// the fully completed list of messages (finalized)
+    /// </summary>
+    /// <param name="query"></param>
+    /// <param name="currentUser"></param>
+    /// <param name="lastId"></param>
+    /// <returns></returns>
+    protected async Task<List<GenericMessageResult>> ListenChat(PollQuery query, UserView currentUser, int lastId)
+    {
+        try
+        {
+            //Step 2: wait on the listening endpoint. Since we're now "polling", go ahead and report the user's 
+            //requested list of rooms 
+            if (query.rooms != null)
+                foreach (var cid in query.UserlistRooms)
+                    await userStatuses.AddStatusAsync(currentUser.id, cid, "active", trackerId);
+
+            //Step 3: listen on the live events until you get a response in one of the rooms.
+            var result = new List<GenericMessageResult>();
+
+            using var fullSource = CancellationTokenSource.CreateLinkedTokenSource(appLifetime.ApplicationStopping, appLifetime.ApplicationStopped);
+            fullSource.CancelAfter(config.LongPollTimeout);
+
+            try
+            {
+                using var searcher = services.dbFactory.CreateSearch(); //Is it better to keep recreating this, or just once? Probably just once...
+
+                while (!fullSource.IsCancellationRequested)
+                {
+                    var listenData = await eventQueue.ListenAsync(currentUser, lastId, fullSource.Token);
+                    lastId = listenData.lastId;
+
+                    //Nothing to do, don't waste time
+                    if (!listenData.events.Any(x => x.type == nameof(EventType.message_event)))
+                        continue;
+
+                    var content = searcher.ToStronglyTyped<ContentView>(listenData.objects[EventType.message_event][nameof(RequestType.content)]);
+                    var messages = searcher.ToStronglyTyped<MessageView>(listenData.objects[EventType.message_event][nameof(RequestType.message)]);
+                    var users = searcher.ToStronglyTyped<UserView>(listenData.objects[EventType.message_event][nameof(RequestType.user)]);
+
+                    //We only care about message events (for now anyway), and only the ones which are in our content group
+                    foreach (var ev in listenData.events.Where(x => x.type == nameof(EventType.message_event)))
+                    {
+                        //Skip messages within content we didn't request. No need to check perms btw, since the listener
+                        //does this for us.
+                        if (query.rooms != null && query.rooms.Count > 0 && !query.rooms.Contains(ev.contentId))
+                            continue;
+
+                        var message = messages.FirstOrDefault(x => x.id == ev.refId);
+
+                        //So for this event, we need to pull the message, content, and I guess the create user?
+                        result.Add(MakeGenericMessageResult(
+                            content.FirstOrDefault(x => x.id == ev.contentId),
+                            message,
+                            users.FirstOrDefault(x => x.id == message?.createUserId),
+                            currentUser
+                        ));
+                    }
+
+                    if (result.Any())
+                        break;
+                }
+            }
+            catch (OperationCanceledException)
+            {
+                services.logger.LogDebug($"Small longpolling cancelled (normal)");
+            }
+
+            return await FinalizeMessages(result, query, currentUser.id, lastId);
+        }
+        finally
+        {
+            backgroundQueue.AddTask(RemoveStatusAfterExpire());
+        }
+
     }
 
     [Authorize()]
@@ -349,30 +454,15 @@ public class SmallController : BaseController
 
             //Step 0: before doing ANYTHING, must retrieve the maxId in the event system. This way, if it increases 
             //while we spend time looking for the non-polling data, we will catch everything
-            var lastId = eventQueue.GetCurrentLastId();
+            var lastId = query.eid > 0 ? query.eid : eventQueue.GetCurrentLastId();
 
             //Step 1: query the normal way for results. Do NOT use any cached stuff here!
             var staticResult = await SearchChatStatic(query, currentUser);
 
             if(staticResult.Any())
-                return staticResult.Union(await GetUserlistMessages(query, currentUser.id)).ToList();
-
-            try
-            {
-                //Step 2: wait on the listening endpoint. Since we're now "polling", go ahead and report the user's 
-                //requested list of rooms 
-                if(query.rooms != null)
-                    foreach(var cid in query.UserlistRooms)
-                        await userStatuses.AddStatusAsync(currentUser.id, cid, "active", trackerId);
-
-                //Step 3: listen on the live events until you get a response in one of the rooms.
-            }
-            finally
-            {
-                backgroundQueue.AddTask(RemoveStatusAfterExpire());
-            }
-
-            return new List<GenericMessageResult>();
+                return await FinalizeMessages(staticResult, query, currentUser.id, lastId); 
+            else
+                return await ListenChat(query, currentUser, lastId);
         });
     }
 
