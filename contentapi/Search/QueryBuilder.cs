@@ -53,6 +53,7 @@ public class QueryBuilder : IQueryBuilder
         { "notdeleted", new MacroDescription("", "NotDeletedMacro", new List<RequestType> { RequestType.content, RequestType.message, RequestType.user }) }, 
         { "notnull", new MacroDescription("f", "NotNullMacro", Enum.GetValues<RequestType>().ToList()) },
         { "null", new MacroDescription("f", "NullMacro", Enum.GetValues<RequestType>().ToList()) },
+        { "registered", new MacroDescription("", "RegisteredMacro", new List<RequestType> { RequestType.user }) },
         { "usertype", new MacroDescription("i", "UserTypeMacro", new List<RequestType> { RequestType.user }) },
         { "ingroup", new MacroDescription("v", "InGroupMacro", new List<RequestType> { RequestType.user }) },
         { "activebans", new MacroDescription("", "ActiveBansMacro", new List<RequestType> { RequestType.ban }) },
@@ -288,6 +289,7 @@ public class QueryBuilder : IQueryBuilder
     public string NotNullMacro(SearchRequestPlus request, string field) { return $"{field} IS NOT NULL"; }
     public string NullMacro(SearchRequestPlus request, string field) { return $"{field} IS NULL"; }
     public string UserTypeMacro(SearchRequestPlus request, string type) { return EnumMacroSearch<UserType>(type); }
+    public string RegisteredMacro(SearchRequestPlus request) { return NullMacro(request, nameof(User.registrationKey)); }
     public string NotDeletedMacro(SearchRequestPlus request) { return "deleted = 0"; }
 
     public string ReceiveUserLimit(SearchRequestPlus request, string requester)
