@@ -180,8 +180,14 @@ public class SmallController : BaseController
         });
     }
 
+    public class SmallSearch
+    {
+        public string search {get;set;} = "";
+        public long id {get;set;} = 0;
+    }
+
     [HttpGet("search")]
-    public Task<ActionResult> Search([FromQuery]string search)
+    public Task<ActionResult> Search([FromQuery]SmallSearch search)
     {
         return SmallTaskCatch(async () => 
         {
@@ -189,10 +195,17 @@ public class SmallController : BaseController
             try { user = await GetUserViewStrictAsync(); }
             catch { user = new UserView() { id = 0, username = "DEFAULT"}; }
 
+            List<ContentView> result = new();
+
             //Construct a search 
-            var result = await CachedSearcher.GetByField<ContentView>(RequestType.content, nameof(ContentView.name), search, "like");
+            if(search.id != 0)
+                result = new List<ContentView> { await CachedSearcher.GetById<ContentView>(RequestType.content, search.id) };
+            else if(!string.IsNullOrWhiteSpace(search.search))
+                result = await CachedSearcher.GetByField<ContentView>(RequestType.content, nameof(ContentView.name), search.search, "like");
+            else
+                throw new RequestException("Must supply either id or search");
+
             return result.Select(x => MakeGenericMessageResult(x, null, null, user)).ToList();
-            //return result.Select(x => (x.id, x.name, GenericStatus(x, null, user))).ToList();
         });
     }
 
