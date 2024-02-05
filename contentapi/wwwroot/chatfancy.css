@@ -57,6 +57,36 @@ body[data-theme="blue"] button {
     filter: sepia(0.25) hue-rotate(169deg);
 }
 
+body[data-theme="sillydull"] {
+    --stdborder: 1px solid #696969;
+    --rightpanebg: #dad8e6;
+    /*--rightpanebg: #e4e1f5;*/
+    /*--titlebg: #9ad864;*/
+    --titlebg: #a9c491;
+    /*--titlebg: #64d86a;*/
+    --imageminibg: #e6e6ed;
+    /*--userlistbg: #bcd3ea;*/
+    --userlistbg: #dbe9d3;
+    --activitybg: #f4f8ff;
+    --connectedbg: #00ff9c;
+    --usercolor: #5d537f;
+    --modulecolor: darkcyan;
+    --modulecontentcolor: gray;
+    --annotationcolor: #9978af;
+    --notificationbg: #a6bc92;
+    --notificationalertbg: #fa72ff;
+    --font: sans-serif;
+    --linkcolor: #00428d; /*#0669da;*/
+    --linkvisitedcolor: #472f8a; /*rgb(97 93 144); /*rgb(36 26 139);*/
+    --T-bg: #e9e7e0;
+    --T-color: #795572;
+    --T-code-bg: #514242;
+    --T-code-color: #eee6e1;
+}
+/*body[data-theme="blue"] button {
+    filter: sepia(0.25) hue-rotate(169deg);
+}*/
+
 body[data-theme="terminal"] {
     --stdborder: 1px solid lime;
     --rightpanebg: black;

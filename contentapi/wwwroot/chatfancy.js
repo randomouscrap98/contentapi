@@ -1,7 +1,7 @@
 //NOTE: Nothing in this file is used to make the chat work! Stick to chat.html, that has everything you really need!
 //I just wanted to make the chat a little nicer, think of this as a "plugin" if you will
 
-var chat_fancy_themes = [ "base", "dark", "purple", "blue", "frog", "terminal" ];
+var chat_fancy_themes = [ "base", "dark", "purple", "blue", "sillydull", "frog", "terminal" ];
 
 const FANCYSETTINGSKEY = "contentapi_defimpl_fancy";
 function GetFancySettings() 
