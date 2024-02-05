@@ -187,7 +187,7 @@ public class SmallController : BaseController
     }
 
     [HttpGet("search")]
-    public Task<ActionResult> Search([FromQuery]SmallSearch search)
+    public Task<ActionResult> Search([FromQuery]SmallSearch searchparam)
     {
         return SmallTaskCatch(async () => 
         {
@@ -198,10 +198,10 @@ public class SmallController : BaseController
             List<ContentView> result = new();
 
             //Construct a search 
-            if(search.id != 0)
-                result = new List<ContentView> { await CachedSearcher.GetById<ContentView>(RequestType.content, search.id) };
-            else if(!string.IsNullOrWhiteSpace(search.search))
-                result = await CachedSearcher.GetByField<ContentView>(RequestType.content, nameof(ContentView.name), search.search, "like");
+            if(searchparam.id != 0)
+                result = new List<ContentView> { await CachedSearcher.GetById<ContentView>(RequestType.content, searchparam.id) };
+            else if(!string.IsNullOrWhiteSpace(searchparam.search))
+                result = await CachedSearcher.GetByField<ContentView>(RequestType.content, nameof(ContentView.name), searchparam.search, "like");
             else
                 throw new RequestException("Must supply either id or search");
 

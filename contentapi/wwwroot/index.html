@@ -7,19 +7,19 @@
     <meta name="rating" content="general">
     <meta name="description" content="SBS default implementation">
     <link rel="icon" href="favicon.ico" type="image/x-icon">
-    <script src="api.js?v=1704004610"></script>
+    <script src="api.js?v=1707099948"></script>
     <!-- These are required for the 12y parser (markup) -->
-    <script src="markup/langs.js?v=1704004610"></script>
-    <script src="markup/legacy.js?v=1704004610"></script>
-    <script src="markup/parse.js?v=1704004610"></script>
-    <script src="markup/render.js?v=1704004610"></script>
-    <script src="markup/helpers.js?v=1704004610"></script>
-    <link rel="stylesheet" href="markup/markup.css?v=1704004610">
-    <link rel="stylesheet" href="markup.css?v=1704004610">
-    <script src="markup.js?v=1704004610"></script>
+    <script src="markup/langs.js?v=1707099948"></script>
+    <script src="markup/legacy.js?v=1707099948"></script>
+    <script src="markup/parse.js?v=1707099948"></script>
+    <script src="markup/render.js?v=1707099948"></script>
+    <script src="markup/helpers.js?v=1707099948"></script>
+    <link rel="stylesheet" href="markup/markup.css?v=1707099948">
+    <link rel="stylesheet" href="markup.css?v=1707099948">
+    <script src="markup.js?v=1707099948"></script>
     <!-- The scripts and styling for this page in particular -->
-    <script src="index.js?v=1704004610"></script>
-    <link rel="stylesheet" href="index.css?v=1704004610">
+    <script src="index.js?v=1707099948"></script>
+    <link rel="stylesheet" href="index.css?v=1707099948">
 </head>
 
 <body>
@@ -181,7 +181,7 @@
                 <!-- The editor goes here (in this container) -->
                 <div id="page-submit-container"></div>
             </div>
-            <h3>Comments:</h3>
+            <h3 id="comments-label">Comments:</h3>
             <div id="comment-submit-container" data-requireslogin="">
                 <form onsubmit="return t_comment_submit_submit(this)">
                     <label for="comment-submit-text">New comment:</label>
@@ -197,6 +197,13 @@
                 <a href="#" id="page-commentup">Older Comments</a>
                 <a href="#" id="page-commentdown">Newer Comments</a>
             </div>
+            <!--<h3>Filter comments:</h3>
+            <form id="commentsearch" method="GET">
+                <input type="hidden" name="t" value="page">
+                <input id="csearch_pid" type="hidden" name="pid" value="">
+                <label><span>Search:</span> <input type="text" name="ctext"></label>
+                <input type="submit" value="Search Comments">
+            </form>-->
         </div>
         <div id="t_blogs" data-onload="blogs_onload">
             <h2>Blogs</h2>

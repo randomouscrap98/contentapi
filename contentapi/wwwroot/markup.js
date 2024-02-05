@@ -28,3 +28,7 @@ var Nav = {
         return a;
     }
 };
+
+HTMLImageElement.prototype.decode = function() {
+    return Promise.resolve(true);
+};
