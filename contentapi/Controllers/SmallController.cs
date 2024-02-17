@@ -8,6 +8,7 @@ using System.Globalization;
 using System.Text;
 using Dapper;
 using contentapi.Live;
+using contentapi.Search;
 
 namespace contentapi.Controllers;
 
@@ -195,17 +196,25 @@ public class SmallController : BaseController
             try { user = await GetUserViewStrictAsync(); }
             catch { user = new UserView() { id = 0, username = "DEFAULT"}; }
 
-            List<ContentView> result = new();
+            var request = new SearchRequest()
+            {
+                type = nameof(RequestType.content),
+                fields = "*" //Even though we don't use most...
+            };
+            var parameters = new Dictionary<string, object>() {
+                { "paramid", searchparam.id },
+                { "paramsearch", searchparam.search }
+            };
 
             //Construct a search 
             if(searchparam.id != 0)
-                result = new List<ContentView> { await CachedSearcher.GetById<ContentView>(RequestType.content, searchparam.id) };
+                request.query = "id = @paramid";
             else if(!string.IsNullOrWhiteSpace(searchparam.search))
-                result = await CachedSearcher.GetByField<ContentView>(RequestType.content, nameof(ContentView.name), searchparam.search, "like");
+                request.query = "name LIKE @paramsearch";
             else
                 throw new RequestException("Must supply either id or search");
 
-            return result.Select(x => MakeGenericMessageResult(x, null, null, user)).ToList();
+            return (await CachedSearcher.SearchSingleType<ContentView>(user.id, request, parameters)).Select(x => MakeGenericMessageResult(x, null, null, user)).ToList();
         });
     }
 
