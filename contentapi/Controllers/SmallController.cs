@@ -175,8 +175,8 @@ public class SmallController : BaseController
         return SmallTaskCatch(async () => 
         {
             var user = await GetUserViewStrictAsync();
-            return new List<(long, string)> {
-                (user.id, user.username)
+            return new List<(long, string, string)> {
+                (user.id, user.username, user.avatar)
             };
         });
     }
