@@ -1,5 +1,6 @@
 using contentapi.data;
 using SixLabors.ImageSharp;
+using SixLabors.ImageSharp.Advanced;
 using SixLabors.ImageSharp.Formats;
 using SixLabors.ImageSharp.Processing;
 
@@ -55,10 +56,11 @@ public class ImageManipulator_Direct : IImageManipulator
             await fileData.CopyToAsync(memStream);
             fileData.Seek(0, SeekOrigin.Begin);
 
-            IImageFormat? format;
+            IImageFormat format = await Image.DetectFormatAsync(fileData);
+            fileData.Seek(0, SeekOrigin.Begin);
 
             //This will throw an exception if it's not an image (most likely)
-            using (var image = Image.Load(fileData, out format))
+            using (var image = Image.Load(fileData))
             {
                 double sizeFactor = ResizeFactor;
                 result.Width = image.Width;
@@ -123,13 +125,13 @@ public class ImageManipulator_Direct : IImageManipulator
 
         try
         {
-            await Task.Run(() =>
+            await Task.Run(async () =>
             {
-                IImageFormat? format;
-
-                using var image = Image.Load(fileData, out format);
-
+                IImageFormat format = await Image.DetectFormatAsync(fileData);
                 result.MimeType = format.DefaultMimeType;
+                fileData.Seek(0, SeekOrigin.Begin);
+
+                using var image = Image.Load(fileData);
 
                 //var maxDim = Math.Max(image.Width, image.Height);
                 var isGif = format.DefaultMimeType == Constants.GifMime;
