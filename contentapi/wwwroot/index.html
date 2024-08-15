@@ -7,19 +7,19 @@
     <meta name="rating" content="general">
     <meta name="description" content="SBS default implementation">
     <link rel="icon" href="favicon.ico" type="image/x-icon">
-    <script src="api.js?v=1710109932"></script>
+    <script src="api.js?v=1723760807"></script>
     <!-- These are required for the 12y parser (markup) -->
-    <script src="markup/langs.js?v=1710109932"></script>
-    <script src="markup/legacy.js?v=1710109932"></script>
-    <script src="markup/parse.js?v=1710109932"></script>
-    <script src="markup/render.js?v=1710109932"></script>
-    <script src="markup/helpers.js?v=1710109932"></script>
-    <link rel="stylesheet" href="markup/markup.css?v=1710109932">
-    <link rel="stylesheet" href="markup.css?v=1710109932">
-    <script src="markup.js?v=1710109932"></script>
+    <script src="markup/langs.js?v=1723760807"></script>
+    <script src="markup/legacy.js?v=1723760807"></script>
+    <script src="markup/parse.js?v=1723760807"></script>
+    <script src="markup/render.js?v=1723760807"></script>
+    <script src="markup/helpers.js?v=1723760807"></script>
+    <link rel="stylesheet" href="markup/markup.css?v=1723760807">
+    <link rel="stylesheet" href="markup.css?v=1723760807">
+    <script src="markup.js?v=1723760807"></script>
     <!-- The scripts and styling for this page in particular -->
-    <script src="index.js?v=1710109932"></script>
-    <link rel="stylesheet" href="index.css?v=1710109932">
+    <script src="index.js?v=1723760807"></script>
+    <link rel="stylesheet" href="index.css?v=1723760807">
 </head>
 
 <body>
@@ -70,13 +70,31 @@
                 <input type="submit" value="Login">
             </form>
             <hr>
-            <h2>Recover password:</h2>
-            <p>This will send an email (if an account is tied to it) with a 1 time use temporary password</p>
+            <h2>Recovery (one-time passcode):</h2>
+            <p>This will send an email (if an account is tied to it) with a 1 time use temporary passcode. You 
+                can use this passcode either as a one-time-use password to login, or to reset your current password
+                below. Regardless, it will only work once.
+            </p>
             <form data-recoverform onsubmit="return t_recover_submit(this)">
                 <label for="recover-email">Email:</label>
                 <input id="recover-email" name="email" required="">
                 <input type="submit" value="Recover Account">
                 <div id="recover-sent" hidden="">Email Sent!</div>
+            </form>
+            <hr>
+            <h2>Set new password / email:</h2>
+            <p>After retrieving a one-time passcode, you can use it here to reset your actual password or email.</p>
+            <form data-newpasswordform onsubmit="return t_newpassword_submit(this)">
+                <label for="newpassword-email">Email (for account identification):</label>
+                <input id="newpassword-email" name="currentEmail" required="">
+                <label for="newpassword-code">One-time passcode (or old password):</label>
+                <input id="newpassword-code" type="password" name="currentPassword" required="">
+                <label for="newpassword-password">New password (optional):</label>
+                <input id="newpassword-password" type="password" name="password">
+                <label for="newpassword-newemail">New email (optional):</label>
+                <input id="newpassword-newemail" name="email">
+                <input type="submit" value="Reset password">
+                <div id="newpassword-success" hidden="">Password reset!</div>
             </form>
         </div>
         <div id="t_register">

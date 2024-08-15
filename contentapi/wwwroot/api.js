@@ -501,6 +501,11 @@ Api.prototype.PasswordRecovery = function(email, handler)
     this.Raw(`user/sendpasswordrecovery`, email, handler, "POST")
 };
 
+Api.prototype.SetPrivateData = function(data, handler)
+{
+    this.Raw(`user/privatedata`, data, handler, "POST")
+};
+
 Api.prototype.About = function(handler)
 {
     this.Raw("status", null, handler);

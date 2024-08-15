@@ -1137,6 +1137,24 @@ function t_recover_submit(form)
     return false;
 }
 
+function t_newpassword_submit(form)
+{
+    var data = {};
+    data.currentEmail = document.getElementById("newpassword-email").value;
+    data.currentPassword = document.getElementById("newpassword-code").value;
+    data.password = document.getElementById("newpassword-password").value;
+    data.email = document.getElementById("newpassword-newemail").value;
+    var sentDiv = document.getElementById("newpassword-success");
+
+    sentDiv.setAttribute("hidden", "");
+
+    api.SetPrivateData(data, new ApiHandler(d => {
+        sentDiv.removeAttribute("hidden");
+    }));
+
+    return false;
+}
+
 function t_register_submit(form)
 {
     var username = document.getElementById("register-username").value;
