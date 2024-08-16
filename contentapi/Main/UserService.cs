@@ -256,7 +256,7 @@ public class UserService : IUserService
         //Next, get the LEGITIMATE data from the database
         try
         {
-            user = await GetUserByWhatever($"where {fieldname} = @user", new { user = value });
+            user = await GetUserByWhatever($"where {fieldname} = @user COLLATE NOCASE", new { user = value });
         }
         catch(NotFoundException)
         {
