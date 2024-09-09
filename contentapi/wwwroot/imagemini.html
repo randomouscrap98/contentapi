@@ -53,11 +53,13 @@ window.onload = function()
 
     if(settings.bucket) bucket.value = settings.bucket;
     if(settings.quantize) quantize.value = settings.quantize;
+    if(settings.freeze) freeze.checked = true;
 
     reloadList();
 
     bucket.onblur = () => { setPage(0); reloadList(); SetImageMiniSettingValue("bucket", bucket.value)};
     quantize.onchange = () => { SetImageMiniSettingValue("quantize", quantize.value); }
+    freeze.onchange = () => { SetImageMiniSettingValue("freeze", freeze.checked); reloadList(); }
     forward.onclick = () => { changePage(1); reloadList(); };
     back.onclick = () => { changePage(-1); reloadList(); };
 
@@ -165,7 +167,7 @@ function createImage(content)
 {
     var container = document.createElement("a");
     var image = document.createElement("img");
-    image.src = api.ResolveRelativeUrl(api.GetFileUrl(content.hash, new FileModifyParameter(IMAGESIZE)));
+    image.src = api.ResolveRelativeUrl(api.GetFileUrl(content.hash, new FileModifyParameter(IMAGESIZE, false, freeze.checked)));
     container.href = api.ResolveRelativeUrl(api.GetFileUrl(content.hash));
     container.append(image);
     container.target="_blank";
@@ -230,6 +232,10 @@ img {
     right:-3px;
     z-index: 100;
 }
+#freeze {
+    width: unset;
+    vertical-align: middle;
+}
 @media (max-width: 8rem)
 {
     body, div { font-size: 0.5rem; }
@@ -249,6 +255,7 @@ img {
             <button id="back">&lt;</button>
             <span id="page">0</span>
             <button id="forward">&gt;</button>
+            <label for="freeze"><input id="freeze" type="checkbox">gifreeze</label>
         </div>
     </div>
 </body>
