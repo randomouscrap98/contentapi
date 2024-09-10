@@ -163,6 +163,8 @@ public class FileService : IFileService
 
             if (modify.size > 0)
                 extraFolder += $"{modify.size}";
+            if (modify.maxSize > 0)
+                extraFolder += $"m{modify.maxSize}";
             if (modify.crop)
                 extraFolder += "a";
             if (modify.freeze)
@@ -362,17 +364,11 @@ public class FileService : IFileService
 
     public async Task<Tuple<byte[], string>> GetFileAsync(string hash, GetFileModify modify)
     {
-        if (modify.size > 0)
-        {
-            if (modify.size < 10)
-                throw new RequestException("Requested file size too small!");
-            else if (modify.size <= 100)
-                modify.size = 10 * (modify.size / 10);
-            else if (modify.size <= 1000)
-                modify.size = 100 * (modify.size / 100);
-            else
-                throw new RequestException("Requested file size too large!");
-        }
+        modify.size = SizeConstraint(modify.size);
+        modify.maxSize = SizeConstraint(modify.maxSize);
+
+        if (modify.size > 0 && modify.maxSize > 0)
+            throw new RequestException("Cannot specify both size and maxSize!");
 
         //Go get that ONE file. This should return null if we can't read it... let's hope!
         //SPECIAL: the 0 file is 
@@ -449,5 +445,22 @@ public class FileService : IFileService
         }
 
         return await System.IO.File.ReadAllBytesAsync(thumbnailPath);
+    }
+
+    private static int SizeConstraint(int size)
+    {
+        if (size > 0)
+        {
+            if (size < 10)
+                throw new RequestException("Requested file size too small!");
+            else if (size <= 100)
+                return 10 * (size / 10);
+            else if (size <= 1000)
+                return 100 * (size / 100);
+            else
+                throw new RequestException("Requested file size too large!");
+        }
+
+        return size;
     }
 }
