@@ -789,6 +789,9 @@ body, input, textarea, select {
     border: var(--stdborder);
     box-sizing: border-box;
 }
+#chatsearch { display: flex; }
+#chatsearch > * { flex: none; }
+#commentsearch_ctext { flex: 1; width: 3em; }
 .user {
     font-weight: bold;
     color: var(--usercolor);
@@ -922,7 +925,7 @@ body, input, textarea, select {
             </div>
             <!-- A special miniature page in the api run frontend for managing images -->
             <iframe id="imagemini" src="imagemini.html?v=1725916092"></iframe>
-            <form method="GET">
+            <form id="chatsearch" method="GET">
                 <input id="commentsearch_pid" type="hidden" name="pid" value="">
                 <input id="commentsearch_ctext" type="text" name="ctext" placeholder="Comment Text">
                 <input type="submit" value="🔍" formtarget="_blank">
