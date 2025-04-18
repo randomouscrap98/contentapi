@@ -137,8 +137,16 @@ public class ImageManipulator_IMagick : IImageManipulator
 
         var arglist = new List<string>() { filename + (baseInfo.MimeType == Constants.GifMime && !modify.freeze ? "" : "[0]") };
 
+        if (modify.size > 0 && modify.maxSize > 0)
+            throw new RequestException("Can't specify both size and maxSize in the same request!");
+
+        var size = modify.size > 0 ? modify.size : modify.maxSize;
+
         //Cropping can be done with the resize arg, add ^ to the end
-        var resize = $"{modify.size}x{modify.size}";
+        var resize = $"{size}x{size}";
+
+        if (modify.maxSize > 0)
+            resize += ">";
 
         if(modify.crop)
             resize += "^";
@@ -154,7 +162,7 @@ public class ImageManipulator_IMagick : IImageManipulator
         }
 
         if(modify.crop)
-            arglist.AddRange(new [] { "-background", "none", "-gravity", "center", "-extent", $"{modify.size}x{modify.size}"});
+            arglist.AddRange(new [] { "-background", "none", "-gravity", "center", "-extent", $"{size}x{size}"});
         
         if(baseInfo.MimeType == Constants.GifMime && !modify.freeze)
         {
