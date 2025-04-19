@@ -65,7 +65,8 @@ class Markup_12y2 { constructor() {
 	
 	// About __proto__ in object literals:
 	// https://tc39.es/ecma262/multipage/ecmascript-language-expressions.html#sec-runtime-semantics-propertydefinitionevaluation
-	const IS_BLOCK = {__proto__:null, code:1, divider:1, ROOT:1, heading:1, quote:1, table:1, table_cell:1, image:1, video:1, audio:1, spoiler:1, align:1, list:1, list_item:1, youtube:1, anchor:1, table_divider:1}
+	const IS_BLOCK = {__proto__:null, code:'block', divider:'block', ROOT:'block', heading:'block', quote:'block', table:'block', table_cell:'block', image:'block', video:'block', audio:'block', spoiler:'block', align:'block', list:'block', list_item:'block', youtube:'block', anchor:'block', table_divider:'block', ruby:'text', key:'text'}
+	// 'text' is for inline-block elements
 	
 
 	// argument processing //
@@ -116,7 +117,7 @@ class Markup_12y2 { constructor() {
 				type = 'audio'
 			else if (/[.](mp4|mkv|mov|webm|avi|flv|m4v|mpeg|mpg|ogv|ogm|ogx|wmv|xvid)\b/i.test(url))
 				type = 'video'
-			else if (/^https?:[/][/](?:www[.])?(?:youtube.com[/]watch[?]v=|youtu[.]be[/]|youtube.com[/]shorts[/])[\w-]{11}/.test(url)) {
+			else if (/^https?:[/][/](?:www[.]|music[.])?(?:youtube.com[/]watch[?]v=|youtu[.]be[/]|youtube.com[/]shorts[/])[\w-]{11}/.test(url)) {
 				// todo: accept [start-end] args maybe?
 				type = 'youtube'
 			}
@@ -264,13 +265,13 @@ class Markup_12y2 { constructor() {
 			push(dest, type, o.args, o.content)
 		} }
 		
-		current.prev = type in IS_BLOCK ? 'block' : o.prev
+		current.prev = IS_BLOCK[type] || o.prev
 	}
 	
 	// push empty tag
 	const BLOCK=(type, args)=>{
 		current.content.push({type, args})
-		current.prev = type in IS_BLOCK ? 'block' : 'text'
+		current.prev = IS_BLOCK[type] || 'text'
 	}
 	
 	const NEWLINE=(real)=>{
@@ -441,6 +442,15 @@ class Markup_12y2 { constructor() {
 				} break; case '\\sup': {
 					OPEN('superscript')
 					word_maybe()
+				} break; case '\\sm': {
+					OPEN('small')
+					word_maybe()
+				} break; case '\\sc': {
+					OPEN('small_caps')
+					word_maybe()
+				} break; case '\\ov': {
+					OPEN('overline')
+					word_maybe()
 				} break; case '\\b': {
 					OPEN('bold')
 					word_maybe()
@@ -462,7 +472,8 @@ class Markup_12y2 { constructor() {
 					OPEN('align', {align: a})
 				} break; case '\\spoiler': case '\\h': {
 					let [label="spoiler"] = rargs
-					OPEN('spoiler', {label})
+					let cw = /\bcw\b|🔞/i.test(label)
+					OPEN('spoiler', {label, cw})
 				} break; case '\\ruby': {
 					let [txt="true"] = rargs
 					OPEN('ruby', {text: txt})
@@ -489,6 +500,10 @@ class Markup_12y2 { constructor() {
 					if (!is_color(color))
 						color = null
 					OPEN('background_color', {color})
+				} break; case '\\lang': {
+					let [lang=""] = rargs
+					OPEN('language', {lang})
+					word_maybe()
 				}}
 			} break; case 'STYLE': {
 				let c = check_style(token, text.charAt(match.index-1)||"\n", text.charAt(REGEX.lastIndex)||"\n")

@@ -212,6 +212,19 @@ L + ratio { }
 	display: none;
 }
 
+.M-content-warning > .M-spoiler-label {
+	background: var(--T-red-bg, #F888);
+	border-radius: 0px;
+	/*border-color: red;*/
+	/*idk;*/
+}
+.M-content-warning > .M-spoiler-label::before {
+	content: "⛔Show ";
+}
+.M-content-warning[open] > .M-spoiler-label::before {
+	content: "⛔Hide ";
+}
+
 /***********/
 /** Quote **/
 /***********/
@@ -452,4 +465,16 @@ y12-video > * {
 .Markup h5 {
 	font-size: 1.125em;
 	font-weight: bold;
+}
+
+/*************/
+/** Styling **/
+/*************/
+
+.M-small-caps {
+	font-variant: small-caps;
+}
+
+.M-overline {
+	text-decoration: overline;
 }

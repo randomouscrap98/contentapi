@@ -731,11 +731,11 @@ class Markup_Legacy { constructor() {
 		
 		// audio, video, image, youtube
 		function urlType(url) {
-			if (/(\.mp3(?!\w)|\.ogg(?!\w)|\.wav(?!\w)|#audio$)/i.test(url))
+			if (/(\.(mp3|ogg|wav|m4a|flac|aac|oga|opus|wma)(?!\w)|#audio$)/i.test(url))
 				return ["audio", {url}]
-			if (/(\.mp4(?!\w)|\.mkv(?!\w)|\.mov(?!\w)|#video$)/i.test(url))
+			if (/(\.(mp4|mkv|mov|webm|avi|flv|m4v|mpeg|ogv|ogm|ogx|wmv|xvid)(?!\w)|#video$)/i.test(url))
 				return ["video", {url}]
-			if (/^https?:[/][/](?:www[.])?(?:youtube.com[/]watch[?]v=|youtu[.]be[/]|youtube.com[/]shorts[/])[\w-]{11}/.test(url))
+			if (/^https?:[/][/](?:www[.]|music[.])?(?:youtube.com[/]watch[?]v=|youtu[.]be[/]|youtube.com[/]shorts[/])[\w-]{11}/.test(url))
 				return ["youtube", {url}]
 			let size = /^([^#]*)#(\d+)x(\d+)$/.exec(url)
 			if (size)

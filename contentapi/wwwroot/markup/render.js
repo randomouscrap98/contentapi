@@ -132,7 +132,7 @@ class Markup_Render_Dom { constructor() {
 			let link = e.firstChild
 			link.href = url
 			link.title = url
-			link.lastChild.textContent = url.replace(/.*[/]/, "…/")
+			link.lastChild.textContent = url.replace(/.*[/]/, "…/").replace(/[?].*$/, "?…")
 			return e
 		}.bind(𐀶`<y12-audio><a>🎵️<span></span></a></y12-audio>`),
 		
@@ -297,6 +297,12 @@ we should create our own fake bullet elements instead.*/
 		
 		superscript: 𐀶`<sup>`,
 		
+		small: 𐀶`<small>`,
+		
+		small_caps: 𐀶`<span class='M-small-caps'>`,
+		
+		overline: 𐀶`<span class='M-overline'>`,
+		
 		/*anchor: function({name}) {
 			let e = this()
 			e.id = "Markup-anchor-"+name
@@ -309,8 +315,10 @@ we should create our own fake bullet elements instead.*/
 			return e.firstChild
 		}.bind(𐀶`<ruby><span></span><rt>`), // I don't think we need <rp> since we're rendering for modern browsers...
 		
-		spoiler: function({label}) {
+		spoiler: function({label, cw}) {
 			let e = this()
+			if (cw)
+				e.classList.add('M-content-warning')
 			e.firstChild.textContent = label//.replace(/_/g, " ")
 			//todo: [12y1] maybe replace all underscores in args with spaces, during parsing?
 			return e.lastChild
@@ -326,6 +334,12 @@ we should create our own fake bullet elements instead.*/
 				e.dataset.bgcolor = color
 			return e
 		}.bind(𐀶`<span class='M-background'>`),
+		
+		language: function({lang}) {
+			let e = this()
+			e.lang = lang
+			return e
+		}.bind(𐀶`<span>`),
 		
 		invalid: function({text, reason}) {
 			let e = this()

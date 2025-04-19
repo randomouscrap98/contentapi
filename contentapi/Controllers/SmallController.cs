@@ -73,6 +73,8 @@ public class SmallController : BaseController
         }
         if(message != null)
         {
+            if(message.receiveUserId != 0)
+                sb.Append('U');
             if(message.edited)
                 sb.Append('E');
             if(message.deleted)
