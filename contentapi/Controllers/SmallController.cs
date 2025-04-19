@@ -159,6 +159,15 @@ public class SmallController : BaseController
         }
     }
 
+    /// <summary>
+    /// Produce a "small user" format data for the given user view
+    /// </summary>
+    /// <param name="user"></param>
+    /// <returns></returns>
+    private (long, string, string) GetSmallUser(UserView user) {
+        return (user.id, user.username, user.avatar);
+    }
+
     [HttpGet("login")]
     public Task<ActionResult> Login([FromQuery]string username, [FromQuery]string password, [FromQuery]long expireSeconds = 0)
     {
@@ -172,14 +181,25 @@ public class SmallController : BaseController
 
     [Authorize()]
     [HttpGet("me")]
-    public Task<ActionResult> Me()
+    public Task<ActionResult> Me([FromQuery(Name="uids")]List<long>? lookupUsers)
     {
-        return SmallTaskCatch(async () => 
+        return SmallTaskCatch(async () =>
         {
-            var user = await GetUserViewStrictAsync();
-            return new List<(long, string, string)> {
-                (user.id, user.username, user.avatar)
-            };
+            UserView currentUser = await GetUserViewStrictAsync();
+
+            if (lookupUsers == null || lookupUsers.Count == 0)
+            {
+                return new List<(long, string, string)> {
+                    GetSmallUser(currentUser)
+                };
+            }
+            else
+            {
+                return (await CachedSearcher.SearchSingleType<UserView>(currentUser.id,
+                    new SearchRequest() { type = nameof(RequestType.user), fields = "id,username,avatar", query = "id in @users" },
+                    new Dictionary<string, object>() { { "users", lookupUsers.ToArray() } }
+                )).Select(u => GetSmallUser(u)).ToList();
+            }
         });
     }
 
