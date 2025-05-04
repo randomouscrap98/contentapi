@@ -145,9 +145,6 @@ public class ImageManipulator_Direct : IImageManipulator
                     result.RenderCount++;
                 }
 
-                //This must come after the crop!
-                var isNowLarger = (modify.size > Math.Max(image.Width, image.Height));
-
                 //Saving as png also works, but this preserves the format (even if it's a little heavier compute, it's only a one time thing)
                 if (modify.freeze && isGif)
                 {
@@ -156,8 +153,19 @@ public class ImageManipulator_Direct : IImageManipulator
                     result.RenderCount++;
                 }
 
-                if (modify.size > 0 && !(isGif && isNowLarger)) //&& (modify.size > image.Width || modify.size > image.Height)))
+                // this is to catch the fact that we don't want to resize gifs
+                if (isGif)
+                { }
+                // check to make sure you don't set both
+                else if (modify.size > 0 && modify.maxSize > 0)
                 {
+                    throw new RequestException("Cannot have both size and maxSize!");
+                }
+                // size
+                else if (modify.size > 0) //&& (modify.size > image.Width || modify.size > image.Height)))
+                {
+                    var sizeIsLarger = (modify.size > Math.Max(image.Width, image.Height));
+
                     var width = 0;
                     var height = 0;
 
@@ -168,11 +176,31 @@ public class ImageManipulator_Direct : IImageManipulator
                         height = modify.size;
 
                     if (HighQualityResize)
-                        image.Mutate(x => x.Resize(width, height, isNowLarger ? KnownResamplers.Spline : KnownResamplers.Lanczos3));
+                        image.Mutate(x => x.Resize(width, height, sizeIsLarger ? KnownResamplers.Spline : KnownResamplers.Lanczos3));
                     else
                         image.Mutate(x => x.Resize(width, height));
 
                     result.RenderCount++;
+                }
+                // maxSize: only resize if the image is larger than the max size
+                else if (modify.maxSize > 0 && modify.maxSize < Math.Max(image.Width, image.Height))
+                {
+                    var width = 0;
+                    var height = 0;
+
+                    //Preserve aspect ratio when not square
+                    if (image.Width > image.Height)
+                        width = modify.maxSize;
+                    else
+                        height = modify.maxSize;
+
+                    if (HighQualityResize)
+                        image.Mutate(x => x.Resize(width, height, KnownResamplers.Lanczos3));
+                    else
+                        image.Mutate(x => x.Resize(width, height));
+
+                    result.RenderCount++;
+
                 }
 
                 result.Width = image.Width;
